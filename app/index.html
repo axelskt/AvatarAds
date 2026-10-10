@@ -31838,14 +31838,14 @@ window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
 window._mcKlingVer='v2.6';
 function _mcSetKlingVer(v){ window._mcKlingVer = (v==='v3' && _aaIsDev()) ? 'v3' : 'v2.6'; try{ _mcSaveOpts&&_mcSaveOpts(); }catch(_){} _mcRenderAdv(); }
 window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
-window._mcCamFollow=true; window._mcKeepVidBg=false; window._mcFormat='auto';   // #cam-realiste (04/09) : « Caméra réaliste » COCHÉE par défaut. 'auto' (défaut) = ratio de la VIDÉO DE RÉF (LOT A, mesuré : Kling suit le ratio de la vidéo, pas de l'image) ; repli ratio image si réf illisible
+window._mcCamFollow=true; window._mcKeepVidBg=false; window._mcFondVideo=false; window._mcFormat='auto';   // #cam-realiste (04/09) : « Caméra réaliste » COCHÉE par défaut. 'auto' (défaut) = ratio de la VIDÉO DE RÉF (LOT A, mesuré : Kling suit le ratio de la vidéo, pas de l'image) ; repli ratio image si réf illisible
 window._mcAutoFrame=true;   // cadrage auto du visage — ON par défaut (Axel, 14/08)
 window._mcBgClean=true;     // fond fourni : effacer la personne dessus (par image, non persisté)
 // ── OPTIONS MÉMORISÉES (Axel, 14/08 : « une fois qu'on met une option, elle est
 // enregistrée et remise la prochaine fois — sauf arrière-plan et instruction »).
 function _mcSaveOpts(){ try{ localStorage.setItem('aa_mc_opts', JSON.stringify({
   tier:window._mcTier, quality:window._mcQuality, render:window._mcRender, format:window._mcFormat,
-  cam:!!window._mcCamFollow, camV2:true, keepVidBg:!!window._mcKeepVidBg, autoFrame:window._mcAutoFrame!==false, klingVer:window._mcKlingVer, voice:window._mcVoice||'orig' })); }catch(_){ } }
+  cam:!!window._mcCamFollow, camV2:true, keepVidBg:false, fondVideo:!!window._mcFondVideo, autoFrame:window._mcAutoFrame!==false, klingVer:window._mcKlingVer, voice:window._mcVoice||'orig' })); }catch(_){ } }
 function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts')||'null'); if(!o) return;
   if(o.tier==='pro'||o.tier==='standard') window._mcTier=o.tier;
   if(o.quality==='720'||o.quality==='1080') window._mcQuality=o.quality;
@@ -31854,7 +31854,8 @@ function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts
   // Caméra réaliste ON par défaut (Axel 04/09). Migration une seule fois : les préférences
   // enregistrées AVANT ce changement (sans camV2) sont forcées à ON ; ensuite le choix explicite est respecté.
   window._mcCamFollow = o.camV2 ? !!o.cam : true;
-  window._mcKeepVidBg=!!o.keepVidBg; window._mcAutoFrame=true;
+  // 10/10 : l'ancien « fond vidéo » par détourage (+1 cr/s, lent) est remplacé par le fond NATIF de Motion 3.0
+  window._mcKeepVidBg=false; window._mcFondVideo=!!o.fondVideo && o.tier==='pro'; window._mcAutoFrame=true;
   window._mcVoice = (o.voice==='fille'||o.voice==='garcon') ? o.voice : 'orig';
   window._mcKlingVer=(window._mcTier==='pro')?'v3':'v2.6'; }catch(_){ } } // version couplée au modèle (Motion 2.6/3.0) ; cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
 _mcLoadOpts();
@@ -31936,6 +31937,7 @@ function _mcSetTier(t){
     if(typeof showPaywall==='function') showPaywall('Oups — Motion 3.0 est réservé aux plans Pro & Élite', 'Passe en Pro ou Élite pour débloquer Motion 3.0.'); else toast('Motion 3.0 est réservé aux plans Pro et Élite'); return;
   }
   window._mcTier=t; window._mcKlingVer=(t==='pro')?'v3':'v2.6'; window._mcQuality=(t==='pro'?'1080':'720');
+  if(t!=='pro') window._mcFondVideo=false;   // le fond de la vidéo d'origine n'existe qu'en Motion 3.0
   _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost();
 }
 function _mcSetQual(v){ window._mcQuality=v; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); }
@@ -31947,6 +31949,18 @@ function _mcToggleCam(){ window._mcCamFollow=!window._mcCamFollow; _mcSaveOpts()
 // par-dessus la vidéo de référence (render-worker __compose:'motion-bg'). Le chemin
 // frame-figée AVANT Kling est conservé (cohérence lumière du rendu).
 // ⚠ PRICING : aucun crédit supplémentaire débité pour l'instant — Axel tranchera.
+// GARDER LE FOND DE LA VIDÉO D'ORIGINE (Axel 10/10) : natif chez Motion 3.0 (background_source input_video) — aucun
+// détourage, aucun supplément. Activé, il masque « Glisse un fond » ; en Motion 2.6 il fait passer en Motion 3.0.
+function _mcToggleFondVideo(){
+  if(!window._mcFondVideo && window._mcTier!=='pro'){
+    if(!['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
+      if(typeof showPaywall==='function') showPaywall('Garder le fond de ta vidéo', 'Disponible avec Motion 3.0 — plans Pro et Élite.'); else toast('Disponible avec Motion 3.0 — plans Pro et Élite');
+      return;
+    }
+    window._mcTier='pro'; window._mcKlingVer='v3'; window._mcQuality='1080';
+  }
+  window._mcFondVideo=!window._mcFondVideo; _mcSaveOpts(); _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost();
+}
 function _mcToggleVidBg(){ window._mcKeepVidBg=!window._mcKeepVidBg; _mcSaveOpts(); _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost(); }
 function _mcToggleAutoFrame(){ window._mcAutoFrame=(window._mcAutoFrame===false); _mcSaveOpts(); _mcRenderAdv(); }
 function _mcToggleBgClean(){ window._mcBgClean=(window._mcBgClean===false); _mcRenderAdv(); }
@@ -32074,6 +32088,20 @@ function _mcUpdateCost(){
   // Axel 09/10 : plus de détail « 2 cr/s × 10 s · voix offerte » — le total, le modèle et la définition suffisent
   el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">'+(bgOn?'· fond vidéo +'+CREDIT_COSTS.motionBgPerSec+' cr/s ':'')+'· '+tierLbl+coupe+'</span>';
 }
+// « Arrière-plan · glisse un fond » (+ « Effacer la personne du fond ») — masqué quand on garde le fond de la vidéo
+function _mcFondPersoHtml(){
+  return `    <div onclick="document.getElementById('mcBgInput').click()" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:22px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;margin-bottom:18px;position:relative;overflow:hidden;min-height:100px">
+      <input type="file" id="mcBgInput" accept="image/*" style="display:none" onchange="_mcPick(this,'bg')">
+      ${window._mcBgB64?`<img src="${window._mcBgB64}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:''}
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;position:relative"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      <span style="font-weight:700;color:var(--text);font-size:13.5px;position:relative">${window._mcBgB64?'Fond ajouté':'Glisse un fond'}</span>
+      <span class="faint" style="font-size:11.5px;position:relative">remplace le décor — même une photo avec quelqu'un dessus</span>
+    </div>
+    ${window._mcBgB64?`<button onclick="_mcToggleBgClean()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin:-8px 0 18px;border:${window._mcBgClean!==false?'2px solid var(--accent)':'1px solid var(--border)'};background:${window._mcBgClean!==false?'var(--accent-soft)':'var(--surface)'}">
+      <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">Effacer la personne du fond</span><span class="faint" style="font-size:11.5px">Si quelqu'un est sur cette image, il disparaît — seul le décor reste</span></div>
+      <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${window._mcBgClean!==false?'var(--accent)':'var(--surface-3)'};border:1px solid ${window._mcBgClean!==false?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${window._mcBgClean!==false?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
+    </button>`:''}`;
+}
 function _mcRenderAdv(){
   const card=document.getElementById('mcAdvCard'); if(!card) return;
   // Motion 3.0 (tier 'pro') réservé Pro/Élite : un Starter avec une préférence 'pro' enregistrée retombe sur Motion 2.6.
@@ -32095,33 +32123,6 @@ function _mcRenderAdv(){
       <span style="font-weight:800;font-size:18px">Paramètres avancés</span>
       <button onclick="_mcCloseAdv()" class="row" style="width:32px;height:32px;border-radius:9px;border:1px solid var(--border);align-items:center;justify-content:center;cursor:pointer;background:none;color:var(--text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <span class="label" style="display:block;margin-bottom:8px">Arrière-plan · optionnel</span>
-    <div onclick="document.getElementById('mcBgInput').click()" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:22px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;margin-bottom:18px;position:relative;overflow:hidden;min-height:100px">
-      <input type="file" id="mcBgInput" accept="image/*" style="display:none" onchange="_mcPick(this,'bg')">
-      ${window._mcBgB64?`<img src="${window._mcBgB64}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:''}
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;position:relative"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-      <span style="font-weight:700;color:var(--text);font-size:13.5px;position:relative">${window._mcBgB64?'Fond ajouté':'Glisse un fond'}</span>
-      <span class="faint" style="font-size:11.5px;position:relative">remplace le décor — même une photo avec quelqu'un dessus</span>
-    </div>
-    ${window._mcBgB64?`<button onclick="_mcToggleBgClean()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin:-8px 0 18px;border:${window._mcBgClean!==false?'2px solid var(--accent)':'1px solid var(--border)'};background:${window._mcBgClean!==false?'var(--accent-soft)':'var(--surface)'}">
-      <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">Effacer la personne du fond</span><span class="faint" style="font-size:11.5px">Si quelqu'un est sur cette image, il disparaît — seul le décor reste</span></div>
-      <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${window._mcBgClean!==false?'var(--accent)':'var(--surface-3)'};border:1px solid ${window._mcBgClean!==false?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${window._mcBgClean!==false?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
-    </button>`:''}
-    <span class="label" style="display:block;margin-bottom:8px">Instructions · optionnel</span>
-    <textarea id="mcPromptTa" oninput="window._mcPrompt=this.value" class="field" style="min-height:96px;resize:vertical;margin-bottom:18px" placeholder="Ex : garde le regard caméra, ambiance studio, démarche assurée…"></textarea>
-    <span class="label" style="display:block;margin-bottom:8px">Format</span>
-    <div class="seg" style="width:100%;margin-bottom:6px">
-      ${[['auto',0,0],['9:16',9,16],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'auto')===f;const ic=f==='auto'?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="3.2 3.2"/></svg>':`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>`;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 6px;font-size:12.5px" onclick="_mcSetFormat('${f}')">${ic}${f==='auto'?'Auto':f}</button>`;}).join('')}
-    </div>
-    <div style="height:10px"></div>
-    <span class="label" style="display:block;margin-bottom:8px">Options</span>
-    ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow]]
-      .concat((typeof _aaIsDev==='function' && _aaIsDev()) ? [['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Le vrai décor de ta vidéo, animé — seule la personne est remplacée · +'+CREDIT_COSTS.motionBgPerSec+' cr/s (DEV — lent, à améliorer)',!!window._mcKeepVidBg]] : [])
-      .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
-        <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
-        <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
-      </button>`).join('')}
-    <div style="height:8px"></div>
     <span class="label" style="display:block;margin-bottom:8px">Modèle</span>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:${tier==='pro'?'16px':'14px'}">
       ${tierCard('standard','Motion 2.6','Rapide et fiable')}
@@ -32134,6 +32135,25 @@ function _mcRenderAdv(){
       <button class="${q==='1080'?'on':''}" style="flex:1" onclick="_mcSetQual('1080')">1080p <span class="mono" style="font-size:10px;color:var(--accent-2)">+1 cr/s</span></button>
     </div>
     <p class="faint" style="font-size:11.5px;margin-bottom:18px">${q==='1080'?"1080p natif : +1 crédit / seconde.":"720p rapide. Passe en 1080p natif pour +1 cr/s, ou choisis Motion 3.0."}</p>`}
+    <span class="label" style="display:block;margin-bottom:8px">Format</span>
+    <div class="seg" style="width:100%;margin-bottom:6px">
+      ${[['auto',0,0],['9:16',9,16],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'auto')===f;const ic=f==='auto'?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="3.2 3.2"/></svg>':`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>`;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 6px;font-size:12.5px" onclick="_mcSetFormat('${f}')">${ic}${f==='auto'?'Auto':f}</button>`;}).join('')}
+    </div>
+    <div style="height:10px"></div>
+    <div style="height:12px"></div>
+    <span class="label" style="display:block;margin-bottom:8px">Arrière-plan</span>
+    <button onclick="_mcToggleFondVideo()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:${window._mcFondVideo?'18px':'12px'};border:${window._mcFondVideo?'2px solid var(--accent)':'1px solid var(--border)'};background:${window._mcFondVideo?'var(--accent-soft)':'var(--surface)'}">
+      <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">Garder le fond de la vidéo d’origine</span><span class="faint" style="font-size:11.5px">Le décor de ta vidéo reste, seule la personne est remplacée${tier==='pro'?'':' · avec Motion 3.0'}</span></div>
+      <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${window._mcFondVideo?'var(--accent)':'var(--surface-3)'};border:1px solid ${window._mcFondVideo?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${window._mcFondVideo?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
+    </button>
+    ${window._mcFondVideo?'':_mcFondPersoHtml()}
+    <span class="label" style="display:block;margin-bottom:8px">Options</span>
+    ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow]]
+      .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
+        <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
+        <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
+      </button>`).join('')}
+    <div style="height:8px"></div>
     <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       ${modes.map(([id,t,sub])=>{const o=rnd===id;return `<button onclick="_mcSetRender('${id}')" class="col" style="gap:8px;padding:12px 10px;border-radius:13px;align-items:center;cursor:pointer;font-family:inherit;border:${o?'2px solid var(--accent)':'1px solid var(--border)'};background:${o?'var(--accent-soft)':'var(--panel-1)'}"><div style="width:34px;height:52px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border-2);flex:0 0 auto">${diag(id)}</div><div class="col" style="gap:2px;align-items:center"><span style="font-size:12px;font-weight:${o?700:600};color:${o?'var(--text)':'var(--text-2)'};text-align:center;line-height:1.2">${t}</span><span class="faint" style="font-size:10px;text-align:center">${sub}</span></div></button>`;}).join('')}
@@ -32143,7 +32163,7 @@ function _mcRenderAdv(){
       <span class="mono" style="font-size:13px;color:var(--accent-2);font-weight:700">${totalTxt}</span>
     </div>
     <button onclick="_mcCloseAdv()" class="btn btn-ghost" style="width:100%;margin-top:14px">Terminé</button>`;
-  const ta=document.getElementById('mcPromptTa'); if(ta) ta.value=window._mcPrompt||'';
+  window._mcPrompt='';   // champ « Instructions » retiré (Axel 10/10) : le prompt de mouvement maison s'applique toujours
 }
 
 /* ── Motion Control · « Remplacer l'audio » (Axel 08-09/10, ex « Cloner l'audio de la vidéo ») ──────────────────────
@@ -32879,7 +32899,7 @@ async function _mcGenerate(){
     // constaté le 15/08). On matérialise donc l'option : une frame de la vidéo
     // de réf sert de fond (sa personne effacée), le perso est incrusté dessus.
     let charUrl = si.data.signedUrl;
-    let bgSrc = window._mcBgB64 || null, bgDeVid = false;
+    let bgSrc = window._mcFondVideo ? null : (window._mcBgB64 || null), bgDeVid = false;   // fond de la vidéo gardé : aucun fond perso
     // LOT MC · frame de la réf DÉJÀ nettoyée (personne effacée par gpt-image) — le
     // pipeline « fond vidéo » d'après-Kling la RÉUTILISE comme patch statique
     // (assets/bgclean.jpg du worker) : zéro second appel gpt-image.
@@ -32922,7 +32942,7 @@ async function _mcGenerate(){
     // « Suivi de la caméra » et « garder le fond de la vidéo » n'existent pas en
     // paramètres Kling (schéma fal : image/video/prompt/orientation/son) — ils
     // se pilotent par le PROMPT. Le fond par défaut reste celui de l'IMAGE.
-    const _mcBgTxt = window._mcKeepVidBg
+    const _mcBgTxt = (window._mcKeepVidBg || (window._mcFondVideo && tier==='pro'))
       ? ' Keep the EXACT same background, scene and environment as the REFERENCE VIDEO: only replace the person with the provided character — everything behind them stays identical to the original video.'
       : ' Keep the EXACT same background, scene and environment as the provided image: do not change, replace, blur, crop out or regenerate anything behind the character — the decor must stay identical.';
     const _mcCamTxt = window._mcCamFollow
@@ -33000,7 +33020,7 @@ async function _mcGenerate(){
         try{
           const _r = await _kieRun(ver==='v3' ? 'kling-3.0-mc' : 'kling-2.6-mc',
             { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId).slice(0,2400),
-              mode: (tier==='pro' || q==='1080') ? '1080p' : '720p', background_source:'input_image' },
+              mode: (tier==='pro' || q==='1080') ? '1080p' : '720p', background_source:(window._mcFondVideo && ver==='v3') ? 'input_video' : 'input_image' },
             { every:4000, maxPolls:375, onTick:(i)=>_mcProg(i>75?('Génération en cours… ('+(_dv?'kie.ai':'le moteur')+' est chargé, ça arrive)'):('Génération en cours…'+(_dv?' (kie.ai)':'')), Math.min(88, 22+i*2)) });
           window._aaLastEngine='kie'; window._mcKieRid=_r.rid;
           return _r.url;
