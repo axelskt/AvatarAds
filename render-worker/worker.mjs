@@ -2217,7 +2217,9 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // style Musique : la piste est seule, elle est donc posée au niveau d'une vidéo (et non plus 4,5 dB sous une voix)
     if (pick && plan.__musique) {
       const lufs = pick.lufs != null ? pick.lufs : loudnessOf(pick.file)
-      if (lufs != null) pick.vol = Math.round(Math.min(1.6, Math.max(0.05, Math.pow(10, (MUSIC_SEULE_LUFS - lufs) / 20))) * 1000) / 1000
+      // mesure impossible : la piste reste PRÉSENTE (0,9) — jamais le volume « sous la voix » d'un montage parlé (−40 LUFS, 11/10)
+      pick.vol = lufs != null ? Math.round(Math.min(1.6, Math.max(0.05, Math.pow(10, (MUSIC_SEULE_LUFS - lufs) / 20))) * 1000) / 1000 : 0.9
+      console.log(`▶ style Musique : piste seule ${lufs == null ? '(niveau non mesuré)' : lufs.toFixed(1) + ' LUFS'} → vol ${pick.vol}`)
     }
     if (pick && existsSync(pick.file)) {
       // départ QUELCONQUE dans le morceau (pick.start) : ce sont des titres

@@ -18,7 +18,7 @@
 FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg ca-certificates fonts-liberation unzip \
+    ffmpeg ca-certificates curl fonts-liberation unzip \
     chromium \
     libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdrm2 libgbm1 libgtk-3-0 \
     libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 xdg-utils \
