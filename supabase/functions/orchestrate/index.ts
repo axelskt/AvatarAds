@@ -57,12 +57,14 @@ const BUDGET_MS = 148_000
 // arrière-plan (EdgeRuntime.waitUntil) — il ne dépend plus de la coupure de 160 s de la requête. Budget du travail de
 // fond : sous la limite d'horloge d'une fonction (400 s en plan payant).
 const BUDGET_ASYNC_MS = 330_000
-// RÉFLEXION DU MONTAGE (réglage Rapide / Moyen / Élevé de l'app) : modèle, effort et part « plan » prélevée. Jamais de
-// nom de modèle côté client. En mode direct (sans tâche de fond, MCP), seul « rapide » tient dans le budget.
+// RÉFLEXION DU MONTAGE (curseur Faible / Moyen / Élevé de l'app, clé « rapide » = Faible) : modèle, effort et part « plan »
+// prélevée = le prix ENTIER du niveau (app : 2 / 5 / 10, Axel 10/10) ; le rendu est payé par une autre op (habillage) ou le
+// reste de l'op. Jamais de nom de modèle côté client. En mode direct (sans tâche de fond, MCP), seul « rapide » tient dans
+// le budget : il tire 2 sur montageIA (8), le reste (6) paie le rendu.
 const NIVEAUX: Record<string, { modele: string; effort: string; coutPlan: number }> = {
   rapide: { modele: CLAUDE_MODEL, effort: 'low', coutPlan: 2 },
-  moyen: { modele: CLAUDE_MODEL, effort: 'medium', coutPlan: 2 },
-  eleve: { modele: 'claude-opus-5-5', effort: 'high', coutPlan: 6 },
+  moyen: { modele: CLAUDE_MODEL, effort: 'medium', coutPlan: 5 },
+  eleve: { modele: 'claude-opus-5-5', effort: 'high', coutPlan: 10 },
 }
 // échéance PROPRE À LA REQUÊTE (un isolat peut servir deux montages à la fois) : passée à chaque étape
 const reste = (fin: number) => fin - Date.now()
@@ -2697,8 +2699,8 @@ async function traiter(req: Request, budgetMs = BUDGET_MS): Promise<Response> {
     // niveau de réflexion : demandé par l'app ; en direct, seul « rapide » tient dans les 160 s
     const _nivDemande = String(form.get('niveau') || '').toLowerCase()
     const niveau = !_fond ? 'rapide' : (NIVEAUX[_nivDemande] ? _nivDemande : 'moyen')
-    // Tirage du coût-plan (2 cr, 6 en « élevé ») sur l'op montageIA, AVANT Scribe/Claude. spend(1) → réserve 1 < 2 → 402.
-    // Le reste (montageIA − coût-plan, ≥ 4) demeure tirable pour render-job (resolve_op retient une op réglée à réserve>0).
+    // Tirage du coût-plan (2 en direct ; 2 / 5 / 10 selon la réflexion en tâche de fond) sur l'op du montage, AVANT Scribe/Claude.
+    // Le reste éventuel demeure tirable pour render-job ; en tâche de fond, le rendu a sa propre op (habillage ou niveau + 4).
     if (_auth.userId) {
       const _rr = await applyReservation({ req, userId: _auth.userId, proxy: 'orchestrate', cost: NIVEAUX[niveau].coutPlan, label: 'plan' })
       if (!_rr.ok) return json({ error: _rr.error }, _rr.status)

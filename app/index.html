@@ -6471,9 +6471,10 @@ const CREDIT_COSTS = {
   // crédit le moins cher (Élite90, 0,068 €) : 0,55 € encaissés, ×4. Les tarifs
   // lipsync à la seconde : avatarPerSec 2 (depuis le 23/08, coût 1080p), omniPerSec 5.
   montageIA: 8,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
-  // réflexion du montage (Paramètres avancés) : le prix suit le niveau — Moyen = montageIA. Orchestrate prélève 2 (6 en
-  // Élevé) pour le plan ; render-job tire le reste (4 au moins)
-  montageNiveau: { rapide: 6, moyen: 8, eleve: 12 },
+  // réflexion du montage (Axel 10/10 : Faible 2 · Moyen 5 · Élevé 10) : ce prix paie le CHEF seul (orchestrate le tire
+  // entier). Le rendu se paie à part, jamais moins de montageRender (plancher serveur RENDU_MONTAGE_MIN) : avec avatar,
+  // le lipsync à la seconde + 1 cr/s pour le reste ; avec sa vidéo, montageRender fixe (_mtCoutLance).
+  montageNiveau: { rapide: 2, moyen: 5, eleve: 10 },
   // 📐 QUALITÉ DE GÉNÉRATION — le 1080p se paie à la seconde (720p gratuit).
   // Avant le 03/08 c'était +2 crédits forfaitaires, et surtout ce bouton ne
   // réglait QUE l'encodeur du navigateur : la génération Hedra partait en 1080p
@@ -13607,12 +13608,15 @@ const MZ_VSTYLE = [   // maquette 09/10 : Auto · Apple · Sombre premium · Liq
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
   subPos:'bas', subSize:'M', music:'auto', rhythm:'auto', transitions:'cut', broll:3, avatarDens:2, punch:true, sfx:true, motion:'gestures', niveau:'moyen' }; }
 // prix du montage selon la réflexion choisie (jamais de nom de modèle affiché)
-const MZ_NIVEAU = [['rapide','Rapide','le plus court'],['moyen','Moyen','équilibré'],['eleve','Élevé','le plus soigné']];
+// curseur à 3 crans (Axel 10/10) ; la clé « rapide » reste celle du serveur, le libellé dit « Faible »
+const MZ_NIVEAU = [['rapide','Faible','analyse la plus rapide'],['moyen','Moyen','équilibré'],['eleve','Élevé','le plus soigné, analyse plus longue']];
 // Chef en tâche de fond + réflexion : d'abord sur le compte d'Axel (owner / developer) le temps de le valider sur de vrais
 // montages ; passer MT_FOND_POUR_TOUS à true l'ouvre à tous. Sans lui : appel direct d'avant, réflexion « rapide », prix de base.
 const MT_FOND_POUR_TOUS = false;
 function _mtFond(){ return MT_FOND_POUR_TOUS || !!(typeof currentMember!=='undefined' && currentMember && (currentMember.is_owner || String(currentMember.plan||'').toLowerCase()==='developer')); }
 function _mtNiveau(){ const n=(_mt && _mt.adv && _mt.adv.niveau) || 'moyen'; return CREDIT_COSTS.montageNiveau[n] ? n : 'moyen'; }
+// avec SA vidéo (pas de lipsync) : le niveau + le rendu, sur UNE op (le chef tire le niveau, render-job le reste ≥ 4)
+function _mtCoutLance(){ return _mtFond() ? _mtCoutMontage() + CREDIT_COSTS.montageRender : CREDIT_COSTS.montageIA; }
 function _mtMusique(){ return ((_mt && _mt.adv) || {}).vstyle === 'musique'; }
 function _mtCoutMontage(){ return _mtFond() ? (CREDIT_COSTS.montageNiveau[_mtNiveau()] || CREDIT_COSTS.montageIA) : CREDIT_COSTS.montageIA; }
 // ── LE CHEF D'ORCHESTRE EN TÂCHE DE FOND (10/10) ────────────────────────────
@@ -13743,15 +13747,27 @@ function mzAdvRender(){
   }).join('');
   // réflexion du montage : plus elle est poussée, plus le plan est soigné et plus l'analyse est longue
   const ng=document.getElementById('mzNiveauGrid');
-  { const lbl=ng && ng.previousElementSibling; const vis=_mtFond(); if(ng) ng.style.display=vis?'grid':'none'; if(lbl && lbl.classList.contains('mz-lbl')) lbl.style.display=vis?'':'none'; }
-  if(ng && _mtFond()) ng.innerHTML = MZ_NIVEAU.map(([v,l,sub])=>{
-    const on=_mtNiveau()===v;
-    return '<button type="button" onclick="mzAdvSet(\'niveau\',\''+v+'\');_mtUpdateCost()" style="display:flex;flex-direction:column;gap:3px;padding:11px 12px;border-radius:14px;text-align:left;cursor:pointer;font-family:var(--font);color:var(--text);'
-      +'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:var(--surface)">'
-      +'<span class="row" style="justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">'+l+'</span>'+(on?'<span style="color:var(--accent-2);display:flex">'+ck+'</span>':'')+'</span>'
-      +'<span class="faint" style="font-size:11px">'+sub+'</span>'
-      +'<span class="mono" style="font-size:10.5px;color:var(--text-2)">'+CREDIT_COSTS.montageNiveau[v]+' crédits</span></button>';
-  }).join('');
+  { const lbl=ng && ng.previousElementSibling; const vis=_mtFond(); if(ng) ng.style.display=vis?'block':'none'; if(lbl && lbl.classList.contains('mz-lbl')) lbl.style.display=vis?'':'none'; }
+  if(ng && _mtFond()){
+    const i=Math.max(0, MZ_NIVEAU.findIndex(x=>x[0]===_mtNiveau()));
+    ng.innerHTML = '<div style="padding:14px 14px 12px;border:1px solid var(--border);border-radius:14px;background:var(--surface)">'
+      +'<div class="row" style="justify-content:space-between;align-items:baseline;margin-bottom:12px"><span id="mzNivLbl" style="font-weight:700;font-size:14px"></span>'
+      +'<span id="mzNivPrix" class="mono" style="font-size:11px;color:var(--text-2)"></span></div>'
+      +'<input type="range" id="mzNivSlider" class="aa-slider" min="0" max="2" step="1" value="'+i+'" oninput="mzNiveauSlide(this)" aria-label="Réflexion du montage" style="width:100%">'
+      +'<div class="row faint" style="justify-content:space-between;margin-top:8px;font-size:11px">'+MZ_NIVEAU.map(x=>'<span>'+x[1]+'</span>').join('')+'</div>'
+      +'<div id="mzNivSub" class="faint" style="font-size:11px;margin-top:6px"></div></div>';
+    mzNiveauSlide(document.getElementById('mzNivSlider'));
+  }
+}
+// le curseur ne re-dessine pas la fenêtre (un innerHTML pendant le glisser casserait le geste) : libellé, prix, remplissage
+function mzNiveauSlide(el){
+  if(!el) return;
+  const n=MZ_NIVEAU[Math.max(0, Math.min(2, +el.value||0))];
+  _mt.adv.niveau=n[0];
+  const l=document.getElementById('mzNivLbl'), p=document.getElementById('mzNivPrix'), sub=document.getElementById('mzNivSub');
+  if(l) l.textContent=n[1]; if(p) p.textContent=CREDIT_COSTS.montageNiveau[n[0]]+' crédits'; if(sub) sub.textContent=n[2];
+  _aaSliderFill(el);
+  try{ _mtUpdateCost(); }catch(_){}
 }
 function mzAdvSummary(){
   const el=document.getElementById('mzAdvSum'); if(!el) return;
@@ -14559,13 +14575,13 @@ function _mtUpdateCost(){
   try{ _mtOptSync(); }catch(_){}
   const b=document.getElementById('mtGoLbl'); if(!b) return;
   // sans avatar : « Ma vidéo » suit la réflexion choisie ; l'audio seul passe par l'Éditeur (réflexion Rapide, prix de base)
-  if(!(_mt.src==='gameplay' && _mt.avatar)){ const _c = (_mt.src==='mavideo' || _mt.video) ? _mtCoutMontage() : CREDIT_COSTS.montageIA; window._mtPrixTexte = _c + ' crédits'; window._mtPrixMin = window._mtPrixMax = 0; b.textContent = 'Créer ma vidéo — ' + _c + ' crédits'; return; }
+  if(!(_mt.src==='gameplay' && _mt.avatar)){ const _c = (_mt.src==='mavideo' || _mt.video) ? _mtCoutLance() : CREDIT_COSTS.montageIA; window._mtPrixTexte = _c + ' crédits'; window._mtPrixMin = window._mtPrixMax = 0; b.textContent = 'Créer ma vidéo — ' + _c + ' crédits'; return; }
   // Axel 09/10 : JAMAIS le nom du modèle sur le bouton (ni ailleurs côté client) — on parle de l'avatar, pas de la techno.
   const omni=_mt.lipModel==='omnihuman', mix=_mt.lipModel==='mix';
   const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
   // style Musique : la voix est coupée, l'avatar ne parle donc jamais (aucune scène lipsync) — prix fixe
   if(_mtMusique() && _mt.mp3Dur){
-    const c=Math.ceil(_mtCoutMontage() + _mt.mp3Dur*CREDIT_COSTS.hyperframesPerSec);
+    const c=Math.ceil(_mtCoutMontage() + Math.max(_mtFond() ? CREDIT_COSTS.montageRender : 0, _mt.mp3Dur*CREDIT_COSTS.hyperframesPerSec));
     window._mtPrixMin = window._mtPrixMax = c; window._mtSecMax = 0; window._mtPrixTexte = c+' crédits';
     b.textContent = 'Créer ma vidéo — '+c+' crédits'; return;
   }
@@ -14577,9 +14593,11 @@ function _mtUpdateCost(){
     const lo=Math.min(6, Math.max(2, Math.round(dur*0.18)));   // au mieux : le hook seul
     const hi=Math.min(10, Math.max(lo+2, Math.round(dur*0.42))); // au pire : plusieurs scènes
     const _hook=Math.min(6, Math.max(2, Math.round(dur*0.18))); // Mix : le hook au tarif avatar haute qualité, le reste au tarif avatar
+    // le reste (habillage) paie le rendu : jamais sous montageRender avec la réflexion réglable (le niveau ne paie que le chef)
+    const reste=(sec)=>Math.max(_mtFond() ? CREDIT_COSTS.montageRender : 0, Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec);
     const cost=(sec)=> mix
-      ? Math.ceil(_mtCoutMontage() + Math.min(sec,_hook)*CREDIT_COSTS.omniPerSec + Math.max(0,sec-_hook)*CREDIT_COSTS.avatarPerSec + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec)
-      : Math.ceil(_mtCoutMontage() + sec*rate + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec);
+      ? Math.ceil(_mtCoutMontage() + Math.min(sec,_hook)*CREDIT_COSTS.omniPerSec + Math.max(0,sec-_hook)*CREDIT_COSTS.avatarPerSec + reste(sec))
+      : Math.ceil(_mtCoutMontage() + sec*rate + reste(sec));
     const cLo=cost(lo), cHi=cost(hi);
     window._mtPrixMax = cHi; window._mtPrixMin = cLo; window._mtSecMax = hi;   // le haut annoncé : au-delà, le flux demande confirmation avant de débiter les scènes
     window._mtPrixTexte = (cLo===cHi ? cLo+' crédits' : cLo+' à '+cHi+' crédits');
@@ -16233,7 +16251,8 @@ async function _mtSegmentedGenerate(){
       }
     }
     const opsScenes=prep.reduce((a,x)=>a+x.op, 0);
-    const habillage=Math.max(0, scenesCost - opsScenes);
+    // réflexion réglable : le niveau ne paie que le chef → l'habillage paie le rendu et porte le plancher du serveur
+    const habillage=Math.max(_mtFond() ? CREDIT_COSTS.montageRender : 0, scenesCost - opsScenes);
     const _illimite = !!(currentMember && (String(currentMember.plan||'').toLowerCase()==='developer' || currentMember.is_owner));
     const recadrages = _illimite ? 0 : await _mtRecadragesAPayer(segs);
     if(!_illimite && creditsBalance() < opsScenes + habillage + recadrages){
@@ -16308,7 +16327,8 @@ async function _mtSegmentedGenerate(){
     // 7) render-job → poll → download
     _mtProg(92, 'Rendu final sur le serveur… (1 à 3 min)');
     // ops DÉSIGNÉES (relecture 26/09) : le montage paie le rendu, l'habillage est tiré avec lui — jamais une op de scène
-    const _ops = _opMontage ? [_opMontage, _opHabillage].filter(Boolean) : [];
+    // réflexion réglable : l'op du montage est vide (le chef l'a tirée entière) → c'est l'habillage qui paie le rendu (op principale)
+    const _ops = _opMontage ? (_mtFond() && _opHabillage ? [_opHabillage, _opMontage] : [_opMontage, _opHabillage]).filter(Boolean) : [];
     if(_annule()){ await _sortieAnnulee(); return; }
     _mtBoutonRendu('envoi');   // à partir d'ici, le serveur tire les crédits : plus d'« Annuler »
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan, input_video:inPath, assets, avatar_clips, ops:_ops }) });
@@ -16401,7 +16421,7 @@ async function _mtVideoGenerate(){
     if(_dv > 90.5){ toast('Vidéo trop longue ('+Math.round(_dv)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis-la ou découpe-la en plusieurs vidéos.'); return; }
     if(_mt.video.size > 19.5 * 1024 * 1024){ toast("Ta vidéo dépasse 20 Mo. Réexporte-la plus légère (720p suffit) ou raccourcis-la : au-delà, l'analyse ne passe pas."); return; } }
   window._mtRunId=(window._mtRunId||0)+1; const _run=window._mtRunId;
-  if(!(await spendCreditsFor(_mtCoutMontage(), 'montage IA'))) return;
+  if(!(await spendCreditsFor(_mtCoutLance(), 'montage IA'))) return;
   const _opMontage = window._aaLastSpendOp || null;
   window._mtAborted = false;   // un nouveau montage n'hérite pas de l'annulation du précédent
   const _annule=()=>window._mtAborted || _run!==window._mtRunId;
@@ -16710,7 +16730,7 @@ function _mtReviewBack(){ _mtVideoDone(_mtFinalUrl); }
 // lipsync existants comme le fait la régénération (l'audio ne change pas).
 // audit 10/10 : la relance repasse par TOUT le montage (chef + rendu, et les scènes avatar) — on annonce le vrai prix de base
 // la relance repasse par le flux complet (mtGo) : même prix que le bouton principal, scènes de l'avatar comprises (audit 10/10)
-function _mtReviewCost(){ try{ _mtUpdateCost(); }catch(_){} return window._mtPrixTexte || (_mtCoutMontage() + ' crédits'); }
+function _mtReviewCost(){ try{ _mtUpdateCost(); }catch(_){} return window._mtPrixTexte || (_mtCoutLance() + ' crédits'); }
 function _mtReviewEyebrow(t){
   return '<div class="mono" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px">'+t+'</div>';
 }
@@ -43368,7 +43388,7 @@ window.mPreviewClose=function(){
         <div id="mzStyleGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px"></div>
 
         <div class="mz-lbl">Réflexion du montage</div>
-        <div id="mzNiveauGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px"></div>
+        <div id="mzNiveauGrid" style="margin-bottom:24px"></div>
 
         <button type="button" class="btn btn-primary" onclick="mzAdvClose()" style="width:100%;padding:14px;font-weight:800;font-size:15px;border-radius:14px">Appliquer</button>
       </div>
