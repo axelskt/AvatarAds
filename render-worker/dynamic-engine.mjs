@@ -1638,6 +1638,9 @@ export function buildDynamicComposition(plan, opts = {}) {
       const panClair = !surEcran && pan && pan.kind !== 'avclip'
         && (pan.kind === 'media' || pan.kind === 'medias' || panels.indexOf(pan) % 2 === 1)
       g.sombre = slam ? true : ap ? (!pan || pan.kind === 'avclip' || surEcran) : !panClair
+      // un groupe qui DÉBORDE sur le visage reste blanc (audit 10/10 : « danser ton influenceuse » en encre foncée
+      // sur la photo, illisible) — le milieu du groupe ne suffit pas à dire sur quoi il est posé
+      if (!g.sombre && panels.some((p) => p.kind === 'avclip' && p.t0 < b - 0.05 && p.t1 > a + 0.05)) g.sombre = true
       // l'ancre est celle de la PHRASE (v17) : tous les groupes d'une même phrase
       // s'accumulent au même endroit — c'est la phrase suivante qui se déplace.
       // Un panneau au-dessus → ancres basses seulement ; visage plein cadre → tout.
@@ -1664,7 +1667,9 @@ export function buildDynamicComposition(plan, opts = {}) {
       g.mode = ((g.sIdx ?? 0) * 2 + i) % 6
       const dedans = g.mots.map((w, k) => {
         const bare = normAcc(w.text)
-        const cls = ACCFORTS.has(bare) ? ' acc' : (STOPW.has(bare) ? ' sm' : '')
+        // un mot fort TRÈS long (« FONCTIONNALITÉS ») à 1,78 em sortait du cadre, sous les boutons TikTok : il garde
+        // sa couleur mais rétrécit (audit 10/10)
+        const cls = ACCFORTS.has(bare) ? (bare.length >= 10 ? ' acc lg' : ' acc') : (STOPW.has(bare) ? ' sm' : (bare.length >= 13 ? ' lg' : ''))
         // l'escalier de la réf ne touche PAS au hook (hk15 validé tel quel)
         const off = g.hook ? '' : ` style="vertical-align:${OFFS[(i + k) % OFFS.length]}em"`
         // sans ponctuation (« IA, » → « IA »), comme en Production — la coupe des
@@ -1928,11 +1933,14 @@ ${GSAP_SCRIPT}
      Le halo seul manquait de tenue : sur un fond clair il bavait, sur une photo
      il se noyait. Une pastille pleine se pose sur n'importe quel arrière-plan,
      assume sa présence, et laisse le mot prononcé ressortir vraiment. */
+  /* ZONE SÛRE DROITE (audit 10/10) : TikTok couvre ~20 % à droite (j'aime, commentaires) — le centre des sous-titres
+     glisse vers la gauche et l'ancre « droite » s'arrête avant la colonne de boutons */
   .dyncap { position:absolute; left:0; width:${W}px; text-align:center;
+    padding-right:${slam ? 0 : Math.round(W * 0.1)}px;
     z-index:60; pointer-events:none; box-sizing:border-box; }
   /* l'ancre change à chaque groupe (réf) : gauche / droite / centre */
   .dyncap.dc-al { text-align:left; padding-left:${Math.round(W * 0.09)}px; }
-  .dyncap.dc-ar { text-align:right; padding-right:${Math.round(W * 0.09)}px; }
+  .dyncap.dc-ar { text-align:right; padding-right:${Math.round(W * 0.21)}px; }
   /* #124 · mots géants (réf ssstik) : l'accent devient un plan à lui seul */
   .gwcap { position:absolute; left:0; width:${W}px; top:${Math.round(H * 0.335)}px;
     text-align:center; z-index:65; pointer-events:none; }
@@ -1945,7 +1953,7 @@ ${GSAP_SCRIPT}
      prends la vidéo comme modèle ») : PLUS DE PILULE. Le modèle docu — texte
      blanc très gras posé À MÊME l'image, ombre portée douce, casse naturelle,
      l'accent en couleur et plus gros. */
-  .dc-p { display:inline-block; max-width:${Math.round(W * (slam ? 0.72 : 0.86))}px;
+  .dc-p { display:inline-block; max-width:${Math.round(W * (slam ? 0.72 : 0.74))}px;
     background:transparent; box-shadow:none; padding:0;
     font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.024em;
     font-size:${Math.round(H * 0.040)}px; line-height:1.06; color:#FFFFFF;
@@ -1961,6 +1969,8 @@ ${GSAP_SCRIPT}
      pas juste plus gros). Marche sur panneau sombre ET clair. Slam = jaune + un poil
      plus grand pour le « slam ». */
   .dc-p:not(.dc-hook) .dc-w.acc { font-size:${slam ? '1.7em' : '1.78em'}; font-weight:900; letter-spacing:-.035em; color:${accCol}; }
+  .dc-p:not(.dc-hook) .dc-w.acc.lg { font-size:1.22em; }
+  .dc-p:not(.dc-hook) .dc-w.lg:not(.acc) { font-size:.86em; }
   /* sur un panneau CLAIR : encre sombre, ombre claire discrète */
   .dc-clair { background:transparent; color:#17171C;
     text-shadow:0 ${Math.round(H * 0.0014)}px ${Math.round(H * 0.005)}px rgba(255,255,255,.6),

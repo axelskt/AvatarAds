@@ -53,6 +53,17 @@ const CLAUDE_MODEL = 'claude-sonnet-5-5'
 // et un dépassement NOMME l'étape fautive. Les étapes facultatives (relecture,
 // rattrapage) sont simplement sautées ; les indispensables échouent proprement.
 const BUDGET_MS = 148_000
+// CHEF EN TÂCHE DE FOND (Axel 09/10, point 6) : l'appel répond tout de suite par un job_id et le travail continue en
+// arrière-plan (EdgeRuntime.waitUntil) — il ne dépend plus de la coupure de 160 s de la requête. Budget du travail de
+// fond : sous la limite d'horloge d'une fonction (400 s en plan payant).
+const BUDGET_ASYNC_MS = 330_000
+// RÉFLEXION DU MONTAGE (réglage Rapide / Moyen / Élevé de l'app) : modèle, effort et part « plan » prélevée. Jamais de
+// nom de modèle côté client. En mode direct (sans tâche de fond, MCP), seul « rapide » tient dans le budget.
+const NIVEAUX: Record<string, { modele: string; effort: string; coutPlan: number }> = {
+  rapide: { modele: CLAUDE_MODEL, effort: 'low', coutPlan: 2 },
+  moyen: { modele: CLAUDE_MODEL, effort: 'medium', coutPlan: 2 },
+  eleve: { modele: 'claude-opus-5-5', effort: 'high', coutPlan: 6 },
+}
 // échéance PROPRE À LA REQUÊTE (un isolat peut servir deux montages à la fois) : passée à chaque étape
 const reste = (fin: number) => fin - Date.now()
 function delai(ms: number): AbortSignal { return AbortSignal.timeout(Math.max(1000, Math.floor(ms))) }
@@ -798,7 +809,9 @@ async function claudePlan(
   memory: string,
   style = '',
   fin = Date.now() + BUDGET_MS,
+  niveau = 'rapide',
 ): Promise<{ plan: Plan; usage: unknown }> {
+  const reglage = NIVEAUX[niveau] || NIVEAUX.rapide
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
 
@@ -1233,8 +1246,8 @@ Analyse d'abord la video, puis genere le plan de montage.`,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 16000,
+      model: reglage.modele,
+      max_tokens: niveau === 'rapide' ? 16000 : 32000,
       thinking: { type: 'adaptive' },
       // effort BAS : 88 % des tokens produits etaient du raisonnement interne
       // (11 999 sur 13 581 mesures), ce qui faisait depasser le budget de 150 s de
@@ -1242,7 +1255,7 @@ Analyse d'abord la video, puis genere le plan de montage.`,
       // cadence et les verrous sont deterministes cote serveur : le modele n a plus
       // qu a designer les mots forts, ce qui ne demande pas une longue deliberation.
       output_config: {
-        effort: 'low',
+        effort: reglage.effort,
         format: { type: 'json_schema', schema: PLAN_SCHEMA },
       },
       system,
@@ -2627,8 +2640,9 @@ function buildCaptions(words: Word[], accents: string[], duration: number) {
 }
 
 // ---------- handler ----------
-serve(async (req: Request) => {
-  const _fin = Date.now() + BUDGET_MS   // échéance de CETTE requête (Supabase coupe à 160 s)
+async function traiter(req: Request, budgetMs = BUDGET_MS): Promise<Response> {
+  const _fin = Date.now() + budgetMs   // échéance de CE travail (requête directe : Supabase coupe à 160 s)
+  const _fond = budgetMs > BUDGET_MS
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST uniquement' }, 405)
 
@@ -2652,6 +2666,7 @@ serve(async (req: Request) => {
   let _opId: string | undefined
   let _drew = false
   let _settled = false
+  let _coutTire = 2
 
   try {
     // CHRONO (09/10) : la fonction est coupée à 160 s sans rien dire — chaque étape externe
@@ -2672,12 +2687,15 @@ serve(async (req: Request) => {
     const duration = clamp(Number(form.get('duration')) || 0, 1, MAX_DURATION)
     if (!duration) return json({ error: 'Champ "duration" manquant' }, 400)
 
-    // Tirage du coût-plan (2 cr) sur l'op montageIA, AVANT Scribe/Claude. spend(1) → réserve 1 < 2 → 402 (oracle fermé).
-    // Le reste (montageIA=8 − 2 = 6) demeure tirable pour render-job (resolve_op retient une op réglée à réserve>0).
+    // niveau de réflexion : demandé par l'app ; en direct, seul « rapide » tient dans les 160 s
+    const _nivDemande = String(form.get('niveau') || '').toLowerCase()
+    const niveau = !_fond ? 'rapide' : (NIVEAUX[_nivDemande] ? _nivDemande : 'moyen')
+    // Tirage du coût-plan (2 cr, 6 en « élevé ») sur l'op montageIA, AVANT Scribe/Claude. spend(1) → réserve 1 < 2 → 402.
+    // Le reste (montageIA − coût-plan, ≥ 4) demeure tirable pour render-job (resolve_op retient une op réglée à réserve>0).
     if (_auth.userId) {
-      const _rr = await applyReservation({ req, userId: _auth.userId, proxy: 'orchestrate', cost: 2, label: 'plan' })
+      const _rr = await applyReservation({ req, userId: _auth.userId, proxy: 'orchestrate', cost: NIVEAUX[niveau].coutPlan, label: 'plan' })
       if (!_rr.ok) return json({ error: _rr.error }, _rr.status)
-      _opId = _rr.opId; _drew = true
+      _opId = _rr.opId; _drew = true; _coutTire = NIVEAUX[niveau].coutPlan
     }
 
     const script = String(form.get('script') || '').trim().slice(0, 4000) || null
@@ -2777,7 +2795,7 @@ serve(async (req: Request) => {
 
     // 4. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
     const style = String(options.style || options.vstyle || '').toLowerCase().slice(0, 20)
-    const { plan: rawPlan, usage } = await claudePlan(duration, motsRelus, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text, style, _fin)
+    const { plan: rawPlan, usage } = await claudePlan(duration, motsRelus, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text, style, _fin, niveau)
     _chrono(`plan (${JSON.stringify(usage || {}).slice(0, 160)})`)
 
     // 5. bornes/cohérence côté serveur — la mémoire compte comme du fourni :
@@ -2916,6 +2934,45 @@ serve(async (req: Request) => {
     return json({ error: String((err as Error)?.message || err).slice(0, 300) }, 500)
   } finally {
     // Échec APRÈS le tirage (Scribe/Claude KO, 422, exception) sans règlement → on REND les 2 cr tirés (op remboursable).
-    if (_drew && !_settled && _auth.userId && _opId) { try { await releaseOp(_auth.userId, _opId, 2) } catch { /* best-effort */ } }
+    if (_drew && !_settled && _auth.userId && _opId) { try { await releaseOp(_auth.userId, _opId, _coutTire) } catch { /* best-effort */ } }
   }
+}
+
+// ── POINT D'ENTRÉE ───────────────────────────────────────────────────────────
+// En-tête « x-aa-async: 1 » (l'app) : le travail part en tâche de fond et la réponse donne un job_id tout de suite ;
+// l'app suit la ligne orchestrate_jobs (RLS : ses lignes seulement). Sans l'en-tête (MCP, anciens clients) : comme avant,
+// une requête directe. Le MÊME traitement tourne dans les deux cas — seuls le budget et la livraison changent.
+serve(async (req: Request) => {
+  if (req.method === 'POST' && req.headers.get('x-aa-async') === '1') {
+    const auth = await authUser(req)
+    if (!auth.isService && !auth.userId) { await lacherCorps(req); return json({ error: 'unauthorized' }, 401) }
+    const ru = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime
+    if (ru && typeof ru.waitUntil === 'function') {
+      // le corps est lu MAINTENANT : la requête d'origine se termine avec la réponse
+      const corps = await req.arrayBuffer()
+      const copie = new Request(req.url, { method: 'POST', headers: req.headers, body: corps })
+      const svcJobs = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+      const { data: job, error: jErr } = await svcJobs.from('orchestrate_jobs')
+        .insert({ user_id: auth.userId || null, status: 'running' }).select('id').single()
+      if (!jErr && job) {
+        // ménage : ses lignes de plus de 2 jours (le résultat n'a servi qu'au lancement)
+        if (auth.userId) svcJobs.from('orchestrate_jobs').delete().eq('user_id', auth.userId).lt('created_at', new Date(Date.now() - 2 * 86_400_000).toISOString()).then(() => {}, () => {})
+        const travail = (async () => {
+          let statut = 'failed', resultat: unknown = null, erreur = ''
+          try {
+            const rep = await traiter(copie, BUDGET_ASYNC_MS)
+            resultat = await rep.json().catch(() => null)
+            const r = resultat as { ok?: boolean; error?: string } | null
+            if (rep.ok && r && r.ok) statut = 'done'; else erreur = String((r && r.error) || 'HTTP ' + rep.status).slice(0, 300)
+          } catch (e) { erreur = String((e as Error)?.message || e).slice(0, 300) }
+          await svcJobs.from('orchestrate_jobs').update({ status: statut, result: resultat, error: erreur || null, updated_at: new Date().toISOString() }).eq('id', job.id)
+        })()
+        ru.waitUntil(travail)
+        return json({ ok: true, async: true, job_id: job.id })
+      }
+      // table absente / erreur : on traite en direct la copie (le corps est déjà lu)
+      return traiter(copie, BUDGET_MS)
+    }
+  }
+  return traiter(req, BUDGET_MS)
 })
