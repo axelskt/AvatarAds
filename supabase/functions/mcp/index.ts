@@ -110,7 +110,7 @@ const MONTAGE_RENDER_COST = 4  // = montageRender (MP4 monté par le moteur de r
 // Mêmes styles que l'app (maquette 09/10 : Auto · Apple · Sombre premium · Mot par mot), Auto par défaut :
 // c'est lui qui porte les sous-titres Production (plan.capSkin). « dynamic » reste accepté (anciens appels) ;
 // « glass », « bientôt » dans l'app, retombe sur Auto comme dans l'app.
-const MONTAGE_STYLES      = ['auto', 'apple', 'slam', 'word', 'dynamic']
+const MONTAGE_STYLES      = ['auto', 'apple', 'slam', 'word', 'dynamic', 'musique']
 const MONTAGE_MAX_BYTES   = 20_000_000 // limite du chef d'orchestre
 // OmniHuman 1.5 (ByteDance via fal) — le moteur lipsync le plus réaliste (#107/#121)
 const OMNI_COST_SEC = 5
@@ -1276,7 +1276,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
               required: ['url'],
             },
           },
-          style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel, comme dans l'app : auto (défaut — l'IA choisit, avec les sous-titres et le texte choc du look Production), apple (fond clair, minimal), slam (sombre premium : fond noir, contrastes chauds), word (mot par mot sur page blanche), dynamic (motion design continu, sous-titres maison)." },
+          style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel, comme dans l'app : auto (défaut — l'IA choisit, avec les sous-titres et le texte choc du look Production), apple (fond clair, minimal), slam (sombre premium : fond noir, contrastes chauds), word (mot par mot sur page blanche), dynamic (motion design continu, sous-titres maison), musique (aucune voix au rendu : musique seule, 3 s de réaction du visage sous le texte choc, puis le texte à l'écran par phrases sur les visuels ; jamais de lipsync)." },
           brief: { type: 'string', description: "Optionnel — ce que l'utilisateur veut mettre en avant (intention, produit, CTA). 700 caractères max." },
           script: { type: 'string', description: 'Optionnel — texte EXACT du script parlé : garantit des sous-titres parfaits.' },
           duration_seconds: { type: 'number', description: "Optionnel — durée exacte de l'audio en secondes (sinon estimée automatiquement)." },
@@ -3996,7 +3996,8 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   // mêmes raisons de schéma en cache que [LIPSYNC] (voir plus bas). Audit 02/10 : aux droits du compte (modeleLipsyncAutorise)
   // — 'omnihuman' passait pour un Starter alors que lipsync_video le réserve à Pro / Élite ; MIX (Omni au hook + Hedra
   // ensuite) = propriétaire seul (Axel 23/08). Non autorisé ou inconnu → hedra, et la réponse le dit.
-  const veutLipsync = args.lipsync === true || /\[LIPSYNC\]/i.test(brief)
+  // style Musique : la voix est coupée au rendu — un visage qui parle sans voix ne se paie jamais
+  const veutLipsync = style !== 'musique' && (args.lipsync === true || /\[LIPSYNC\]/i.test(brief))
   let modeleLip = String(args.lipsync_model || (/\[MIX\]/i.test(brief) ? 'mix' : /\[OMNI\]/i.test(brief) ? 'omnihuman' : 'hedra')).toLowerCase()
   let lipRepli = ''
   if (!modeleLipsyncAutorise(profile, modeleLip)) {
@@ -4074,7 +4075,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       fd.append('duration', String(Math.round(durEst * 100) / 100))
       if (script) fd.append('script', script)
       if (brief) fd.append('brief', brief)
-      fd.append('options', JSON.stringify({ lang: 'fr', hasAvatar: !!avatarFile }))
+      fd.append('options', JSON.stringify({ lang: 'fr', hasAvatar: !!avatarFile, style }))   // le style choisit la fiche du chef (comme l'app)
       fd.append('user_id', userId)   // appel service : la mémoire de marque lue est celle de CE compte (et seulement elle)
       // le chef VOIT les médias (vision) et les place au moment que leur nom décrit
       if (medias.length) {

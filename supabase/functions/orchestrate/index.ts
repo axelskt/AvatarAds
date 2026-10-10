@@ -629,12 +629,13 @@ function chocRecopie(texte: string, premiere: string): boolean {
   for (let i = 0; i + 2 < h.length; i++) if ((' ' + p + ' ').includes(' ' + h.slice(i, i + 3).join(' ') + ' ')) return true
   return false
 }
-async function reecrireChoc(texte: string, words: { text: string; start: number }[], fin: number): Promise<string> {
+// `obligatoire` (style Musique : sans voix, le texte choc EST l'accroche) : sans texte proposé, on en écrit un.
+async function reecrireChoc(texte: string, words: { text: string; start: number }[], fin: number, obligatoire = false): Promise<string> {
   const ordre = words.slice().sort((a, b) => a.start - b.start).map((w) => String(w.text))
   let k = ordre.findIndex((w) => /[.!?]$/.test(w.trim()))
   if (k < 0 || k > 24) k = Math.min(ordre.length - 1, 15)
   const premiere = ordre.slice(0, k + 1).join(' ')
-  if (!texte || !chocRecopie(texte, premiere)) return texte
+  if (texte ? !chocRecopie(texte, premiere) : !obligatoire) return texte
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   // facultative et BRÈVE : elle ne doit jamais manger le budget du rattrapage des trous qui la suit
   if (!anthKey || reste(fin) < 35_000) return texte
@@ -648,7 +649,7 @@ async function reecrireChoc(texte: string, words: { text: string; start: number 
 Modèles de ton : « Ça devrait être interdit de montrer ça 😶 », « Pourquoi personne ne m'a montré ça avant ??? 😭 », « Mon cerveau a buggé la première fois que j'ai vu ça 🫠 ».
 Règles : il nomme le SUJET concret de la vidéo (pas « ça » tout seul) ; il ne reprend AUCUN groupe de 3 mots de la première phrase dite ; jamais un chiffre ni une promesse que la vidéo ne tient pas ; écriture naturelle (pas en capitales), 6 à 12 mots, 60 caractères max, 1 ou 2 emojis à la fin seulement.
 Réponds avec le texte seul, sur une ligne.`,
-      messages: [{ role: 'user', content: `Première phrase dite : « ${premiere} »\nDébut de la vidéo : « ${sujet} »\nTexte choc refusé (il recopie la voix) : « ${texte} »` }],
+      messages: [{ role: 'user', content: `Première phrase dite : « ${premiere} »\nDébut de la vidéo : « ${sujet} »\n` + (texte ? `Texte choc refusé (il recopie la voix) : « ${texte} »` : 'Aucun texte choc proposé : écris-le.') }],
     }),
     signal: delai(Math.min(6_000, reste(fin) - 25_000)),
   }).catch(() => null)
@@ -657,7 +658,7 @@ Réponds avec le texte seul, sur une ligne.`,
   const neuf = String((data?.content || []).map((c: { text?: string }) => c?.text || '').join(' '))
     .replace(/^[«"\s]+|[»"\s]+$/g, '').replace(/[|\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim()
   if (!neuf || Array.from(neuf).length > 72 || chocRecopie(neuf, premiere)) return texte
-  console.log(`▶ texte choc réécrit (il recopiait la 1re phrase) : « ${texte} » → « ${neuf} »`)
+  console.log(texte ? `▶ texte choc réécrit (il recopiait la 1re phrase) : « ${texte} » → « ${neuf} »` : `▶ texte choc écrit (style Musique) : « ${neuf} »`)
   return neuf
 }
 
@@ -791,6 +792,12 @@ const FICHES_STYLE: Record<string, string> = {
 2. Les motifs abstraits (champ motif) n'existent pas ici : laisse motif vide.
 3. Les images de l'utilisateur deviennent des cartes au-dessus du mot : place-les sur leur mention exacte.
 4. Le CTA final est la phrase entiere dite (« commente X et je te l'envoie ») : ne pose pas d'animation par-dessus.`,
+  musique: `STYLE MUSIQUE — FICHE (recette « texte + musique » de Production : AUCUNE voix au rendu).
+1. La voix sera COUPEE : seule la musique s'entend et le texte a l'ecran remplace la parole (affiche par phrases courtes). Garde des sous-titres fideles a ce qui est dit, sans rien ajouter.
+2. 0 -> 3 s = la REACTION : le visage seul, muet, sous le TEXTE CHOC. Aucune scene ni aucun media avant 3 s : le code les decale apres.
+3. Le texte choc (hook.text) est OBLIGATOIRE : la reaction de quelqu'un de choque qui donne envie de rester (« Pourquoi personne ne m'a montre ca avant ?? 😭 »), il nomme le sujet si possible et ne recopie jamais la 1re phrase dite. Le hook couvre 0 -> 3 s.
+4. Apres la reaction, les VISUELS portent tout : les images de l'utilisateur d'abord (2,5 a 4 s chacune, reutilise-les si tu en manques), puis une scene justifiee par le mot dit toutes les 2,5 a 3,5 s. Le visage ne revient que s'il n'y a vraiment rien d'autre (un visage qui parle sans voix se remarque).
+5. Le CTA final = la consigne exacte (« commente X ») : beat keyword avec X en valeur.`,
   dynamic: `STYLE DYNAMIQUE — FICHE (panneaux qui se poussent, visite guidee).
 1. Les etapes dans l'app (« va sur », « clique », « ecris ») sont une VISITE GUIDEE (tuto), jamais une animation abstraite.
 2. Un panneau toutes les 2 a 3,5 s, justifie par son mot ; le visage revient entre deux sequences.
@@ -2818,8 +2825,11 @@ async function traiter(req: Request, budgetMs = BUDGET_MS): Promise<Response> {
     // le verdict du rattrapage voyage dans la REPONSE, pas dans un log invisible :
     // sans ca, impossible de savoir s'il n'a rien comble parce qu'il a refuse ou
     // parce qu'il n'a jamais tourne.
-    if (plan.hook && plan.hook.text) {
-      try { plan.hook.text = await reecrireChoc(String(plan.hook.text), fixedWords, _fin) } catch (_) { /* facultatif */ }
+    // style Musique : la voix est coupée au rendu, la musique est la NÔTRE (même si l'audio en contenait une) et le texte
+    // choc est obligatoire — c'est lui qui porte la réaction des 3 premières secondes
+    if (style === 'musique') { plan.detected.music = false; if (!plan.hook) plan.hook = { text: '', start: 0, end: 3 } }
+    if (plan.hook && (plan.hook.text || style === 'musique')) {
+      try { plan.hook.text = await reecrireChoc(String(plan.hook.text || ''), fixedWords, _fin, style === 'musique') } catch (_) { /* facultatif */ }
       _chrono('choc')
     }
     const rattrapage: RapportRattrapage = { trous: [], propose: [], refus: [], pose: [] }

@@ -234,11 +234,23 @@ export function deriveClassicSlides(plan, opts = {}) {
   // visage + le texte choc. Une scène qui commence dedans démarre à la fin de
   // l'accroche si elle a encore de quoi vivre (≥ 1 s), sinon elle s'efface.
   // Ses médias à lui ne bougent pas. (Mot par mot n'a pas de visage.)
-  const hookEnd = r2(Number(plan.hook && plan.hook.text ? plan.hook.end : 0) || 0)
-  if (!word && hookEnd > 0.5 && (plan.avatarSegments || []).length) {
+  // Style Musique : la réaction (0 → 3 s) est TOUJOURS le visage seul, même sans texte choc ni fenêtre avatar
+  // déclarée, et ses médias à lui en sortent aussi (recette F05 : la réaction, puis la démo).
+  const musique = plan.slideStyle === 'musique'
+  const hookEnd = r2(Number(plan.hook && (plan.hook.text || musique) ? plan.hook.end : 0) || 0)
+  if (musique && hookEnd > 0.5) {
+    // un média fourni est toujours placé : il est DÉCALÉ après la réaction (2,3 s au moins), jamais retiré
+    for (const b of plan.broll || []) {
+      if ((b.start || 0) >= hookEnd - 0.05) continue
+      b.start = r2(hookEnd + 0.02)
+      b.end = r2(Math.min(Math.max(1, (Number(plan.duration) || 0) - 0.5), Math.max(b.end || 0, b.start + 2.3)))
+    }
+    plan.broll = (plan.broll || []).filter((b) => (b.end || 0) - (b.start || 0) >= 0.8)
+  }
+  if (!word && hookEnd > 0.5 && ((plan.avatarSegments || []).length || musique)) {
     let decales = 0, retires = 0
     fin = fin.filter((sl) => {
-      if (estUser(sl) || (sl.start || 0) >= hookEnd - 0.05) return true
+      if ((estUser(sl) && !musique) || (sl.start || 0) >= hookEnd - 0.05) return true
       if ((sl.end || 0) - hookEnd >= 1.0) { sl.start = r2(hookEnd + 0.02); decales++; return true }
       retires++; return false
     })

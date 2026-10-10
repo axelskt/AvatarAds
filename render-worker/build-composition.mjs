@@ -579,14 +579,19 @@ export function buildComposition(plan, opts = {}) {
   // sous-titre y est ENCRE : le blanc-sur-blanc du mode vidéo y est illisible.
   const pageMode = !!plan.pageMode
 
-  const caps = (plan.captions || []).map((c, i) => {
+  const capsSrc = plan.captions || []
+  const caps = capsSrc.map((c, i) => {
     const cream = pageMode || inFullScene(r2(c.start) + 0.05)
+    // une ponctuation transcrite comme un mot à part (« réseaux » puis « ? ») appartient au mot d'avant : c'est elle
+    // qui borne les phrases (moments clés, style Musique)
+    const suiv = capsSrc[i + 1]
+    const ponctSuiv = suiv && /^[\s.!?…,;:]+$/.test(String(suiv.text || '')) ? String(suiv.text).trim() : ''
     return {
       id: 'cap' + i,
       // sans ponctuation, comme en Production (« IA, » → « IA ») ; le point
       // d'un domaine (« avatarads.fr ») est intérieur, il reste
       text: CASE(capSkinText(c.text)),
-      raw: String(c.text || ''),          // la ponctuation d'origine : elle borne les phrases (moments clés)
+      raw: String(c.text || '') + ponctSuiv,   // la ponctuation d'origine : elle borne les phrases (moments clés)
       start: r2(c.start),
       dur: r2(Math.max(0.1, c.end - c.start)),
       accent: !!c.accent,
@@ -603,6 +608,65 @@ export function buildComposition(plan, opts = {}) {
     .filter((c) => !(hasCta && c.start >= ctaStart))
     // …et ceux du hook par le bloc accumulé façon hk15 (hook mot-à-mot v2)
     .filter((c) => !(hasWordHook && c.start < hookCapEndW))
+  // ── STYLE MUSIQUE (recette F05) : la voix est coupée au mix, le texte la remplace ──
+  // Sans le son, un mot isolé ne se lit pas : des PHRASES de 6 mots au plus, coupées
+  // à la ponctuation ou à un silence, posées en bloc (les mots tombent en cascade) et
+  // tenues jusqu'à la suivante. Rien pendant la réaction (le texte choc y est seul).
+  const musique = plan.slideStyle === 'musique' && !!capSkin
+  if (musique) {
+    const finReaction = r2(plan.hook?.end ?? 3)
+    const PONCT = /[.!?…,;:]$/
+    // une phrase ne finit jamais sur un mot de liaison (« … DE CRÉER DU », « … IA ET ») : passé 6 mots, on va
+    // jusqu'au prochain mot plein, 9 mots au plus
+    const LIAISON = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'un', 'une', 'au', 'aux', 'a', 'à', 'en', 'et', 'ou', 'mais', 'donc',
+      'car', 'que', 'qui', 'ce', 'cet', 'cette', 'ces', 'ton', 'ta', 'tes', 'mon', 'ma', 'mes', 'son', 'sa', 'ses', 'notre', 'nos',
+      'votre', 'vos', 'leur', 'leurs', 'sur', 'sous', 'dans', 'pour', 'par', 'avec', 'sans', 'chez', 'vers', 'entre', 'je', 'tu', 'il',
+      'elle', 'on', 'nous', 'vous', 'ils', 'elles', 'ne', 'se', 'me', 'te', 'y', 'très', 'plus', 'comme', 'si', 'est', 'c'])
+    const lie = (raw) => LIAISON.has(String(raw || '').toLowerCase().replace(/[’‘]/g, "'").replace(/[^\p{L}']/gu, '').replace(/^(?:qu|[jltdnsmc])'/, ''))
+    const mots = caps.filter((c) => c.start >= finReaction - 0.05)
+    // la fin d'une phrase commencée pendant la réaction (« … sur les » | « réseaux. ») ne s'affiche pas seule
+    const avantR = caps.filter((c) => c.start < finReaction - 0.05).pop()
+    if (avantR && !PONCT.test(avantR.raw)) {
+      const k = mots.slice(0, 2).findIndex((c) => PONCT.test(c.raw))
+      if (k >= 0) mots.splice(0, k + 1)
+    }
+    const phrases = []
+    let cur = []
+    for (const c of mots) {
+      const prec = cur[cur.length - 1]
+      if (prec && (c.start - (prec.start + prec.dur) > 0.6 || c.top !== prec.top)) { phrases.push(cur); cur = [] }
+      cur.push(c)
+      if (PONCT.test(c.raw) || (cur.length >= 6 && !lie(c.raw)) || cur.length >= 9) { phrases.push(cur); cur = [] }
+    }
+    if (cur.length) phrases.push(cur)
+    // jamais un mot seul à l'écran : il rejoint la phrase d'avant (même hauteur, place libre), sinon la suivante
+    for (let k = 0; k < phrases.length; k++) {
+      if (phrases.length < 2 || phrases[k].length > 1) continue
+      const av = phrases[k - 1], ap = phrases[k + 1]
+      if (av && av.length < 7 && av[0].top === phrases[k][0].top) { av.push(...phrases[k]); phrases.splice(k--, 1) }
+      else if (ap && ap[0].top === phrases[k][0].top) { ap.unshift(...phrases[k]); phrases.splice(k--, 1) }
+    }
+    // une phrase qui ne reste pas 0,5 s ne se lit pas sans le son : elle finit celle d'avant si elle la continue
+    // (« … SANS JAMAIS MONTRER » + « TON VISAGE »), sinon elle ouvre la suivante (« ET LÀ » + « TU OBTIENS… »)
+    for (let k = 0; k + 1 < phrases.length; k++) {
+      const ph = phrases[k], av = phrases[k - 1], ap = phrases[k + 1]
+      if (ap[0].start - ph[0].start >= 0.5) continue
+      if (av && !PONCT.test(av[av.length - 1].raw) && av.length + ph.length <= 9 && av[0].top === ph[0].top) { av.push(...ph); phrases.splice(k--, 1) }
+      else if (ph.length + ap.length <= 9 && ap[0].top === ph[0].top) { ap.unshift(...ph); phrases.splice(k--, 1) }
+    }
+    caps.splice(0, caps.length, ...phrases.map((ws, k) => {
+      const der = ws[ws.length - 1]
+      return { id: 'mp' + k, start: ws[0].start, dur: r2(Math.max(0.6, der.start + der.dur - ws[0].start)), top: ws[0].top,
+        cream: ws.some((w) => w.cream), accent: false, raw: der.raw, text: ws.map((w) => w.text).join(' '),
+        grp: ws.map((w, j) => ({ id: 'mp' + k + 'w' + j, text: w.text, t: r2(ws[0].start + j * 0.05) })) }
+    }))
+    // une phrase se lit : elle tient jusqu'à la suivante (1,5 s de blanc au plus), même quand la voix allait vite
+    for (let k = 0; k + 1 < caps.length; k++) {
+      const c = caps[k], n = caps[k + 1], trou = r2(n.start - (c.start + c.dur))
+      if (trou <= 1.5) c.dur = r2(Math.max(0.3, n.start - 0.04 - c.start))   // jamais deux phrases à la fois
+    }
+    console.log(`▶ style Musique : ${caps.length} phrase(s) à l'écran`)
+  }
   // CHAQUE MOT TIENT JUSQU'AU SUIVANT (audit 10/10, règle de Production : GAP_HOLD
   // 1 s dans usine/captions.mjs). Le mot disparaissait à la fin de sa syllabe :
   // 1 à 6 images sans sous-titre entre deux mots, un clignotement permanent.
@@ -628,7 +692,7 @@ export function buildComposition(plan, opts = {}) {
   // Mot à mot partout SAUF aux moments clés : la dernière phrase avant chaque changement de section s'affiche EN BLOC
   // et chaque mot s'allume quand il est dit (usine/captions.mjs, .cap.grp), avec un swish à l'entrée. Seulement avec
   // un style de sous-titres Production (Auto) : Apple, Sombre premium et Mot par mot gardent leur écriture.
-  if (capSkin && !wordMode) {
+  if (capSkin && !wordMode && !musique) {
     const ENDP = /[.!?…]$/
     const bornes = (plan.sections || []).slice(1).map((sx) => r2(sx && sx.start)).filter((t) => t > 2 && t < D - 1.5)
     let kg = 0

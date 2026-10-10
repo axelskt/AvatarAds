@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { lookup as dnsLookup } from 'node:dns/promises'
 import { buildComposition } from './build-composition.mjs'
 // look Production (09/10) : emojis du texte choc + musiques énergiques de Production
-import { preparerEmojisChoc, choisirMusiqueProduction, fichierMusiqueProduction } from './production-look.mjs'
+import { preparerEmojisChoc, choisirMusiqueProduction, fichierMusiqueProduction, capSkinOf, CAP_SKINS } from './production-look.mjs'
 import { buildGenSubsComposition } from './gen-subs-composition.mjs'
 // EXIGE_GLOBAL et ANIMS voyagent avec la dérivation : la passe de finition doit
 // juger une correction avec EXACTEMENT le même garde-fou que le reste de la
@@ -128,6 +128,8 @@ const MUSIC_TARGET_LUFS = -20
 // en moyenne ~4,5 dB sous la voix (voix -16, musique brute -9 dB ≈ -20,5 LUFS), et
 // DUCKÉES par la voix (sidechain) : elle s'efface quand on parle, revient entre les phrases.
 const MUSIC_PROD_TARGET_LUFS = -18.5
+// style Musique : la musique est le SEUL son (pas de voix) — sonie des vidéos F05 de Production
+const MUSIC_SEULE_LUFS = -15
 const MUSIC_DUCK = 'sidechaincompress=threshold=0.03:ratio=8:attack=5:release=260'
 
 // banque extensible : dépose des `assets/music/<mood>-1.mp3`, `<mood>-2.mp3`, … et ils
@@ -1075,6 +1077,23 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       }
     }
 
+    // ── STYLE MUSIQUE (recette F05 de Production, Axel 09/10) ───────────────
+    // Aucune voix : la musique seule, et le texte à l'écran remplace la parole.
+    // La vidéo s'ouvre sur 3 s de RÉACTION (le visage, muet) sous le texte choc,
+    // puis les visuels suivent le rythme de ce qui était dit. Jamais de lipsync
+    // (un visage qui parle sans voix) ; toujours une musique, sauf si
+    // l'utilisateur a fourni la sienne (c'est le seul son de la vidéo).
+    if (plan.slideStyle === 'musique') {
+      plan.__musique = true
+      delete plan.__lipsync
+      const finR = r2(Math.min(3, Math.max(1.5, (Number(plan.duration) || 0) - 2)))
+      plan.hook = { ...(plan.hook || {}), start: 0, end: finR }
+      if (['neon', 'minimal', 'none'].includes(plan.capStyle)) plan.capStyle = 'punch'
+      if (!capSkinOf(plan)) plan.capSkin = CAP_SKINS[0]
+      if (!plan.userAudio && !(plan.music && (plan.music.track || plan.music.mood))) plan.music = { mood: 'dynamique' }
+      console.log(`▶ style Musique : voix coupée, réaction 0→${finR} s${plan.hook.text ? ' sous le texte choc' : ' (pas de texte choc)'}, texte à l'écran par phrase`)
+    }
+
     const assetFiles = {}
     // ── LA FORME DU MÉDIA DÉCIDE DE SA PLACE ────────────────────────────
     // Un média PAYSAGE (capture d'écran, démo d'app) posé en petit médaillon
@@ -1277,7 +1296,9 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // dans chaque trou. Seulement en photo fixe (sans lipsync : une photo figée
     // entre deux clips qui parlent serait un visage muet) et hors des moteurs qui
     // couvrent l'écran eux-mêmes (dynamique, apple, sombre, mot par mot).
-    if (!baseAUneImage && avatarPhoto && !Object.keys(avatarClips).length && !plan.__lipsync
+    // Style Musique : même règle quand la base est le fond de jeu du flux photo + audio — sa photo est la réaction
+    // (seul ce flux envoie la photo en Musique : avec SA vidéo, la base reste sa vidéo).
+    if ((!baseAUneImage || plan.__musique) && avatarPhoto && !Object.keys(avatarClips).length && !plan.__lipsync
         && !['dynamic', 'apple', 'slam', 'word'].includes(String(plan.slideStyle || ''))) {
       try {
         const tmp = join(proj, 'media', 'base-photo.mp4')
@@ -2063,7 +2084,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     const mixIns = []
     let idx = 2
 
-    if (baseHasAudio) {
+    if (plan.__musique) console.log('▶ style Musique : la voix n\'est pas mixée')
+    if (baseHasAudio && !plan.__musique) {
       // LA VOIX EST NORMALISÉE SEULE, et pas dans le mix : un loudnorm sur le
       // mélange rabaissait TOUT dès qu'on ajoutait un bruitage.
       //
@@ -2109,6 +2131,11 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       } else console.warn(`musique Production ${String(trackDemandee).slice(0, 8)} indisponible → bibliothèque`)
     }
     if (!pick) pick = mood || trackDemandee ? pickMusic(mood || 'dynamique', plan.duration || 1) : null
+    // style Musique : la piste est seule, elle est donc posée au niveau d'une vidéo (et non plus 4,5 dB sous une voix)
+    if (pick && plan.__musique) {
+      const lufs = pick.lufs != null ? pick.lufs : loudnessOf(pick.file)
+      if (lufs != null) pick.vol = Math.round(Math.min(1.6, Math.max(0.05, Math.pow(10, (MUSIC_SEULE_LUFS - lufs) / 20))) * 1000) / 1000
+    }
     if (pick && existsSync(pick.file)) {
       // départ QUELCONQUE dans le morceau (pick.start) : ce sont des titres
       // entiers, on ne veut pas toujours entendre la même intro. -ss avant -i
@@ -2119,7 +2146,7 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       // #68 (Axel, 07/08) : la musique ENTRE — montée de 1,2 s au lieu d'un
       // fondu de 0,6 s, l'effet « la couche BGM arrive » de la réf @tians028.
       const duck = pick.prod && mixIns.includes('[voice]')
-      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${pick.vol},afade=t=in:st=0:d=1.2,afade=t=out:st=${Math.max(0, plan.duration - 1.2)}:d=1.2${duck ? ',aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[musraw]' : '[mus]'}`)
+      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${pick.vol},afade=t=in:st=0:d=${plan.__musique ? 0.3 : 1.2},afade=t=out:st=${Math.max(0, plan.duration - 1.2)}:d=1.2${duck ? ',aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[musraw]' : '[mus]'}`)
       if (duck) {
         // la voix sert deux fois : au mix, et de clé au compresseur de la musique
         mixIns[mixIns.indexOf('[voice]')] = '[voicem]'

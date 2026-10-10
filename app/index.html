@@ -13595,12 +13595,13 @@ const MZ_BROLL  = ['Aucune','Légère · ~30 %','Équilibrée · ~60 %','Dense �
 // 6e colonne `soon:true` = « bientôt disponible » (carte grisée, non cliquable) —
 // choix d'Axel 01/08 : Anim (ex-apple) est LE style validé, les autres reviennent
 // quand ils seront au niveau ; « autre » sera remplacé par un nouveau style.
-const MZ_VSTYLE = [   // maquette 09/10 : Auto · Apple · Sombre premium · Liquid glass (bientôt) · Éditorial blanc (bientôt) · Mot par mot
+const MZ_VSTYLE = [   // maquette 09/10 : Auto · Apple · Sombre premium · Liquid glass (bientôt) · Musique · Mot par mot
   ['auto','Auto','IA choisit',['#FF8042','#9A7CFF'],''],
   ['apple','Apple','fond clair, minimal',['#F2F2F5','#D8D8DE'],'pub Apple : fond blanc immacule, motion lent, un seul objet heros au centre, typo fine, enormement de vide'],
   ['slam','Sombre premium','noir, contrastes chauds',['#1A1620','#FF7A1A'],'Style viral sombre (ref @sophiene.ia / hustle) : fond noir anime (grille + halos), gros mots Anton, mot-cle jaune dans les sous-titres, avatar 4 fois max (3 plein cadre + 1 split), grille 3x3 de tes medias au hook, visite guidee de l\'app sur les etapes, vrais rendus qui partent vers les reseaux, compteur 1.000.000+'],   // = le style sombre du moteur (slideStyle 'slam')
   ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte',true],
-  ['editorial','Éditorial blanc','magazine, sérif',['#FFFFFF','#E4E4EA'],'',true],
+  // Musique (Axel 09/10, recette F05 de Production) remplace « Éditorial blanc » : aucune voix au rendu, musique seule
+  ['musique','Musique','texte + musique, sans voix',['#16131C','#FF4D6D'],'Aucune voix au rendu : la musique seule, le texte a l\'ecran remplace la parole (phrases courtes). 0-3 s = la reaction du visage sous le texte choc, puis tes visuels (2,5 a 4 s chacun) jusqu\'au CTA'],
   ['word','Mot par mot','texte plein écran rythmé',['#2A2438','#FFE500'],'Page blanche du debut a la fin : la VIDEO source ne s\'affiche jamais, le sous-titre est le seul texte (un mot au centre). Comme il n\'y a aucune video a l\'ecran, les IMAGES de l\'utilisateur sont le visuel principal : place-les GENEREUSEMENT (2.5 a 4s chacune, reutilise la meme image plusieurs fois si tu en manques) — sans elles l\'ecran reste blanc. Les formes animees ne comblent que ce qui reste. Pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
@@ -13612,6 +13613,7 @@ const MZ_NIVEAU = [['rapide','Rapide','le plus court'],['moyen','Moyen','équili
 const MT_FOND_POUR_TOUS = false;
 function _mtFond(){ return MT_FOND_POUR_TOUS || !!(typeof currentMember!=='undefined' && currentMember && (currentMember.is_owner || String(currentMember.plan||'').toLowerCase()==='developer')); }
 function _mtNiveau(){ const n=(_mt && _mt.adv && _mt.adv.niveau) || 'moyen'; return CREDIT_COSTS.montageNiveau[n] ? n : 'moyen'; }
+function _mtMusique(){ return ((_mt && _mt.adv) || {}).vstyle === 'musique'; }
 function _mtCoutMontage(){ return _mtFond() ? (CREDIT_COSTS.montageNiveau[_mtNiveau()] || CREDIT_COSTS.montageIA) : CREDIT_COSTS.montageIA; }
 // ── LE CHEF D'ORCHESTRE EN TÂCHE DE FOND (10/10) ────────────────────────────
 // L'appel répond tout de suite par un job_id ; on suit sa ligne (orchestrate_jobs, RLS) jusqu'au plan. Un serveur qui
@@ -14561,6 +14563,12 @@ function _mtUpdateCost(){
   // Axel 09/10 : JAMAIS le nom du modèle sur le bouton (ni ailleurs côté client) — on parle de l'avatar, pas de la techno.
   const omni=_mt.lipModel==='omnihuman', mix=_mt.lipModel==='mix';
   const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
+  // style Musique : la voix est coupée, l'avatar ne parle donc jamais (aucune scène lipsync) — prix fixe
+  if(_mtMusique() && _mt.mp3Dur){
+    const c=Math.ceil(_mtCoutMontage() + _mt.mp3Dur*CREDIT_COSTS.hyperframesPerSec);
+    window._mtPrixMin = window._mtPrixMax = c; window._mtSecMax = 0; window._mtPrixTexte = c+' crédits';
+    b.textContent = 'Créer ma vidéo — '+c+' crédits'; return;
+  }
   if(_mt.mp3Dur){
     // L'avatar n'est PAS lipsyncé sur toute la vidéo : le chef d'orchestre ne garde que
     // les passages où le voir sert (hook, temps forts) — en général 2 à 4 scènes.
@@ -14993,6 +15001,7 @@ async function montageGo(){
     return _mtSegmentedGenerate();
   }
 
+  if(_mtMusique()){ toast('Le style Musique s\'ouvre sur ta réaction : ajoute ta photo d\'avatar ou ta vidéo.'); return; }
   // 🎮 pas d'avatar → 100 % gameplay + voix : pipeline Générateur classique (split + Montage IA auto)
   // les 90 s se vérifient AVANT tout débit (audit 10/10 : le refus tombait après le débit de la base)
   if((_mt.mp3Dur||0) > 90.5){ toast('Audio trop long ('+Math.round(_mt.mp3Dur)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis ton audio ou découpe-le en plusieurs vidéos.'); return; }
@@ -15913,7 +15922,7 @@ function _mtLookProduction(plan, dur, a){
   // pas de musique ajoutée si l'utilisateur a donné la sienne, si l'audio en contient
   // déjà une (détectée par le chef d'orchestre) ou s'il a demandé « sans musique »
   const auto=!a.music || a.music==='auto';
-  const dejaMusique=!!(plan.detected && plan.detected.music);
+  const dejaMusique=!!(plan.detected && plan.detected.music) && a.vstyle!=='musique';
   if(auto && !_mt.bgAudio && !dejaMusique){
     const ok=Object.keys(MT_PROD_MUSIC).filter(id=>MT_PROD_MUSIC[id]>=(Number(dur)||0)+0.5);
     if(ok.length) plan.music={ mood:(plan.music && plan.music.mood) || 'dynamique', track:_mtTirage('music', ok) };
@@ -16168,7 +16177,7 @@ async function _mtSegmentedGenerate(){
     plan.transitions= _a.transitions || 'cut';
     // « Mot par mot » : le sous-titre EST le visuel. Sans lui il ne resterait
     // qu'une page blanche vide — on ignore donc le « sans sous-titres ».
-    if(_a.subStyle==='none' && _a.vstyle!=='word') plan.captions=[];
+    if(_a.subStyle==='none' && _a.vstyle!=='word' && _a.vstyle!=='musique') plan.captions=[];
     if(_a.sfx===false)   plan.sfx=[];
     if(_a.punch===false) plan.zooms=[];
     if(_a.broll===0)     plan.broll=[];
@@ -16179,6 +16188,10 @@ async function _mtSegmentedGenerate(){
     // filet de sécurité : au moins 1 scène (hook) si le chef n'en a pas placé
     if(!segs.length){ segs=[{ start:0, end:Math.min(dur, Math.max(2, Math.min(6, dur*0.35))), format:'portrait' }]; }
     plan.avatarSegments=segs;
+    // style Musique : la voix est coupée au rendu, l'avatar ne parle donc jamais — aucune scène générée ni payée ;
+    // sa photo part au rendu et sert de visage (réaction des 3 premières secondes, fenêtres visage)
+    const _musique = plan.slideStyle==='musique';
+    if(_musique) segs=[];
 
     // 4) coût réel : avSec × tarif modèle + reste × hyperframes (1 cr/s) — débité avant Hedra
     // pricing À LA SECONDE : lipsync sur les scènes (avSec × rate) + reste habillé (hyperframes 1 cr/s)
@@ -16273,6 +16286,12 @@ async function _mtSegmentedGenerate(){
       avatar_clips.push(p);
     }
     const assets=[];
+    if(_musique && _mt.avatar){
+      const ext=/png/i.test(_mt.avatar.type||'') ? 'png' : 'jpg', p=user.id+'/as-avatar-'+ts+'.'+ext;
+      const e=await sb.storage.from('render-media').upload(p, _mt.avatar, { upsert:true, contentType:_mt.avatar.type||'image/jpeg' });
+      if(e.error) throw new Error('upload photo : '+e.error.message);
+      assets.push({ id:'avatar', path:p, kind:'image' });
+    }
     // TOUS ses fichiers choisis partent au rendu, pas seulement ceux que le chef a placés (audit 10/10) : le moteur pose
     // d'office un média absent du plan (« un média fourni est toujours placé »). Les visuels de « Ma marque » ajoutés
     // automatiquement, eux, ne partent que si le chef les a retenus.
@@ -16542,7 +16561,7 @@ async function _mtVideoGenerate(){
     plan.transitions= _a.transitions || 'cut';
     // « Mot par mot » : le sous-titre EST le visuel. Sans lui il ne resterait
     // qu'une page blanche vide — on ignore donc le « sans sous-titres ».
-    if(_a.subStyle==='none' && _a.vstyle!=='word') plan.captions=[];
+    if(_a.subStyle==='none' && _a.vstyle!=='word' && _a.vstyle!=='musique') plan.captions=[];
     if(_a.sfx===false)   plan.sfx=[];
     if(_a.punch===false) plan.zooms=[];
     if(_a.broll===0)     plan.broll=[];
