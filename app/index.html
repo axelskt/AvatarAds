@@ -9951,7 +9951,7 @@ async function _imgMakeRealisticBatch(btn){
   const tick = setInterval(paint, 1000);
   const fmtFor = (w,h)=> (h > w*1.15) ? '1024x1792' : (w > h*1.15) ? '1792x1024' : '1024x1024';   // format le plus proche (cases + actions)
   const readUrl = (f)=> new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(f); });
-  const slotMsg = (i, m)=>{ const sl=document.getElementById('_imgMultiSlot'+i); if(sl) sl.innerHTML='<div style="color:var(--text3);font-size:10.5px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">'+String(m).replace(/</g,'&lt;').slice(0,220)+'</div>'; };
+  const slotMsg = (i, m)=>{ const sl=document.getElementById('_imgMultiSlot'+i); if(sl) sl.innerHTML='<div style="color:var(--text3);font-size:10.5px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">'+_sansModele(String(m)).replace(/</g,'&lt;').slice(0,220)+'</div>'; };
   const slotLoading = (i, label)=>{ const sl=document.getElementById('_imgMultiSlot'+i); if(!sl) return;
     sl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:9px">'
       + '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>'
@@ -10792,7 +10792,7 @@ function _imgProgStart(label){
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none'; }                     // masque l'image précédente pendant le chargement
   // Chrono RÉEL (Axel 23/09) à la place de l'estimation « (~30s) », qui mentait dès que le moteur était chargé.
   const l=document.getElementById('imgProgLabel');
-  const _base=String(label || (l ? l.textContent : '') || '').replace(/\s*\(~\d+\s*s\)\s*$/,'').replace(/\s*·\s*\d+:\d{2}$/,'');
+  const _base=_sansModele(String(label || (l ? l.textContent : '') || '')).replace(/\s*\(~\d+\s*s\)\s*$/,'').replace(/\s*·\s*\d+:\d{2}$/,'');
   const _t0=Date.now();
   const _fmt=(ms)=>{ const x=Math.floor(ms/1000); return Math.floor(x/60)+':'+String(x%60).padStart(2,'0'); };
   if(l) l.textContent=_base+' · 0:00';
@@ -10960,7 +10960,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain, meta
   // currently experiencing high demand » (surcharge transitoire côté Google). On réessaie
   // 2 fois avec backoff avant d'abandonner, sinon un simple pic de charge fait échouer l'upscale.
   // #4k-504 (Axel 31/08) : le google-ai-proxy renvoie un 504 (gateway timeout) quand Nano Banana
-  // Pro met trop de temps (surcharge Google). C'était traité comme un « refus » d'image (corps vide
+  // Pro met trop de temps (forte demande). C'était traité comme un « refus » d'image (corps vide
   // → aucune image → faux message « a refusé cette image »). On l'ajoute aux cas RÉESSAYABLES.
   const _nbOverloaded = (st, j) => st===503 || st===429 || st===500 || st===504 || st===502 || st===408
     || (j && j.error && /high demand|overloaded|unavailable|try again later|temporarily|rate.?limit|resource.?exhausted|timeout|timed out|deadline/i.test(JSON.stringify(j.error)));
@@ -11007,7 +11007,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain, meta
              || (d && d.candidates && d.candidates[0] && d.candidates[0].finishReason) || '';
     // Timeout gateway (504/502/408/réseau) après 3 essais = SURCHARGE, pas un refus de contenu.
     if(!_br && (_nbLastStatus===504 || _nbLastStatus===502 || _nbLastStatus===408 || _nbLastStatus===0)){
-      throw new Error('Le service 4K a mis trop de temps à répondre (surcharge Google) — réessaie dans un instant.');
+      throw new Error('Le service 4K a mis trop de temps à répondre (forte demande) — réessaie dans un instant.');
     }
     throw new Error('Le moteur a refusé cette image (aucune image renvoyée' + (_br ? ' · '+_br : '') + ')');
   }
@@ -11416,7 +11416,7 @@ async function _imgUpscaleHD(btn){
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
-    toast('Détails du visage appliqués — ' + engine);   // #detail-visage : plus de debug « visage: ? » (passe Clarity retirée)
+    toast('Détails du visage appliqués' + (_kieDev() ? ' — ' + engine : ''));   // #detail-visage : plus de debug « visage: ? » (passe Clarity retirée)
   }catch(e){
     // Ni Nano Banana Pro ni Clarity n'ont rendu d'image → on rend les crédits.
     try{ await creditsFlowRefund('la restauration 4K a échoué'); }catch(_){}
@@ -11531,7 +11531,7 @@ async function _imgUpscaleNano(btn){
     creditsFlowDone();
     toast('Amélioré en 4K'+(_kieDev()?' — '+engine:'')+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
   }catch(e){
-    try{ await creditsFlowRefund('le 4K Nano a échoué'); }catch(_){}
+    try{ await creditsFlowRefund('l’amélioration 4K a échoué'); }catch(_){}
     toast(''+(e.message||e));
   }
   finally{
@@ -11698,7 +11698,7 @@ async function generateImage(){
             console.error('Image '+(i+1)+':', err);
             const _m=_imgFriendlyErr((err&&err.message)||'Échec');
             const slot = document.getElementById('_imgMultiSlot'+i);
-            if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:10px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">⚠ '+_m.replace(/</g,'&lt;').slice(0,180)+'</div>'; }
+            if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:10px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">⚠ '+_sansModele(_m).replace(/</g,'&lt;').slice(0,180)+'</div>'; }
             if(i===0) toast(''+_m.slice(0,180));
           }
         }
@@ -11724,7 +11724,7 @@ async function generateImage(){
         // moins »). gpt compose ; Nano ajoute la texture et monte en 4K.
         // Si OpenAI refuse (filtre) → Nano direct, comme avant.
         try {
-          _imgProgStart('gpt-image-2.5…');
+          _imgProgStart('Création de l’image…');
           url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize, { chain: true });
           try {
             _imgProgStart('Passage en 4K… (~30s)');
@@ -11837,7 +11837,7 @@ async function generateImage(){
           console.error('Image '+(i+1)+':', err);
           const _m=_imgFriendlyErr((err&&err.message)||'Échec');
           const slot = document.getElementById('_imgMultiSlot'+i);
-          if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:10px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">⚠ '+_m.replace(/</g,'&lt;').slice(0,180)+'</div>'; }
+          if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:10px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">⚠ '+_sansModele(_m).replace(/</g,'&lt;').slice(0,180)+'</div>'; }
           if(i===0) toast(''+_m.slice(0,180));
         }
       }
@@ -11870,7 +11870,7 @@ function _imgFriendlyErr(m){
               : 'image refusée par le filtre de contenu';
     return 'Génération refusée par le filtre de sécurité du moteur ('+kind+') — c\'est le filtre du moteur d\'images, pas AvatarAds. Essaie une autre photo, un cadrage plus serré (visage/épaules) ou une tenue moins suggestive.';
   }
-  if(/high demand|overloaded|unavailable|503|try again later|temporarily|resource.?exhausted/i.test(m)) return 'Le moteur 4K de Google est surchargé en ce moment (pic de demande) — réessaie dans une minute, ton crédit a été remboursé.';
+  if(/high demand|overloaded|unavailable|503|try again later|temporarily|resource.?exhausted/i.test(m)) return 'Le moteur 4K est surchargé en ce moment (pic de demande) — réessaie dans une minute, ton crédit a été remboursé.';
   if(/billing|quota|insufficient/i.test(m)) return 'Quota du moteur d\'images atteint — réessaie dans quelques minutes.';
   if(/timeout|timed out/i.test(m)) return 'Délai dépassé — réessaie.';
   return m;
@@ -12042,7 +12042,7 @@ function _imgSlotUpscale(kind, slot, url, size, opt){
       _imgFillMultiSlot(slot, finalUrl, size, false, { no4K: kind==='nano' || !!opt.no4K, view, dlName:(kind==='nano'?'avatarads-4k.':'avatarads-hd.')+ext });
       toast((kind==='nano' ? 'Amélioré en 4K' : 'Détails du visage appliqués')+(_kieDev()?' — '+engine:'')+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
     }catch(e){
-      try{ await creditsFlowRefund(kind==='nano' ? 'le 4K Nano a échoué' : 'la restauration a échoué'); }catch(_){}
+      try{ await creditsFlowRefund(kind==='nano' ? 'l’amélioration 4K a échoué' : 'la restauration a échoué'); }catch(_){}
       undo();
       toast(''+((e&&e.message)||e));
     }
@@ -15043,7 +15043,7 @@ function _mtProg(pct, label){
   // décalé (rien de visible), à 100 % il ne l'est plus du tout.
   if(b) b.setAttribute('stroke-dashoffset', String(477.5*(1-Math.min(100,Math.max(0,pct))/100)));
   if(p) p.textContent=Math.round(pct);
-  if(l) l.textContent = label || _MT_STAGES[stage];
+  if(l) l.textContent = _sansModele(label || _MT_STAGES[stage]);
   if(st) st.innerHTML=_MT_STAGES.map((s,i)=>{
     const ico = i<stage
       ? '<span style="color:var(--accent-2);display:flex"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>'
@@ -16901,7 +16901,7 @@ async function _mdOpen(jobId){
     setTimeout(()=>{ _mdRender(); }, 650);
   }catch(e){
     ov.innerHTML = '<div class="col" style="flex:1;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center">'
-      +'<div style="font-size:15px;font-weight:700">⚠ '+_mdEsc(String(e.message||e).slice(0,120))+'</div>'
+      +'<div style="font-size:15px;font-weight:700">⚠ '+_mdEsc(_sansModele(String(e.message||e)).slice(0,120))+'</div>'
       +'<button onclick="_mdClose()" class="btn btn-ghost" style="padding:12px 26px">Fermer</button></div>';
   }
 }
@@ -20674,7 +20674,7 @@ function _gnProg(v, t){
   const g = window._gn; v = Math.max(g._p || 0, Math.min(100, Math.round(v || 0))); g._p = v;   // monotone : ne recule jamais
   const bar = document.getElementById('gnLoadBar'); if(bar) bar.style.width = v + '%';
   const pc = document.getElementById('gnLoadPct'); if(pc) pc.textContent = v + ' %';
-  if(t){ const s = document.getElementById('gnLoadSub'); if(s) s.textContent = String(t).replace(/<[^>]*>/g, '').replace(/\s*\(\d+\s*%\)\s*$/, '').trim(); }
+  if(t){ const s = document.getElementById('gnLoadSub'); if(s) s.textContent = _sansModele(String(t)).replace(/<[^>]*>/g, '').replace(/\s*\(\d+\s*%\)\s*$/, '').trim(); }
 }
 // Image → base64 (fichier local, data:, blob: ou URL signée de l'étape Avatar)
 async function _gnImageB64(im){
@@ -27825,7 +27825,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   await ensureCanvasFonts(); // polices sous-titres prêtes AVANT le rendu canvas (sinon fallback Arial baké dans la vidéo)
   const setStage = (label, pct) => {
     const stageLbl = document.getElementById('composeProgressStage');
-    if(stageLbl) stageLbl.textContent = label;
+    if(stageLbl) stageLbl.textContent = _sansModele(label);
     if(compPct) compPct.textContent = (pct||0) + '%';
     if(compFill) compFill.style.width = (pct||0) + '%';
     if(btn) btn.innerHTML = '' + label;
@@ -29786,7 +29786,7 @@ const _LIB_IMPORT_CARD = `
       <div style="font-size:11px;font-weight:700;color:var(--orange2);text-align:center;padding:0 8px;line-height:1.4">Importer une vidéo avatar</div>
     </div>
     <div class="vid-meta">
-      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.5">MP4 Hedra ou vidéo existante → ajoute sous-titres &amp; effets</div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.5">Ta vidéo avatar (MP4) ou une vidéo existante → ajoute sous-titres &amp; effets</div>
     </div>
   </div>`;
 
@@ -30228,7 +30228,7 @@ function renderLibrary(){
       const imgHist = JSON.parse(localStorage.getItem('imgHistory')||'[]');
       imgHist.forEach((img, i) => items.push({
         _src: 'img', _idx: i, fav: !!img.fav,
-        type:'image', emo:'🖼️', name:'Image IA', tags:['image', img.styleLabel||'DALL-E'],
+        type:'image', emo:'🖼️', name:'Image IA', tags:['image', img.styleLabel||'Image IA'],
         style:'IMAGE', bg:'linear-gradient(135deg,rgba(77,171,247,0.2),rgba(77,171,247,0.05))',
         imgUrl: img.url, idbKey: img.idbKey || null, srvPath: img.srvPath || null, ts: img.ts||0,
         date: img.ts ? new Date(img.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : ''
@@ -32344,7 +32344,7 @@ function _mcProg(msg, pct){
   if(!_mcT0) _mcT0=Date.now();
   if(!_mcTimerIv){ _mcTimerIv=setInterval(_mcTimerTick,1000); }
   _mcTimerTick();
-  const t=document.getElementById('mcProgTxt'); if(t) t.textContent=msg||'';
+  const t=document.getElementById('mcProgTxt'); if(t) t.textContent=_sansModele(msg||'');
   const b=document.getElementById('mcProgBar'); if(b) b.style.width=Math.max(0,Math.min(100,pct||0))+'%';
 }
 function _mcProgHide(){ const o=document.getElementById('mcProg'); if(o) o.style.display='none'; if(_mcTimerIv){ clearInterval(_mcTimerIv); _mcTimerIv=null; } _mcT0=0; }
@@ -32398,7 +32398,7 @@ function _mcShowResult(url, render, fullUrl){
   // max-width/max-height qu'avant, la boîte est simplement ajustée au ratio.
   m.innerHTML='<div class="col" style="gap:12px;align-items:center;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:6px 2px"><video src="'+_safeUrl(url)+'" controls autoplay playsinline onloadedmetadata="if(this.videoWidth)this.style.aspectRatio=this.videoWidth+\' / \'+this.videoHeight" style="max-height:'+(isSplit?'46vh':'70vh')+';width:auto;max-width:100%;aspect-ratio:9/16;object-fit:contain;border-radius:16px;background:var(--panel-1);box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
     +(lbl?'<div class="faint mono" style="font-size:11px">'+lbl+'</div>':'')
-    +(window._mcVoiceNote?'<div style="font-size:12.5px;line-height:1.45;text-align:center;max-width:360px;color:rgba(246,244,241,.82)">'+String(window._mcVoiceNote).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c])+'</div>':'')
+    +(window._mcVoiceNote?'<div style="font-size:12.5px;line-height:1.45;text-align:center;max-width:360px;color:rgba(246,244,241,.82)">'+_sansModele(String(window._mcVoiceNote)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c])+'</div>':'')
     +(isSplit?_mcReframePanel(render):'')
     +'<div class="row" style="gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn-primary" onclick="_mcDownload()">Télécharger</button>'
     +(window._mcLastFullUrl?'<button class="btn btn-ghost" onclick="_mcDownload(window._mcLastFullUrl)">Version plein écran</button>':'')
@@ -32632,7 +32632,7 @@ function _omniProg(txt,pct){
       if(_omniProgVal<99) _omniSetProg(_omniProgVal + Math.max(0.08,(99-_omniProgVal)*0.015));   // progression douce (fal ne renvoie pas de % réel) : approche LENTE et continue de 99 (ne se fige plus à 95) ; le chrono mm:ss rassure à côté ; le 100 arrive à la fin
     }, 400);
   }
-  const l=document.getElementById('omniProgLabel'); if(l && txt!=null) l.textContent=txt;
+  const l=document.getElementById('omniProgLabel'); if(l && txt!=null) l.textContent=_sansModele(txt);
   if(pct!=null) _omniSetProg(pct);
 }
 function _omniProgHide(){ clearInterval(_omniProgTimer); _omniProgTimer=null; const ov=document.getElementById('omniLoadingOverlay'); if(ov) ov.style.display='none'; }
@@ -34082,7 +34082,7 @@ function _expMultiOpen(k){
 }
 function _expSlotProgress(i, v, t){
   const b=document.getElementById('_expSlotBar'+i), pc=document.getElementById('_expSlotPct'+i), tx=document.getElementById('_expSlotTxt'+i);
-  if(b) b.style.width=Math.round(v)+'%'; if(pc) pc.textContent=Math.round(v); if(tx && t) tx.innerHTML=t;
+  if(b) b.style.width=Math.round(v)+'%'; if(pc) pc.textContent=Math.round(v); if(tx && t) tx.innerHTML=_sansModele(t);
 }
 function _expSlotFill(i, url, blob){
   const slot=document.getElementById('_expSlot'+i), box=document.getElementById('_expSlotBox'+i);
@@ -34107,7 +34107,7 @@ function _expSlotFail(i, msg, debited, back, pending){
     : (back > 0) ? 'Crédits rendus : '+back+'.'
     : debited ? 'Si la vidéo n’arrive pas dans ta Bibliothèque, tes crédits seront rendus automatiquement.'
     : 'Aucun crédit débité pour cette vidéo.';
-  box.innerHTML='<div class="mono" style="font-size:11px;color:var(--text2);text-align:center;line-height:1.5;padding:14px">Vidéo '+(i+1)+' non générée<br><span style="color:var(--text3);font-size:10px">'+_escH(String(msg||'').slice(0,140))+'</span><br><span style="color:var(--text3);font-size:10px">'+cr+'</span></div>';
+  box.innerHTML='<div class="mono" style="font-size:11px;color:var(--text2);text-align:center;line-height:1.5;padding:14px">Vidéo '+(i+1)+' non générée<br><span style="color:var(--text3);font-size:10px">'+_escH(_sansModele(String(msg||'')).slice(0,140))+'</span><br><span style="color:var(--text3);font-size:10px">'+cr+'</span></div>';
 }
 let _expFfTail = Promise.resolve();
 function _expFfAcquire(){ let rel; const next=new Promise(r=>{ rel=r; }); const prev=_expFfTail; _expFfTail=prev.then(()=>next); return prev.then(()=>rel); }   // ffmpeg.wasm : une vidéo à la fois
@@ -34210,7 +34210,7 @@ async function _expressCreateOne(o){
   let p=0; const setP=(v,t)=>{
     p=v;
     if(o){ _expSlotProgress(o.idx, v, t); return; }   // lot : l'avancement de CETTE vidéo dans SA case
-    if(progBar)progBar.style.width=v+'%'; if(progTxt&&t)progTxt.innerHTML=t;
+    if(progBar)progBar.style.width=v+'%'; if(progTxt&&t)progTxt.innerHTML=_sansModele(t);
   };
   const _t0=Date.now();
   const _fmtT=(ms)=>{ const s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
@@ -34598,7 +34598,7 @@ function expressAddSubs(){
       <div style="font-size:15px;font-weight:800"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Sous-titres automatiques</div>
       <button onclick="if(!window._expSubsBusy)document.getElementById('_expSubsModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;line-height:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div style="font-size:11.5px;color:var(--text3);margin-bottom:14px">Whisper IA transcrit la voix mot à mot, incruste les sous-titres et télécharge la vidéo.</div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:14px">La transcription IA écrit ta voix mot à mot, incruste les sous-titres et télécharge la vidéo.</div>
     <div class="mono" style="font-size:10px;color:var(--text3);margin-bottom:6px">STYLE</div>
     <div id="_esmStyle" class="row" style="gap:8px;margin-bottom:12px"></div>
     <div class="mono" style="font-size:10px;color:var(--text3);margin-bottom:6px">POSITION</div>
@@ -34632,7 +34632,7 @@ async function _expBurnSubs(){
   if(!raw){ toast('Aucune vidéo'); return; }
   window._expVidBlobRaw = raw;
   const go=document.getElementById('_esmGo'), prog=document.getElementById('_esmProg'), ptxt=document.getElementById('_esmProgTxt'), pbar=document.getElementById('_esmProgBar');
-  const setp=(v,t)=>{ if(pbar)pbar.style.width=v+'%'; if(ptxt&&t)ptxt.innerHTML=t; };
+  const setp=(v,t)=>{ if(pbar)pbar.style.width=v+'%'; if(ptxt&&t)ptxt.innerHTML=_sansModele(t); };
   window._expSubsBusy=true;
   if(go){ go.disabled=true; go.style.opacity='.6'; }
   if(prog) prog.style.display='block';
@@ -35853,7 +35853,7 @@ function _veoFiltre(o, prof){
 }
 function _veoMsgFiltre(f){
   const r = (f.raisons || []).join(' · ');
-  return '🚫 Vidéo bloquée par le filtre de sécurité de Google — ta vidéo n\'est pas perdue, elle n\'a jamais été produite'
+  return 'Vidéo bloquée par le filtre de sécurité — ta vidéo n\'est pas perdue, elle n\'a jamais été produite'
     + (r ? ' · motif : ' + r : '')
     + '. Change la photo de départ (cadrage plus serré, tenue moins ajustée) ou reformule le prompt.';
 }
@@ -35902,7 +35902,7 @@ async function _veoAwaitOp(opName){
     if(!pr.ok) continue;
     const pd=await pr.json();
     if(pd.done){
-      if(pd.error){ err=pd.error.message||'Génération refusée par Google'; break; }
+      if(pd.error){ err=pd.error.message||'Génération refusée par le moteur vidéo'; break; }
       ({ b64, uri } = _veoPickVideo(pd.response || pd));
       if(!b64 && !uri){
         // LE MESSAGE PORTE LA FORME REÇUE. Un `console.warn` ne suffisait pas :
@@ -41556,7 +41556,7 @@ async function edExport(){
     status.textContent='Exporté en '+ext.toUpperCase()+' ('+expW+'×'+expH+(segments.length>1?' · '+segments.length+' clips collés':'')+')';
     toast(segments.length>1?segments.length+' clips collés et exportés':'Clip exporté');
   }catch(e){
-    console.error('Export éditeur:',e); status.textContent='Échec : '+e.message; toast('Export échoué : '+e.message);
+    console.error('Export éditeur:',e); status.textContent='Échec : '+_sansModele(e.message); toast('Export échoué : '+e.message);
   }finally{
     edProgClose();
     try{ v.pause(); }catch(e){} try{ _ed&&_ed.music&&_ed.music.pause(); }catch(e){}

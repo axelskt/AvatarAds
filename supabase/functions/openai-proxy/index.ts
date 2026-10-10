@@ -136,7 +136,7 @@ serve(async (req: Request) => {
   if (!auth.isService && !auth.userId) return jsonRes(401, { error: 'Unauthorized — session invalide ou expirée' })
 
   const openaiKey = Deno.env.get('OPENAI_API_KEY') ?? ''
-  if (!openaiKey) return jsonRes(500, { error: 'OPENAI_API_KEY not configured in Supabase secrets' })
+  if (!openaiKey) { console.error('OPENAI_API_KEY manquante'); return jsonRes(500, { error: 'Génération d’images momentanément indisponible — réessaie plus tard' }) }
 
   const url = new URL(req.url)
   const up = safeUpstream(OPENAI_BASE, url.searchParams.get('path') ?? '/v1/chat/completions', ALLOW)

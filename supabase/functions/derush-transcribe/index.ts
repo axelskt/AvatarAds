@@ -144,14 +144,14 @@ serve(async (req) => {
     })
   } catch {
     if (!exempt) await ajusterDerush(user.id, -pris)   // rien n'est parti chez ElevenLabs : réservation rendue
-    return json(502, { error: 'scribe_error' })
+    return json(502, { error: 'Transcription momentanément indisponible — réessaie dans un instant' })
   }
   if (!res.ok) {
     if (!exempt) await ajusterDerush(user.id, -pris)
-    return json(502, { error: 'scribe_error', detail: (await res.text()).slice(0, 200) })
+    { console.error('dérush transcription', res.status, (await res.text()).slice(0, 200)); return json(502, { error: 'Transcription momentanément indisponible — réessaie dans un instant' }) }
   }
   let data: any
-  try { data = await res.json() } catch { return json(502, { error: 'scribe_error' }) }
+  try { data = await res.json() } catch { return json(502, { error: 'Transcription momentanément indisponible — réessaie dans un instant' }) }
   const words = (data.words || [])
     .filter((w: { type?: string }) => !w.type || w.type === 'word')
     .map((w: { text: string; start: number; end: number }) => ({

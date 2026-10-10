@@ -126,7 +126,7 @@ async function callClaude(userBlock: string, images: { media: string; b64: strin
       ] }],
     }),
   })
-  if (!res.ok) throw new Error('Claude ' + res.status + ' ' + (await res.text()).slice(0, 200))
+  if (!res.ok) { console.error('brand-memory ' + res.status + ' ' + (await res.text()).slice(0, 200)); throw new Error('Lecture de ta marque momentanément indisponible (' + res.status + ') — réessaie dans un instant') }
   const data = await res.json()
   const txt = (data.content || []).filter((c: { type: string }) => c.type === 'text').map((c: { text: string }) => c.text).join('')
   try { return JSON.parse(txt) } catch (_) { return null }

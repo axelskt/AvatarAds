@@ -215,7 +215,7 @@ serve(async (req: Request) => {
   if (rawPath === '/health') {
     return jsonRes(200, { ok: true, hasKey: !!falKey })   // audit #3 : ne plus exposer longueur/nom de la clé sans auth
   }
-  if (!falKey) return jsonRes(500, { error: 'Aucune clé fal.ai dans les secrets Supabase (attendu : FALAI_API_KEY)' })
+  if (!falKey) { console.error('FALAI_API_KEY manquante'); return jsonRes(500, { error: 'Service de génération momentanément indisponible — réessaie plus tard' }) }
 
   const v = safePath(rawPath, ALLOW)
   if (!v.ok) return jsonRes(400, { error: 'path refusé : ' + v.reason })
@@ -280,7 +280,7 @@ serve(async (req: Request) => {
     // Omni Flash IMAGE→VIDÉO = tous les plans payants depuis le 25/09 (Axel : « Starter inclus ») ; Free → 403. L'EDIT
     // (/edit, Module Omni) reste Starter+ → ne PAS gater sur le nom seul.
     else if (isOmniI2v) {
-      const g = await requirePlan(auth.userId, ['starter', 'pro', 'elite'], 'Omni Flash'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+      const g = await requirePlan(auth.userId, ['starter', 'pro', 'elite'], 'Flash'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
     // OmniHuman (relecture 26/09) : ce chemin n'avait AUCUNE garde de plan — un Starter atteignait par le repli fal ce que
     // kie-proxy lui refuse. Mêmes plans que KIE_OPEN (Élite ; owner / developer passent), comme le Générateur et le Montage IA.
@@ -479,7 +479,7 @@ serve(async (req: Request) => {
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
     if (res.status === 402 || /insufficient|balance|quota/i.test(text)) {
-      return jsonRes(402, { error: 'Crédits fal.ai épuisés — recharge le compte fal', falStatus: res.status })
+      return jsonRes(402, { error: '402 — plus de solde', falStatus: res.status })
     }
     return new Response(text, { status: res.status, headers: { ...CORS, 'Content-Type': res.headers.get('content-type') ?? 'application/json' } })
   } catch (err) {
