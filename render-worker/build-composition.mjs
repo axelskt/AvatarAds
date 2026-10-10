@@ -19,7 +19,7 @@ import { uiScene } from './ui-scenes.mjs'
 // Audit 02/10 : échappements, CSP et GSAP embarqué partagés par tous les builders (voir securite.mjs)
 import { escAttr, cspComposition, GSAP_SCRIPT } from './securite.mjs'
 // look Production (09/10) : styles de sous-titres + texte choc tirés par l'app (plan.capSkin / plan.chocStyle)
-import { capSkinOf, isBoxSkin, capSkinText, capSkinCss, chocBloc, chocCss, sansEmoji, ajouterSfxChoc } from './production-look.mjs'
+import { capSkinOf, isBoxSkin, skinLisibleSurCreme, capSkinText, capSkinCss, chocBloc, chocCss, sansEmoji, ajouterSfxChoc } from './production-look.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -408,11 +408,22 @@ export function buildComposition(plan, opts = {}) {
   // une slide (bande cinéma sous la slide — le clip suit le cadrage #videoFit).
   // Sans avatarSegments/avatarClips → comportement inchangé (base = vidéo continue). ──
   const avatarClips = opts.avatarClips || {}
+  // PHOTO FIXE SANS LIPSYNC (audit 10/10) : le moteur classique n'affichait QUE des clips de lipsync — sans
+  // eux (MCP lipsync:false, le mode économique par défaut), la fenêtre avatar restait NOIRE, frame 0 comprise.
+  // Le moteur dynamique pose déjà la photo : on fait pareil (photo de la fenêtre si la rotation en a choisi
+  // une, sinon la photo d'avatar), avec un zoom lent pour qu'elle vive.
+  const photoFixe = (s) => {
+    const p = String((s && s.photo) || '')
+    return /^media\/avatar(-\d{1,2})?\.(png|jpe?g|webp)$/.test(p) ? p : (opts.avatarPhoto || '')
+  }
   const avatarSegs = (plan.avatarSegments || [])
-    .map((s, i) => ({ id: 'av' + i, src: avatarClips['av' + i] || avatarClips[i] || null,
-      format: s.format === 'paysage' ? 'paysage' : 'portrait',
-      start: r2(s.start), end: r2(Math.max(s.end, s.start + 0.3)) }))
-    .filter((s) => s.src)
+    .map((s, i) => {
+      const clip = avatarClips['av' + i] || avatarClips[i] || null
+      return { id: 'av' + i, src: clip, photo: clip ? '' : photoFixe(s),
+        format: s.format === 'paysage' ? 'paysage' : 'portrait',
+        start: r2(s.start), end: r2(Math.max(s.end, s.start + 0.3)) }
+    })
+    .filter((s) => s.src || s.photo)
     .sort((a, b) => a.start - b.start)
     .map((s) => ({ ...s, dur: r2(Math.max(0.3, s.end - s.start)) }))
 
@@ -616,10 +627,15 @@ export function buildComposition(plan, opts = {}) {
   // TEXTE CHOC (look Production, 09/10) : la phrase de l'accroche prend un des styles
   // de Production, à la place du badge jaune, sur la même fenêtre (même coupe avant la
   // première scène qui empiète). Phrase qui ne tient pas → le badge habituel.
-  const choc = hook && !wordMode ? chocBloc(plan, { W, H, start: hook.start, dur: hook.dur }) : null
+  // la fenêtre du texte choc est TOUTE l'accroche (Production : 0 → fin du hook), au-dessus de tout (z 75) :
+  // elle n'est plus coupée par la première scène qui empiète (audit 10/10 : une animation posée à 0,7 s
+  // réduisait l'accroche sous 0,6 s → plus de texte choc du tout, frame 0 comprise)
+  const chocWin = plan.hook && plan.hook.text && !wordMode && !hookUnderWordPanel
+    ? { start: hookStart, dur: r2(Math.max(0.8, Math.min(D - hookStart, (plan.hook.end ?? 3) - hookStart))) } : null
+  const choc = chocWin ? chocBloc(plan, { W, H, start: chocWin.start, dur: chocWin.dur }) : null
   if (choc) {
     ajouterSfxChoc(plan, choc.sfx)
-    console.log(`▶ texte choc ${choc.style} (${choc.layout.size} px, ${choc.layout.lines.length} ligne(s)) ${hook.start}→${r2(hook.start + hook.dur)} s`)
+    console.log(`▶ texte choc ${choc.style} (${choc.layout.size} px, ${choc.layout.lines.length} ligne(s)) ${chocWin.start}→${r2(chocWin.start + chocWin.dur)} s`)
   }
   const hookHtml = choc ? choc.html : hook ? `
       <div class="clip" id="hook" data-start="${hook.start}" data-duration="${hook.dur}" data-track-index="4">
@@ -675,7 +691,7 @@ export function buildComposition(plan, opts = {}) {
   const capsHtml = caps.map((c, i) => (wordMode
     ? `
       <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${Math.round(wordFontSize(c.text, W, H) * (c.start < hookCapEnd ? 1.28 : 1))}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
-    : capSkin && !c.cream ? (() => {
+    : capSkin && (!c.cream || skinLisibleSurCreme(capSkin)) ? (() => {
       const t = capSkinText(c.text) || String(c.text || '')
       return `
       <div class="clip cap sk sk-${capSkin}${isBoxSkin(capSkin) ? ' bx' : ''}"${
@@ -943,8 +959,10 @@ export function buildComposition(plan, opts = {}) {
 
   // #119 · scènes avatar : visibles (au-dessus du gameplay) seulement sur leur fenêtre,
   // fondu court aux bornes (les coupures entre scènes tombent hors slides → invisibles)
+  // l'avatar qui OUVRE la vidéo est là dès la frame 0 (couverture TikTok) : pas de fondu depuis le noir
   const avatarJs = avatarSegs.map((a) => `
-      tl.fromTo('#${a.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.12, ease: 'power1.out' }, ${a.start});
+      ${a.start <= 0.05 ? `tl.set('#${a.id}', { autoAlpha: 1 }, 0);` : `tl.fromTo('#${a.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.12, ease: 'power1.out' }, ${a.start});`}${a.photo ? `
+      tl.fromTo('#${a.id}', { scale: 1 }, { scale: 1.06, duration: ${a.dur}, ease: 'none', transformOrigin: '50% 35%' }, ${a.start});` : ''}
       tl.to('#${a.id}', { autoAlpha: 0, duration: 0.12, ease: 'power1.in' }, ${r2(a.start + a.dur - 0.12)});`).join('')
 
   // AMPLITUDE DU MOUVEMENT — la règle est : si on remarque le mouvement plus que le
@@ -1227,7 +1245,9 @@ ${slides.length ? `      <div id="slidezone" class="clip" data-start="0" data-du
               </filter>
             </defs></svg>
             <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
-${avatarSegs.map((a) => `            <video id="${a.id}" class="clip avatar-seg" src="${esc(a.src)}" data-start="${a.start}" data-duration="${a.dur}" data-track-index="9" muted playsinline></video>`).join('\n')}
+${avatarSegs.map((a) => a.src
+  ? `            <video id="${a.id}" class="clip avatar-seg" src="${esc(a.src)}" data-start="${a.start}" data-duration="${a.dur}" data-track-index="9" muted playsinline></video>`
+  : `            <img id="${a.id}" class="clip avatar-seg" src="${esc(a.photo)}" data-start="${a.start}" data-duration="${a.dur}" data-track-index="9" alt="" />`).join('\n')}
           </div>
         </div>
       </div>

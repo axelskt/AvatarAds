@@ -23,6 +23,10 @@ export const CAP_SKINS = ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08'
 const BOX_SKINS = ['S03', 'S05', 'S07', 'S21']
 export const capSkinOf = (plan) => (plan && CAP_SKINS.includes(plan.capSkin) ? plan.capSkin : null)
 export const isBoxSkin = (id) => BOX_SKINS.includes(id)
+// Lisibles sur une scène plein cadre CRÈME (fond clair) : boîtes et contours noirs épais. Les styles blancs sans
+// contour, les néons et les ombres seules (S04, S09, S10, S12, S13, S17) y disparaissent → ancien rendu « crème ».
+const SKINS_SUR_CREME = ['S01', 'S02', 'S03', 'S05', 'S06', 'S07', 'S08', 'S11', 'S15', 'S16', 'S18', 'S19', 'S21']
+export const skinLisibleSurCreme = (id) => SKINS_SUR_CREME.includes(id)
 // jamais de ponctuation à l'écran (Axel 30/09, règle Production) ; le point d'un domaine reste
 export const capSkinText = (t) => String(t || '').replace(/^[.,!?;:…()'’«»"-]+|[.,!?;:…()«»"]+$/g, '').trim()
 
