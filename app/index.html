@@ -13619,7 +13619,7 @@ function _mtNiveau(){ const n=(_mt && _mt.adv && _mt.adv.niveau) || 'moyen'; ret
 function _mtCoutLance(){ return _mtCoutMontage(); }
 // Musique : « bientôt » pour les clients (Axel 11/10 : la qualité dépend trop de la démo qu'ils déposent) ; ouvert sur le
 // compte d'Axel (owner / developer). true = carte ouverte à tous.
-const MT_MUSIQUE_POUR_TOUS = false;
+const MT_MUSIQUE_POUR_TOUS = true;   // OUVERT À TOUS le 11/10 (Axel), après le vrai test sur sa démo C-OMNI-01
 function _mtMusiqueOuverte(){ return MT_MUSIQUE_POUR_TOUS || !!(typeof currentMember!=='undefined' && currentMember && (currentMember.is_owner || String(currentMember.plan||'').toLowerCase()==='developer')); }
 function _mtMusique(){ return ((_mt && _mt.adv) || {}).vstyle === 'musique' && _mtMusiqueOuverte(); }
 function _mtCoutMontage(){ return _mtFond() ? (CREDIT_COSTS.montageNiveau[_mtNiveau()] || CREDIT_COSTS.montageIA) : CREDIT_COSTS.montageIA; }
