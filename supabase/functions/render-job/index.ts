@@ -142,14 +142,22 @@ serve(async (req: Request) => {
     // rendus RÉCENTS. Les vieux sont marqués échoués au passage, pour que la
     // liste dise la vérité et que le compteur ne les revoie plus.
     {
+      // 10/10 : « mort » = sans battement depuis 45 min (le moteur rafraîchit updated_at toutes les 2 min et reprend
+      // lui-même ses orphelins) — plus la date de création : un job remis en file après un redéploiement n'est pas mort.
       const limite = new Date(Date.now() - 45 * 60 * 1000).toISOString()
       const { data: morts } = await service.from('render_jobs')
         .update({ status: 'failed', error: 'moteur interrompu pendant le rendu — job clos automatiquement' })
-        .eq('user_id', user.id).in('status', ['queued', 'rendering']).lt('created_at', limite)
+        .eq('user_id', user.id).in('status', ['queued', 'rendering']).lt('updated_at', limite)
         .select('id, plan, input_video, assets')
-      // Audit métier 06/09 : un job mort clos ici doit RENDRE sa réservation (sinon reserved=0 tiré à la
-      // création reste bloqué → l'utilisateur ne peut plus se faire rembourser une vidéo jamais rendue).
-      for (const m of (morts ?? [])) for (const k of cleRendu(m.id)) { try { await service.rpc('release_by_job', { p_user: user.id, p_job: k, p_cost: 9999 }) } catch (_) { /* best-effort */ } }
+      // Audit métier 06/09 + 10/10 : un job mort clos ici REMBOURSE (refund_job_open, une seule fois) ; repli : la réserve
+      // est rendue (release_by_job) si l'op est encore entamée ailleurs.
+      for (const m of (morts ?? [])) for (const k of cleRendu(m.id)) {
+        try {
+          const { data: r, error: e } = await service.rpc('refund_job_open', { p_user: user.id, p_job: k })
+          const rr = (r ?? {}) as { ok?: boolean; reason?: string }
+          if (e || (!rr.ok && ['in_progress', 'no_drawn'].includes(String(rr.reason)))) await service.rpc('release_by_job', { p_user: user.id, p_job: k, p_cost: 9999 })
+        } catch (_) { /* best-effort */ }
+      }
       // « Cloner l'audio » (09/10) : un job 'motion-voix' mort laisse sa vidéo copiée et sa voix sous voix-prep/<uid>/ → supprimées
       // ici (list_media_purge les liste aussi, au-delà d'1 jour, mais la purge planifiée n'est PAS active : décision du 04/10).
       const prives: string[] = []
@@ -162,7 +170,7 @@ serve(async (req: Request) => {
       if (prives.length) { try { await service.storage.from('render-media').remove(prives) } catch (_) { /* best-effort */ } }
 
       const { count } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id).in('status', ['queued', 'rendering']).gte('created_at', limite)
+        .eq('user_id', user.id).in('status', ['queued', 'rendering']).gte('updated_at', limite)
       if ((count ?? 0) >= 2) return json({ error: 'Tu as deja un rendu en cours — attends qu\'il se termine' }, 429)
     }
 

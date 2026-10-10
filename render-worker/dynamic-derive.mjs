@@ -26,6 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ANIMS as ANIMS_BRUT } from './anim-pack.mjs'
+import { EDITOR_ONLY } from './anim-bank.mjs'
 import { sujetsDe, estUneSuite } from './sujet-pack.mjs'
 
 // ── ANIMATIONS REFUSEES PAR AXEL ────────────────────────────────────────────
@@ -570,6 +571,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
     return { anim: 'sujet', sujets: su, motion: su.length > 1 && estUneSuite(ph) ? 'flow' : 'cascade' }
   }
   const add = (slide, a, b) => {
+    // ── LA MARQUE AVATARADS RESTE CHEZ AVATARADS (audit 10/10) ────────────────
+    // Sur la vidéo d'un CLIENT (plan.__marqueAvatarAds === false, posé par le worker d'après le compte du job), rien de
+    // ce qui montre AvatarAds ne part tout seul : ni les anims « éditeur seulement » (logos AvatarAds / Claude), ni une
+    // capture de l'app (Express, résultat, visite guidée…). Seuls ses propres choix (slide.user) passent.
+    if (plan.__marqueAvatarAds === false && slide && !slide.user
+      && (EDITOR_ONLY.has(String(slide.anim || '')) || slide.screen)) return null
     // Le filtre doit etre ICI, au seul passage obligé : filtrer la liste ANIMS
     // ne bloquait que mes tables de mots-clés, et les scènes proposées par le
     // chef d'orchestre repassaient devant (clock revenait à 13,8 s).
@@ -1881,6 +1888,35 @@ export function deriveDynamicSlides(plan, opts = {}) {
         }
         return t
       })
+      // ── LA PAGE MONTRÉE EST CELLE DU MODULE DONT ON PARLE (audit 10/10) ──────
+      // Vidéo d'audit : « Le secret, c'est la fonctionnalité Express… importe les photos… écris des prompts » → le chef
+      // avait calé les 3 étapes sur la page MONTAGE IA (04-montageia) : on vendait Express en montrant un autre module.
+      // Règle : le dernier module NOMMÉ à voix haute avant le mot de l'étape décide de la page ; une étape posée sur la
+      // page d'un AUTRE module est retirée (la table MODULES montre alors la bonne page sur le mot du module).
+      {
+        const pages = new Set(MODULES.map((m) => m.screen))
+        const mentions = []
+        for (const m of MODULES) for (const pat of m.pat) {
+          const toks = pat.split(' ')
+          for (let j = 0; j + toks.length <= words.length; j++) {
+            if (toks.every((tk, k) => norm(words[j + k].text) === tk)) mentions.push({ t: words[j].start, screen: m.screen })
+          }
+        }
+        mentions.sort((x, y) => x.t - y.t)
+        for (let i = tuto.length - 1; i >= 0; i--) {
+          const t = tuto[i]
+          if (!pages.has(String(t.screen || ''))) continue
+          const h = findSeq(words, String(t.word || '')) || findAny(words, [String(t.word || '')])
+          if (!h) continue
+          const avant = mentions.filter((m) => m.t <= h.start + 0.05)
+          const dernier = avant.length ? avant[avant.length - 1] : null
+          if (dernier && dernier.screen !== t.screen) {
+            console.log(`▶ visite : étape « ${t.word} » retirée — page ${t.screen} alors que la voix parle de ${dernier.screen}`)
+            tuto.splice(i, 1)
+            plan.tuto.splice(i, 1)   // même indice (la map ne déplace rien) : le reste de la dérivation voit la visite réelle
+          }
+        }
+      }
       {
         // Certaines entrées ne sont PAS dans la barre latérale : « Connecter
         // Claude » vit au fond de la modale Mon compte. Axel : « il arrive déjà
@@ -4133,5 +4169,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
       }
       console.warn(`⚠ média « ${b.assetId} » PERDU : ni panneau ni fenêtre avatar à ${a}s`)
     }
+  }
+  // ── DERNIER FILTRE « MARQUE » (audit 10/10) : une scène peut DEVENIR un logo par réécriture (« ma méthode » → tools)
+  // sans repasser par add() — sur la vidéo d'un client, tout ce qui montre AvatarAds sort ici, en dernier.
+  if (plan.__marqueAvatarAds === false) {
+    const avant = (plan.slides || []).length
+    plan.slides = (plan.slides || []).filter((s) => s && (s.user || (!s.screen && !EDITOR_ONLY.has(String(s.anim || '')))))
+    if (plan.slides.length < avant) console.log(`▶ vidéo client : ${avant - plan.slides.length} logo(s) / capture(s) AvatarAds retiré(s) en sortie`)
   }
 }

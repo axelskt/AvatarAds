@@ -18,6 +18,7 @@ import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync, statSync, renameSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { ANIM_EMOJI_SET } from './anim-pack.mjs'
+import { EDITOR_ONLY } from './anim-bank.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { lookup as dnsLookup } from 'node:dns/promises'
@@ -877,6 +878,21 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
   // référence de média qui REMONTE hors du projet (« ../x.png » dans un src d'item, de scène, d'incrustation…)
   // est retirée aussi : la compilation HyperFrames copiait ce fichier du serveur dans le rendu.
   { const ecartes = assainirPlan(plan); if (ecartes) console.warn(`▶ plan : ${ecartes} référence(s) de fichier invalide(s) écartée(s)`) }
+
+  // ── LA MARQUE AVATARADS RESTE CHEZ AVATARADS (audit 10/10) ─────────────────
+  // Les logos AvatarAds / Claude et les captures de l'app (Express, résultat, Léna, visite guidée) partaient sur la vidéo
+  // de n'importe quel client (une boulangerie qui dit « livraison express » recevait l'écran Express d'AvatarAds). Ils ne
+  // restent que sur les vidéos d'un compte AvatarAds (propriétaire / developer) ; en --local (tests d'Axel), comme avant.
+  if (!plan.__compose) {
+    plan.__marqueAvatarAds = await compteAvatarAds(userId)
+    if (!plan.__marqueAvatarAds) {
+      const avant = (plan.slides || []).length + (plan.tuto || []).length
+      plan.tuto = []
+      plan.slides = (plan.slides || []).filter((s) => s && (s.user || (!s.screen && !EDITOR_ONLY.has(String(s.anim || '')))))
+      const retires = avant - plan.slides.length
+      if (retires) console.log(`▶ vidéo client : ${retires} logo(s) / capture(s) AvatarAds retiré(s) du plan`)
+    }
+  }
 
   // Motion Control (#34) : composition légère original + motion, pas de montage.
   if (plan.__compose === 'motion-split') { await composeMotionSplit(jobDir, outPath, plan); return }
@@ -2436,6 +2452,17 @@ async function rembourserLipsync(n) { if (RENDER_USER && n > 0) await rpcCredits
 // Audit 02/10 : droits du compte DU JOB sur les modèles de lipsync, revérifiés ici (le plan vient du client : render-job,
 // render_montage_plan) — mix = propriétaire seul ; omnihuman = Pro / Élite ou compte illimité (owner, developer), la règle
 // de lipsync_video et du MCP. Profil illisible → aucun des deux (repli hedra, jamais plus cher que le défaut).
+// Compte AvatarAds (propriétaire ou developer) ? Sans utilisateur (--local) : oui. Profil illisible : non (client).
+async function compteAvatarAds(userId) {
+  if (!userId) return true
+  try {
+    const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const r = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=is_owner,plan`, { headers: { Authorization: 'Bearer ' + key, apikey: key } })
+    const d = await r.json().catch(() => [])
+    const p = Array.isArray(d) ? d[0] : null
+    return !!p && (p.is_owner === true || String(p.plan || '').toLowerCase() === 'developer')
+  } catch (_) { return false }
+}
 async function droitsLipsync(userId) {
   if (!userId) return { owner: true, omni: true }
   try {
@@ -3087,14 +3114,27 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
 // à l'échec (remboursement partiel possible côté client). Avant : rien → refund après téléchargement.
 // Relecture 26/09 : le Montage IA avatar désigne DEUX ops (montage + habillage) → render-job les lie à 'render:<id>' puis
 // 'render:<id>#1' (#2 au plus) : on règle / libère chaque clé (sans op liée = sans effet). MÊMES clés que render-job (cleRendu).
+// Échec d'un rendu : on REMBOURSE (refund_job_open, une seule fois — refunded_at / job_bill_state), on ne se contente
+// plus de remettre la réserve (audit 10/10 : release_by_job rendait les crédits à la RÉSERVE, et seul le client — s'il
+// écoutait encore — les remboursait ; onglet fermé ou délai de 15 min dépassé = crédits perdus). Le refund_credits que
+// l'app enverra ensuite tombe sur « déjà remboursé » et resynchronise le solde. Repli release_by_job si l'op est encore
+// entamée par autre chose (in_progress) ou n'a pas été tirée par le rendu (no_drawn).
 async function reservationJob(sb, job, ok) {
   if (!job || !job.user_id) return
   for (const key of ['render:' + job.id, 'render:' + job.id + '#1', 'render:' + job.id + '#2']) {
     try {
-      const { error } = ok
-        ? await sb.rpc('settle_by_job', { p_user: job.user_id, p_job: key })
-        : await sb.rpc('release_by_job', { p_user: job.user_id, p_job: key, p_cost: 9999 })
-      if (error) console.warn('réservation', ok ? 'settle' : 'release', key, ':', error.message)
+      if (ok) {
+        const { error } = await sb.rpc('settle_by_job', { p_user: job.user_id, p_job: key })
+        if (error) console.warn('réservation settle', key, ':', error.message)
+        continue
+      }
+      const { data, error } = await sb.rpc('refund_job_open', { p_user: job.user_id, p_job: key })
+      const r = data || {}
+      if (!error && r.ok) { console.log(`↩ ${key} : ${r.refunded} crédit(s) remboursé(s)`); continue }
+      if (error || ['in_progress', 'no_drawn'].includes(r.reason)) {
+        const { error: e2 } = await sb.rpc('release_by_job', { p_user: job.user_id, p_job: key, p_cost: 9999 })
+        if (e2) console.warn('réservation release', key, ':', e2.message)
+      }
     } catch (e) { console.warn('réservation :', e.message) }
   }
 }
@@ -3139,6 +3179,44 @@ async function pollLoop() {
   }
   process.on('SIGTERM', () => { rendreLaMain('SIGTERM') })
   process.on('SIGINT', () => { rendreLaMain('SIGINT') })
+
+  // ── LES JOBS ORPHELINS (audit 10/10) ──────────────────────────────────────
+  // Le filet SIGTERM ci-dessus ne suffit pas : le rendu HyperFrames est un appel BLOQUANT, le gestionnaire de
+  // signal ne s'exécute pas tant qu'il tourne, et Railway coupe le conteneur avant. Mesuré : un montage MCP est
+  // resté « rendering » 4 h 30 après un déploiement (le client attendait sans fin, ses crédits bloqués).
+  // Deux pièces, indépendantes du signal :
+  //   · un BATTEMENT toutes les 2 min sur le job en cours (updated_at) — il passe pendant les longues phases
+  //     asynchrones (lipsync, envois) ; une phase bloquante, elle, dure au plus quelques minutes ;
+  //   · une REPRISE des jobs « rendering » sans battement depuis 30 min : remis en file (3 tentatives au plus),
+  //     au démarrage puis toutes les 5 min quand le moteur est libre.
+  const ORPHELIN_MIN = 30, ESSAIS_MAX = 3
+  setInterval(() => {
+    if (!jobEnCours) return
+    sb.from('render_jobs').update({ updated_at: new Date().toISOString() }).eq('id', jobEnCours).eq('status', 'rendering')
+      .then(() => {}, () => {})
+  }, 120_000).unref?.()
+  let dernierBalayage = 0
+  const reprendreOrphelins = async () => {
+    dernierBalayage = Date.now()
+    try {
+      const limite = new Date(Date.now() - ORPHELIN_MIN * 60_000).toISOString()
+      const { data } = await sb.from('render_jobs').select('id, attempts, user_id').eq('status', 'rendering').lt('updated_at', limite).limit(20)
+      for (const j of data || []) {
+        if (j.id === jobEnCours) continue
+        if ((j.attempts || 0) >= ESSAIS_MAX) {
+          // interrompu 3 fois : on arrête de le relancer, on le clôt et on rembourse (jamais un job bloqué à vie)
+          const { data: f } = await sb.from('render_jobs').update({ status: 'failed', error: 'rendu interrompu à répétition — crédits rendus', updated_at: new Date().toISOString() })
+            .eq('id', j.id).eq('status', 'rendering').lt('updated_at', limite).select('id')
+          if (f && f.length) { await reservationJob(sb, j, false); console.warn(`⚠ job orphelin ${j.id} : ${j.attempts} tentatives → clos et remboursé`) }
+          continue
+        }
+        const { data: r } = await sb.from('render_jobs').update({ status: 'queued', updated_at: new Date().toISOString() })
+          .eq('id', j.id).eq('status', 'rendering').lt('updated_at', limite).select('id')
+        if (r && r.length) console.log(`↩ job orphelin ${j.id} remis en file (sans battement depuis ${ORPHELIN_MIN} min)`)
+      }
+    } catch (e) { console.warn('reprise des orphelins :', e.message) }
+  }
+  await reprendreOrphelins()
   console.log('🎼 render-worker en écoute (poll 5 s)…')
 
   // Audit 04/10 (MCP-3) : FILE ÉQUITABLE entre comptes. Le moteur rend un job à la fois, le plus ancien d'abord : un compte qui
@@ -3153,7 +3231,10 @@ async function pollLoop() {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
       // + préparation des vidéos MCP (02/10)
       const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix'])   // motion-voix : simple mux (copie du flux vidéo), quelques secondes
-      if (!cand) { await new Promise((r) => setTimeout(r, 2000)); continue }   // #vitesse (02/09) : 5 s → 2 s de latence de prise
+      if (!cand) {
+        if (Date.now() - dernierBalayage > 5 * 60_000) await reprendreOrphelins()
+        await new Promise((r) => setTimeout(r, 2000)); continue   // #vitesse (02/09) : 5 s → 2 s de latence de prise
+      }
       const { data: job } = await sb.from('render_jobs').select('*').eq('id', cand.id).eq('status', 'queued').maybeSingle()
       if (!job) { await new Promise((r) => setTimeout(r, 500)); continue }   // pris par un autre moteur entre-temps (ou hoquet DB)
 

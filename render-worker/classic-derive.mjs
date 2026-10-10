@@ -19,6 +19,7 @@
 
 import { norm, findSeq, findAny, LEAD, MODULES, STEP_WORDS, GEN_OBJ, PROMPT_SAMPLE, VOICE_ANIMS } from './dynamic-derive.mjs'
 import { spotOf } from './screen-spots.mjs'
+import { EDITOR_ONLY } from './anim-bank.mjs'
 import { ANIMS } from './anim-pack.mjs'
 
 const r2 = (n) => Math.round(n * 100) / 100
@@ -188,7 +189,10 @@ export function deriveClassicSlides(plan) {
     }
   }
 
-  plan.slides = kept
+  // la marque AvatarAds reste chez AvatarAds (audit 10/10) : sur la vidéo d'un client, ni logos ni captures de l'app
+  plan.slides = plan.__marqueAvatarAds === false
+    ? kept.filter((s) => s && (s.user || (!s.screen && !EDITOR_ONLY.has(String(s.anim || '')))))
+    : kept
   if (framed || dropped || recut || reanim || toAnim) {
     console.log(`▶ style ${plan.slideStyle || 'auto'} : ${toAnim} carte(s) de texte remplacée(s) par une animation · `
       + `${dropped} carte(s) hors-sujet retirée(s) · ${recut} slam(s) recalé(s) · `

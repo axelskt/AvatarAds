@@ -251,6 +251,8 @@ export const ANIM_NAMES = BANK.map((b) => b.name)
 // editorOnly (liste B) n'y sont pas : sync-anim-bank.mjs ne recopie qu'elle
 // dans le bloc ANIMS/catalogue/lexique d'orchestrate.
 export const ORCH_BANK = BANK.filter((b) => !b.editorOnly)
+// les anims « éditeur seulement » (logo, tools, copy, connect…) — jamais posées automatiquement chez un client (audit 10/10)
+export const EDITOR_ONLY = new Set(BANK.filter((b) => b.editorOnly).map((b) => b.name))
 export const ORCH_ANIM_NAMES = ORCH_BANK.map((b) => b.name)
 
 // le bloc que lit le modèle, régénéré dans l'orchestrateur par sync-anim-bank.mjs
