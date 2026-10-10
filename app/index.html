@@ -40780,6 +40780,13 @@ const RENDERJOB_FN = SUPABASE_URL + '/functions/v1/render-job';
 let _edAi = { files: [], busy: false };
 
 function openEdAiModal(){
+  // même règle que montageGo (et orchestrate côté serveur, audit 10/10) : le Montage IA reste Élite pendant la bêta
+  { const _plan = String(currentMember?.plan || 'free').toLowerCase();
+    if(!['elite','developer'].includes(_plan) && !currentMember?.is_owner){
+      toast('Le Montage IA est réservé au plan Élite pendant la bêta');
+      try{ openPaywall && openPaywall('elite'); }catch(_){}
+      return;
+    } }
   if(!_ed || !_ed.clips || !_ed.clips.length){ toast('Charge d\'abord une vidéo dans l\'éditeur'); return; }
   let m = document.getElementById('edAiModal');
   if(m){ m.style.display='flex'; _edAiRenderFiles(); return; }

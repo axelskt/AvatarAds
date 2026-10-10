@@ -244,6 +244,29 @@ const numOf = (t) => {
   return FR_NUMS[norm(t)] || 0
 }
 
+// LE NOMBRE DE VUES DIT, PAS UN NOMBRE DE DÉMO (audit 10/10) : « 10 millions de
+// vues » affichait 2,4 M, « des millions de vues » comptait jusqu'à 100 000.
+// On remonte au plus 4 mots avant « vues » : chiffres (« 100 000 », même coupés
+// en deux mots), nombres en lettres, multiplicateurs (million, mille). « des
+// millions » sans nombre vaut le minimum vrai — un million. 0 = rien de dit.
+const vuesDites = (words, iVues) => {
+  let mult = 1, chiffres = ''
+  for (let k = iVues - 1; k >= Math.max(0, iVues - 4); k--) {
+    const brut = String(words[k].text || '').trim()
+    const t = norm(brut.replace(/[.,!?]+$/, ''))
+    if (!chiffres && (t === 'de' || t === 'd')) continue
+    if (/^\d[\d\s.,]*$/.test(brut.replace(/[.,!?]+$/, ''))) { chiffres = brut.replace(/\D/g, '') + chiffres; continue }
+    if (chiffres) break
+    if (/^millions?$/.test(t)) { mult *= 1e6; continue }
+    if (t === 'mille' || t === 'milliers') { mult *= 1000; continue }
+    const n = FR_NUMS[t] || (t === 'cent' || t === 'centaines' ? 100 : 0)
+    if (n) return n * mult
+    break
+  }
+  if (chiffres) return parseInt(chiffres, 10) * mult
+  return mult > 1 ? mult : 0
+}
+
 // zones de choix de l'app : mot prononcé → cartes `pick` correspondantes
 const PICKS = {
   'photo-reel': { choices: ['Photo réaliste', 'Pixar 3D', 'UGC réel'], sel: 0 },
@@ -1037,7 +1060,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const src = clipPourFenetre(a, b)
       // sans matière lipsync et avec la voix qui parle : pas de photo figée —
       // la fenêtre saute, les scènes voisines s'étirent (règle du 15/08)
-      if (!src && words.some((x) => x.start < b - 0.15 && x.end > a + 0.15)) {
+      // (seulement quand des clips existent : en mode photo — MCP lipsync:false — ou
+      //  quand le worker génère le lipsync APRÈS la dérivation, la fenêtre est le visage)
+      if (!src && hasClips && words.some((x) => x.start < b - 0.15 && x.end > a + 0.15)) {
         console.log(`▶ suppression ${a}→${b}s : la voix parle sans matière lipsync → pas de visage figé`)
         continue
       }
@@ -1604,15 +1629,20 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const src = clipPourFenetre(r2(a), r2(b))
       // sans matière lipsync : pas de photo figée pendant que la voix parle —
       // l'adresse saute, les scènes voisines s'étirent (vu à 25,1 s de la v12)
-      if (!src) {
+      // …SEULEMENT quand des clips existent. En mode photo (MCP lipsync:false), la
+      // photo EST le visage : la retirer laissait le CTA « Commente IA » sans
+      // personne (audit 10/10, R1). Et quand le worker génère le lipsync APRÈS
+      // la dérivation, cette fenêtre recevra le sien comme les autres.
+      if (!src && hasClips) {
         console.log(`▶ adresse ${r2(a)}→${r2(b)}s : la voix parle sans matière lipsync → pas de visage figé, les voisins s'étirent`)
         continue
       }
-      const bAd = r2(Math.min(b, src.finMax))
+      const bAd = r2(src ? Math.min(b, src.finMax) : b)
       if (bAd - a < 0.6) continue
       ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: bAd, adresse: true,
-        clip: src.clip, ...(src.from ? { clipFrom: src.from } : {}) })
-      console.log(`▶ adresse directe ${r2(a)}→${bAd}s : elle reprend le clip lipsync av${src.clip}${src.from ? ` (repris à ${src.from}s dedans)` : ' (même début, mêmes mots)'}`)
+        clip: src ? src.clip : -1, ...(src && src.from ? { clipFrom: src.from } : {}) })
+      console.log(src ? `▶ adresse directe ${r2(a)}→${bAd}s : elle reprend le clip lipsync av${src.clip}${src.from ? ` (repris à ${src.from}s dedans)` : ' (même début, mêmes mots)'}`
+        : `▶ adresse directe ${r2(a)}→${bAd}s : le visage (photo) reprend l'écran`)
       claim(a, bAd); n2++
     }
     if (n2) console.log(`▶ ${n2} adresse(s) directe(s) : le visage reprend l'écran`)
@@ -1644,7 +1674,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // est aussi dit dans l'accroche, sur la fenêtre du visage : le compteur y
       // était refusé, et le `break` faisait rater celui de « générer des vues »,
       // trois phrases plus loin. On continue jusqu'à en poser un.
-      if (add({ anim: 'views', items: [{ text: '100 000' }, { text: '200' }] }, a, b)) {
+      // un nombre DIT (« 10 millions de vues ») est la cible ; sans nombre, le
+      // départ et l'arrivée validés par Axel pour « générer des vues »
+      const dit = vuesDites(words, i + seq.length - 1)
+      const fmt = (v) => Math.round(v).toLocaleString('fr-FR')
+      const items = dit ? [{ text: fmt(dit) }, { text: fmt(dit >= 2000 ? 200 : Math.max(1, dit / 10)) }]
+        : [{ text: '100 000' }, { text: '200' }]
+      if (add({ anim: 'views', items }, a, b)) {
         console.log(`▶ « ${seq.join(' ')} » → le compteur de vues grimpe (${r2(a)}s)`)
         break
       }
@@ -1700,7 +1736,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
         if (hkT && hkT[1] > a) hkT[1] = a
         console.log(`▶ hook coupé sur « ${words[i - 1].text} » à ${a}s → le chrono joue en synchro`)
       }
-      if (add({ anim: 'ui', ui: 'timer', value: String(sec), unit: 'SECONDES' }, a, b)) {
+      if (add({ anim: 'ui', ui: 'timer', value: String(sec), unit: 'SECONDES', countEnd: r2(words[i].end || b) }, a, b)) {
         console.log(`▶ « ${words[i - 1].text} ${words[i].text} » → chrono ${sec} SECONDES (${a}→${b}s)`)
         // …et la fin de phrase rend l'écran au VISAGE (Axel : « switch sur
         // l'avatar une fois que j'ai dit top chrono ») : une respiration juste
@@ -1708,8 +1744,21 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // a DÉJÀ une fenêtre visage à cet endroit (avec son clip lipsync), on
         // ne la double pas — la sienne porte la matière, la nôtre serait muette.
         const dejaLa = (plan.avatarSegments || []).some((w) => Math.abs((w.start || 0) - b) < 0.8)
-        if (!dejaLa) plan.avatarSegments = [...(plan.avatarSegments || []),
-          { start: b, end: r2(Math.min(D, b + 2.6)), format: 'portrait' }]
+        // `clip` OBLIGATOIRE (audit 10/10) : sans lui, le worker prenait le clip
+        // de la fenêtre de même indice — un visage qui dit les mots d'une autre
+        // scène. Le clip payé qui couvre ce moment s'il existe ; sinon la photo
+        // (clip -1), sauf si des clips existent : un visage muet pendant que la
+        // voix parle est pire que la scène voisine qui s'étire.
+        const srcCh = clipPourFenetre(b, r2(Math.min(D, b + 2.6)))
+        const finCh = r2(Math.min(D, b + 2.6, srcCh ? srcCh.finMax : Infinity))
+        if (!dejaLa && (srcCh || !hasClips) && finCh - b >= 0.8) {
+          plan.avatarSegments = [...(plan.avatarSegments || []),
+            // `adresse` : réservée AVANT tout le monde, comme celles de §0b — §2
+            // la retomberait sinon sur son propre claim et la jetterait.
+            { start: b, end: finCh, format: 'portrait', adresse: true, clip: srcCh ? srcCh.clip : -1,
+              ...(srcCh && srcCh.from ? { clipFrom: srcCh.from } : {}) }]
+          claim(b, finCh)
+        }
       }
     }
   }
@@ -2811,13 +2860,21 @@ export function deriveDynamicSlides(plan, opts = {}) {
     { pat: ['en un clic', 'un seul clic'], ui: 'oneclick', pad: 2.2 },
     { pat: ['genere la cle', 'generer la cle', 'génère la clé'], ui: 'keycopy', pad: 3.0 },
     // (« X est connecté à Y » → animation `connect`, plus haut : les VRAIS logos)
-    { pat: ['millions de vues', 'des millions de vue'], ui: 'views', pad: 1.6, value: '2400000' },
+    // la valeur est LUE dans la phrase (vuesDites), jamais un 2 400 000 de démo
+    { pat: ['millions de vues', 'des millions de vue'], ui: 'views', pad: 1.6, vues: true },
   ]
   for (const o of ONESHOT) {
     for (const p of o.pat) {
       const hit = findSeq(words, p)
       if (!hit) continue
-      add({ anim: 'ui', ui: o.ui, ...(o.value ? { value: o.value } : {}) },
+      let value = o.value
+      if (o.vues) {
+        const iV = words.findIndex((w, k) => k >= hit.i && /^vues?$/.test(norm(String(w.text).replace(/[.,!?]+$/, ''))))
+        const v = iV >= 0 ? vuesDites(words, iV) : 0
+        if (!v) continue
+        value = String(Math.round(v))
+      }
+      add({ anim: 'ui', ui: o.ui, ...(value ? { value } : {}) },
         Math.max(0, hit.start - LEAD), Math.min(D, hit.end + o.pad))
       break
     }
@@ -3108,7 +3165,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // sans hésiter sur la casse (Axel : « faut que ça soit toujours en
         // majuscule le mot »).
         const KW = kw.toLocaleUpperCase('fr-FR')
-        const a = Math.max(last.start - 0.1, D - 5)
+        let a = Math.max(last.start - 0.1, D - 5)
+        // SES MÉDIAS ET SES CHOIX PASSENT DEVANT (audit 10/10) : le CTA ne les
+        // rogne plus — il démarre après eux, tant qu'il lui reste 1,2 s pour
+        // taper le mot. Sinon (média jusqu'au bout), le média est rogné mais
+        // jamais supprimé.
+        const estUser = (sc) => sc.user || sc.assetId || ['media', 'medias', 'photowall'].includes(String(sc.anim))
+        const finUser = Math.max(0, ...out.filter((sc) => estUser(sc) && (sc.end || 0) > a + 0.05).map((sc) => sc.end || 0))
+        if (finUser && finUser <= D - 1.2) a = r2(Math.max(a, finUser + 0.02))
         // LE CTA GARDE LA FIN. J'avais essayé de le faire céder pour atteindre
         // 100 % des scènes du chef d'orchestre ; Axel, en voyant le résultat :
         // « CTA à revoir, là y'a besoin de texte pour le CTA pour mettre le mot,
@@ -3120,7 +3184,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
           const s = out[i]
           if ((s.end || 0) <= a + 0.05) continue
           s.end = r2(a - 0.05)
-          if (s.end - s.start < 0.8) out.splice(i, 1)   // trop court : il dégage
+          // trop court : il dégage (un média de l'utilisateur sera repêché en
+          // fin de dérivation, posé en couche sur la carte du CTA)
+          if (s.end - s.start < 0.8) out.splice(i, 1)
         }
         // …ET L'ADRESSE, AVEC LE LOGO. Axel : « dans le CTA quand je dis
         // avatarads.fr tu ajoutes le logo AvatarAds ». Il dit DEUX choses dans
@@ -4113,28 +4179,48 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // résultat est une preuve : elle se regarde seule. On essaie donc d'abord
       // de lui donner tout l'écran, en délogeant l'animation qui l'occupait —
       // une animation fabriquée ne vaut pas le fichier qu'Axel a fourni.
+      // ⚠ ICI ON AGIT SUR plan.slides, PLUS SUR `out` (audit 10/10) : à ce
+      // stade `plan.slides` est déjà figé (= merged) et `out` n'est plus relu.
+      // L'ancien code délogeait l'animation dans `out` et y posait le média : le
+      // log disait « PLEIN CADRE », la vidéo gardait l'animation, le média
+      // disparaissait. Les bornes de `taken` sont aussi périmées (étirements) :
+      // la place se vérifie donc sur les scènes et les fenêtres FINALES.
       {
-        const vire = []
-        for (let i = out.length - 1; i >= 0; i--) {
-          const s = out[i]
-          if (!(a < s.end - 0.05 && e > s.start + 0.05)) continue
-          if (s.user || s.assetId || s.overlayMedia || String(s.anim) === 'media') continue
-          if (s.screen || String(s.anim) === 'ui') continue      // la visite guidée ne cède pas
-          vire.push({ s, i })
-        }
+        const sl = plan.slides || (plan.slides = [])
+        const recouvre = (x, y) => a < y - 0.05 && e > x + 0.05
+        const protege = (sc) => sc.user || sc.assetId || sc.overlayMedia || String(sc.anim) === 'media'
+          || sc.screen || String(sc.anim) === 'ui'          // la visite guidée ne cède pas
+          || sc.cta                                         // le mot à commenter non plus
+        const bloque = sl.some((sc) => recouvre(sc.start, sc.end) && protege(sc))
+          // le visage passe AU-DESSUS des panneaux : sur une fenêtre avatar, le
+          // média irait dessous — c'est le médaillon (plus bas) qui s'en charge
+          || (plan.avatarSegments || []).some((w) => Math.min(e, w.end) - Math.max(a, w.start) > 0.3)
+        const vire = bloque ? [] : sl.filter((sc) => recouvre(sc.start, sc.end))
         if (vire.length) {
-          for (const { s, i } of vire) {
-            out.splice(i, 1)
-            const k = taken.findIndex((w) => Math.abs(w[0] - s.start) < 0.01 && Math.abs(w[1] - s.end) < 0.01)
-            if (k >= 0) taken.splice(k, 1)
+          // le média ABSORBE les bouts d'animation qui le débordent de peu
+          // (≤ 1,5 s) plutôt que de laisser un trou derrière eux…
+          let a2 = a, e2 = e
+          for (const sc of vire) {
+            if (sc.start < a2 && sc.start >= a - 1.5) a2 = r2(sc.start)
+            if (sc.end > e2 && sc.end <= e + 1.5) e2 = r2(sc.end)
           }
-          if (add({ anim: 'media', src, assetId: b.assetId, hero: !!b.hero, user: true }, a, e)) {
-            console.log(`▶ média « ${b.assetId} » en PLEIN CADRE (${a}→${e}s) — ${vire.map((v) => v.s.anim || v.s.type).join(', ')} lui cède la place`)
-            continue
+          // …sans jamais mordre une fenêtre visage voisine
+          for (const w of plan.avatarSegments || []) {
+            if (w.end > a2 && w.end <= a + 0.3) a2 = r2(Math.max(a2, w.end + 0.02))
+            if (w.start < e2 && w.start >= e - 0.3) e2 = r2(Math.min(e2, w.start - 0.02))
           }
-          // ça n'a pas pris : on rend leur place aux animations délogées
-          for (const { s } of vire) { out.push(s); claim(s.start, s.end) }
-          out.sort((x, y) => x.start - y.start)
+          for (const sc of vire) {
+            const k = sl.indexOf(sc)
+            if (sc.start >= a2 - 0.05 && sc.end <= e2 + 0.05) { sl.splice(k, 1); continue }
+            // déborde de loin : on garde sa part hors du média si elle tient
+            if (a2 - sc.start >= 0.8) sc.end = r2(a2 - 0.02)
+            else if (sc.end - e2 >= 0.8) sc.start = r2(e2 + 0.02)
+            else sl.splice(k, 1)
+          }
+          sl.push({ anim: 'media', src, assetId: b.assetId, hero: !!b.hero, user: true, start: a2, end: e2 })
+          sl.sort((x, y) => x.start - y.start)
+          console.log(`▶ média « ${b.assetId} » en PLEIN CADRE (${a2}→${e2}s) — ${vire.map((v) => v.anim || v.type).join(', ')} lui cède la place`)
+          continue
         }
       }
 

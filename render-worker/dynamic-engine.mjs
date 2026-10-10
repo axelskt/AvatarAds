@@ -24,7 +24,7 @@ import { SAFE, fontFaceCss } from './visual-styles.mjs'
 import { jsonPourScript, escAttr, urlCss, cspComposition, GSAP_SCRIPT } from './securite.mjs'
 import { deriveDynamicSlides } from './dynamic-derive.mjs'
 // look Production (09/10) : texte choc sur l'accroche (plan.chocStyle, tiré par l'app)
-import { chocBloc, chocCss, sansEmoji, ajouterSfxChoc } from './production-look.mjs'
+import { chocBloc, chocCss, sansEmoji, ajouterSfxChoc, capSkinText } from './production-look.mjs'
 import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
 const r2 = (n) => Math.round(n * 100) / 100
@@ -1667,7 +1667,9 @@ export function buildDynamicComposition(plan, opts = {}) {
         const cls = ACCFORTS.has(bare) ? ' acc' : (STOPW.has(bare) ? ' sm' : '')
         // l'escalier de la réf ne touche PAS au hook (hk15 validé tel quel)
         const off = g.hook ? '' : ` style="vertical-align:${OFFS[(i + k) % OFFS.length]}em"`
-        return `<span class="dc-w${cls}" data-t="${r2(w.start)}"${off}>${esc(w.text)}</span>`
+        // sans ponctuation (« IA, » → « IA »), comme en Production — la coupe des
+        // groupes, elle, a déjà lu la ponctuation d'origine plus haut
+        return `<span class="dc-w${cls}" data-t="${r2(w.start)}"${off}>${esc(capSkinText(w.text))}</span>`
       }).join(' ')
       return `<div class="clip dyncap${g.hook ? '' : an.cls}" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"${slam && isFace && !isSplit ? ' data-face="1"' : ''}
         style="top:${g.hook ? hautHook : an.top}px"><span class="dc-p${g.hook ? ` dc-hook hk${hs}` : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`

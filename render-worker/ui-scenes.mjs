@@ -311,12 +311,16 @@ export const UI_SCENES = {
 
   // ── « des millions de vues » : les compteurs sociaux qui s'emballent ────────
   views(id, t0, t1, tone, s) {
+    // LE CHIFFRE VIENT DE LA VOIX (audit 10/10) : le gros compteur va au nombre
+    // DIT (s.value, lu par la dérivation) ; les trois pastilles (cœur, bulle,
+    // partage) ne portent plus de compteurs inventés — 128 K / 9 K / 42 K que
+    // personne n'avait annoncés. Elles s'allument, c'est le mouvement qui parle.
     const rows = [
-      { icon: 'M12 21s-7-4.6-9.5-8.2C.6 9.7 2.6 6 6 6c2 0 3.4 1 4 2.2C10.6 7 12 6 14 6c3.4 0 5.4 3.7 3.5 6.8C15 16.4 12 21 12 21z', v: 128400, lab: '' },
-      { icon: 'M21 11.5a8.4 8.4 0 01-9 8.4 8.6 8.6 0 01-4-.9L3 20l1.1-4.4a8.4 8.4 0 1116.9-4.1z', v: 9260, lab: '' },
-      { icon: 'M14 9V5l8 7-8 7v-4C6 15 3 18 2 21c0-6 3-10.5 12-12z', v: 41800, lab: '' },
+      { icon: 'M12 21s-7-4.6-9.5-8.2C.6 9.7 2.6 6 6 6c2 0 3.4 1 4 2.2C10.6 7 12 6 14 6c3.4 0 5.4 3.7 3.5 6.8C15 16.4 12 21 12 21z', v: 0, lab: '' },
+      { icon: 'M21 11.5a8.4 8.4 0 01-9 8.4 8.6 8.6 0 01-4-.9L3 20l1.1-4.4a8.4 8.4 0 1116.9-4.1z', v: 0, lab: '' },
+      { icon: 'M14 9V5l8 7-8 7v-4C6 15 3 18 2 21c0-6 3-10.5 12-12z', v: 0, lab: '' },
     ]
-    const big = parseInt(String(s.value || '2400000').replace(/\D/g, ''), 10) || 2400000
+    const big = parseInt(String(s.value || '').replace(/\D/g, ''), 10) || 0
     const cD = r2(Math.min(1.5, t1 - t0 - 0.4))
     const html = `
       <div class="stack" style="gap:26px">
@@ -326,17 +330,16 @@ export const UI_SCENES = {
           ${rows.map((r, k) => `<div id="${id}r${k}" style="display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0">
             <span style="width:104px;height:104px;border-radius:50%;background:${tone.dark ? '#1C1C24' : '#FFFFFF'};display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(13,13,18,${tone.dark ? '.5' : '.12'})">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="${ACC}"><path d="${r.icon}"/></svg></span>
-            <span id="${id}n${k}" style="font-size:34px;font-weight:700;color:${tone.ink}">0</span></div>`).join('')}
+            </div>`).join('')}
         </div>
       </div>`
     const fmt = (n) => (n >= 1000000 ? (n / 1000000).toFixed(1).replace('.0', '') + 'M' : n >= 1000 ? Math.round(n / 1000) + 'K' : String(n))
     let js = `
-  var ${id}v = { b: 0${rows.map((r, k) => `, n${k}: 0`).join('')} };
-  tl.fromTo('#${id}big',{scale:0.72,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'back.out(1.5)'},${r2(t0)});
-  tl.to(${id}v,{b:${big}${rows.map((r, k) => `, n${k}:${r.v}`).join('')},duration:${cD},ease:'power2.out',onUpdate:function(){
+  var ${id}v = { b: 0 };
+  tl.fromTo('#${id}big',{scale:0.72,opacity:0},{scale:1,opacity:${big ? 1 : 0},duration:0.4,ease:'back.out(1.5)'},${r2(t0)});
+  tl.to(${id}v,{b:${big},duration:${cD},ease:'power2.out',onUpdate:function(){
     var f=function(n){return n>=1000000?(n/1000000).toFixed(1).replace('.0','')+'M':n>=1000?Math.round(n/1000)+'K':String(Math.round(n))};
     var e=document.getElementById('${id}big'); if(e) e.textContent=f(${id}v.b);
-    ${rows.map((r, k) => `var e${k}=document.getElementById('${id}n${k}'); if(e${k}) e${k}.textContent=f(${id}v.n${k});`).join('\n    ')}
   }},${r2(t0 + 0.1)});
   tl.fromTo('#${id}lab',{y:40,opacity:0},{y:0,opacity:1,duration:0.3,ease:'circ.out'},${r2(t0 + 0.32)});` +
       rows.map((r, k) => `\n  tl.fromTo('#${id}r${k}',{y:70,scale:0.7,opacity:0},{y:0,scale:1,opacity:1,duration:0.4,ease:'back.out(1.7)'},${r2(t0 + 0.4 + k * 0.11)});`).join('') + `
@@ -355,7 +358,12 @@ export const UI_SCENES = {
     const val = parseInt(String(s.value || '30').replace(/\D/g, ''), 10) || 30
     const cx = 540, cy = 1010, R = 300
     const pieR = R / 2, pieC = Math.round(2 * Math.PI * pieR)   // circonférence du rayon R/2
-    const countDur = r2(Math.min(1.3, t1 - t0 - 0.5))
+    // le compte ARRIVE sur le nombre dit (s.countEnd = fin de « secondes ») :
+    // les valeurs de passage ne restent pas à l'écran pendant la phrase suivante
+    const fin = Number(s.countEnd)
+    const countDur = r2(Number.isFinite(fin) && fin > t0
+      ? Math.max(0.5, Math.min(1.3, fin - (t0 + 0.15), t1 - t0 - 0.5))
+      : Math.min(1.3, t1 - t0 - 0.5))
     const ticks = Array.from({ length: 12 }, (_, k) => {
       const a = (k / 12) * 2 * Math.PI - Math.PI / 2
       const x1 = cx + Math.cos(a) * (R + 34), y1 = cy + Math.sin(a) * (R + 34)

@@ -372,7 +372,7 @@ type Plan = {
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée — redirections MANUELLES revalidées à chaque saut,
 // IPv6 / formes numériques / ports / metadata bloqués (avant, seul l'hôte initial était contrôlé).
-import { safeFetchHtml, authUser, billableGate, applyReservation, settleReservation, releaseOp, lacherCorps } from '../_shared/guard.ts'
+import { safeFetchHtml, authUser, billableGate, applyReservation, settleReservation, releaseOp, lacherCorps, requirePlan } from '../_shared/guard.ts'
 async function fetchSiteContext(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 6000)
@@ -2433,7 +2433,7 @@ async function relireTranscription(words: Word[], contexte: string, cle: string,
         system: `Tu relis une transcription automatique en français, mot à mot. Tu corriges :
 — les apostrophes d'élision que le transcripteur avale (« dinvestissement » → « d'investissement », « lIA » → « l'IA », « jai » → « j'ai »)
 — les noms propres et noms de marque mal entendus, et leurs majuscules
-— les MOTS MAL ENTENDUS : un homophone ou un mot proche qui ne colle pas au sens de la phrase. Exemples vus : « commande site » quand il demande un commentaire → « commente site » ; « photo riel » → « photo réel » ; « une fois ton concret » → « une fois ton compte_créé » ; « avataria » → « AvatarAds ». Tu tranches avec le SENS de la phrase et le contexte (une vidéo de créateur : « commente X et je t'envoie… », « crée ton compte », « génère ton avatar »).
+— les MOTS MAL ENTENDUS : un homophone ou un mot proche qui ne colle pas au sens de la phrase. Exemples vus : « commande site » quand il demande un commentaire → « commente site » ; « photo riel » → « photo réel » ; « une fois ton concret » → « une fois ton compte_créé » ; « avataria » → « AvatarAds » ; « imagia » → « Images_IA » (le module Images IA). Tu tranches avec le SENS de la phrase et le contexte (une vidéo de créateur : « commente X et je t'envoie… », « crée ton compte », « génère ton avatar »).
 
 Quand une correction remplace UN mot par DEUX (« concret » → « compte créé »), relie-les par un underscore : « compte_créé ». Jamais d'espace ajouté.
 
@@ -2566,6 +2566,10 @@ serve(async (req: Request) => {
   if (!_auth.isService && !_auth.userId) { await lacherCorps(req); return json({ error: 'unauthorized' }, 401) }
   // Audit #3 : orchestrate = Scribe + N Claude (coûteux). Exiger un débit récent (montage débite AVANT) + plafond.
   // M6 (06/09) : amplification réduite — 1 débit → 6 runs / 15 min (au lieu de 12/30).
+  // Audit 10/10 : le Montage IA est réservé à l'Élite pendant la bêta (décision d'Axel, montageGo dans l'app) —
+  // vérifié ICI aussi : le bouton « Montage IA » de l'Éditeur et un appel direct passaient à côté du contrôle de
+  // l'app. Owner / developer passent ; le MCP (clé de service) fait son propre contrôle ; fail-open sur hoquet DB.
+  if (_auth.userId) { const _p = await requirePlan(_auth.userId, ['elite'], 'Montage IA'); if (!_p.ok) { await lacherCorps(req); return json({ error: 'Le Montage IA est réservé au plan Élite pendant la bêta' }, 403) } }
   if (_auth.userId) { const _g = await billableGate({ userId: _auth.userId, proxy: 'orchestrate', requireDebit: true, debitMinutes: 15, rateMax: 6, label: 'plan' }); if (!_g.ok) { await lacherCorps(req); return json({ error: _g.error }, _g.status) } }
 
   // Audit métier 14/09 : orchestrate TIRE une part non-remboursable (coût-plan) sur l'op montageIA et la RÈGLE au

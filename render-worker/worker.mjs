@@ -1184,6 +1184,27 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       }
       if (avatarPool.length > 1) console.log(`▶ pool avatar : ${avatarPool.length} visages (rotation par fenêtre)`)
     }
+    // ── AUDIO SEUL + PHOTO, SANS LIPSYNC : LE FOND, C'EST SON VISAGE (audit 10/10) ──
+    // En style Auto (moteur classique), tout ce que les scènes ne couvrent pas
+    // montre la base — ici un fond NOIR fabriqué : 14 trous noirs sur R2 et un
+    // CTA final sur du noir. « Un trou se remplit par le visage » (Axel) : la
+    // base devient sa photo, et les sous-couches (`fonds`, plus bas) la posent
+    // dans chaque trou. Seulement en photo fixe (sans lipsync : une photo figée
+    // entre deux clips qui parlent serait un visage muet) et hors des moteurs qui
+    // couvrent l'écran eux-mêmes (dynamique, apple, sombre, mot par mot).
+    if (!baseAUneImage && avatarPhoto && !Object.keys(avatarClips).length && !plan.__lipsync
+        && !['dynamic', 'apple', 'slam', 'word'].includes(String(plan.slideStyle || ''))) {
+      try {
+        const tmp = join(proj, 'media', 'base-photo.mp4')
+        execFileSync('ffmpeg', ['-v', 'error', '-y', '-loop', '1', '-framerate', String(FPS), '-i', join(proj, avatarPhoto),
+          '-i', join(proj, 'media', 'base.mp4'), '-map', '0:v', '-map', '1:a', '-shortest',
+          '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p',
+          '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-tune', 'stillimage', '-c:a', 'copy', tmp])
+        renameSync(tmp, join(proj, 'media', 'base.mp4'))
+        baseAUneImage = true
+        console.log('▶ audio seul + photo : la base devient la photo d\'avatar (plus de trou noir entre les scènes)')
+      } catch (e) { console.warn('base photo :', e.message) }
+    }
     // ── #42 · LE LIPSYNC, SCÈNE PAR SCÈNE ────────────────────────────────────
     // Axel : « il faut qu'il appelle l'API Hedra pour le faire, et faut qu'il
     // génère scène par scène, pas tout l'audio ». L'app le fait déjà ainsi ; le
@@ -1226,6 +1247,33 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
         const av = String(c.text || '')
         for (const [re, to] of FIX) c.text = String(c.text || '').replace(re, to)
         if (c.text !== av) n++
+      }
+      // « IMAGIA » (audit 10/10) : la transcription colle « Images IA » en un seul
+      // mot, et le nom du module s'affichait faux sous sa propre capture. On le
+      // rend en DEUX mots (le temps du mot partagé) : le sous-titre est juste et
+      // la visite guidée retrouve la suite « images ia ».
+      const cs = plan.captions || []
+      for (let i = cs.length - 1; i >= 0; i--) {
+        const m = String(cs[i].text || '').trim().match(/^imagu?ia([.,!?…]*)$/i)
+        if (!m) continue
+        const c = cs[i], mid = r2((Number(c.start) + Number(c.end)) / 2)
+        cs.splice(i, 1, { ...c, text: 'Images', end: mid }, { ...c, text: 'IA' + m[1], start: mid })
+        n++
+      }
+      // même règle pour les mots que la relecture d'orchestrate a dédoublés
+      // (« concret » → « compte créé », « imagia » → « Images IA ») : un mot du
+      // plan = un mot dit, sinon la dérivation ne retrouve pas la suite.
+      for (let i = cs.length - 1; i >= 0; i--) {
+        const t = String(cs[i].text || '').trim()
+        if (!/^[\p{L}][\p{L}'’-]*(\s+[\p{L}][\p{L}'’-]*)+[.,!?…]*$/u.test(t)) continue
+        const parts = t.split(/\s+/), c = cs[i]
+        const a0 = Number(c.start), d = Math.max(0.02, Number(c.end) - a0)
+        const tot = parts.reduce((x, p) => x + p.length, 0)
+        let acc = 0
+        cs.splice(i, 1, ...parts.map((p) => {
+          const st = r2(a0 + d * acc / tot); acc += p.length
+          return { ...c, text: p, start: st, end: r2(a0 + d * acc / tot) }
+        }))
       }
       if (n) console.log(`▶ ${n} sous-titre(s) corrigé(s) (lexique métier)`)
     }

@@ -35,6 +35,8 @@ export const ANIM_EMOJI_SET = {
 export { ANIM_NAMES as ANIMS } from './anim-bank.mjs'
 import { ANIM_NAMES as ANIMS } from './anim-bank.mjs'
 
+// libellés d'INTERFACE, pas des affirmations : ils gardent leur exemple (voir txt)
+const DEF_INTERFACE = new Set(['MA-VIDEO.MP4', 'PRISE 1', 'PRISE 2', '0:28', '0:42', '+1'])
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 // Palette : sombre sur clair pour les styles page blanche, l'inverse sinon.
@@ -123,7 +125,18 @@ export function animHtml(name, s, W, H, vs) {
   // #blank · mode « anim vide » (éditeur AvatarAds) : on rend la STRUCTURE de l'anim sans le
   // texte d'exemple, pour que l'utilisateur pose SON contenu par-dessus. Aucun impact sur les
   // montages normaux (s._blank n'est jamais posé par la dérivation).
-  const txt = (i, def) => esc(s._blank ? '' : ((raw[i] || '').trim() || def))
+  // LE CHIFFRE AFFICHÉ VIENT DE CE QUI EST DIT (règle d'Axel, non négociable) :
+  // les nombres d'exemple codés ici (« 490€ », « +12K », « 99,98 % »…)
+  // s'affichaient dès que le chef d'orchestre ne passait rien — la facture
+  // annonçait 490 € que personne n'avait dits (audit 10/10). Sans valeur
+  // entendue, la case reste vide ; seuls les libellés d'interface (nom de
+  // fichier, durée d'un lecteur, numéro de prise) gardent leur exemple.
+  const txt = (i, def) => {
+    if (s._blank) return ''
+    const v = (raw[i] || '').trim()
+    if (v) return esc(v)
+    return esc(/\d/.test(def) && !DEF_INTERFACE.has(def) ? '' : def)
+  }
   // #blank/#perso · fente IMAGE : jumelle de txt() pour un <img>. En mode blanc →
   // boîte vide (l'utilisateur pose son logo dans l'éditeur). Sinon l'image PERSO
   // (items[i].src, posée par le menu image du Montage IA) si fournie, à défaut
@@ -4153,6 +4166,10 @@ export function animJs(name, s, r2) {
       // ⚠️ `animJs` ne dispose pas du `items` d'`animHtml` : on relit la scène.
       const its = (s.items || []).map((it) => String(it.text || ''))
       const nb = (t, d) => { const v = String(t || '').replace(/[^0-9]/g, ''); return v ? parseInt(v, 10) : d }
+      // la cible vient des items (posés par la dérivation ou le chef d'après la
+      // voix) ; sans elle, le compteur ne compte pas au-delà d'un ordre de
+      // grandeur que la phrase ne contredit pas (« des vues » → 100 000, le
+      // départ et l'arrivée validés par Axel pour « générer des vues »)
       const dep = nb(its[1], 200)
       const arr = Math.max(dep + 1, nb(its[0], 100000))
       const T = r2(Math.max(0.8, Math.min(dur - 0.7, 1.3)))

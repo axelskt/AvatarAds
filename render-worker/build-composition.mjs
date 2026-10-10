@@ -469,7 +469,7 @@ export function buildComposition(plan, opts = {}) {
   // et les mots déjà dits RESTENT à l'écran — au lieu de se remplacer.
   const ctaWords = wordMode
     ? (plan.captions || []).filter((c) => c.start >= ctaStart)
-      .map((c, i) => ({ id: 'ctw' + i, text: String(c.text || ''), t: r2(c.start), accent: !!c.accent }))
+      .map((c, i) => ({ id: 'ctw' + i, text: capSkinText(c.text), t: r2(c.start), accent: !!c.accent }))
       .filter((w) => w.text)
     : []
   // LE MOT-CLÉ DU CTA EN ORANGE. Le chef d'orchestre remplit `accents` avec les mots
@@ -507,7 +507,7 @@ export function buildComposition(plan, opts = {}) {
   }
   const hookWords = wordMode
     ? (plan.captions || []).filter((c) => String(c.text || '').trim() && c.start < hookCapEndW)
-      .map((c, i) => ({ id: 'whk' + i, text: String(c.text).trim(), t: r2(c.start), accent: !!c.accent }))
+      .map((c, i) => ({ id: 'whk' + i, text: capSkinText(c.text) || String(c.text).trim(), t: r2(c.start), accent: !!c.accent }))
     : []
   const hasWordHook = hookWords.length >= 3
   if (hasWordHook) {
@@ -524,7 +524,10 @@ export function buildComposition(plan, opts = {}) {
   const capTopSplit = SLIDE_H + Math.round(VIDEO_H * 0.62) - Math.round(subSize * 0.75)
   // pendant une scène plein cadre, les sous-titres passent sur fond clair (ombre au lieu du contour)
   const inFullScene = (t) => fullDefs.some((f) => t >= f.start && t < f.start + f.dur)
-  const capTopCream = Math.round(H * 0.74)
+  // MÊME HAUTEUR QUE SUR LA VIDÉO (audit 10/10) : à 0,74 H le mot descendait
+  // jusqu'à y≈1520 sur 1920 — sous la légende et les boutons TikTok (zone sûre
+  // basse ≈ 1450) — et sautait de ~140 px à chaque raccord scène/visage.
+  const capTopCream = capTopFull
   // style de sous-titres choisi par l'utilisateur (Parametres avances) ; 'punch' = defaut
   // historique. 'st-auto' = l'utilisateur n'a rien imposé → le style visuel peut habiller
   // les sous-titres (typo fine Apple, sérif éditorial…) sans écraser un choix explicite.
@@ -560,7 +563,9 @@ export function buildComposition(plan, opts = {}) {
     const cream = pageMode || inFullScene(r2(c.start) + 0.05)
     return {
       id: 'cap' + i,
-      text: CASE(c.text),
+      // sans ponctuation, comme en Production (« IA, » → « IA ») ; le point
+      // d'un domaine (« avatarads.fr ») est intérieur, il reste
+      text: CASE(capSkinText(c.text)),
       start: r2(c.start),
       dur: r2(Math.max(0.1, c.end - c.start)),
       accent: !!c.accent,
@@ -1179,8 +1184,11 @@ export function buildComposition(plan, opts = {}) {
          dynamic porté tel quel — BLANC à ombre franche (tient sur la page
          blanche), le mot fort s'ALLUME en rouge flou juste après son arrivée,
          MÊME taille (c'est le néon qui fait l'emphase, pas la taille). */
+      /* + CONTOUR NOIR (audit 10/10) : sur la page blanche du Mot par mot, le blanc à
+         ombre restait illisible — et c'est la COUVERTURE TikTok (frame 0). Le
+         contour fait lire le mot sur la page comme sur une vidéo. */
       .whk-w { display: inline-block; opacity: 0; padding: 0.04em ${Math.round(W * 0.004)}px;
-        color: #FFFFFF;
+        color: #FFFFFF; -webkit-text-stroke: ${Math.max(4, Math.round(H * 0.0036))}px #0D0D12; paint-order: stroke fill;
         text-shadow: 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.62),
           0 ${Math.round(H * 0.0012)}px ${Math.round(H * 0.004)}px rgba(0,0,0,.5);
         will-change: transform, opacity; }

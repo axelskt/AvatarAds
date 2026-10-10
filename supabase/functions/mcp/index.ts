@@ -107,7 +107,10 @@ const NETTOYAGE: ConfigNettoyage = {
 // montage étant facturé PLAN + RENDER, la somme doit donc faire 8.
 const MONTAGE_PLAN_COST   = 4  // part « chef d'orchestre » (transcription Scribe + plan Claude)
 const MONTAGE_RENDER_COST = 4  // = montageRender (MP4 monté par le moteur de rendu)
-const MONTAGE_STYLES      = ['auto', 'apple', 'glass', 'dynamic', 'word']
+// Mêmes styles que l'app (maquette 09/10 : Auto · Apple · Sombre premium · Mot par mot), Auto par défaut :
+// c'est lui qui porte les sous-titres Production (plan.capSkin). « dynamic » reste accepté (anciens appels) ;
+// « glass », « bientôt » dans l'app, retombe sur Auto comme dans l'app.
+const MONTAGE_STYLES      = ['auto', 'apple', 'slam', 'word', 'dynamic']
 const MONTAGE_MAX_BYTES   = 20_000_000 // limite du chef d'orchestre
 // OmniHuman 1.5 (ByteDance via fal) — le moteur lipsync le plus réaliste (#107/#121)
 const OMNI_COST_SEC = 5
@@ -447,6 +450,10 @@ const isUnlimited = (p: Record<string, unknown>) =>
 // Audit 02/10 : OmniHuman (lipsync haute résolution) = Pro & Élite ou compte illimité — la règle de lipsync_video (Axel 26/09),
 // appliquée aussi au Montage IA (montage_ia, render_montage_plan). 'mix' (Omni au hook) = propriétaire seul (Axel 23/08).
 const droitOmniHuman = (p: Record<string, unknown>) => isUnlimited(p) || ['pro', 'elite'].includes(String(p.plan || '').toLowerCase())
+// Audit 10/10 : Montage IA = Élite pendant la bêta, comme dans l'app (montageGo) et orchestrate. Le MCP l'ouvrait au
+// Starter. Le suivi (check_montage, get_montage_plan) reste ouvert : il ne lance rien et ne lit que ses propres jobs.
+const droitMontageIA = (p: Record<string, unknown>) => isUnlimited(p) || String(p.plan || '').toLowerCase() === 'elite'
+const PLAN_LABEL: Record<string, string> = { free: 'Free', starter: 'Starter', pro: 'Pro', elite: 'Élite' }
 const modeleLipsyncAutorise = (p: Record<string, unknown>, m: unknown): boolean => {
   const v = String(m ?? '').toLowerCase()
   if (v === 'hedra') return true
@@ -1247,7 +1254,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
     },
     {
       name: 'montage_ia',
-      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, clics), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (lipsync standard 2 cr/s, lipsync haute résolution 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
+      description: `Réservé au plan Élite pendant la bêta. Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, clics), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (lipsync standard 2 cr/s, lipsync haute résolution 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -1269,7 +1276,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
               required: ['url'],
             },
           },
-          style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel des slides : dynamic (motion design continu, défaut), apple (épuré clair), glass (liquid glass), word (mot par mot), auto (choisi par l'IA)." },
+          style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel, comme dans l'app : auto (défaut — l'IA choisit, avec les sous-titres et le texte choc du look Production), apple (fond clair, minimal), slam (sombre premium : fond noir, contrastes chauds), word (mot par mot sur page blanche), dynamic (motion design continu, sous-titres maison)." },
           brief: { type: 'string', description: "Optionnel — ce que l'utilisateur veut mettre en avant (intention, produit, CTA). 700 caractères max." },
           script: { type: 'string', description: 'Optionnel — texte EXACT du script parlé : garantit des sous-titres parfaits.' },
           duration_seconds: { type: 'number', description: "Optionnel — durée exacte de l'audio en secondes (sinon estimée automatiquement)." },
@@ -1299,7 +1306,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
     },
     {
       name: 'render_montage_plan',
-      description: `L'ÉDITEUR via Claude (rendu) : re-rend un Montage IA à partir d'un PLAN MODIFIÉ (obtenu via get_montage_plan puis ajusté : textes, timings, styles, coupes…). Réutilise l'audio du montage d'origine. Coût : ${MONTAGE_RENDER_COST} crédits. Retourne un nouveau job_id — appelle ensuite check_montage.`,
+      description: `Réservé au plan Élite pendant la bêta. L'ÉDITEUR via Claude (rendu) : re-rend un Montage IA à partir d'un PLAN MODIFIÉ (obtenu via get_montage_plan puis ajusté : textes, timings, styles, coupes…). Réutilise l'audio du montage d'origine. Coût : ${MONTAGE_RENDER_COST} crédits. Retourne un nouveau job_id — appelle ensuite check_montage.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -3886,7 +3893,7 @@ async function createMontageJobs(
 async function runMontageIA(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   const audioUrl = String(args.audio_url || '').trim()
   if (!audioUrl) return toolErr('Le paramètre "audio_url" est requis.')
-  const style = MONTAGE_STYLES.includes(String(args.style)) ? String(args.style) : 'dynamic'
+  const style = MONTAGE_STYLES.includes(String(args.style)) ? String(args.style) : 'auto'
   const brief = String(args.brief || '').trim().slice(0, 700)
   const script = String(args.script || '').trim().slice(0, 4000)
   const got = await fetchUserFile(audioUrl, MONTAGE_MAX_BYTES, /^(audio\/|video\/mp4|application\/octet-stream)/, "l'audio (audio_url)")
@@ -4095,7 +4102,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       }
       const plan = od.plan as Record<string, unknown>
       plan.duration = Math.round(durEst * 100) / 100 // le moteur recale sur la durée réelle
-      if (style !== 'auto') plan.slideStyle = style
+      plan.slideStyle = style   // explicite, comme l'app (Auto compris)
       lookProduction(plan, durEst)   // 09/10 : sous-titres, texte choc et musique de Production (comme l'app)
 
       // 2) l'audio devient l'entrée du rendu (le moteur gère l'absence de piste vidéo)
@@ -4216,7 +4223,7 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
   }
 
   const { data: rj } = await svc.from('render_jobs')
-    .select('status, output_url, error, created_at').eq('id', job.op_name).maybeSingle()
+    .select('status, output_url, error, created_at, updated_at').eq('id', job.op_name).maybeSingle()
   if (!rj) {
     await failAndRefund(userId, job, 'job de rendu disparu')
     return toolErr('Job de rendu introuvable — crédits remboursés.')
@@ -4233,9 +4240,17 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
       await failAndRefund(userId, job, 'moteur de rendu hors ligne')
       return toolErr('Le moteur de rendu est resté hors ligne plus de 2 h — crédits remboursés, réessaie plus tard.')
     }
-    return enCours("En file d'attente du moteur de rendu.", 'check_montage', '1 minute')
+    return toolText("⏳ En file d'attente du moteur de rendu. Ce n'est pas une erreur : rappelle check_montage dans ~1 minute.")
   }
-  if (rj.status === 'rendering') return enCours('Rendu du montage en cours (il prend 2 à 5 minutes).', 'check_montage', '1 minute')
+  // Audit 10/10 : check_montage répond TOUT DE SUITE (pas de long-poll ici) — le message ne promet plus d'attente
+  // côté serveur ni « rappelle IMMÉDIATEMENT ». Un rendu sans battement depuis 45 min (le worker met updated_at
+  // à jour toutes les 2 min) est un rendu interrompu : le worker le relance seul (3 essais) puis rembourse.
+  if (rj.status === 'rendering') {
+    const muet = Date.now() - new Date(String(rj.updated_at || rj.created_at)).getTime() > 45 * 60_000
+    return toolText(muet
+      ? '⏳ Le rendu a été interrompu (redémarrage du moteur) : il est relancé automatiquement, et remboursé s\'il échoue trois fois. Rappelle check_montage dans ~5 minutes.'
+      : '⏳ Rendu du montage en cours (2 à 5 minutes). Ce n\'est pas une erreur : rappelle check_montage dans ~1 minute.')
+  }
   if (rj.status === 'done' && rj.output_url) {
     // ré-héberge le MP4 en public (render-media est privé) — claim atomique anti-doublon
     const dl = await svc.storage.from('render-media').download(String(rj.output_url))
@@ -5656,6 +5671,9 @@ serve(async (req) => {
       else if (name === 'check_avatar_video') out = await runCheckAvatarVideo(profile, args)
       else if (name === 'clean_audio') out = await runCleanAudio(profile, args, ctx)
       else if (name === 'lipsync_video') out = await runLipsyncVideo(profile, args, ctx)
+      else if ((name === 'montage_ia' || name === 'render_montage_plan') && !droitMontageIA(profile)) {
+        out = toolErr(`Le Montage IA est réservé au plan Élite pendant la bêta. Ton plan actuel : ${PLAN_LABEL[String(profile.plan || 'free').toLowerCase()] || 'Free'}. Passe au plan Élite sur ${APP_URL}`)
+      }
       else if (name === 'montage_ia') out = await runMontageIA(profile, args, ctx)
       else if (name === 'check_montage') out = await runCheckMontage(profile, args)
       else if (name === 'get_montage_plan') out = await runGetMontagePlan(profile, args)
