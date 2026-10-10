@@ -16441,7 +16441,7 @@ function _mtDureeVideo(file){
 // ses visuels à LUI (jamais les visuels automatiques de « Ma marque ») : ses images, ses vidéos, et sa vidéo déposée
 async function _mtVisuelsSansVoix(){
   const out = [];
-  for(const a of ((window._edAi && _edAi.files) || [])){
+  for(const a of ((typeof _edAi !== 'undefined' && _edAi && _edAi.files) || [])){   // _edAi est une liaison du script, PAS window._edAi
     if(String(a.id || '').startsWith('lib')) continue;
     out.push({ id: a.id, file: a.file, isVideo: !!a.isVideo, url: a.url, dur: a.isVideo ? await _mtDureeVideo(a.file) : 0 });
   }
