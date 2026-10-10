@@ -13,7 +13,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { billableGate, userPlan, reserveStrict, reserveEnforce, requirePlan, PLANS_PAYANTS, COMPOSE_SANS_TIRAGE, RENDU_MONTAGE_MIN,
+import { billableGate, userPlan, reserveStrict, reserveEnforce, requirePlan, PLANS_PAYANTS, COMPOSE_SANS_TIRAGE, RENDU_MONTAGE_MIN, plancherRenduOp,
   MONTAGE_DUREE_MAX, RENDU_DUREE_MAX, RETOUCHE_OCTETS_MAX, RETOUCHE_EN_COURS_MAX, MOTION_ASSETS, fichierDuFlux, opMotionRecente,
   opFondVideo, opRenduMontage, tailleObjet } from '../_shared/guard.ts'
 import { cheminSur, planClientRenderJob } from '../_shared/storage-path.ts'
@@ -220,13 +220,15 @@ serve(async (req: Request) => {
         }
         // Tirage AVANT l'insertion + on vérifie le montant : un perdant du burst (op déjà à 0) → 402, pas de job.
         if (!opErr) {
+          // 11/10 : plancher de l'op principale — 1 si le chef d'orchestre y a déjà tiré son plan (prix fixe du niveau), sinon 4
+          const plancherMain = opIds.length ? await plancherRenduOp(user.id, opIds[0]) : RENDU_MONTAGE_MIN
           for (const o of opIds) {
             // audit 14/09 : draw_full_reservation renvoie le MONTANT tiré (int, 0 = rien).
             // Audit 04/10 (MONT-1) : l'op PRINCIPALE doit porter au moins le prix du rendu (RENDU_MONTAGE_MIN = montageRender) —
             // avant, le plancher valait 1 : spend_credits(1) finançait un rendu serveur. Flux légitimes : montage IA (8 − 2 tirés
             // par orchestrate = 6), Éditeur et régénération (4). L'habillage (2e op désignée) reste tiré entier, sans plancher.
             let amt = 0
-            try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: o, p_min: o === opIds[0] ? RENDU_MONTAGE_MIN : 1 }); amt = Number(_ok) || 0 }
+            try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: o, p_min: o === opIds[0] ? plancherMain : 1 }); amt = Number(_ok) || 0 }
             catch (e) { console.warn('draw_full render-job:', (e as Error).message) }
             if (amt > 0) tires.push({ op: o, amt })
             else if (o === opIds[0]) break   // l'op principale n'a rien donné : on ne tire pas les autres

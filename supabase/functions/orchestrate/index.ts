@@ -57,14 +57,14 @@ const BUDGET_MS = 148_000
 // arrière-plan (EdgeRuntime.waitUntil) — il ne dépend plus de la coupure de 160 s de la requête. Budget du travail de
 // fond : sous la limite d'horloge d'une fonction (400 s en plan payant).
 const BUDGET_ASYNC_MS = 330_000
-// RÉFLEXION DU MONTAGE (curseur Faible / Moyen / Élevé de l'app, clé « rapide » = Faible) : modèle, effort et part « plan »
-// prélevée = le prix ENTIER du niveau (app : 2 / 5 / 10, Axel 10/10) ; le rendu est payé par une autre op (habillage) ou le
-// reste de l'op. Jamais de nom de modèle côté client. En mode direct (sans tâche de fond, MCP), seul « rapide » tient dans
-// le budget : il tire 2 sur montageIA (8), le reste (6) paie le rendu.
-const NIVEAUX: Record<string, { modele: string; effort: string; coutPlan: number }> = {
-  rapide: { modele: CLAUDE_MODEL, effort: 'low', coutPlan: 2 },
-  moyen: { modele: CLAUDE_MODEL, effort: 'medium', coutPlan: 5 },
-  eleve: { modele: 'claude-opus-5-5', effort: 'high', coutPlan: 10 },
+// RÉFLEXION DU MONTAGE (curseur Faible / Moyen / Élevé de l'app, clé « rapide » = Faible) : modèle, effort et prix du niveau
+// (app : 2 / 5 / 10, Axel 10/10) = le PRIX FIXE du montage. En tâche de fond, le chef en tire tout SAUF 1 crédit, laissé à
+// render-job (plancher 1 sur une op de montage déjà tirée par le chef, guard.ts plancherRenduOp). Jamais de nom de modèle
+// côté client. En mode direct (sans tâche de fond, MCP), seul « rapide » tient dans le budget : il tire 2 sur montageIA (8).
+const NIVEAUX: Record<string, { modele: string; effort: string; prix: number }> = {
+  rapide: { modele: CLAUDE_MODEL, effort: 'low', prix: 2 },
+  moyen: { modele: CLAUDE_MODEL, effort: 'medium', prix: 5 },
+  eleve: { modele: 'claude-opus-5-5', effort: 'high', prix: 10 },
 }
 // échéance PROPRE À LA REQUÊTE (un isolat peut servir deux montages à la fois) : passée à chaque étape
 const reste = (fin: number) => fin - Date.now()
@@ -2015,6 +2015,9 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // une correspondance exacte ne trouvait presque rien. On cherche donc la
       // suite de mots, puis a defaut le mot le plus long du groupe (le plus
       // distinctif — « format » plutot que « le »).
+      // une zone où l'on ÉCRIT : « prompt », mais aussi les champs « decris-l-image-que-tu-veux-generer », « decris-ta-video-… »
+      // (audit R2-09 : le texte tapé n'était recopié que pour « prompt » → champs restés sur leur placeholder)
+      const ZONE_TEXTE = /prompt|(^|-)decri|descri|script|texte|ecri/
       const toks = String(tu.word || '').split(/\s+/).map(norm).filter((x) => x.length >= 3)
       if (!toks.length) continue
       let w: Word | undefined
@@ -2036,7 +2039,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // propose souvent plusieurs mots qui pointent vers la meme case.
       if (tutoShots.some((sh) => sh.screen === screen && (sh.z === rect || sh.z2 === rect))) continue
       if (prev && prev.screen === screen && !prev.z2 && w.start - prev.t < 2.0) prev.z2 = rect
-      else tutoShots.push({ t: w.start, screen, z: rect, text: zone.includes('prompt') ? String(tu.text || '').slice(0, 60) : '' })
+      else tutoShots.push({ t: w.start, screen, z: rect, text: ZONE_TEXTE.test(zone) ? String(tu.text || '').slice(0, 60) : '' })
     }
     for (let i = 0; i < tutoShots.length; i++) {
       const sh = tutoShots[i]
@@ -2699,12 +2702,13 @@ async function traiter(req: Request, budgetMs = BUDGET_MS): Promise<Response> {
     // niveau de réflexion : demandé par l'app ; en direct, seul « rapide » tient dans les 160 s
     const _nivDemande = String(form.get('niveau') || '').toLowerCase()
     const niveau = !_fond ? 'rapide' : (NIVEAUX[_nivDemande] ? _nivDemande : 'moyen')
-    // Tirage du coût-plan (2 en direct ; 2 / 5 / 10 selon la réflexion en tâche de fond) sur l'op du montage, AVANT Scribe/Claude.
-    // Le reste éventuel demeure tirable pour render-job ; en tâche de fond, le rendu a sa propre op (habillage ou niveau + 4).
+    // Tirage du coût-plan sur l'op du montage, AVANT Scribe/Claude : 2 en direct (montageIA 8 → 6 pour le rendu) ; en tâche de
+    // fond, le prix du niveau moins 1 (1 / 4 / 9) — le dernier crédit paie le rendu (render-job, plancher 1 car le chef a tiré).
     if (_auth.userId) {
-      const _rr = await applyReservation({ req, userId: _auth.userId, proxy: 'orchestrate', cost: NIVEAUX[niveau].coutPlan, label: 'plan' })
+      const coutPlan = _fond ? Math.max(1, NIVEAUX[niveau].prix - 1) : 2
+      const _rr = await applyReservation({ req, userId: _auth.userId, proxy: 'orchestrate', cost: coutPlan, label: 'plan' })
       if (!_rr.ok) return json({ error: _rr.error }, _rr.status)
-      _opId = _rr.opId; _drew = true; _coutTire = NIVEAUX[niveau].coutPlan
+      _opId = _rr.opId; _drew = true; _coutTire = coutPlan
     }
 
     const script = String(form.get('script') || '').trim().slice(0, 4000) || null

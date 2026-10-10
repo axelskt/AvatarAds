@@ -470,6 +470,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
     .sort((a, b) => a.start - b.start)
   if (!words.length) return
   const D = r2(plan.duration || (words[words.length - 1].end + 0.5))
+  // ── UN VISAGE QUI PARLE NE GÈLE JAMAIS (C7, audit 10/10) ──────────────────
+  // Les passes qui comblent les trous (§3c, dernier filet) étiraient une fenêtre à clip lipsync au-delà de sa matière :
+  // le recoupage gelait la dernière image pendant que la voix continuait. Une fenêtre à clip ne s'étire donc que dans sa
+  // matière (+0,45 s : la poussée du panneau suivant la recouvre), ou sur un passage où personne ne parle.
+  const finMatiere = (x) => (x && Number.isInteger(x.clip) && x.clip >= 0 && MATIERE[x.clip]) ? MATIERE[x.clip].e : Infinity
+  const etirable = (x, fin) => {
+    const m = finMatiere(x)
+    return fin <= m + 0.45 || !words.some((w) => w.end > m + 0.05 && w.start < fin - 0.05)
+  }
   const out = []
   const taken = []        // fenêtres occupées, pour ne jamais superposer deux scènes
   const overlaps = (a, b) => taken.some((w) => a < w[1] - 0.05 && b > w[0] + 0.05)
@@ -699,6 +708,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // SaaS IA peut changer ta vie », le chef d'orchestre posait `logo` — et
     // l'ecran affichait « avatarads.fr » pendant qu'Axel dit « SaaS IA ».
     // Sa proposition n'est pas au-dessus de la regle.
+    let calee = false   // la scène s'est déjà calée sur le mot qui la justifie (garde-fou EXIGE_GLOBAL)
     if (EXIGE_GLOBAL[nom] && !slide.user && !contexte) {
       // …mais un CHOIX EXPLICITE de l'écran « Détails du montage » passe : Axel
       // a remplacé target par lineup et la garde le lui jetait (« j'ai mis
@@ -757,40 +767,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const motif = EXIGE_GLOBAL[nom]
       const declencheur = motif ? dansFenetre.find((w) => motif.test(w.text)) : null
       if (declencheur) {
+        calee = true
         const na = r2(Math.max(a, declencheur.start - 0.12))
         if (na > a + 0.08 && b - na >= 1.25 && !overlaps(na, b)) {
           console.log(`▶ ${nom} recalé sur « ${declencheur.text} » : ${a}s → ${na}s`)
           a = na
-        }
-      } else {
-        // ── UN PLAN CHANGE SUR UN MOT, JAMAIS AU MILIEU ─────────────────────
-        // Axel, 03/08 : « je dis "et voici pourquoi" et à ce moment-là ça
-        // devrait changer de frame, pourquoi ça n'a pas changé ? »
-        //
-        // Le recalage ci-dessus ne s'appliquait qu'aux animations portant un
-        // mot OBLIGATOIRE déclaré. Toutes les autres — la majorité — gardaient
-        // le temps approximatif du chef d'orchestre, qui raisonne en phrases et
-        // arrondit. Une scène pouvait donc démarrer à 7,63 s quand le mot qui
-        // la justifie commence à 7,50 : treize centièmes de décalage, invisibles
-        // sur le papier, mais l'œil les voit comme un montage mou.
-        //
-        // On aligne donc TOUTE scène sur le début du mot le plus proche, dans
-        // une fenêtre de ±0,35 s — au-delà, ce n'est plus un arrondi, c'est un
-        // autre moment, et on ne touche à rien. Les 0,12 s d'avance sont les
-        // mêmes que pour les beats : l'image doit être là quand le mot tombe,
-        // pas après.
-        let meilleur = null, ecart = 0.36
-        for (const w of words) {
-          const d = Math.abs(w.start - a)
-          if (d < ecart) { ecart = d; meilleur = w }
-          if (w.start > a + 0.4) break
-        }
-        if (meilleur) {
-          const na = r2(Math.max(0, meilleur.start - 0.12))
-          if (Math.abs(na - a) > 0.04 && b - na >= 1.25 && !overlaps(na, b)) {
-            console.log(`▶ ${nom} aligné sur « ${meilleur.text} » : ${a}s → ${na}s (${r2(Math.abs(na - a))}s de décalage rattrapé)`)
-            a = na
-          }
         }
       }
     }
@@ -856,6 +837,40 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (String(slide.anim) === 'result' && !slide.screen && !slide.userFile) {
       console.log('▶ result écarté : ni capture ni résultat utilisateur à montrer')
       return null
+    }
+    // C9 (audit 10/10) : sorti du garde-fou EXIGE_GLOBAL — il ne servait qu'aux animations qui en ont un (rocket, idea, speed,
+    // lineup, views… gardaient le temps arrondi du chef). Toute animation non choisie par l'utilisateur, pas déjà calée sur
+    // son mot déclencheur, se cale sur le début du mot le plus proche.
+    if (!calee && !slide.user && isAnimPanel(slide)) {
+      // ── UN PLAN CHANGE SUR UN MOT, JAMAIS AU MILIEU ─────────────────────
+      // Axel, 03/08 : « je dis "et voici pourquoi" et à ce moment-là ça
+      // devrait changer de frame, pourquoi ça n'a pas changé ? »
+      //
+      // Le recalage ci-dessus ne s'appliquait qu'aux animations portant un
+      // mot OBLIGATOIRE déclaré. Toutes les autres — la majorité — gardaient
+      // le temps approximatif du chef d'orchestre, qui raisonne en phrases et
+      // arrondit. Une scène pouvait donc démarrer à 7,63 s quand le mot qui
+      // la justifie commence à 7,50 : treize centièmes de décalage, invisibles
+      // sur le papier, mais l'œil les voit comme un montage mou.
+      //
+      // On aligne donc TOUTE scène sur le début du mot le plus proche, dans
+      // une fenêtre de ±0,35 s — au-delà, ce n'est plus un arrondi, c'est un
+      // autre moment, et on ne touche à rien. Les 0,12 s d'avance sont les
+      // mêmes que pour les beats : l'image doit être là quand le mot tombe,
+      // pas après.
+      let meilleur = null, ecart = 0.36
+      for (const w of words) {
+        const d = Math.abs(w.start - a)
+        if (d < ecart) { ecart = d; meilleur = w }
+        if (w.start > a + 0.4) break
+      }
+      if (meilleur) {
+        const na = r2(Math.max(0, meilleur.start - 0.12))
+        if (Math.abs(na - a) > 0.04 && b - na >= 1.25 && !overlaps(na, b)) {
+          console.log(`▶ ${nom} aligné sur « ${meilleur.text} » : ${a}s → ${na}s (${r2(Math.abs(na - a))}s de décalage rattrapé)`)
+          a = na
+        }
+      }
     }
     ;[a, b] = slide.user ? [a, b] : fit(a, b)   // la fenêtre d'un choix explicite ne bouge pas
     // SON MEDIA A DROIT AU FLASH. Une enumeration — « homme, femme, coach
@@ -3639,7 +3654,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
       //      une fenêtre à clip (les lèvres glisseraient) ou un média (sa
       //      fenêtre est un point du script).
       const cible = r2((chain[i + 1].start || 0) - 0.02)
-      if (!isAnimPanel(chain[i])) { chain[i].end = cible; continue }
+      if (!isAnimPanel(chain[i])) {
+        if (etirable(chain[i], cible)) chain[i].end = cible
+        else if (finMatiere(chain[i]) + 0.45 > (chain[i].end || 0)) chain[i].end = r2(Math.min(cible, finMatiere(chain[i]) + 0.45))
+        continue
+      }
       const fin0 = r2(chain[i].end || 0)
       let fin1 = r2(Math.min(cible, fin0 + 0.35))
       const reliquat = r2(cible - fin1)
@@ -3655,7 +3674,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       chain[i].end = fin1
     }
     const last = chain[chain.length - 1]
-    if (last && D - (last.end || 0) > 0 && D - (last.end || 0) < 1.2) last.end = r2(D)
+    if (last && D - (last.end || 0) > 0 && D - (last.end || 0) < 1.2 && etirable(last, D)) last.end = r2(D)
   }
 
   // ── 3b-ter · LE VISAGE REVIENT AU MOINS 3 FOIS (#136, Axel 15/08) ─────────
@@ -3675,9 +3694,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if ((plan.avatarSegments || []).some((w) => s.end > (w.start || 0) - 4 && s.end < (w.end || 0) + 4)) continue
       const cut = r2(Math.max(s.start + 1.4, s.end - 1.8))
       if (s.end - cut < 1.2) continue
+      // C7 : avec des clips lipsync, le visage qui revient PARLE — il reprend le clip payé qui couvre ces secondes, sinon on
+      // n'en crée pas (une photo figée pendant que la voix parle, c'est le défaut que §3b-ter fabriquait)
+      const src = clipPourFenetre(cut, s.end)
+      if (hasClips && !src) continue
       const k = taken.findIndex((tk) => Math.abs(tk[1] - s.end) < 0.08 && tk[0] <= s.start + 0.08)
       if (k >= 0) taken[k][1] = cut
-      const w = { start: cut, end: s.end, clip: -1 }
+      const w = { start: cut, end: s.end, clip: src ? src.clip : -1, ...(src && src.from ? { clipFrom: src.from } : {}) }
       s.end = cut
       if (Array.isArray(s.items)) s.items = s.items.filter((it) => !(it.t > cut - 0.25))
       plan.avatarSegments = [...(plan.avatarSegments || []), w].sort((x, y) => x.start - y.start)
@@ -4118,19 +4141,31 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // sortant était déjà caché pendant que l'entrant glissait → dégradé visible
     // quand même. Un léger chevauchement, la poussée le recouvre proprement.
     const CREUX = 0.15
-    let cur = 0, bouches = 0
+    let cur = 0, bouches = 0, geles = 0
+    // une fenêtre à clip n'avance jamais son début : le clip démarrerait en avance sur la voix
+    const clipReel = (x) => Number.isInteger(x.clip) && x.clip >= 0
     for (const [a, , ] of bornes) {
       if (a - cur >= CREUX) {
         const avant = bornes.filter((x) => x[1] <= cur + 0.06).sort((x, y) => y[1] - x[1])[0]
         const apres = bornes.find((x) => x[0] >= a - 0.06)
-        if (avant) { avant[2].end = r2(Math.min(D, a + 0.45)); bouches++ }
-        else if (apres) { apres[2].start = r2(cur); bouches++ }
+        const fin = r2(Math.min(D, a + 0.45))
+        if (avant && etirable(avant[2], fin)) { avant[2].end = fin; bouches++ }
+        else if (apres && !clipReel(apres[2])) { apres[2].start = r2(cur); bouches++ }
+        else if (avant) {   // C7 : le visage s'étire jusqu'au bout de sa matière seulement — un creux vaut mieux qu'un visage gelé qui parle
+          const m = r2(Math.min(fin, finMatiere(avant[2]) + 0.45))
+          if (m > avant[2].end) avant[2].end = m
+          geles++
+        }
       }
       cur = Math.max(cur, bornes.filter((x) => x[0] <= a).reduce((m, x) => Math.max(m, x[1]), cur))
     }
     const dernier = bornes[bornes.length - 1]
-    if (dernier && D - dernier[1] >= CREUX) { dernier[2].end = r2(D); bouches++ }
+    if (dernier && D - dernier[1] >= CREUX) {
+      if (etirable(dernier[2], D)) { dernier[2].end = r2(D); bouches++ }
+      else { const m = r2(Math.min(D, finMatiere(dernier[2]) + 0.45)); if (m > dernier[2].end) dernier[2].end = m; geles++ }
+    }
     if (bouches) console.log(`▶ ${bouches} creux bouché(s) par la scène voisine (seuil ${CREUX}s)`)
+    if (geles) console.log(`▶ ${geles} visage(s) laissé(s) au bout de leur matière lipsync (jamais gelés pendant que la voix parle)`)
   }
 
   // ── AUCUN MÉDIA DE L'UTILISATEUR NE DISPARAÎT EN SILENCE ────────────────────

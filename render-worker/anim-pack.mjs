@@ -3459,13 +3459,16 @@ export function animJs(name, s, r2) {
     case 'screen': {
       const zx = typeof s.screenX === 'number' ? s.screenX : 0.5
       const zy = typeof s.screenY === 'number' ? s.screenY : 0.5
-      const zs = typeof s.screenZoom === 'number' ? s.screenZoom : 1
+      // R2-31 (audit 10/10) : le zoom fixe ×2,1 du chef coupait sa propre cible (« Générer l'imag », « ages IA ») : on zoome
+      // au plus de quoi garder la zone ENTIÈRE dans le champ (88 %), jamais sous ×1,15 — la caméra (clamp) fait le reste
+      const zFit = (z, w, h) => Math.max(Math.min(z, 1.15), Math.min(z, 0.88 / Math.max(0.05, Number(w) || 0, Number(h) || 0)))
+      const zs = zFit(typeof s.screenZoom === 'number' ? s.screenZoom : 1, s.boxW, s.boxH)
       // GSAP compose translate(t) scale(z) : l'echelle s'applique AVANT la
       // translation, donc le decalage doit lui aussi etre multiplie par le zoom.
       // Sans ce facteur, la zone visee derivait d'autant plus qu'on zoomait — c'est
       // ce qui empechait la fonction d'etre pile au centre.
       const has2 = typeof s.screenX2 === 'number' && typeof s.screenY2 === 'number'
-      const zs2 = typeof s.screenZoom2 === 'number' ? s.screenZoom2 : zs
+      const zs2 = has2 ? zFit(typeof s.screenZoom2 === 'number' ? s.screenZoom2 : zs, s.boxW2, s.boxH2) : zs
       // LA CAMERA NE SORT PAS DE L'IMAGE. A un zoom z, la fenetre visible fait 1/z de
       // large : viser plus pres du bord que 1/(2z) fait deborder, et le conteneur
       // apparaissait alors en aplat vide sur le cote (visible en visant le menu

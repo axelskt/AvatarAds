@@ -806,6 +806,19 @@ export async function opFondVideo(userId: string): Promise<string | null> {
 // libellé de montage, ouverte, de moins de 2 h, dont la réserve couvre le plancher. Avant, render-job prenait « la dernière
 // op ouverte » quelle qu'elle soit : un débruitage à 1 crédit fait pendant la relecture du plan aurait payé le rendu (et,
 // avec le plancher, l'aurait refusé). null = aucune (ou erreur) → l'appelant garde l'ancienne résolution (resolve_op).
+// Plancher du tirage de l'op PRINCIPALE d'un rendu (11/10) : RENDU_MONTAGE_MIN (MONT-1) en général ; 1 pour une op « montage IA »
+// sur laquelle le chef d'orchestre a DÉJÀ tiré son plan (réflexion Faible / Moyen / Élevé : le prix fixe du niveau paie le chef,
+// son dernier crédit paie le rendu). Une op neuve de 1 crédit ne finance donc toujours pas un rendu (le chef n'y a rien tiré).
+export async function plancherRenduOp(userId: string, opId: string): Promise<number> {
+  try {
+    const { data } = await svc().from('credit_ops').select('reason, amount, reserved_remaining').eq('id', opId).eq('user_id', userId).maybeSingle()
+    const r = data as { reason: string; amount: number; reserved_remaining: number | null } | null
+    if (r && r.reason === 'montage IA' && Number(r.amount) >= 2 && r.reserved_remaining != null
+      && Number(r.amount) - Number(r.reserved_remaining) >= 1) return 1
+  } catch { /* hoquet DB : plancher habituel */ }
+  return RENDU_MONTAGE_MIN
+}
+
 export async function opRenduMontage(userId: string, min = RENDU_MONTAGE_MIN): Promise<string | null> {
   try {
     const { data, error } = await svc().from('credit_ops').select('id, amount, reserved_remaining').eq('user_id', userId)
