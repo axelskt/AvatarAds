@@ -250,8 +250,12 @@ const HF_RENDU_MAX_MS = 40 * 60 * 1000
 // que de laisser loudnorm re-traiter une voix déjà masterisée par l'app.
 function loudnessOf(file) {
   try {
+    // framelog=VERBOSE et non quiet : « quiet » n'existe qu'à partir de ffmpeg 6.1 — le ffmpeg 5.1 de Debian (l'image du
+    // worker) refusait l'option, la mesure échouait sans bruit et TOUT tombait sur les valeurs par défaut en ligne (11/10 :
+    // musique de Production au volume de repli, voix toujours renvoyée vers loudnorm). verbose = le détail image par image
+    // part au niveau verbose, invisible au niveau par défaut ; le résumé « I: … LUFS » reste au niveau info.
     const r = spawnSync('ffmpeg', ['-nostdin', '-hide_banner', '-i', file, '-map', '0:a:0',
-      '-af', 'ebur128=framelog=quiet', '-f', 'null', '-'], { encoding: 'utf8' })
+      '-af', 'ebur128=framelog=verbose', '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     const hits = [...String(r.stderr || '').matchAll(/I:\s*(-?\d+(?:\.\d+)?)\s*LUFS/g)]
     const v = hits.length ? parseFloat(hits[hits.length - 1][1]) : NaN
     // Une voix ne mesure JAMAIS 0,0 LUFS ni quoi que ce soit au-dessus de
@@ -3863,5 +3867,7 @@ if (flag('--batch-blank') != null) {
       .then((m) => m.superviserServeurAudio())
       .catch((e) => console.error('[clean] serveur audio non démarré :', e.message))
   }
+  // contrôle au démarrage : la mesure de sonie marche-t-elle avec le ffmpeg de l'image ? (11/10 : elle échouait sans bruit)
+  try { const l = loudnessOf(join(HERE, 'assets', 'sfx', 'mo-whoosh-1.mp3')); console.log(l == null ? '⚠ mesure de sonie : ÉCHEC (ffmpeg de l\'image)' : `▶ mesure de sonie : OK (${l.toFixed(1)} LUFS sur le son témoin)`) } catch (_) { /* jamais bloquant */ }
   pollLoop()
 }

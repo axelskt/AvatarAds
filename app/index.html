@@ -16507,8 +16507,15 @@ async function _mtMusiqueSansVoix(){
     fd.append('demo_dur', String(Math.round(demoDur*100)/100));
     fd.append('options', JSON.stringify({ lang:'fr', hasAvatar: avecReaction, style:'musique', useBrand:(_mt.useBrand!==false) }));
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
-    try{
-      // la piste son : la vidéo elle-même (le serveur sait la lire) ; trop lourde → son seul en WAV
+    // la démo part au stockage D'ABORD : le chef la fait transcrire depuis un lien signé (aucune extraction du son dans le
+    // navigateur — muette sur Safari —, aucun plafond de 20 Mo) ; elle sert ensuite telle quelle au rendu
+    const tsDemo = Date.now();
+    const demoPath = user.id+'/as-demo-'+tsDemo+'.mp4';
+    let demoEnvoyee = false;
+    try{ const e = await sb.storage.from('render-media').upload(demoPath, demo, { upsert:true, contentType: demo.type || 'video/mp4' }); demoEnvoyee = !e.error; }catch(_){}
+    if(demoEnvoyee) fd.append('demo_path', demoPath);
+    else try{
+      // repli : la piste son envoyée avec la requête (la vidéo elle-même si elle est légère, sinon le son seul en WAV)
       if(demo.size <= 19.5*1024*1024) fd.append('audio', demo, demo.name || 'demo.mp4');
       else fd.append('audio', await _mtAudioSliceWav(demo, 0, demoDur), 'demo.wav');
     }catch(e){ console.warn('son de la démo :', e); }
@@ -16550,8 +16557,7 @@ async function _mtMusiqueSansVoix(){
     // 3) envoi : la réaction (ou sa photo) devient l'entrée du rendu, sa démo le seul média
     _mtProg(62, 'Envoi de ta démo au serveur…');
     const ts = Date.now();
-    const demoPath = user.id+'/as-demo-'+ts+'.mp4';
-    { const e = await sb.storage.from('render-media').upload(demoPath, demo, { upsert:true, contentType: demo.type || 'video/mp4' }); if(e.error) throw new Error('envoi de ta démo : '+e.error.message); }
+    if(!demoEnvoyee){ const e = await sb.storage.from('render-media').upload(demoPath, demo, { upsert:true, contentType: demo.type || 'video/mp4' }); if(e.error) throw new Error('envoi de ta démo : '+e.error.message); }
     const assets = [{ id:'demo', path: demoPath, kind:'video' }];
     let inPath;
     if(reaction){ inPath = user.id+'/in-'+ts+'.mp4'; const u = await sb.storage.from('render-media').upload(inPath, reaction, { contentType:'video/mp4', upsert:true }); if(u.error) throw new Error('envoi de la réaction : '+u.error.message); }

@@ -150,24 +150,33 @@ function alignScript(script: string, tWords: Word[], duration: number): Word[] {
 }
 
 // ---------- transcription ElevenLabs Scribe ----------
-async function transcribe(audio: File, lang: string | null, fin = Date.now() + BUDGET_MS): Promise<{ text: string; words: Word[]; hasMusic: boolean }> {
+// `audio` : le fichier, OU un lien HTTPS signé (style Musique, 11/10 : la démo est lue depuis le stockage — plus d'extraction
+// du son dans le navigateur, muette sur Safari, ni de plafond de 20 Mo)
+async function transcribe(audio: File | string, lang: string | null, fin = Date.now() + BUDGET_MS): Promise<{ text: string; words: Word[]; hasMusic: boolean }> {
   const elKey = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
   if (!elKey) { console.error('ELEVENLABS_API_KEY manquante'); throw new Error('Transcription momentanément indisponible — réessaie plus tard') }
-  const fd = new FormData()
-  fd.append('file', audio, audio.name || 'audio.wav')
-  fd.append('model_id', 'scribe_v1')
-  fd.append('timestamps_granularity', 'word')
-  fd.append('tag_audio_events', 'true')
-  fd.append('diarize', 'false')
-  if (lang) fd.append('language_code', lang)
+  const corps = (champUrl: string) => {
+    const fd = new FormData()
+    if (typeof audio === 'string') fd.append(champUrl, audio)
+    else fd.append('file', audio, audio.name || 'audio.wav')
+    fd.append('model_id', 'scribe_v1')
+    fd.append('timestamps_granularity', 'word')
+    fd.append('tag_audio_events', 'true')
+    fd.append('diarize', 'false')
+    if (lang) fd.append('language_code', lang)
+    return fd
+  }
+  const appel = (champUrl: string) => fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+    method: 'POST',
+    headers: { 'xi-api-key': elKey },
+    body: corps(champUrl),
+    signal: delai(Math.min(45_000, reste(fin) - 60_000)),
+  })
   let res: Response
   try {
-    res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
-      method: 'POST',
-      headers: { 'xi-api-key': elKey },
-      body: fd,
-      signal: delai(Math.min(45_000, reste(fin) - 60_000)),
-    })
+    res = await appel('source_url')
+    // `source_url` est le nom actuel ; l'ancien `cloud_storage_url` reste accepté (déprécié) — repli si le premier est refusé
+    if (typeof audio === 'string' && (res.status === 400 || res.status === 422)) { await res.text().catch(() => ''); res = await appel('cloud_storage_url') }
   } catch (e) {
     if (estDelai(e)) throw new Error('Transcription trop longue — réessaie dans un instant')
     throw e
@@ -385,7 +394,8 @@ type Plan = {
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée — redirections MANUELLES revalidées à chaque saut,
 // IPv6 / formes numériques / ports / metadata bloqués (avant, seul l'hôte initial était contrôlé).
-import { safeFetchHtml, authUser, billableGate, applyReservation, settleReservation, releaseOp, lacherCorps, requirePlan } from '../_shared/guard.ts'
+import { safeFetchHtml, authUser, billableGate, applyReservation, settleReservation, releaseOp, lacherCorps, requirePlan, svc } from '../_shared/guard.ts'
+import { cheminSur } from '../_shared/storage-path.ts'
 async function fetchSiteContext(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 6000)
@@ -2878,8 +2888,16 @@ async function traiter(req: Request, budgetMs = BUDGET_MS): Promise<Response> {
     if (sansVoix) {
       // style Musique : sa démo, transcrite si elle porte sa voix (Scribe lit la vidéo) ; muette sinon
       let mots: MotSV[] = []
-      if (audio instanceof File && audio.size >= 1024) {
-        try { const sc = await transcribe(audio, lang, _fin); mots = (sc.words || []).map((w: { text: string; start: number; end: number }) => ({ text: String(w.text), start: Number(w.start) || 0, end: Number(w.end) || 0 })) }
+      // la démo est lue DEPUIS LE STOCKAGE (chemin de SON dossier, lien signé 15 min) ; repli : le fichier envoyé
+      let source: File | string | null = null
+      const demoPath = _auth.userId ? cheminSur(_auth.userId, String(form.get('demo_path') || '')) : null
+      if (demoPath) {
+        try { const { data } = await svc().storage.from('render-media').createSignedUrl(demoPath, 900); if (data?.signedUrl) source = data.signedUrl }
+        catch (e) { console.warn('lien de la démo :', (e as Error).message) }
+      }
+      if (!source && audio instanceof File && audio.size >= 1024) source = audio
+      if (source) {
+        try { const sc = await transcribe(source, lang, _fin); mots = (sc.words || []).map((w: { text: string; start: number; end: number }) => ({ text: String(w.text), start: Number(w.start) || 0, end: Number(w.end) || 0 })) }
         catch (e) { console.warn('transcription démo :', (e as Error).message) }
       }
       _chrono(`démo transcrite (${mots.length} mots)`)
