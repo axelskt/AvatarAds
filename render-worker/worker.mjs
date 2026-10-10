@@ -982,6 +982,21 @@ function construireBaseSansVoix(plan, jobDir, basePath, fps) {
     }
     parts.push(out); t = r2(t + d)
   }
+  // 2 bis) la réaction GLISSE vers le 1er visuel (0,25 s vers la gauche, comme le format F05 de Production) : la réaction est
+  // prolongée de 0,25 s sous le glissement, le 1er visuel commence donc toujours à R — aucun sous-titre ne bouge
+  if (R > 0.3 && parts.length >= 2) {
+    try {
+      const TS = 0.25, p0 = join(tmp, 'p0x.mp4'), j = join(tmp, 'j01.mp4')
+      const dureeSrc = parseFloat(ffprobe(basePath, 'format=duration')) || 0
+      const [w, h] = dims(basePath)
+      if (w > 0 && dureeSrc >= R + TS) execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', basePath, '-t', (R + TS).toFixed(3), '-vf', cadre(w, h, 'null'), '-t', (R + TS).toFixed(3), ...enc, p0])
+      else execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', parts[0], '-vf', `tpad=stop_mode=clone:stop_duration=${TS}`, '-t', (R + TS).toFixed(3), ...enc, p0])
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', p0, '-i', parts[1], '-filter_complex',
+        `[0:v]settb=AVTB,fps=${fps}[a];[1:v]settb=AVTB,fps=${fps}[b];[a][b]xfade=transition=slideleft:duration=${TS}:offset=${R.toFixed(3)},format=yuv420p[v]`,
+        '-map', '[v]', ...enc, j])
+      parts.splice(0, 2, j)
+    } catch (e) { console.warn('glissement réaction → visuel :', e.message) }
+  }
   // 3) bout à bout (mêmes réglages partout → concat sans réencodage) + piste silencieuse
   writeFileSync(join(tmp, 'liste.txt'), parts.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join('\n'))
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', join(tmp, 'liste.txt'), '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo',

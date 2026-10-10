@@ -632,18 +632,20 @@ export function buildComposition(plan, opts = {}) {
     }
     const phrases = []
     let cur = []
-    for (const c of mots) {
+    // la phrase qui finit dans les 2 mots suivants n'est pas coupée avant sa fin (« … en quelques » | « secondes »)
+    const finProche = (k) => cur.length + 2 <= 9 && mots.slice(k + 1, k + 3).some((x) => PONCT.test(x.raw))
+    mots.forEach((c, k) => {
       const prec = cur[cur.length - 1]
       if (prec && (c.start - (prec.start + prec.dur) > 0.6 || c.top !== prec.top)) { phrases.push(cur); cur = [] }
       cur.push(c)
-      if (PONCT.test(c.raw) || (cur.length >= 6 && !lie(c.raw)) || cur.length >= 9) { phrases.push(cur); cur = [] }
-    }
+      if (PONCT.test(c.raw) || (cur.length >= 6 && !lie(c.raw) && !finProche(k)) || cur.length >= 9) { phrases.push(cur); cur = [] }
+    })
     if (cur.length) phrases.push(cur)
     // jamais un mot seul à l'écran : il rejoint la phrase d'avant (même hauteur, place libre), sinon la suivante
     for (let k = 0; k < phrases.length; k++) {
       if (phrases.length < 2 || phrases[k].length > 1) continue
       const av = phrases[k - 1], ap = phrases[k + 1]
-      if (av && av.length < 7 && av[0].top === phrases[k][0].top) { av.push(...phrases[k]); phrases.splice(k--, 1) }
+      if (av && av.length < 9 && av[0].top === phrases[k][0].top && (!PONCT.test(av[av.length - 1].raw) || !ap)) { av.push(...phrases[k]); phrases.splice(k--, 1) }
       else if (ap && ap[0].top === phrases[k][0].top) { ap.unshift(...phrases[k]); phrases.splice(k--, 1) }
     }
     // une phrase qui ne reste pas 0,5 s ne se lit pas sans le son : elle finit celle d'avant si elle la continue
