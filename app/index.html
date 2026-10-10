@@ -16425,16 +16425,17 @@ function _mtFermerSuivi(){
 // plan au chef d'orchestre, on upload la vidéo + le plan → worker → MP4 propre (avec slides).
 // « Ajuster » à la fin ouvre le MP4 FINAL (celui qui est téléchargé), pas la source.
 // ════════════════════════════════════════════════════════════════════════════
-//  STYLE MUSIQUE SANS VOIX (F05 pour les clients, Axel 10/10)
-//  Rien n'est dit : sa photo devient une RÉACTION choquée (Omni Flash, kie, 4 s — 3 s gardées) sous un texte choc, puis ses
-//  visuels défilent, chacun avec une phrase écrite par le chef d'orchestre d'après ce qu'il VOIT, puis le CTA ; la musique
-//  fait le reste. Il faut assez de contenu : 2 visuels au moins et ~8 s de matière (une image compte 3 s, une vidéo sa
-//  durée, 6 s au plus). Prix = prix fixe de la réflexion + la réaction (5 cr/s × 4 s, comme partout dans l'app).
-//  La réaction échoue ? Sa photo prend sa place (poussée lente), et ses crédits sont rendus.
+//  STYLE MUSIQUE (F05 pour les clients, Axel 11/10) — « juste une démo, avec ou sans voix, et les sous-titres comme Production »
+//  Il dépose SA démo vidéo (enregistrement d'écran, vidéo de son produit), avec ou sans sa voix. Sa photo devient une
+//  RÉACTION choquée (Omni Flash via kie, 4 s — 3 s gardées) sous un texte choc, puis sa démo passe MUETTE avec les cartes
+//  des démos muettes de Production (consignes calées sur ce qu'il dit, encadré au résultat, CTA en bas), et la musique.
+//  Sans voix : texte choc + CTA seulement (jamais de consigne inventée). Prix = prix fixe de la réflexion + la réaction.
+//  La réaction échoue ? Sa photo prend sa place (poussée lente) et ses crédits sont rendus.
 // ════════════════════════════════════════════════════════════════════════════
 const _MT_REACTION_SEC = 4;   // cran kie le plus court (4/6/8/10) ; le worker en garde 3
+const _MT_DEMO_MAX = 80;      // la démo + 3 s de réaction tiennent dans les 90 s du Montage IA
 function _mtReactionCout(){ return Math.round(_MT_REACTION_SEC * (CREDIT_COSTS.omniFlashPerSec || 5)); }
-function _mtSansVoixActif(){ return _mtMusique() && !_mt.mp3; }
+function _mtSansVoixActif(){ return _mtMusique(); }
 function _mtDureeVideo(file){
   return new Promise((ok) => {
     const v = document.createElement('video'), u = URL.createObjectURL(file); let fini = false;
@@ -16443,17 +16444,6 @@ function _mtDureeVideo(file){
     setTimeout(() => fin(0), 8000);
   });
 }
-// ses visuels à LUI (jamais les visuels automatiques de « Ma marque ») : ses images, ses vidéos, et sa vidéo déposée
-async function _mtVisuelsSansVoix(){
-  const out = [];
-  for(const a of ((typeof _edAi !== 'undefined' && _edAi && _edAi.files) || [])){   // _edAi est une liaison du script, PAS window._edAi
-    if(String(a.id || '').startsWith('lib')) continue;
-    out.push({ id: a.id, file: a.file, isVideo: !!a.isVideo, url: a.url, dur: a.isVideo ? await _mtDureeVideo(a.file) : 0 });
-  }
-  if(_mt.video && !out.some((x) => x.file === _mt.video)) out.push({ id: 'mavideo', file: _mt.video, isVideo: true, dur: await _mtDureeVideo(_mt.video) });
-  return out.slice(0, 8);
-}
-function _mtContenuSec(vis){ return vis.reduce((n, a) => n + (a.isVideo ? Math.min(6, Math.max(1.5, a.dur || 3)) : 3), 0); }
 async function _mtReactionOmni(photo, op){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user) throw new Error('Session expirée — reconnecte-toi');
@@ -16476,11 +16466,11 @@ async function _mtReactionOmni(photo, op){
   return blob;
 }
 async function _mtMusiqueSansVoix(){
-  const vis = await _mtVisuelsSansVoix();
-  if(vis.length < 2 || _mtContenuSec(vis) < 8){
-    toast('Le style Musique a besoin de contenu : ajoute au moins 3 visuels (photos ou vidéos de ton produit, de ton app, de tes résultats).');
-    return;
-  }
+  const demo = _mt.video || null;
+  if(!demo){ toast('Le style Musique part de ta démo : dépose une vidéo (enregistrement d\'écran ou vidéo de ton produit), avec ou sans ta voix.'); return; }
+  const demoDur = await _mtDureeVideo(demo);
+  if(!(demoDur >= 2)){ toast('Ta démo est illisible ou trop courte (2 s au moins).'); return; }
+  if(demoDur > _MT_DEMO_MAX + 0.5){ toast('Ta démo dure ' + Math.round(demoDur) + ' s : le style Musique en accepte ' + _MT_DEMO_MAX + ' au plus. Raccourcis-la.'); return; }
   creditsFlowBegin();
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ toast('Reconnecte-toi puis réessaie'); return; }
@@ -16509,22 +16499,26 @@ async function _mtMusiqueSansVoix(){
     try{ await _libAutoSaveVideo(bl, 'Réaction ' + new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }), ['Montage IA','Réaction','9:16'], '', 'OMNI'); toast('Ta réaction est rangée dans ta Bibliothèque'); }catch(_){}
   }).catch(()=>{}); };
   try{
-    _mtProg(8, 'Préparation de tes visuels…');
-    // 1) le chef d'orchestre lit les visuels (miniatures) et le brief
+    _mtProg(8, 'Préparation de ta démo…');
+    // 1) le chef d'orchestre écoute sa démo (si elle porte sa voix) et regarde ses images clés
     const fd = new FormData();
     fd.append('sans_voix', '1');
     fd.append('reaction', avecReaction ? '1' : '0');
+    fd.append('demo_dur', String(Math.round(demoDur*100)/100));
     fd.append('options', JSON.stringify({ lang:'fr', hasAvatar: avecReaction, style:'musique', useBrand:(_mt.useBrand!==false) }));
-    const site=(document.getElementById('mtSite')?.value||'').trim() || (localStorage.getItem('aa_user_site')||'');
-    if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
-    fd.append('assets', JSON.stringify(vis.map(a=>({ id:a.id, name:(a.file && a.file.name) || 'visuel', kind:a.isVideo?'video':'image', dur: Math.round((a.dur||0)*100)/100 }))));
-    for(const a of vis){
-      let th = null;
-      try{ th = a.isVideo ? (((await _mtFramesFromVideo(a.file, 1)) || [])[0] || {}).blob || null : await _edAiThumb(a.file); }catch(_){}
-      if(th) fd.append('asset_'+a.id, th, 'thumb.jpg');
-    }
-    const _msgAttente = avecReaction ? 'L\'IA écrit ta vidéo et filme ta réaction… (1 à 3 min)' : 'L\'IA écrit ta vidéo… (~1 min)';
+    try{
+      // la piste son : la vidéo elle-même (le serveur sait la lire) ; trop lourde → son seul en WAV
+      if(demo.size <= 19.5*1024*1024) fd.append('audio', demo, demo.name || 'demo.mp4');
+      else fd.append('audio', await _mtAudioSliceWav(demo, 0, demoDur), 'demo.wav');
+    }catch(e){ console.warn('son de la démo :', e); }
+    try{
+      const n = Math.max(4, Math.min(12, Math.round(demoDur / 2)));
+      const frames = (await _mtFramesFromVideo(demo, n)) || [];
+      frames.forEach((f,i)=>fd.append('frame_'+i, f.blob, 't'+f.t+'.jpg'));
+      fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
+    }catch(e){ console.warn('images de la démo :', e); }
+    const _msgAttente = avecReaction ? 'L\'IA sous-titre ta démo et filme ta réaction… (1 à 3 min)' : 'L\'IA sous-titre ta démo… (~1 min)';
     _mtProg(16, _msgAttente);
     // la barre AVANCE pendant l'attente (16 → 58 %, sur l'heure réelle) : une barre figée se lit comme une panne (Axel)
     const _t0Att = Date.now();
@@ -16550,26 +16544,19 @@ async function _mtMusiqueSansVoix(){
     if(!_orc || !_orc.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+(_orc && _orc.status)));
     const plan = { ...od.plan };
     const _a = _mt.adv || {};
-    plan.slideStyle = 'musique'; plan.capStyle = 'punch'; plan.capPos = _a.subPos || 'bas'; plan.capSize = _a.subSize || 'M';
+    plan.slideStyle = 'musique';
     if(_a.sfx===false) plan.sfx = [];
-    if(_a.music==='none') plan.music = null;
     _mtLookProduction(plan, plan.duration, _a);
-    // 3) envoi : la réaction (ou sa photo) devient l'entrée du rendu, ses visuels les médias
-    _mtProg(62, 'Envoi de tes visuels au serveur…');
+    // 3) envoi : la réaction (ou sa photo) devient l'entrée du rendu, sa démo le seul média
+    _mtProg(62, 'Envoi de ta démo au serveur…');
     const ts = Date.now();
-    const assets = [];
-    for(const a of vis){
-      if(a.isVideo && (a.file.size||0) > 60*1024*1024) continue;
-      const ext = a.isVideo ? 'mp4' : (/png/i.test(a.file.type||'') ? 'png' : 'jpg');
-      const p = user.id+'/as-'+a.id+'-'+ts+'.'+ext;
-      const e = await sb.storage.from('render-media').upload(p, a.file, { upsert:true, contentType: a.file.type || (a.isVideo ? 'video/mp4' : 'image/jpeg') });
-      if(!e.error) assets.push({ id:a.id, path:p, kind: a.isVideo ? 'video' : 'image' });
-    }
-    if(!assets.length) throw new Error('envoi des visuels impossible — réessaie');
+    const demoPath = user.id+'/as-demo-'+ts+'.mp4';
+    { const e = await sb.storage.from('render-media').upload(demoPath, demo, { upsert:true, contentType: demo.type || 'video/mp4' }); if(e.error) throw new Error('envoi de ta démo : '+e.error.message); }
+    const assets = [{ id:'demo', path: demoPath, kind:'video' }];
     let inPath;
     if(reaction){ inPath = user.id+'/in-'+ts+'.mp4'; const u = await sb.storage.from('render-media').upload(inPath, reaction, { contentType:'video/mp4', upsert:true }); if(u.error) throw new Error('envoi de la réaction : '+u.error.message); }
     else if(avecReaction){ inPath = user.id+'/in-'+ts+'.jpg'; const u = await sb.storage.from('render-media').upload(inPath, _mt.avatar, { contentType:_mt.avatar.type||'image/jpeg', upsert:true }); if(u.error) throw new Error('envoi de la photo : '+u.error.message); }
-    else { plan.reaction = false; inPath = assets[0].path; }
+    else { plan.reaction = false; inPath = demoPath; }
     // 4) rendu serveur (le montage paie : prix fixe de la réflexion ; la réaction a été tirée par kie)
     if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); _garderReaction(); return; }
     _mtProg(70, 'Rendu final sur le serveur… (1 à 3 min)');
@@ -16582,7 +16569,7 @@ async function _mtMusiqueSansVoix(){
     _mtPendClear(_opMontage); _libereQuitter(); _mtJobSet(d.job_id);
     _mtPollSegmented(d.job_id, _mtVideoDone);
   }catch(e){
-    console.error('montage Musique sans voix :', e);
+    console.error('montage Musique :', e);
     const _rendus = await creditsFlowRefund(undefined, [_opMontage].filter(Boolean));
     _garderReaction();
     _mtPendClear(_opMontage); _libereQuitter(); _mtProg(-1);

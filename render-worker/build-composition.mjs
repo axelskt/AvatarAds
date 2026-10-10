@@ -19,7 +19,7 @@ import { uiScene } from './ui-scenes.mjs'
 // Audit 02/10 : échappements, CSP et GSAP embarqué partagés par tous les builders (voir securite.mjs)
 import { escAttr, cspComposition, GSAP_SCRIPT } from './securite.mjs'
 // look Production (09/10) : styles de sous-titres + texte choc tirés par l'app (plan.capSkin / plan.chocStyle)
-import { capSkinOf, isBoxSkin, skinLisibleSurCreme, capSkinText, capSkinCss, chocBloc, chocCss, sansEmoji, ajouterSfxChoc } from './production-look.mjs'
+import { capSkinOf, isBoxSkin, skinLisibleSurCreme, capSkinText, capSkinCss, chocBloc, chocCss, sansEmoji, ajouterSfxChoc, cartesCss, cartesFitJs, carteBloc } from './production-look.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -783,6 +783,10 @@ export function buildComposition(plan, opts = {}) {
     ajouterSfxChoc(plan, choc.sfx)
     console.log(`▶ texte choc ${choc.style} (${choc.layout.size} px, ${choc.layout.lines.length} ligne(s)) ${chocWin.start}→${r2(chocWin.start + chocWin.dur)} s`)
   }
+  // style Musique (démo) : les cartes de la démo muette de Production, posées au-dessus de sa démo
+  const cartes = plan.sansVoix && Array.isArray(plan.cartes)
+    ? plan.cartes.filter((c) => c && String(c.text || '').trim() && (Number(c.end) || 0) > (Number(c.start) || 0)).slice(0, 40).map((c, i) => carteBloc(c, i, plan._carteEmoji || {}))
+    : []
   const hookHtml = choc ? choc.html : hook ? `
       <div class="clip" id="hook" data-start="${hook.start}" data-duration="${hook.dur}" data-track-index="4">
         <div class="hook-box">${esc(hook.text)}</div>
@@ -1391,7 +1395,8 @@ export function buildComposition(plan, opts = {}) {
       .cap.accent { color: #FF6B35; }
 ${capSkin ? capSkinCss(W) : ''}
 ${choc ? chocCss(W, H) : ''}
-${(capSkin || choc) && !vs ? fontFaceCss() : ''}
+${cartes.length ? cartesCss(W, H) : ''}
+${(capSkin || choc || cartes.length) && !vs ? fontFaceCss() : ''}
 ${slideCss}
 ${(fullDefs.length || bannerDefs.length) ? scenePackCss(W, H) : ''}
 ${vs ? fontFaceCss() + styleCss(vs, W, H, SLIDE_H) : ''}
@@ -1423,6 +1428,7 @@ ${slidesHtml}
 ${fullHtml}
 ${bannersHtml}
 ${hookHtml}
+${cartes.map((c) => c.html).join('')}
 ${whkHtml}
 ${capsHtml}${emojiHtml}${hasCta ? `
       <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${ctaWords.map((w) => `<i id="${w.id}"${w.accent ? ` style="color:${WORD_ACCENT}"` : ''}>${esc(w.text)}</i>`).join(' ')}</span></div>` : ''}
@@ -1438,7 +1444,7 @@ ${maskSil ? `      <div id="maskSil" class="clip" data-start="0" data-duration="
 ` : ''}` : ''}    </div>
 
     <script>
-${wordMode ? WORD_FIT_JS + '\n' : ''}${choc ? choc.fitJs + '\n' : ''}      window.__timelines = window.__timelines || {};
+${wordMode ? WORD_FIT_JS + '\n' : ''}${choc ? choc.fitJs + '\n' : ''}${cartes.length ? cartesFitJs(W) + '\n' : ''}      window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
@@ -1456,6 +1462,7 @@ ${slidesJs}
 ${fullJs}
 ${bannersJs}
 ${hookJs}
+${cartes.map((c) => c.js).join('')}
 ${whkJs}
 ${capsJs}${hasCta ? `
 ${ctaWords.map((w) => `

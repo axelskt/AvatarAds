@@ -664,36 +664,44 @@ Réponds avec le texte seul, sur une ligne.`,
   return neuf
 }
 
-// ── STYLE MUSIQUE SANS VOIX (F05 pour les clients, Axel 10/10) ───────────────────────────────────────────────────────
-// Rien n'est dit : la vidéo = 3 s de RÉACTION de l'avatar (Omni Flash, générée par l'app) sous un TEXTE CHOC, puis les visuels
-// de l'utilisateur, chacun avec une phrase écrite à l'écran, puis le CTA. Le chef lit les visuels (miniatures) et le brief et
-// répond en lignes « a|b|c » (jamais de schéma à tableaux, cf. grammaire Anthropic). Le plan (séquence, sous-titres, accroche,
-// sections) est construit ICI ; le render-worker fabrique la base (réaction + visuels) depuis plan.sequence.
-type VisuelSV = { id: string; name: string; kind: string; dur?: number; thumb?: { media: string; b64: string } }
-async function planSansVoix(o: { assets: VisuelSV[]; brief: string; marque: string; site: string; reaction: boolean; niveau: string; fin: number }): Promise<Record<string, unknown>> {
+// ── STYLE MUSIQUE (F05 pour les clients, Axel 11/10) ─────────────────────────────────────────────────────────────────
+// Le client donne JUSTE sa démo vidéo, avec ou sans sa voix. Le montage : 3 s de RÉACTION de l'avatar (Omni Flash, générée
+// par l'app) sous un TEXTE CHOC, puis sa démo, muette, sous-titrée « comme dans Production » (usine/demo-muette.mjs) :
+// consignes `step` calées sur ce qu'il DIT, un encadré `punch` au résultat, l'encadré CTA en bas jusqu'à la fin ; musique.
+// Sans voix : AUCUNE consigne inventée — texte choc + CTA seulement. Le chef répond en lignes « a|b|c » (grammaire
+// Anthropic) ; le plan est construit ICI, le render-worker fabrique la base (réaction + démo) depuis plan.sequence.
+type MotSV = { text: string; start: number; end: number }
+async function planMusiqueDemo(o: { mots: MotSV[]; frames: { t: number; media: string; b64: string }[]; demoDur: number; brief: string; marque: string; reaction: boolean; niveau: string; fin: number }): Promise<Record<string, unknown>> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
-  const vis = o.assets.filter((a) => a.id)
-  const contenu = vis.reduce((n, a) => n + (a.kind === 'video' ? Math.min(6, Math.max(1.5, Number(a.dur) || 3)) : 3), 0)
-  if (vis.length < 2 || contenu < 8) {
-    const e = new Error('Pas assez de contenu pour un montage Musique : ajoute au moins 3 visuels (images ou vidéos de ton produit, de ton app, de tes résultats).')
-    ;(e as Error & { statut?: number }).statut = 422
-    throw e
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  const dd = r2(Math.max(2, Math.min(80, Number(o.demoDur) || 0)))
+  const voix = o.mots.length >= 3
+  // la parole en segments (une pause > 0,5 s coupe) : « [1.20-3.40] je vais sur avatarads point fr »
+  const segs: { a: number; b: number; t: string[] }[] = []
+  for (const w of o.mots) {
+    const der = segs[segs.length - 1]
+    if (der && w.start - der.b <= 0.5 && der.t.length < 18) { der.t.push(w.text); der.b = w.end }
+    else segs.push({ a: w.start, b: w.end, t: [w.text] })
   }
+  const parole = segs.map((sg) => `[${sg.a.toFixed(2)}-${sg.b.toFixed(2)}] ${sg.t.join(' ')}`).join('\n')
   const reglage = NIVEAUX[o.niveau] || NIVEAUX.rapide
-  const liste = vis.map((a, i) => `${i + 1}. id=${a.id} · ${a.kind === 'video' ? `vidéo de ${(Number(a.dur) || 0).toFixed(1)} s` : 'image'} · fichier « ${a.name} »`).join('\n')
   const content: Record<string, unknown>[] = [{ type: 'text', text:
-    `Brief de l'utilisateur : ${o.brief || '(aucun)'}\n` + (o.marque ? `Sa marque : ${o.marque.slice(0, 1200)}\n` : '') + (o.site ? `Son site (extrait) : ${o.site.slice(0, 1200)}\n` : '')
-    + `\nSes visuels, dans l'ordre où il les a donnés :\n${liste}\n\nLes miniatures suivent, dans le même ordre.` }]
-  for (const a of vis) if (a.thumb) { content.push({ type: 'text', text: `Visuel id=${a.id} :` }); content.push({ type: 'image', source: { type: 'base64', media_type: a.thumb.media, data: a.thumb.b64 } }) }
-  const system = `Tu montes une vidéo TikTok « texte + musique » SANS AUCUNE VOIX (le format qui cartonne en ce moment) :
-${o.reaction ? "0 → 3 s : la RÉACTION muette d'une personne choquée (déjà filmée), sous un TEXTE CHOC ; " : "le 1er visuel s'ouvre sous un TEXTE CHOC ; "}ensuite les visuels de l'utilisateur, chacun avec UNE phrase écrite à l'écran ; enfin le CTA. La musique fait le reste.
+    `Brief de l'utilisateur : ${o.brief || '(aucun)'}\n` + (o.marque ? `Sa marque : ${o.marque.slice(0, 1000)}\n` : '')
+    + `Sa démo dure ${dd.toFixed(1)} s.\n`
+    + (voix ? `Ce qu'il DIT pendant sa démo (temps en secondes depuis le début de la démo) :\n${parole}\n` : 'Il ne parle PAS pendant sa démo (démo muette).\n')
+    + (o.frames.length ? `\nImages de la démo aux instants : ${o.frames.map((f) => f.t.toFixed(1) + ' s').join(', ')}.` : '') }]
+  for (const f of o.frames.slice(0, 12)) { content.push({ type: 'text', text: `t = ${f.t.toFixed(1)} s :` }); content.push({ type: 'image', source: { type: 'base64', media_type: f.media, data: f.b64 } }) }
+  const system = `Tu écris les textes à l'écran d'une vidéo TikTok « texte + musique » (le format qui cartonne) : ${o.reaction ? "3 s de réaction muette d'une personne choquée sous un TEXTE CHOC, puis " : "un TEXTE CHOC sur le début, puis "}la DÉMO de l'utilisateur, MUETTE (sa voix est coupée, seule la musique s'entend). Les textes remplacent sa voix, exactement comme les démos muettes de nos créateurs.
 Réponds UNIQUEMENT par des lignes, rien d'autre :
 CHOC|<texte choc : la réaction à la 1re personne de quelqu'un de choqué qui donne envie de rester (« Pourquoi personne ne m'a montré ça avant ??? 😭 »), 6 à 12 mots, 60 caractères max, 1 ou 2 emojis à la fin, il nomme le sujet si possible>
-V|<id du visuel>|<secondes>|<texte à l'écran : 3 à 9 mots, ce que montre CE visuel ou l'étape qu'il illustre, sans emoji>
-(une ligne V par plan, dans l'ordre du récit : le problème ou l'accroche, la démonstration étape par étape, le résultat ; chaque visuel AU MOINS une fois ; image = 2,5 à 4 s ; vidéo = sa durée utile, 6 s au plus ; un visuel peut revenir si le contenu manque)
-CTA|<MOT-CLÉ à commenter, un seul mot en capitales>|<phrase CTA : « Commente MOT et je t'envoie … »>
-Règles : français naturel ; le texte décrit ce que l'on VOIT (jamais un chiffre, un nom ou une promesse absents des visuels et du brief) ; jamais de nom de modèle d'IA ; phrases courtes qui se lisent en 2 secondes.`
+${voix ? `C|<début s>|<fin s>|step|<consigne>
+(une CONSIGNE par action qu'il décrit : courte, à l'impératif, 2 à 6 mots, ce qu'il FAIT à cet instant — « Va sur AvatarAds.fr », « Clique sur Omni », « Importe ta photo », « Choisis la qualité », « Écris ton prompt » ; elle apparaît au début des mots qui la justifient et tient jusqu'à la suivante, 3,5 s au plus ; temps de la DÉMO ; pas de consigne pour une phrase qui ne décrit aucune action)
+C|<début s>|<fin s>|punch|<encadré du résultat>
+(AU PLUS DEUX : au moment où le résultat apparaît ou est annoncé — « BOOM ! Transformation 🤯 » —, puis éventuellement sur l'avant / après — « Avant / après ultra-réaliste 🤯 » ; 2 à 5 mots, 1 emoji à la fin ; ils tiennent jusqu'à la fin ou jusqu'au suivant)
+` : `(démo MUETTE : n'écris AUCUNE ligne C — on n'invente jamais ce qu'il fait)
+`}CTA|<MOT-CLÉ à commenter : un seul mot en capitales, celui du brief s'il en donne un>
+Règles : français naturel ; rien d'inventé (aucun chiffre, nom ou promesse absent de ce qu'il dit et du brief) ; jamais de nom de modèle d'IA ; une consigne se lit en 1 seconde.`
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': anthKey, 'anthropic-version': '2023-06-01' },
@@ -704,53 +712,48 @@ Règles : français naturel ; le texte décrit ce que l'on VOIT (jamais un chiff
   const data = await res.json()
   const texte = String((data?.content || []).map((c: { text?: string }) => c?.text || '').join('\n'))
   const propre = (t: string, max: number) => String(t || '').replace(/[|\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, max)
-  let choc = '', ctaMot = '', ctaPhrase = ''
-  const plans: { id: string; sec: number; texte: string }[] = []
+  let choc = '', mot = ''
+  let cartes: { start: number; end: number; style: string; text: string }[] = []
   for (const l of texte.split('\n')) {
     const c = l.split('|').map((x) => x.trim())
     if (c[0] === 'CHOC' && c[1]) choc = propre(c[1], 72)
-    else if (c[0] === 'V' && c.length >= 4) {
-      const a = vis.find((x) => x.id === c[1])
-      if (!a) continue
-      const max = a.kind === 'video' ? Math.max(1.5, Math.min(6, Number(a.dur) || 4)) : 4
-      plans.push({ id: a.id, sec: Math.round(Math.max(a.kind === 'video' ? 1.5 : 2.5, Math.min(max, Number(String(c[2]).replace(',', '.')) || 3)) * 100) / 100, texte: propre(c.slice(3).join(' '), 70).replace(/[.!?…]+$/, '') })
-    } else if (c[0] === 'CTA' && c[1]) { ctaMot = propre(c[1], 14).replace(/[^\p{L}\p{N}]/gu, '').toLocaleUpperCase('fr-FR'); ctaPhrase = propre(c.slice(2).join(' '), 90) }
+    else if (c[0] === 'C' && c.length >= 5 && voix) {
+      const a = Number(String(c[1]).replace(',', '.')), b = Number(String(c[2]).replace(',', '.'))
+      const style = c[3] === 'punch' ? 'punch' : 'step'
+      const t = propre(c.slice(4).join(' '), style === 'punch' ? 40 : 48).replace(/[.]+$/, '')
+      if (t && Number.isFinite(a) && Number.isFinite(b) && b > a) cartes.push({ start: r2(Math.max(0, a)), end: r2(Math.min(dd, style === 'punch' ? dd : Math.min(b, a + 3.5))), style, text: t })
+    } else if (c[0] === 'CTA' && c[1]) mot = propre(c[1], 14).replace(/[^\p{L}\p{N}]/gu, '').toLocaleUpperCase('fr-FR')
   }
-  // chaque visuel fourni passe au moins une fois (le chef propose, le code tranche)
-  for (const a of vis) if (!plans.some((p) => p.id === a.id)) plans.push({ id: a.id, sec: a.kind === 'video' ? Math.max(1.5, Math.min(6, Number(a.dur) || 3)) : 3, texte: '' })
-  if (!ctaMot) ctaMot = 'INFO'
-  if (!ctaPhrase || !/comment/i.test(ctaPhrase)) ctaPhrase = `Commente ${ctaMot} et je t'envoie le lien en privé`
-  // ── le temps : réaction, plans, CTA (sur le dernier visuel prolongé) ──
+  // ── le temps : réaction, démo (gelée 2,5 s si elle est très courte) ; comme C-OMNIM-01 de Production, le CTA arrive
+  // AVEC le résultat (1er encadré) et tient jusqu'à la fin — sans résultat, sur les 4 dernières secondes ──
   const R = o.reaction ? 3 : 0
-  const r2 = (n: number) => Math.round(n * 100) / 100
-  const sequence: { assetId: string; start: number; end: number; text: string }[] = []
-  let t = R
-  for (const p of plans) {
-    if (t + p.sec > 84) break
-    sequence.push({ assetId: p.id, start: r2(t), end: r2(t + p.sec), text: p.texte })
-    t = r2(t + p.sec)
+  const D = r2(R + dd + (dd < 6 ? 2.5 : 0))
+  cartes.sort((x, y) => x.start - y.start)
+  let punchs = 0
+  cartes = cartes.filter((c) => c.style !== 'punch' || ++punchs <= 2)
+  for (let i = 0; i < cartes.length; i++) {
+    cartes[i].start = r2(cartes[i].start + R); cartes[i].end = r2(cartes[i].end + R)
+    const n = cartes[i + 1]
+    if (n && cartes[i].end > n.start + R - 0.05) cartes[i].end = r2(n.start + R - 0.05)   // jamais deux à la fois (la suivante n'est pas encore décalée)
   }
-  const CTA_SEC = 3.2
-  const ctaStart = t
-  sequence[sequence.length - 1].end = r2(t + CTA_SEC)
-  const D = r2(t + CTA_SEC)
-  // sous-titres : les mots de chaque phrase répartis sur son plan (le moteur les regroupe en phrases à l'écran)
-  const captions: { text: string; start: number; end: number }[] = []
-  const poser = (phrase: string, a: number, b: number) => {
-    const mots = String(phrase || '').split(/\s+/).filter(Boolean)
-    if (!mots.length) return
-    const span = Math.max(0.4, b - a), pas = span / mots.length
-    mots.forEach((m, i) => captions.push({ text: i === mots.length - 1 && !/[.!?…]$/.test(m) ? m + '.' : m, start: r2(a + i * pas), end: r2(a + (i + 1) * pas) }))
-  }
-  for (const sq of sequence) poser(sq.text, sq.start + 0.12, Math.min(sq.end, sq === sequence[sequence.length - 1] ? ctaStart : sq.end) - 0.15)
-  poser(ctaPhrase, ctaStart + 0.1, D - 0.4)
+  const der = cartes[cartes.length - 1]
+  if (der && der.style === 'punch') der.end = D   // le dernier encadré tient jusqu'à la fin, au-dessus du CTA
+  cartes = cartes.filter((c) => c.end - c.start >= 0.7)
+  const p1 = cartes.find((c) => c.style === 'punch')
+  const ctaStart = r2(p1 ? p1.start : Math.max(R + 0.5, D - 4))
+  // une consigne ne passe jamais sous le CTA (même zone de l'écran)
+  cartes = cartes.filter((c) => c.style !== 'step' || c.start < ctaStart - 0.6).map((c) => (c.style === 'step' && c.end > ctaStart - 0.05) ? { ...c, end: r2(ctaStart - 0.05) } : c)
+  if (!mot) mot = 'INFO'
+  cartes.push({ start: ctaStart, end: D, style: 'cta', text: `Commente "${mot}" et je t'envoie le lien 📩` })
   return {
-    duration: D, sansVoix: true, reaction: !!R, slideStyle: 'musique',
+    duration: D, sansVoix: true, demo: true, voix, reaction: !!R, slideStyle: 'musique',
     hook: { text: choc || 'Personne ne te montre ça 🤯', start: 0, end: R || 2.5 },
-    sequence, captions, slides: [], broll: [], beats: [], avatarSegments: [], zooms: [], beds: [],
+    sequence: [{ assetId: 'demo', start: R, end: D, text: '' }], cartes, captions: [],
+    slides: [], broll: [], beats: [], avatarSegments: [], zooms: [], beds: [],
     sections: [{ start: 0, label: 'reaction' }, ...(R ? [{ start: R, label: 'demo' }] : []), { start: ctaStart, label: 'cta' }],
-    sfx: sequence.map((sq, i) => (i === 0 && !R) ? null : { kind: 'mo-whoosh-1', t: r2(Math.max(0, sq.start - 0.12)), vol: 0.35 }).filter(Boolean),
-    music: { mood: 'dynamique' }, detected: { music: false, subtitles: false }, tone: 'energique', cta: { mot: ctaMot },
+    // le glissement réaction → démo de Production : whoosh + impact
+    sfx: R ? [{ kind: 'mo-whoosh-1', t: r2(R - 0.2), vol: 0.6 }, { kind: 'mo-impact-2', t: r2(R + 0.06), vol: 0.45 }] : [],
+    music: { mood: 'dynamique' }, detected: { music: false, subtitles: false }, tone: 'energique', cta: { mot },
   }
 }
 
@@ -2776,7 +2779,7 @@ async function traiter(req: Request, budgetMs = BUDGET_MS): Promise<Response> {
     const _t0 = Date.now(), _chrono = (etape: string) => console.log(`⏱ orchestrate ${etape} ${Date.now() - _t0} ms`)
     const form = await req.formData()
     _chrono('formulaire lu')
-    // style Musique sans voix (10/10) : aucun audio — le chef lit les visuels (planSansVoix)
+    // style Musique (11/10) : sa démo vidéo, avec ou sans voix — le chef écrit les cartes de la démo muette (planMusiqueDemo)
     const sansVoix = String(form.get('sans_voix') || '') === '1'
     const audio = form.get('audio')
     if (!sansVoix && !(audio instanceof File)) return json({ error: 'Champ "audio" manquant' }, 400)
@@ -2873,17 +2876,23 @@ async function traiter(req: Request, budgetMs = BUDGET_MS): Promise<Response> {
       : (siteToRead ? fetchSiteContext(siteToRead) : Promise.resolve(''))
 
     if (sansVoix) {
-      const siteSV = await siteJob.catch(() => '')
+      // style Musique : sa démo, transcrite si elle porte sa voix (Scribe lit la vidéo) ; muette sinon
+      let mots: MotSV[] = []
+      if (audio instanceof File && audio.size >= 1024) {
+        try { const sc = await transcribe(audio, lang, _fin); mots = (sc.words || []).map((w: { text: string; start: number; end: number }) => ({ text: String(w.text), start: Number(w.start) || 0, end: Number(w.end) || 0 })) }
+        catch (e) { console.warn('transcription démo :', (e as Error).message) }
+      }
+      _chrono(`démo transcrite (${mots.length} mots)`)
       let planSV: Record<string, unknown>
       try {
-        planSV = await planSansVoix({ assets: assets as VisuelSV[], brief, marque: mem.text, site: String(siteSV || ''), reaction: String(form.get('reaction') || '') === '1', niveau, fin: _fin })
+        planSV = await planMusiqueDemo({ mots, frames, demoDur: Number(form.get('demo_dur')) || 0, brief, marque: mem.text, reaction: String(form.get('reaction') || '') === '1', niveau, fin: _fin })
       } catch (e) {
         const st = (e as Error & { statut?: number }).statut
         return json({ error: String((e as Error).message).slice(0, 300) }, st || 500)
       }
-      _chrono('plan sans voix')
+      _chrono('plan Musique')
       if (_auth.userId && _opId) { _settled = await settleReservation(_auth.userId, _opId) }
-      return json({ ok: true, version: '1.5-sv', plan: planSV, transcript: { text: '', words: [], aligned: false } })
+      return json({ ok: true, version: '1.6-demo', plan: planSV, transcript: { text: mots.map((w) => w.text).join(' '), words: mots, aligned: false } })
     }
 
     // 2. transcription word-level + contexte site (en parallèle)

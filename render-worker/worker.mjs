@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { lookup as dnsLookup } from 'node:dns/promises'
 import { buildComposition } from './build-composition.mjs'
 // look Production (09/10) : emojis du texte choc + musiques énergiques de Production
-import { preparerEmojisChoc, choisirMusiqueProduction, fichierMusiqueProduction, capSkinOf, CAP_SKINS } from './production-look.mjs'
+import { preparerEmojisChoc, preparerEmojis, choisirMusiqueProduction, fichierMusiqueProduction, capSkinOf, CAP_SKINS } from './production-look.mjs'
 import { buildGenSubsComposition } from './gen-subs-composition.mjs'
 // EXIGE_GLOBAL et ANIMS voyagent avec la dérivation : la passe de finition doit
 // juger une correction avec EXACTEMENT le même garde-fou que le reste de la
@@ -2008,6 +2008,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     }
     // emojis Apple du texte choc, posés dans le projet AVANT la composition (la page rendue ne sort pas)
     try { plan._chocEmoji = preparerEmojisChoc(plan, proj) } catch (_) { plan._chocEmoji = {} }
+    // style Musique (démo) : les emojis des cartes (« BOOM ! Transformation 🤯 », « … le lien 📩 »)
+    if (plan.sansVoix && Array.isArray(plan.cartes)) { try { plan._carteEmoji = preparerEmojis(plan.cartes.map((c) => c && c.text), proj) } catch (_) { plan._carteEmoji = {} } }
 
     // DERNIER MOT SUR LES BRUITAGES. Le serveur verrouille deja chaque son sur un
     // visuel, mais il ne sait pas que le rendu vient d'ECARTER des images trop

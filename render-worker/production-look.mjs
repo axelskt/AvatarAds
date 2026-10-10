@@ -184,10 +184,14 @@ export function chocCss(W, H) {
 // rendue ne sort jamais (CSP). Échec réseau → l'emoji est simplement retiré.
 const EMOJI_CDN = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/'
 export function preparerEmojisChoc(plan, proj) {
+  if (!chocStyleOf(plan)) return {}
+  return preparerEmojis([String((plan.hook && plan.hook.text) || '')], proj, 4)
+}
+// les emojis Apple de n'importe quels textes (cartes du style Musique, texte choc) → { emoji: chemin dans le projet }
+export function preparerEmojis(textes, proj, max = 8) {
   const out = {}
-  if (!chocStyleOf(plan)) return out
-  const txt = String((plan.hook && plan.hook.text) || '')
-  const found = [...new Set(txt.match(EMOJI) || [])].slice(0, 4)
+  const txt = (textes || []).map((t) => String(t || '')).join(' ')
+  const found = [...new Set(txt.match(EMOJI) || [])].slice(0, max)
   if (!found.length) return out
   mkdirSync(join(proj, 'emoji-choc'), { recursive: true })
   for (const e of found) {
@@ -239,6 +243,48 @@ export function chocBloc(plan, { W, H, start, dur, id = 'hkChoc' }) {
         if(max && w-pad>max){ const k=max/(w-pad); c.style.fontSize=(fs0*k).toFixed(1)+'px'; c.style.lineHeight=(lh0*k).toFixed(1)+'px'; } };
       if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit(); })();`
   return { html, js, fitJs, layout: L, style: cs, sfx: { kind: 'mo-pop-1', t: Math.round((start + 0.02) * 100) / 100, vol: 0.25 } }
+}
+
+// ── CARTES « DÉMO MUETTE » (style Musique, recette usine/demo-muette.mjs de Production, Axel 07/10) ──────────────
+// consigne `step` : blanc cerné de noir, centre-bas ; `punch` : encadré noir au résultat ; `cta` : encadré noir en bas
+// jusqu'à la fin. Zone sûre : x 80 → 880 (200 px libres à droite pour les icônes), jamais sous 1 480 px.
+export function cartesCss(W, H) {
+  const k = Math.min(W / 1080, H / 1920)
+  const p = (v) => Math.round(v * k * 10) / 10 + 'px'
+  return `
+      .dm-card { position: absolute; left: ${p(80)}; width: ${p(800)}; text-align: center; transform-origin: 50% 50%; z-index: 72; }
+      .dm-card .l { display: block; margin: 0; white-space: nowrap; }
+      .dm-card .l > span { display: inline-block; }
+      .dm-card .emj { height: 1.05em; width: 1.05em; vertical-align: -0.18em; margin-left: .12em; }
+      .dm-step { top: ${p(1300)}; font-family: 'Montserrat', 'Arial Black', sans-serif; font-weight: 900; font-size: ${p(62)}; line-height: 1.12; color: #fff;
+        -webkit-text-stroke: ${p(9)} #000; paint-order: stroke fill; text-shadow: 0 ${p(4)} ${p(14)} rgba(0,0,0,.45); }
+      .dm-punch, .dm-cta { font-family: 'Inter', Arial, sans-serif; font-weight: 800; color: #fff; }
+      .dm-punch .l > span, .dm-cta .l > span { background: #111; border-radius: ${p(16)}; padding: ${p(10)} ${p(24)}; box-shadow: 0 ${p(6)} ${p(18)} rgba(0,0,0,.35); }
+      .dm-punch .l:not(:first-child) > span, .dm-cta .l:not(:first-child) > span { margin-top: -${p(6)}; }
+      .dm-punch { top: ${p(1235)}; font-size: ${p(52)}; line-height: 1.18; }
+      .dm-cta { top: ${p(1405)}; font-size: ${p(36)}; line-height: 1.2; }`
+}
+// une carte ne dépasse jamais la zone sûre (800 px) : police réduite, mesurée une fois les polices chargées
+export function cartesFitJs(W) {
+  const max = Math.round(800 * W / 1080)
+  return `
+    (function(){ const fit=()=>document.querySelectorAll('.dm-card').forEach(c=>{ c.style.fontSize=''; const fs=parseFloat(getComputedStyle(c).fontSize); let w=0;
+      c.querySelectorAll('.l>span').forEach(s=>{ w=Math.max(w, s.offsetWidth); }); if(w>${max}) c.style.fontSize=(fs*${max}/w).toFixed(1)+'px'; });
+      fit(); if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); })();`
+}
+// une carte : wrapper .clip (le temps) + carte animée (entrée de Production : 0,16 s, back.out)
+export function carteBloc(c, i, emo = {}) {
+  const style = ['step', 'punch', 'cta'].includes(c.style) ? c.style : 'step'
+  const start = Math.round((Number(c.start) || 0) * 100) / 100
+  const dur = Math.round(Math.max(0.3, (Number(c.end) || 0) - start) * 100) / 100
+  const ligne = (l) => escHtml(l).replace(EMOJI, (m) => (emo[m] ? `<img class="emj" src="${emo[m]}" alt="">` : ''))
+  const html = `
+      <div class="clip" id="dmc${i}" data-start="${start}" data-duration="${dur}" data-track-index="17" style="position:absolute;inset:0;z-index:72;pointer-events:none">
+        <div class="dm-card dm-${style}" id="dmc${i}In">${String(c.text || '').split('\n').map((l) => `<div class="l"><span>${ligne(l)}</span></div>`).join('')}</div>
+      </div>`
+  const js = `
+      tl.fromTo('#dmc${i}In', { autoAlpha: 0, scale: 0.86 }, { autoAlpha: 1, scale: 1, duration: 0.16, ease: 'back.out(2)' }, ${start});`
+  return { html, js }
 }
 
 // Le pop du texte choc, une seule fois : la composition est construite DEUX fois
