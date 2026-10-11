@@ -177,9 +177,11 @@ function burn(video, output, words, opts = {}) {
  #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:'Arial Black','Archivo Black',system-ui,sans-serif}
  #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
  /* ZONE SÛRE (Axel 07/10, capture TikTok : « ça touche l'icône commentaire, les sous-titres sont trop gros ») :
-    x 80 → 880 (200 px libres à droite pour j'aime / commentaire / favoris), bas du texte au-dessus de 1 470 px (légende) ;
-    un mot ou une ligne plus large que 800 px est réduit (script plus bas), jamais coupé ni débordant */
- .cap{position:absolute;left:80px;width:800px;bottom:450px;z-index:5;text-align:center;
+    800 px de large, bas du texte au-dessus de 1 470 px (légende) ; un mot ou une ligne plus large que 800 px est réduit
+    (script plus bas), jamais coupé ni débordant. Axel 11/10 : « mal centré, + sur la droite » → bande CENTRÉE sur
+    l'image (x 140 → 940, axe à 540) au lieu de x 80 → 880 (axe à 480, 60 px trop à gauche) ; les mots courts restent
+    loin des icônes, seul un mot de 800 px frôle la colonne de droite */
+ .cap{position:absolute;left:140px;width:800px;bottom:450px;z-index:5;text-align:center;
    font-weight:900;font-size:82px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
    -webkit-text-stroke:8px #000;paint-order:stroke fill;
    text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;line-height:1}
