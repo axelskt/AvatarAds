@@ -204,6 +204,14 @@
     runGate();
   }
 
+  // Oublie la session locale de la page SANS passer par supabase-js (son verrou peut être celui qui bloque) puis
+  // affiche l'écran de connexion.
+  function forgetSession(msg) {
+    try { localStorage.removeItem(CF_STORAGE_KEY); localStorage.removeItem(CF_STORAGE_KEY + '-user'); localStorage.removeItem(CF_STORAGE_KEY + '-code-verifier'); } catch (e) { /* stockage indisponible */ }
+    gateSeq += 1; CF.user = null; resetData();
+    setStatus('auth', msg);
+  }
+
   // ── contrôle d'accès : factory_access() (RPC légère dédiée, migration 20260924150000) ──
   function runGate() {
     var my = ++gateSeq, ep = epoch;
@@ -241,7 +249,9 @@
         if (my !== gateSeq || ep !== epoch) return;
         var msg = errText(e);
         if (!/délai/.test(msg)) return setStatus('error', msg);
-        return probe().then(function (p) { if (my === gateSeq && ep === epoch) setStatus('error', msg + ' · ' + p); });
+        // 11/10 (Axel : « que ça me demande de me connecter directement ») : session bloquée → on l'oublie et on
+        // affiche la connexion, jamais plus la page « Erreur de chargement ».
+        return forgetSession('La session ne répondait pas : reconnecte-toi.');
       });
   }
 
@@ -1657,7 +1667,13 @@
     if ((CF.status === 'boot' || CF.status === 'loading') && !opt.signal && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opt = Object.assign({}, opt, { signal: AbortSignal.timeout(15000) });
     return fetch(input, opt).finally(function () { if (CF.boot.net === rec) { CF.boot.net = null; emit('boot'); } });
   }
-  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: authLock }, global: { fetch: bootFetch } }); } catch (e) { sb = null; }
+  // 11/10 (Axel : « Erreur de chargement » / « Vérification de l'accès… » en boucle) : la page partageait la session
+  // de l'app (même clé de stockage, même jeton de rafraîchissement). Avec l'app ouverte dans un autre onglet, les deux
+  // renouvelaient le même jeton en rafale (7 rafraîchissements en 4 s dans les journaux du 11/10 à 19h37) et le contrôle
+  // d'accès restait bloqué derrière, sans jamais partir. Session PROPRE à Creative Factory : une connexion une fois sur
+  // cette page, puis plus aucune dépendance aux autres onglets.
+  var CF_STORAGE_KEY = 'sb-cf-v2-auth';
+  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: authLock, storageKey: CF_STORAGE_KEY }, global: { fetch: bootFetch } }); } catch (e) { sb = null; }
   if (!sb) {
     setStatus('error', 'supabase-js n’a pas pu être chargé (réseau ou empreinte SRI).');
     return;
@@ -1673,7 +1689,7 @@
     function (e) { setStatus('error', 'Session illisible : ' + errText(e)); }
   );
   setTimeout(function () {   // filet : toujours en démarrage après 20 s → message clair au lieu d'un rond qui tourne
-    if (CF.status === 'boot') setStatus('error', 'La session ne répond pas : recharge la page (ferme les autres onglets avatarads.fr si ça recommence).');
+    if (CF.status === 'boot') forgetSession('La session ne répondait pas : reconnecte-toi.');
   }, 20000);
   window.addEventListener('message', function (e) { if (e.origin === location.origin) { onOauth(e.data); onTkOauth(e.data); } });
   try {
