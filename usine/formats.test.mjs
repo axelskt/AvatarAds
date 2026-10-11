@@ -50,10 +50,10 @@ test('chocEnd : fixe = 3 s bornées à la vidéo ; hook = durée du hook ; sans 
 });
 
 // ── banque de phrases choc ──
-test('banque : 25 phrases TH01…TH25, modules connus, TH13 exige TX-O02a', () => {
-  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 25 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
+test('banque : 26 phrases TH01…TH26, modules connus, TH13 exige TX-O02a', () => {
+  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 26 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
   F.TEXTES_CHOC.forEach(p => assert.ok(['generique', 'mcp-claude', 'omni', 'montage-ia'].includes(p.module), p.id));
-  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24']);
+  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26']);
   assert.equal(F.textChoc('TH13').tx, 'TX-O02a');
   assert.equal(F.textChoc('TH99'), null); assert.equal(F.textChoc('__proto__'), null);
 });
@@ -136,7 +136,7 @@ test('pickFormat en série : 12 vidéos sur 3 hooks → chaque format 3 fois, ch
 });
 test('pickChoc : phrases compatibles avec la démo, la moins utilisée d’abord, préférence aux phrases qui tiennent (fits)', () => {
   const ids = new Set(); for (let i = 0; i < 40; i++) ids.add(F.pickChoc({ demo: DEMO.omni, rand: () => i / 40 }).id);
-  assert.ok(![...ids].some(id => ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24'].includes(id)), [...ids].join(','));
+  assert.ok(![...ids].some(id => ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26'].includes(id)), [...ids].join(','));
   assert.equal(ids.size, 19);   // phrases génériques (TH10-14 et TH24 = autres modules)
   const idsTx = new Set(); for (let i = 0; i < 60; i++) idsTx.add(F.pickChoc({ demo: DEMO.omni, tx: ['TX-O02a', 'TX-O01'], rand: () => i / 60 }).id);
   assert.ok(idsTx.has('TH13'));
