@@ -592,7 +592,21 @@ execFileSync('node', [join(HERE,'captions.mjs'), 'burn', voice, capt, wj, oj], {
 // ── 3) MUSIQUE (plus longue que la vidéo → coupée à la fin) duckée + BRUITAGES ──
 if (music && dur(music) < total) console.warn(`⚠ musique (${dur(music).toFixed(1)}s) plus courte que la vidéo (${total.toFixed(1)}s) → elle bouclera ; prends une piste plus longue.`);
 const B1 = O1 + TS/2, B2 = cta ? (O2 + TS/2) : null;   // milieu des glissements
-const wh = join(SFX,'mo-whoosh-1.mp3'), imp = join(SFX,'mo-impact-2.mp3');
+// Axel 11/10 : « tu choisis toujours les mêmes bruitages » → une famille de sons tirée PAR VIDÉO (graine = nom de sortie +
+// hook + démo) : chaque vidéo garde des sons cohérents entre ses raccords, mais deux vidéos ne sonnent plus pareil.
+const SFX_POOL = {
+  whoosh: ['mo-whoosh-1.mp3', 'whoosh.mp3', 'woosh.mp3', 'mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
+  impact: ['mo-impact-1.mp3', 'mo-impact-2.mp3', 'mo-impact-3.mp3', 'ed-hit-1.mp3', 'ed-thud-1.mp3', 'ed-thud-2.mp3', 'hit.mp3'],
+  pop:    ['mo-pop-1.mp3', 'mo-pop-2.mp3', 'mo-pop-3.mp3', 'ed-pop-1.mp3', 'pop.mp3'],
+  group:  ['ed-swish-1.mp3', 'mo-swipe-2.mp3', 'mo-tick-1.mp3', 'mo-tap-1.mp3', 'ed-click-1.mp3'],
+  entree: ['woosh.mp3', 'whoosh.mp3', 'mo-whoosh-1.mp3', 'mo-swipe-1.mp3'],
+  photo:  ['camera-shutter.mp3', 'camera-click.mp3', 'snap.mp3'],
+  sortie: ['mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
+};
+const sfxPick = (() => { let h = 2166136261; for (const c of basename(out || '') + '|' + (hookId || '') + '|' + (OPT.demo || '')) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  const pick = {}; Object.keys(SFX_POOL).forEach((k, i) => { const L = SFX_POOL[k]; pick[k] = L[(h >>> (i * 3)) % L.length]; h = Math.imul(h ^ (i + 1), 2654435761) >>> 0; }); return pick; })();
+console.log('  bruitages : ' + Object.values(sfxPick).join(', '));
+const wh = join(SFX, sfxPick.whoosh), imp = join(SFX, sfxPick.impact);
 const dly = s => { const ms = Math.max(0, Math.round(s*1000)); return `${ms}|${ms}`; };
 const sfxIn=[], sfxFilt=[], sfxLabels=[];
 const addSfx = (file, at, vol, tag) => { sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
@@ -600,12 +614,12 @@ addSfx(wh, B1 - 0.20, '-4dB', 'w1'); addSfx(imp, B1 + 0.06, '-7dB', 'i1');
 if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', 'i2'); }
 // ── BRUITAGES LIÉS À L'ACTION (Axel 29/09) : jamais un son sans quelque chose à l'écran ──
 { let q = 0; const sx = f => join(SFX, f);
-  if (sidecar.texte_choc) addSfx(sx('mo-pop-1.mp3'), 0.02, '-12dB', 'x' + q++);                              // texte du hook qui apparaît
+  if (sidecar.texte_choc) addSfx(sx(sfxPick.pop), 0.02, '-12dB', 'x' + q++);                              // texte du hook qui apparaît
   const gs = {}; allWords.forEach(w => { if (w.g && !(w.g in gs)) gs[w.g] = w.start; });
-  Object.values(gs).forEach(t => addSfx(sx('ed-swish-1.mp3'), Math.max(0, t - 0.1), '-14dB', 'x' + q++));       // groupe de sous-titres
-  brollEvents.forEach(e => { addSfx(sx('woosh.mp3'), Math.max(0, e.at - 0.15), '-9dB', 'x' + q++);            // image qui entre
-    if (e.image) addSfx(sx('camera-shutter.mp3'), e.at + 0.02, '-12dB', 'x' + q++);
-    if (e.style === 'hook') addSfx(sx('mo-swipe-1.mp3'), Math.max(0, e.at + e.dur - 0.3), '-16dB', 'x' + q++); });   // … et qui repart
+  Object.values(gs).forEach(t => addSfx(sx(sfxPick.group), Math.max(0, t - 0.1), '-14dB', 'x' + q++));       // groupe de sous-titres
+  brollEvents.forEach(e => { addSfx(sx(sfxPick.entree), Math.max(0, e.at - 0.15), '-9dB', 'x' + q++);            // image qui entre
+    if (e.image) addSfx(sx(sfxPick.photo), e.at + 0.02, '-12dB', 'x' + q++);
+    if (e.style === 'hook') addSfx(sx(sfxPick.sortie), Math.max(0, e.at + e.dur - 0.3), '-16dB', 'x' + q++); });   // … et qui repart
   // démo : clic / génération / résultat d'après les mots dits (2,5 s d'écart au moins, 5 au plus)
   const RULES = [[/^(clique|cliques|cliquer|clic|selectionne|selectionnes|choisis|appuie|appuies|tape|tapes)$/, 'mouse-click.mp3', '-10dB'],
     [/^(genere|generer|generes|lance|lances|creer|cree|crees)$/, 'magic.mp3', '-14dB'],

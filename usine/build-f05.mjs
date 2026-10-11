@@ -109,16 +109,16 @@ const DOUCES = ['M01', 'M02', 'M03', 'M05', 'M06', 'M07', 'M15', 'M16', 'M18', '
 if (DOUCES.includes(musicId)) { console.error(`✗ ${musicId} = musique douce, refusée pour F05 (énergiques : M08 M10 M13 M14 M20 M21-M24)`); process.exit(3); }
 if (dur(music) < total + 0.3) { console.error(`✗ musique ${musicId || music} trop courte (${dur(music).toFixed(1)} s pour ${total.toFixed(1)} s)`); process.exit(3); }
 
-// ── 4) montage : glissement 0,25 s (comme build.mjs), musique seule à −16 LUFS, pop + whoosh + impact ──
+// ── 4) montage : glissement 0,25 s (comme build.mjs), musique seule à −16 LUFS, sans bruitage (Axel 11/10) ──
 const AF = 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo';
 const ms = s => { const v = Math.max(0, Math.round(s * 1000)); return `${v}|${v}`; };
 const fc =
   `[0:v]${VF},setpts=PTS-STARTPTS,settb=AVTB[h];[1:v]${VF},trim=0:${D.toFixed(3)},setpts=PTS-STARTPTS,settb=AVTB[d];` +
   `[h][d]xfade=transition=slideleft:duration=${TS}:offset=${O.toFixed(3)}[v];` +
-  `[2:a]${AF},atrim=0:${total.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.3,afade=t=out:st=${(total - 1).toFixed(3)}:d=1[m];` +
-  `[3:a]${AF},adelay=${ms(0.02)},volume=-12dB[p];[4:a]${AF},adelay=${ms(O + TS / 2 - 0.2)},volume=-4dB[w];[5:a]${AF},adelay=${ms(O + TS / 2 + 0.06)},volume=-7dB[i];` +
-  `[m][p][w][i]amix=inputs=4:duration=first:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.95[a]`;
-ff(['-i', hookC, '-i', demo, '-i', music, '-i', join(SFX, 'mo-pop-1.mp3'), '-i', join(SFX, 'mo-whoosh-1.mp3'), '-i', join(SFX, 'mo-impact-2.mp3'),
+  // Axel 11/10 : « sur les no voice je ne veux pas de bruitage » → musique SEULE (plus de pop / whoosh / impact)
+  `[2:a]${AF},atrim=0:${total.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.3,afade=t=out:st=${(total - 1).toFixed(3)}:d=1,` +
+  `loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.95[a]`;
+ff(['-i', hookC, '-i', demo, '-i', music,
   '-filter_complex', fc, '-map', '[v]', '-map', '[a]', ...VENC, '-pix_fmt', 'yuv420p', '-r', String(FPS),
   '-c:a', 'aac', '-b:a', '192k', '-t', total.toFixed(3), '-movflags', '+faststart', out]);
 
