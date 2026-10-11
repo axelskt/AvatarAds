@@ -1601,9 +1601,10 @@
   // 07/10 (Axel : « mets l'écran pour que je me reconnecte directement ») : efface la session enregistrée dans CE
   // navigateur (clé locale de supabase-js, sans appel réseau : c'est justement le réseau qui bloque) puis recharge → écran
   // de connexion e-mail + mot de passe. Les autres onglets avatarads.fr partagent cette session : ils seront déconnectés aussi.
+  // 11/10 : la page a sa propre session (CF_STORAGE_KEY) → on efface celle-là et on affiche la connexion tout de suite,
+  // sans recharger (l'ancien rechargement relisait une session aussitôt réécrite par l'onglet de l'app).
   function relogin() {
-    try { Object.keys(localStorage).filter(function (k) { return /^sb-guvwgiejzkiodghywpwj-auth-token/.test(k); }).forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* stockage bloqué */ }
-    location.reload();
+    forgetSession('');
   }
   // Après un contrôle d'accès sans réponse : le serveur est-il joignable depuis CETTE page ? (requête minuscule, 4 s)
   function probe() {
@@ -1688,9 +1689,9 @@
     function (r) { bootStep('session lue'); onSession(r && r.data && r.data.session); },
     function (e) { setStatus('error', 'Session illisible : ' + errText(e)); }
   );
-  setTimeout(function () {   // filet : toujours en démarrage après 20 s → message clair au lieu d'un rond qui tourne
+  setTimeout(function () {   // filet : lecture de session toujours en cours après 6 s → écran de connexion (Axel 11/10)
     if (CF.status === 'boot') forgetSession('La session ne répondait pas : reconnecte-toi.');
-  }, 20000);
+  }, 6000);
   window.addEventListener('message', function (e) { if (e.origin === location.origin) { onOauth(e.data); onTkOauth(e.data); } });
   try {
     var bc = new BroadcastChannel('ig-oauth');
