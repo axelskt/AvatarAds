@@ -11464,7 +11464,10 @@ function _imgUpscaleLoadStop(ok){
   clearInterval(_imgUpTimer); _imgUpTimer=null; clearInterval(_imgProgTimer); _imgProgTimer=null;
   if(ok) _imgSetProg(100);
   const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
-  const img=document.getElementById('imgOutput'); if(img) img.style.opacity='1';
+  const img=document.getElementById('imgOutput'); if(img){ img.style.opacity='1'; img.style.height=''; }
+  // relâche le cadre figé au départ (Axel 11/10 : après un 4K, la boîte restait à l'ancienne hauteur → l'image
+  // revenait plus petite en haut et un grand vide blanc dessous)
+  { const z=document.getElementById('imgZone'); if(z){ z.style.height=''; z.style.minHeight='200px'; } }
   { const a=document.getElementById('imgActions'); if(a) a.style.display=''; }
 }
 // pose la nouvelle image 4K SANS zoom : contain dans le cadre figé, puis on relâche proprement
