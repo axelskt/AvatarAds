@@ -63,7 +63,7 @@ test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.
   const md = readFileSync(BANK, 'utf8'), sec = md.split(/^## /m).find(x => /^VALIDÉES/.test(x));
   assert.ok(sec, 'section VALIDÉES');
   const lines = sec.split('\n').filter(l => /^TH\d{2} /.test(l));
-  assert.equal(lines.length, 25);
+  assert.equal(lines.length, 26);
   lines.forEach(l => {
     const m = /^(TH\d{2}) (.+?)\s{2,}\((.+)\)\s*$/.exec(l);
     assert.ok(m, l);
