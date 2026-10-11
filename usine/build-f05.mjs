@@ -70,7 +70,7 @@ const fz = faceZones(hook, 0, H, 0.5);
 // 11/10 : la tête BOUGE pendant la réaction (recul, main à la bouche) → marge de 40 % sous le visage détecté, sinon le texte
 // centré tombait sur le menton ou la bouche (VF-0158, 0170, 0178 sur R-A3-3)
 const facesMv = (fz.faces || null) && fz.faces.map(f => [f[0], f[1], f[2], f[3] * 1.4]);
-const layout = FMT.chocLayout(text, { faces: facesMv, avantApres: false, sizes: null, reserved: [], center: true })   // Axel 07/10 : texte toujours centré;
+const layout = FMT.chocLayout(text, { em: OPT['choc-style'] === 'CS11' ? 0.78 : 1, faces: facesMv, avantApres: false, sizes: null, reserved: [], center: true })   // Axel 07/10 : texte toujours centré;
 console.log(`  phrase choc ${OPT.choc} style ${OPT['choc-style']} (${layout.zone}, ${layout.size} px, ${layout.lines.length} ligne(s)) 0-${H.toFixed(2)} s`
   + (layout.size < 54 ? ' ⚠ moins de 54 px' : '') + (layout.level !== 'ok' ? ' ⚠ revue : ' + layout.reasons.join(' · ') : ''));
 writeFileSync(join(work, 'w.json'), '[]');

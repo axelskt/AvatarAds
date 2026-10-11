@@ -312,9 +312,11 @@
       var colW = col.right - col.left;
       if (colW < 360) return null;
       var padX = Math.round(size * 0.42), padY = Math.round(size * 0.12), lineH = Math.round(size * 1.2);
-      var lines = wrap(words, size, colW - 2 * padX);
+      // o.em : police plus étroite que l'estimation (CS11 = Anton condensé, Axel 11/10 : « mieux sur 2 lignes »)
+      var K = o.em || 1;
+      var lines = wrap(words, size, (colW - 2 * padX) / K);
       if (!lines || lines.length > 6) return null;
-      var tw = 0; lines.forEach(function (l) { tw = Math.max(tw, textEm(l) * size); });
+      var tw = 0; lines.forEach(function (l) { tw = Math.max(tw, textEm(l) * size * K); });
       var w = Math.min(colW, Math.ceil(tw * 1.06) + 2 * padX), h = lines.length * (lineH + 2 * padY);
       var x = col.align === 'center' ? Math.round((col.left + col.right) / 2 - w / 2) : col.left;
       return { x: x, w: w, h: h, size: size, lineH: lineH, padX: padX, padY: padY, lines: lines, maxW: w - 2 * padX };

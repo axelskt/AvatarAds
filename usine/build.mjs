@@ -563,7 +563,8 @@ if (FMT.hasChoc(format)) {
   if (facesForced !== undefined) fz = { faces: Array.isArray(facesForced) ? facesForced : (facesForced && facesForced.faces) || null, frames: 0, error: null, forced: true };
   else fz = faceZones(voice, 0, end, 0.5);
   // bande des sous-titres réservée (VF-0006 : le texte posé au « milieu » touchait les sous-titres) : jamais l'un sur l'autre
-  const lay = { faces: fz.faces, avantApres, sizes: OPT['choc-size'] ? [parseInt(OPT['choc-size'], 10)] : null,
+  // Axel 11/10 : texte choc TOUJOURS centré (le « haut-gauche » faisait décalé) ; CS11 (Anton condensé) mesuré plus étroit
+  const lay = { center: true, em: chocStyle === 'CS11' ? 0.78 : 1, faces: fz.faces, avantApres, sizes: OPT['choc-size'] ? [parseInt(OPT['choc-size'], 10)] : null,
     reserved: format.subs !== 'aucun' ? [{ x: 0, y: 1310, w: 1080, h: 200, why: 'bande des sous-titres + 60 px de marge' }] : [] };   // 11/10 (A3, VF-0109) : à 1370 le texte du milieu se collait aux sous-titres
   // tirage : d'abord une phrase qui tient LISIBLE (≥ 54 px, Axel 06/10 : 41-48 px trop petit), sinon n'importe laquelle qui tient
   const fitsOk = q => FMT.chocLayout(FMT.chocString(q), lay).level === 'ok';
