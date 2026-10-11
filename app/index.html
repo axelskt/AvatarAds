@@ -3346,7 +3346,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
               <!-- Prompt + suggestions + generate -->
               <div class="col grow" style="gap:12px">
-                <div id="imgRefStrip" class="row" style="display:none;gap:10px;flex-wrap:wrap;padding-top:4px"></div>
                 <div style="position:relative;flex:1">
                   <textarea id="imgPrompt" maxlength="1000" class="field" style="height:100%;min-height:104px;resize:none;padding-right:16px;font-size:15.5px;line-height:1.5" placeholder="Décris l'image que tu veux générer…" oninput="_imgUpdateCharCount(this)"></textarea>
                   <!-- #img-enhance-removed (Axel 09/09) : bouton « Améliorer » retiré de la zone de prompt (padding-right du textarea réduit en conséquence) -->
@@ -3354,6 +3353,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   <span id="imgCharCount" class="mono faint" style="position:absolute;right:14px;bottom:9px;font-size:10px;pointer-events:none">0 / 1000</span>
                 </div>
                 <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                  <!-- Axel 11/10 : vignettes des références À GAUCHE de « Générer » (au-dessus du prompt, elles écrasaient le texte) -->
+                  <div id="imgRefStrip" class="row" style="display:none;gap:10px;flex-wrap:nowrap;overflow-x:auto;min-width:0;flex:0 1 auto"></div>
                   <div id="imgSuggestions" class="row gap8" style="flex-wrap:nowrap;flex:1;min-width:0;overflow:hidden"></div>
                   <button class="btn btn-primary" onclick="generateImage()" id="imgGenBtn" style="padding:13px 48px;font-weight:800;font-size:17px;border-radius:16px;flex-shrink:0">
                     <span style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.15"><span style="display:inline-flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer l'image</span><span style="font-size:10px;font-weight:800;opacity:.75;font-family:var(--mono);letter-spacing:.05em;margin-top:2px">3 cr</span></span></button>
@@ -9668,7 +9669,7 @@ function _imgSyncRefCount(){
   if(t) t.textContent = n>1 ? (n+(_imgMode==='correct'?' images à corriger':' images de référence')) : (_imgMode==='correct'?'Image à corriger':'Image de référence');
   if(typeof _imgSyncRealCost==='function') _imgSyncRealCost();   // « Améliorer en 4K » : N images · N×5 cr
 }
-// ── Vignettes des références AU-DESSUS du prompt, chacune avec sa croix ──────
+// ── Vignettes des références sous le prompt, à gauche de « Générer », chacune avec sa croix ──
 // Axel (13/08) : « quand on met une image elle s'affiche au-dessus de la zone
 // de texte avec une croix ». Chaque vignette se retire indépendamment.
 function _imgRenderRefStrip(){
