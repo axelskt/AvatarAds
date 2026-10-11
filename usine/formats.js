@@ -292,7 +292,7 @@
   function faceRects(faces, wide) {
     return (faces || []).filter(function (f) { return Array.isArray(f) && f.length >= 4; }).map(function (f) {
       var x = f[0] * CANVAS.w, y = f[1] * CANVAS.h, w = f[2] * CANVAS.w, h = f[3] * CANVAS.h;
-      return wide ? { x: x - 0.15 * w, y: y - 0.35 * h, w: w * 1.3, h: h * 1.8, why: 'visage' } : { x: x, y: y, w: w, h: h * 1.3, why: 'visage' };
+      return wide ? { x: x - 0.15 * w, y: y - 0.35 * h, w: w * 1.3, h: h * 1.8, why: 'visage' } : { x: x, y: y, w: w, h: h, why: 'visage' };
     });
   }
   // Place la phrase. o = { faces: [[x,y,w,h]…] normalisées | null (inconnues), avantApres: bool, reserved: [rects px] }.
