@@ -44,6 +44,8 @@
   const ALLOWED = ['avatarads.fr', 'trackads.fr'];
   const p = new URLSearchParams(location.search);
   const u = p.get('u') || '', ig = p.get('ig') || '', s = p.get('s') || '';
+  // Lien court (11/10) : avatarads.fr/r?k=<code> — ig-go relit le lead et la destination, renvoyée dans sa réponse
+  const k = /^[A-Za-z0-9]{6,12}$/.test(p.get('k') || '') ? p.get('k') : '';
   let to = 'https://avatarads.fr';
   try {
     const t = new URL(p.get('to') || '');
@@ -64,12 +66,13 @@
       localStorage.setItem('aa_lead', JSON.stringify({ r: r, t: t, x: t + 2592e6 }));
     } catch (e) { /* stockage indisponible : pas d'attribution, la redirection passe */ }
   };
-  if (u) {
-    const q = EDGE + '?log=1&u=' + encodeURIComponent(u) + '&ig=' + encodeURIComponent(ig) + '&s=' + encodeURIComponent(s);
+  const okDest = (d) => { try { const t = new URL(d || ''); const h = t.hostname.toLowerCase(); return t.protocol === 'https:' && ALLOWED.some(a => h === a || h.endsWith('.' + a)) ? t.href : null; } catch (e) { return null; } };
+  if (u || k) {
+    const q = EDGE + '?log=1' + (k ? '&k=' + k : '&u=' + encodeURIComponent(u) + '&ig=' + encodeURIComponent(ig) + '&s=' + encodeURIComponent(s));
     let sent = false;
     try {
       if (window.fetch) {
-        fetch(q, { keepalive: true }).then(r => r.json()).then(j => { if (j && j.ref) keep(j.ref); }).catch(() => {}).then(go);
+        fetch(q, { keepalive: true }).then(r => r.json()).then(j => { if (j && j.ref) keep(j.ref); if (j && j.to && okDest(j.to)) to = okDest(j.to); }).catch(() => {}).then(go);
         sent = true;
       }
     } catch (e) { /* navigateur ancien */ }

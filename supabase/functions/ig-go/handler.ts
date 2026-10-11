@@ -116,10 +116,19 @@ export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   const url = new URL(req.url)
   if (req.method === 'POST' && url.searchParams.get('action') === 'attach') return attach(req)
-  const u  = url.searchParams.get('u') || ''
-  const ig = url.searchParams.get('ig') || ''
-  const s  = url.searchParams.get('s') || ''
-  const to = safeDest(url.searchParams.get('to'))
+  let u  = url.searchParams.get('u') || ''
+  let ig = url.searchParams.get('ig') || ''
+  let s  = url.searchParams.get('s') || ''
+  let to = safeDest(url.searchParams.get('to'))
+  // Lien court (11/10) : ?k=<code> → mêmes valeurs relues en base, puis vérification inchangée (signature datée)
+  const k = url.searchParams.get('k') || ''
+  let viaCode = false
+  if (/^[A-Za-z0-9]{6,12}$/.test(k)) {
+    try {
+      const { data } = await svc.from('ig_short_links').select('u, ig, s, dest').eq('k', k).maybeSingle()
+      if (data) { u = String(data.u || ''); ig = String(data.ig || ''); s = String(data.s || ''); to = safeDest(data.dest); viaCode = true }
+    } catch (_) { /* code inconnu : redirection par défaut */ }
+  }
   // Appelé par r.html (fetch, ou sendBeacon des anciennes pages) → 200 JSON (la redirection est faite par la page).
   // Un GET direct redirige, sans référence.
   const wantsJson = (req.headers.get('accept') || '').includes('application/json') || url.searchParams.get('log') === '1'
@@ -140,6 +149,6 @@ export async function handler(req: Request): Promise<Response> {
       }
     } catch (_) { /* non bloquant : la redirection passe quand même */ }
   }
-  if (wantsJson) return json(200, ref ? { ok: true, ref } : { ok: true })
+  if (wantsJson) return json(200, { ok: true, ...(ref ? { ref } : {}), ...(viaCode ? { to } : {}) })
   return new Response(null, { status: 302, headers: { ...CORS, Location: to } })
 }

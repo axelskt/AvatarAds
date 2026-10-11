@@ -85,3 +85,28 @@ export async function trackedLink(ig: string, u: string, dest: string): Promise<
   return LINK_BASE + '?u=' + encodeURIComponent(u) + '&ig=' + encodeURIComponent(ig)
     + '&s=' + encodeURIComponent(s) + '&to=' + encodeURIComponent(safeDest(dest))
 }
+
+// Lien COURT (Axel 11/10 : « un lien plus sexy, moins long ») : avatarads.fr/r?k=<7 car.> au lieu des 4 paramètres.
+// Le code pointe vers les mêmes valeurs (u, ig, s signée et datée, destination) dans ig_short_links ; ig-go les relit
+// et les vérifie exactement comme un lien long. Si l'écriture échoue, on envoie le lien long (le DM part toujours).
+export const SHORT_BASE = 'https://avatarads.fr/r'
+const B62 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+function shortCode(n = 7): string {
+  const b = crypto.getRandomValues(new Uint8Array(n))
+  let k = ''
+  for (const x of b) k += B62[x % 62]
+  return k
+}
+// deno-lint-ignore no-explicit-any
+export async function shortLink(svc: any, ig: string, u: string, dest: string): Promise<string> {
+  try {
+    const s = await signClick(u, ig), to = safeDest(dest)
+    for (let i = 0; i < 3; i++) {
+      const k = shortCode()
+      const { error } = await svc.from('ig_short_links').insert({ k, u, ig, s, dest: to })
+      if (!error) return SHORT_BASE + '?k=' + k
+      if (!/duplicate|unique/i.test(String(error.message || ''))) break   // autre erreur : lien long
+    }
+  } catch { /* lien long */ }
+  return trackedLink(ig, u, dest)
+}

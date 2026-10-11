@@ -7,7 +7,7 @@
 //  Audit 04/10 (CF-SEC-1) : plafonds PAR PERSONNE (voir handleEvent) — un même lead ne déclenche plus une réponse, un DM,
 //  une lecture de profil et une ligne de journal à chaque commentaire ou à chaque tap.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { trackedLink } from '../_shared/iglink.ts'
+import { shortLink } from '../_shared/iglink.ts'
 import { accountToken as tokenOf } from '../_shared/igacct.ts'
 import { rateHit } from '../_shared/guard.ts'
 
@@ -247,7 +247,7 @@ async function handleEvent(body: any) {
       const meta = { username: prof.username, follower_count: prof.follower_count, follows }
       if (follows === true) {
         if (await sentWithin(igId, sender, 'link', LINK_EVERY_MS)) { console.log('[ig-autodm] lien déjà envoyé il y a moins de 10 min à', sender); continue }
-        await sendMessage(igId, token, { id: sender }, linkMsg(await trackedLink(igId, sender, rule.link)))
+        await sendMessage(igId, token, { id: sender }, linkMsg(await shortLink(svc, igId, sender, rule.link)))
         await logDm({ ig_id: igId, sender_id: sender, kind: 'link', ...meta })
         console.log('[ig-autodm] LIEN envoyé à', sender)
       } else {
