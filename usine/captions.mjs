@@ -80,12 +80,23 @@ function burn(video, output, words, opts = {}) {
       const grp = words.slice(i, j), next = words[j];
       const last = grp[grp.length - 1].end;
       const s = Math.max(0, w.start - LEAD), e = Math.min(dur, next && next.start - last <= GAP_HOLD ? Math.max(s + 0.3, next.start - LEAD) : last + 0.45);
-      caps.push({ grp: grp.map(x => ({ t: clean(x.text), s: Math.max(0, x.start - LEAD) })), t: grp.map(x => clean(x.text)).join(' '), s, e });
+      // 11/10 : un « ou » isolé (« Écris « site » en commentaire ») devient vide une fois nettoyé → case vide dans les
+      // styles en pastilles (S05) ; on ne garde que les mots qui ont du texte
+      const vis = grp.map(x => ({ t: clean(x.text), s: Math.max(0, x.start - LEAD) })).filter(x => x.t);
+      if (vis.length) caps.push({ grp: vis, t: vis.map(x => x.t).join(' '), s, e });
       i = j; continue;
     }
     const next = words[i + 1], s = Math.max(0, w.start - LEAD);
     const e = Math.min(dur, next && next.start - w.end <= GAP_HOLD ? Math.max(s, next.start - LEAD) : w.end + (next ? 0.45 : 0.35));
     caps.push({ t: clean(w.text), s, e }); i++;
+  }
+  // 11/10 (VF-0109) : le 1er mot calé à 0 par l'avance (LEAD) n'avait plus que 0,03 s (« C'est » dit de 0,03 à 0,15) et le
+  // filtre ci-dessous le supprimait → le hook s'ouvrait sur le 2e mot. Il garde 0,12 s, le mot suivant attend.
+  for (let k = 0; k + 1 < caps.length; k++) {
+    const a = caps[k], b = caps[k + 1];
+    if (a.s > 0 || a.grp || b.grp || !a.t || a.e - a.s >= 0.12) continue;
+    const ne = Math.min(0.12, b.e - 0.06);
+    if (ne > a.e) { a.e = ne; b.s = Math.max(b.s, ne); }
   }
   caps = caps.filter(c => c.e - c.s >= 0.06 && (c.grp || c.t));   // un « isolé devient vide : jamais de sous-titre vide
   // 29/09 (Axel : « il y a le texte mais pas de sous-titres ») : les sous-titres tournent AUSSI pendant la phrase choc
