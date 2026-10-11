@@ -11,7 +11,7 @@
 //     `end` s, placée par chocLayout (zone sûre, jamais sur un visage) ; les sous-titres ne commencent qu'après elle.
 //   'normal' = style validé (blanc contour noir 82 px) ; 'gros-colores' = gros mots (108 px), mot fort en jaune.
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, copyFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -284,12 +284,13 @@ function burn(video, output, words, opts = {}) {
   writeFileSync(join(work,'index.html'), html);
   console.log(`▶ rendu sous-titres (${caps.length} captions, style ${subs}${choc ? ', phrase choc 0-' + Math.min(choc.end, dur).toFixed(2) + ' s' : ''})…`);
   // fps de la vidéo source (build.mjs passe CF_FPS=60) ; images de fond extraites en jpg (plus rapide que png, sans perte visible)
-  execFileSync(HF, [...HF_PRE,'render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg', '--workers', String(process.env.CF_WORKERS || 2), '--no-low-memory-mode'], { cwd: work, stdio:'inherit', env:{...process.env, ...(process.platform === 'darwin' ? { PRODUCER_BROWSER_GPU_MODE:'hardware' } : {})} });
+  // dossier temporaire PROPRE à ce rendu (11/10) : le cache d'extraction d'images de HyperFrames (≈ 1 Go par rendu 60 i/s)
+  // vit dans TMPDIR. Il était partagé et vidé à la fin de chaque rendu → avec plusieurs montages en parallèle, le premier
+  // qui finissait effaçait les images des autres (« ENOENT … frame_01119.jpg »). Ici il part avec le dossier de travail.
+  const hfTmp = join(work, 'tmp'); mkdirSync(hfTmp, { recursive: true });
+  execFileSync(HF, [...HF_PRE,'render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg', '--workers', String(process.env.CF_WORKERS || 2), '--no-low-memory-mode'], { cwd: work, stdio:'inherit', env:{...process.env, TMPDIR: hfTmp, ...(process.platform === 'darwin' ? { PRODUCER_BROWSER_GPU_MODE:'hardware' } : {})} });
   console.log('OK ->', output);
   try { rmSync(work, { recursive: true, force: true }); } catch { /* sans gravité */ }
-  // cache d'extraction d'images de HyperFrames (≈ 1 Go par rendu 60 i/s, jamais vidé : 5 Go après 5 vidéos le 30/09) :
-  // il ne sert qu'à re-rendre la MÊME source → supprimé après chaque rendu (disque d'Axel)
-  try { const uid = typeof process.getuid === 'function' ? process.getuid() : ''; rmSync(join(tmpdir(), 'hyperframes-extract-cache-' + uid), { recursive: true, force: true }); } catch { /* sans gravité */ }
 }
 
 // ── CLI ──
