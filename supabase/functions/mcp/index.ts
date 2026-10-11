@@ -186,7 +186,7 @@ function castingAleatoire(): string {
 // N'augmente QUE si le prompt parle d'une personne (sinon on casserait un packshot produit).
 // (02/10) appliqué AUSSI à la photo de départ des vidéos Express : sans ce bloc, la personne sortait « mannequin de pub »
 // (Axel : « hyper IA, beaucoup trop artificiel, pas le même rendu que l'app »).
-function augmenterPortrait(prompt: string): string {
+function augmenterPortrait(prompt: string, garderIdentite = false): string {
   if (!RE_PERSONNE.test(prompt)) return prompt
   const g = genreIndice(prompt)
   const genreTxt = g === 'femme'
@@ -194,7 +194,9 @@ function augmenterPortrait(prompt: string): string {
     : g === 'homme'
       ? ' The person is a MAN (male) — respect this gender exactly, never render a woman.'
       : ''
-  const suffix = genreTxt + castingAleatoire() + IMG_REALISM_SUFFIX
+  // 11/10 : photo de référence d'une PERSONNE (« le même homme que sur la photo ») → jamais de casting aléatoire, il
+  // imposait « clearly DIFFERENT… chestnut hair » et l'avatar A3 perdait sa coupe au bol
+  const suffix = genreTxt + (garderIdentite ? '' : castingAleatoire()) + IMG_REALISM_SUFFIX
   return prompt.slice(0, 3990 - suffix.length) + suffix
 }
 // Accès Starter/Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h.
@@ -1463,9 +1465,14 @@ const TXT_INTEGRITY = ' TEXT & LOGO INTEGRITY: any brand logo, emblem, badge or 
 // « NE PAS INVENTER DE PRODUIT » (Axel 11/09) — ajouté aux prompts SANS produit de référence : un « influenceur
 // UGC selfie » sortait avec un produit fantôme dans les mains. On ne met un produit QUE s'il est décrit ou fourni.
 const NO_INVENT_PRODUCT = " NO INVENTED PRODUCT: do NOT add, invent or place any product, packaged good, bottle, can, box, cosmetic, tube, jar, gadget, phone, poster, sign, branded item, mockup, logo or held object in the person's hands or anywhere in the scene that is NOT explicitly described in the request above. If no product is described, the hands stay empty and there is no product, packaging, label or branding anywhere — render ONLY what is described, nothing added."
+// La référence est-elle une PERSONNE à garder (et pas un produit) ? Image libre + prompt qui le dit.
+const RE_MEME_PERSONNE = /\b(m[êe]me (homme|femme|personne|gar[çc]on|fille|visage|avatar)|same (person|man|woman|face|guy|girl)|personne de (la )?(photo|r[ée]f[ée]rence)|homme de (la )?(photo|r[ée]f[ée]rence)|femme de (la )?(photo|r[ée]f[ée]rence))\b/i
+const REF_PERSONNE = ' SAME PERSON AS THE REFERENCE IMAGE — keep the identity EXACTLY: same face and facial features, same hairstyle, hair length and hair colour, same facial hair, same eye colour, same skin, same body type, same clothing unless the description above changes it. Only change what the description asks for (pose, expression, accessories, framing, setting, lighting). Never replace them with a different-looking person.'
 function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): string {
   const kind = String(args.kind || 'free')
   const base = TXT(args.prompt)
+  if (kind === 'free' && avecRef && RE_MEME_PERSONNE.test(base))
+    return augmenterPortrait(base + REF_PERSONNE + TXT_INTEGRITY + NO_INVENT_PRODUCT, true)
   const refTxt = avecRef
     ? ' PRODUCT 1:1 FROM THE REFERENCE IMAGE — the product/subject must be a faithful, undistorted copy of the reference: identical shape, proportions, colours, materials, label layout, logo geometry and typography. Every letter, word and number on the packaging must be reproduced EXACTLY as in the reference — same spelling, same font, same placement, crisp and fully legible; NEVER invent, mirror, merge, blur, warp or replace characters, never add or remove text. The logo must be a pixel-faithful copy (no warping, no missing or extra strokes). Do NOT redesign, rename, recolour or alter it; only re-light and re-compose it.'
     : ''
