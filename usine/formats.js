@@ -14,7 +14,7 @@
  *                                                  voix : rendu par usine/build-f05.mjs (06/10 : réaction Omni Flash 3 s +
  *                                                  texte choc, démo muette C-MCPM-xx, musique) — pas tiré par build.mjs
  *
- * Phrases choc = banque TH01–TH26 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
+ * Phrases choc = banque TH01–TH28 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
  * quelle, jamais inventée (usine/formats.test.mjs vérifie la copie). Générique = toute démo ; sinon seulement la démo de son
  * module (règle de la banque) ; TH13 (« ma Clio en Porsche ») seulement si le hook visuel montre TX-O02a.
  *
@@ -88,7 +88,9 @@
     { id: 'TH26', text: 'Claude X AvatarAds =', emoji: '💸💸💸', module: 'mcp-claude' },
     // 12/10 (Axel) : les 2 LOGOS officiels en gros (AvatarAds + Claude) et « = 💸💸💸 » dessous ; vidéos Claude seulement.
     // Rendu spécial (logos:true) : placement chocLogoLayout, dessin dans captions.mjs (pas de bandeau CSxx).
-    { id: 'TH27', text: 'AvatarAds + Claude =', emoji: '💸💸💸', module: 'mcp-claude', logos: true }
+    { id: 'TH27', text: 'AvatarAds + Claude =', emoji: '💸💸💸', module: 'mcp-claude', logos: true },
+    // 12/10 (Axel)
+    { id: 'TH28', text: 'La façon la plus débile de faire 1.000€ par jour', emoji: '🤯', module: 'generique' }
   ];
   var TH = Object.create(null);
   TEXTES_CHOC.forEach(function (p) { TH[p.id] = p; });
@@ -190,7 +192,7 @@
     }
     if (combo.texte_choc != null && combo.texte_choc !== '') {
       var p = textChoc(combo.texte_choc);
-      if (!p) errors.push('texte choc « ' + String(combo.texte_choc).slice(0, 30) + ' » absent de la banque validée (TH01–TH26)');
+      if (!p) errors.push('texte choc « ' + String(combo.texte_choc).slice(0, 30) + ' » absent de la banque validée (TH01–TH28)');
       else if (f && !hasChoc(f)) errors.push('texte choc ' + p.id + ' sur le format ' + f.id + ' qui n’en a pas');
       else if (!f) errors.push('texte choc ' + p.id + ' sans format');
       else if (demo !== undefined) { var w = chocWhy(p, demo, tx); if (w) reasons.push('texte choc : ' + w); }
