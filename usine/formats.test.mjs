@@ -50,10 +50,10 @@ test('chocEnd : fixe = 3 s bornées à la vidéo ; hook = durée du hook ; sans 
 });
 
 // ── banque de phrases choc ──
-test('banque : 29 phrases TH01…TH29, modules connus, TH13 exige TX-O02a', () => {
-  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 29 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
+test('banque : 30 phrases TH01…TH30, modules connus, TH13 exige TX-O02a', () => {
+  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 30 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
   F.TEXTES_CHOC.forEach(p => assert.ok(['generique', 'mcp-claude', 'omni', 'montage-ia'].includes(p.module), p.id));
-  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH29']);
+  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH29', 'TH30']);
   assert.equal(F.chocString(F.textChoc('TH29')), '🚨CLAUDE PEUT ENFIN GÉNÉRER DES IMAGES ET VIDÉOS... 🤯');
   assert.equal(F.textChoc('TI09').text, 'Tu essaies de dormir mais tu repenses au nombre de millionnaires que l\'IA va créer cette année');
   assert.equal(F.textChoc('TI01'), null);
@@ -67,7 +67,7 @@ test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.
   const md = readFileSync(BANK, 'utf8'), sec = md.split(/^## /m).find(x => /^VALIDÉES/.test(x));
   assert.ok(sec, 'section VALIDÉES');
   const lines = sec.split('\n').filter(l => /^TH\d{2} /.test(l));
-  assert.equal(lines.length, 29);
+  assert.equal(lines.length, 30);
   lines.forEach(l => {
     const m = /^(TH\d{2}) (.+?)\s{2,}\((.+)\)\s*$/.exec(l);
     assert.ok(m, l);

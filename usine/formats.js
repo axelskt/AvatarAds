@@ -14,7 +14,7 @@
  *                                                  voix : rendu par usine/build-f05.mjs (06/10 : réaction Omni Flash 3 s +
  *                                                  texte choc, démo muette C-MCPM-xx, musique) — pas tiré par build.mjs
  *
- * Phrases choc = banque TH01–TH29 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
+ * Phrases choc = banque TH01–TH30 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
  * quelle, jamais inventée (usine/formats.test.mjs vérifie la copie). Générique = toute démo ; sinon seulement la démo de son
  * module (règle de la banque) ; TH13 (« ma Clio en Porsche ») seulement si le hook visuel montre TX-O02a.
  *
@@ -92,7 +92,9 @@
     // 12/10 (Axel)
     { id: 'TH28', text: 'La façon la plus débile de faire 1.000€ par jour', emoji: '🤯', module: 'generique' },
     // Axel 12/10 : sirène DEVANT le texte (pre), seulement avec une démo Claude
-    { id: 'TH29', pre: '🚨', text: 'CLAUDE PEUT ENFIN GÉNÉRER DES IMAGES ET VIDÉOS...', emoji: '🤯', module: 'mcp-claude' }
+    { id: 'TH29', pre: '🚨', text: 'CLAUDE PEUT ENFIN GÉNÉRER DES IMAGES ET VIDÉOS...', emoji: '🤯', module: 'mcp-claude' },
+    // Axel 12/10 : texte seul, sans logo, seulement avec une démo Claude
+    { id: 'TH30', text: 'Claude + AI =', emoji: '💰💰💰', module: 'mcp-claude' }
   ];
   // Format Insomnie (Axel 12/10) : « Tu essaies de dormir mais tu repenses à… » — banque À PART (factory_bricks TI…,
   // meta.format 'insomnie'), jamais tirée avec les TH ; demos = démos muettes autorisées (sinon générique)
