@@ -38,7 +38,7 @@
     { id: 'F01', value: 'sous-titres', label: 'Sous-titres seuls', choc: 0, chocS: 0, subs: 'normal', voice: true, renderable: true,
       description: 'Sous-titres blancs seuls (l’actuel)' },
     { id: 'F02', value: 'choc-gros-colores', label: 'Texte choc (tout le hook) + gros sous-titres colorés', choc: 'hook', chocS: 3, subs: 'gros-colores', voice: true, renderable: true,
-      description: 'Phrase choc en haut de 0 à 3 s, puis gros sous-titres, mot fort en jaune' },
+      description: 'Phrase choc en haut pendant tout le hook, gros sous-titres, mot fort en jaune' },
     { id: 'F03', value: 'choc-sous-titres', label: 'Texte choc (tout le hook) + sous-titres normaux', choc: 'hook', chocS: 3, subs: 'normal', voice: true, renderable: true,
       description: 'Phrase choc en haut pendant tout le hook, sous-titres blancs' },
     { id: 'F04', value: 'gros-colores', label: 'Gros sous-titres colorés', choc: 0, chocS: 0, subs: 'gros-colores', voice: true, renderable: true,
