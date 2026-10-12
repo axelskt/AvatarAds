@@ -11,7 +11,8 @@ export const HOOK_PERFORMANCE = [
   'HANDS: they talk a lot with BOTH hands, visible in frame at chest height — open palms toward the camera, counting on fingers, pointing at the lens, framing an idea with both hands, a quick emphatic gesture on every key word; the hands keep moving naturally for the whole clip, never resting out of frame.',
   // Axel 12/10 (2e tour) : plus d'émotion du visage et de la tête
   'EMOTION: VERY expressive face, much more than a neutral talking head — big eyebrow raises, eyes widening on the surprising words, real smiles that reach the eyes, a playful squint or frown of disbelief, lips and cheeks moving with the emotion; the emotion visibly evolves through the sentence (surprise → excitement → conviction → a knowing smile on the punchline).',
-  'HEAD: the head is constantly alive — clear nods on key words, head tilts, a quick shake of disbelief, leaning in toward the camera on the important part then leaning back; natural, never robotic or stiff.',
+  // Axel 12/10 (4e tour) : « plus de mouvement de tête » (réf. @devinjatho : tête qui penche d'un côté à l'autre, yeux fermés sur l'emphase)
+  'HEAD MOVEMENT (a lot, like an animated storyteller): the head is in motion on almost every word — it tilts clearly to one side then to the other, bobs with the rhythm of the words, dips the chin and closes the eyes for a beat on an emphasized word then lifts back up with wide eyes, shakes slightly in disbelief, leans in toward the lens on the key part then pulls back; the shoulders and upper body follow the head naturally. Never a static head, never robotic.',
   'DELIVERY: confident, fluid and well articulated like a charismatic content creator, energetic conversational rhythm, every word crisp and clear.'
 ].join(' ');
 
