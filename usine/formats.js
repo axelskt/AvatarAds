@@ -429,14 +429,25 @@
     // alors passer sur les cheveux, jamais sur le visage) — ; les petites tailles (48 → 41) seulement en dernier recours.
     // Avant : une phrase courte restait à 41 px au-dessus des cheveux alors qu'elle tenait en 60+ px sur les cheveux.
     var ALL = o.sizes && o.sizes.length ? o.sizes : SIZES, BIG = ALL.filter(function (z) { return z >= 54; });
-    [[wide, BIG], [core, BIG], [wide, ALL], [core, ALL]].some(function (pass) {
-      var obstacles = fixed.concat(pass[0]);
-      return TIERS.some(function (t) {
+    // Axel 12/10 (VF-0335…0339, A4 en voiture) : JAMAIS sous le menton. Toutes les tentatives EN HAUT (au-dessus de la tête,
+    // quitte à passer sur les cheveux, plus petit, jusqu'à 6 lignes) passent AVANT le milieu ; le milieu n'est plus qu'un
+    // dernier recours signalé en revue (et refusé au montage).
+    var PASS = [[wide, BIG], [core, BIG], [wide, ALL], [core, ALL]];
+    [4, 6].some(function (maxL) {
+      return PASS.some(function (pass) {
+        var obstacles = fixed.concat(pass[0]);
         return pass[1].some(function (size) {
-          return cols.some(function (c) { if (t.zones.indexOf(c.zone) < 0) return false; hit = scan(c, size, t.maxLines, obstacles); return !!hit; });
+          return cols.some(function (c) { if (!c.top) return false; hit = scan(c, size, maxL, obstacles); return !!hit; });
         });
       });
     });
+    if (!hit) PASS.some(function (pass) {
+      var obstacles = fixed.concat(pass[0]);
+      return pass[1].some(function (size) {
+        return cols.some(function (c) { if (c.top) return false; hit = scan(c, size, 6, obstacles); return !!hit; });
+      });
+    });
+    if (hit && hit.zone === 'milieu') reasons.push('texte choc sous le visage (milieu) : interdit (Axel 12/10), pas de place au-dessus de la tête');
     if (!hit) {                                            // aucun endroit libre : moindre recouvrement du visage → revue QC
       var bestA = Infinity;
       cols.forEach(function (c) {

@@ -220,10 +220,13 @@ test('chocLayout : JAMAIS sur un visage (visage élargi : front, cheveux) — se
     const L = F.chocLayout(t, { faces, avantApres: k === 'hkM0102' });
     checkBox(L, t, faces.map(px));
     if (k === 'hkM0102' && L.zone === 'sous-medaillon') assert.ok(L.y >= F.SOUS_MEDAILLON.top);
-    assert.equal(L.level, 'ok', k + ' ' + t);
+    // Axel 12/10 : jamais sous le menton → le milieu n'est jamais « ok » (revue, puis autre phrase au montage)
+    if (L.zone === 'milieu') assert.equal(L.level, 'review', k + ' ' + t); else assert.equal(L.level, 'ok', k + ' ' + t);
   }));
   assert.equal(F.chocLayout(ALL_TEXTS[1], { faces: FACES.bas }).zone, 'haut');
-  assert.equal(F.chocLayout(ALL_TEXTS[1], { faces: FACES.selfie }).zone, 'milieu');
+  const sm = F.chocLayout(ALL_TEXTS[1], { faces: FACES.selfie });
+  assert.ok(sm.zone !== 'milieu' || /sous le visage/.test(sm.reasons.join()), sm.zone);
+  assert.equal(F.chocLayout('Ça devrait être interdit de montrer ça 😶', { faces: FACES.selfie }).zone, 'haut');
 });
 test('chocLayout : aucune place hors visage → moindre recouvrement + revue ; visages inconnus (null) → revue', () => {
   const L = F.chocLayout(ALL_TEXTS[0], { faces: [[0, 0.05, 1, 0.72]] });
