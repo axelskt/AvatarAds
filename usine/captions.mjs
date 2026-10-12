@@ -148,7 +148,9 @@ function burn(video, output, words, opts = {}) {
     if (L.logos) {   // TH27 (Axel 12/10) : logos officiels AvatarAds + Claude en gros, « = 💸💸💸 » dessous, sans bandeau
       const T = decodeURIComponent(new URL('../render-worker/assets/tuto/', import.meta.url).pathname);
       copyFileSync(join(T, 'logo-avatarads.png'), join(work, 'lg-aa.png')); copyFileSync(join(T, 'logo-claude.png'), join(work, 'lg-claude.png'));
-      const money = line('💸💸💸');
+      // Axel 12/10 : « les émojis argent sont à moitié flous » → l'image 64 px agrandie ×2 ; emoji Apple rendu une fois en 320 px
+      copyFileSync(join(T, 'emoji-money-320.png'), join(work, 'lg-money.png'));
+      const money = '<img class="emj" src="lg-money.png" alt="">'.repeat(3);
       chocHtml = `<div class="choc clip choc-logos" id="choc" data-start="0" data-duration="${end.toFixed(3)}" style="left:${L.x}px;top:${L.y}px;width:${L.w}px;height:${L.h}px;`
         + `--lg:${L.logo}px;--gap:${L.gap}px;font-size:${L.size}px;line-height:${L.lineH}px">`
         + `<div class="lg1"><img src="lg-aa.png" alt=""><span>+</span><img class="lgc" src="lg-claude.png" alt=""></div><div class="lg2"><span>=</span>${money}</div></div>`;
