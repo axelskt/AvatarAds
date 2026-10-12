@@ -3,7 +3,7 @@
 // 3-6 candidates. Le texte choc, lui, est propre à chaque vidéo (TH01…TH26 + style) : on le lit sur la couverture avec un
 // petit modèle de vision, on le rapproche de la banque TH (factory_bricks kind 'texte-choc'), puis on ne garde que les
 // vidéos de l'usine qui portent CE texte (factory_qc.brick_combo.texte_choc). L'heure de publication (± 40 min d'un
-// créneau du kit) départage s'il en reste plusieurs. Aucune clé ni image ne sort de l'edge vers le client.
+// créneau du kit) ne sert QUE si l'appelant la fournit : Instagram suit le kit à la minute, TikTok non (Axel 12/10). Aucune clé ni image ne sort de l'edge vers le client.
 // deno-lint-ignore no-explicit-any
 type Svc = { from: (table: string) => any }
 

@@ -374,7 +374,8 @@ Deno.serve(async (req) => {
               const text = await readCoverText(bytes)
               if (text != null) {
                 upd.cover_text = text
-                const rf = await refineByText(svc, text, (v.published_at as string) || null, dur, (vf) => scoreVf(bytes as Uint8Array, vf))
+                const rf = await refineByText(svc, text, null, dur,   // pas d'heure : sur TikTok Axel poste « un peu au hasard », hors kit (12/10)
+                   (vf) => scoreVf(bytes as Uint8Array, vf))
                 if (rf) { upd.vf = rf.vf; upd.match_state = rf.state; upd.candidates = rf.candidates; console.log('texte choc', v.id, rf.why, rf.vf || '') }
               }
             }
