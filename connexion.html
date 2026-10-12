@@ -10,7 +10,7 @@
      La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
      est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
      app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-6wDBux/FodGpGyVdkHtJeeHm6eyBYIobQQJbo6w/wVA=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-ZrPWtVrSwNDoZga2DcXdwKJWlPZCyw3DSDAVM8KEUmc=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -278,14 +278,21 @@ function Login({ go }) {
     const pwV = pwVal || dom("password");
     if (!validEmail(e)) {setErr("Entre un email valide.");return;}
     if (!pwV) {setErr("Entre ton mot de passe.");return;}
+    if (busy) return;
     setBusy(true);setErr("");
-    // jamais un clic sans réponse : 20 s au plus, puis un message clair
-    const { error } = await Promise.race([sb.auth.signInWithPassword({ email: e, password: pwV }),
-      new Promise((ok) => setTimeout(() => ok({ error: { timeout: true } }), 20000))]);
-    setBusy(false);
-    if (error && error.timeout) {setErr("Le serveur ne répond pas. Recharge la page et réessaie.");return;}
-    if (!error) {try {localStorage.setItem("aa_login_pw", "1");} catch (_) {}}
-    if (error) {setErr("Email ou mot de passe incorrect.");return;}
+    // 12/10 (Axel : « Se connecter bloqué ») : connexion SANS passer par supabase-js (son initialisation / son verrou pouvaient
+    // rester bloqués dans Safari → aucun appel ne partait). Appel direct du serveur d'authentification, 20 s au plus, puis la
+    // session est écrite là où l'app la lit (clé de stockage standard de supabase-js) avant d'ouvrir l'app.
+    let r, j;
+    try {
+      r = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=password", { method: "POST",
+        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: e, password: pwV }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined });
+      j = await r.json().catch(() => ({}));
+    } catch (_) {setBusy(false);setErr("Le serveur ne répond pas. Recharge la page et réessaie.");return;}
+    if (!r.ok || !j.access_token || !j.refresh_token) {setBusy(false);setErr("Email ou mot de passe incorrect.");return;}
+    if (!j.expires_at && j.expires_in) j.expires_at = Math.floor(Date.now() / 1000) + Number(j.expires_in);
+    try {localStorage.setItem("sb-guvwgiejzkiodghywpwj-auth-token", JSON.stringify(j));localStorage.setItem("aa_login_pw", "1");} catch (_) {}
     location.href = "/app/";
   }
   function onOtpInput(e) {
@@ -342,7 +349,7 @@ function Login({ go }) {
   !pw && hiddenPw(),
 
   React.createElement("button", { type: "button", className: "btn btn-primary", style: { width: "100%", marginTop: 11, padding: "15px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
-  pw ? "Se connecter" : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
+  pw ? (busy ? "Connexion…" : "Se connecter") : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
   ),
   React.createElement("button", { type: "button", className: "btn", style: { width: "100%", marginTop: 9, padding: "13px 20px", fontSize: 13.5, background: L.btn, border: "1px solid " + L.fieldLine, color: L.ink, fontWeight: 600 }, onClick: () => {try {localStorage.setItem("aa_login_pw", pw ? "0" : "1");} catch (_) {}setPw(!pw);setErr("");} },
   pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"
@@ -413,7 +420,7 @@ function Login({ go }) {
       !pw && hiddenPw(),
 
       React.createElement("button", { type: "button", className: "btn btn-primary", style: { width: "100%", padding: "16px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
-      pw ? "Se connecter" : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
+      pw ? (busy ? "Connexion…" : "Se connecter") : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
       ),
       React.createElement("button", { type: "button", onClick: () => {try {localStorage.setItem("aa_login_pw", pw ? "0" : "1");} catch (_) {}setPw(!pw);setErr("");}, className: "btn", style: { width: "100%", padding: "13px 20px", fontSize: 13.5, background: D.field, border: "1px solid " + D.line, color: D.ink, fontWeight: 600 } },
       pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"
