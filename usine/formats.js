@@ -37,10 +37,10 @@
   var FORMATS = [
     { id: 'F01', value: 'sous-titres', label: 'Sous-titres seuls', choc: 0, chocS: 0, subs: 'normal', voice: true, renderable: true,
       description: 'Sous-titres blancs seuls (l’actuel)' },
-    { id: 'F02', value: 'choc-gros-colores', label: 'Texte choc 3 s + gros sous-titres colorés', choc: 'fixe', chocS: 3, subs: 'gros-colores', voice: true, renderable: true,
+    { id: 'F02', value: 'choc-gros-colores', label: 'Texte choc (tout le hook) + gros sous-titres colorés', choc: 'hook', chocS: 3, subs: 'gros-colores', voice: true, renderable: true,
       description: 'Phrase choc en haut de 0 à 3 s, puis gros sous-titres, mot fort en jaune' },
-    { id: 'F03', value: 'choc-sous-titres', label: 'Texte choc 3 s + sous-titres normaux', choc: 'fixe', chocS: 3, subs: 'normal', voice: true, renderable: true,
-      description: 'Phrase choc en haut de 0 à 3 s, puis sous-titres blancs' },
+    { id: 'F03', value: 'choc-sous-titres', label: 'Texte choc (tout le hook) + sous-titres normaux', choc: 'hook', chocS: 3, subs: 'normal', voice: true, renderable: true,
+      description: 'Phrase choc en haut pendant tout le hook, sous-titres blancs' },
     { id: 'F04', value: 'gros-colores', label: 'Gros sous-titres colorés', choc: 0, chocS: 0, subs: 'gros-colores', voice: true, renderable: true,
       description: 'Gros sous-titres, mot fort en jaune, sans phrase choc' },
     { id: 'F05', value: 'texte-musique', label: 'Texte + musique', choc: 'hook', chocS: 0, subs: 'aucun', voice: false, renderable: false,
@@ -175,6 +175,7 @@
     return pickBalanced(ok, 'texte_choc', opts.done, opts.hook || null, opts.rand);
   }
   // Fin de la phrase choc (s) : 'fixe' = chocS (bornée à la vidéo) ; 'hook' = tout le hook ; sinon 0.
+  // Axel 12/10 : F02/F03 passent en 'hook' — « la durée du texte choc doit être égale au hook »
   function chocEnd(f, hookDur, total) {
     if (!f || !f.choc) return 0;
     var e = f.choc === 'hook' ? +hookDur || 0 : f.chocS;

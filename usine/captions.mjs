@@ -11,8 +11,8 @@
 //     `end` s, placée par chocLayout (zone sûre, jamais sur un visage) ; les sous-titres ne commencent qu'après elle.
 //   'normal' = style validé (blanc contour noir 82 px) ; 'gros-colores' = gros mots (108 px), mot fort en jaune.
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync, existsSync } from 'node:fs';
+import { tmpdir, homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 await import(new URL('./formats.js', import.meta.url).href);   // globalThis.CF_FORMATS (isStrong, bigCapSize, capsAfterChoc)
@@ -28,6 +28,15 @@ const GAP_HOLD = 1.0;
 // CLI HyperFrames : npx sur le Mac ; sur le serveur (Railway) le binaire installé dans l'image (CF_HF_BIN)
 const HF = process.env.CF_HF_BIN || 'npx', HF_PRE = process.env.CF_HF_BIN ? [] : ['--yes', 'hyperframes'];
 const bareOf = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
+// emoji Apple HD : binaire compilé une fois depuis usine/emoji-render.swift (macOS + swiftc), null sinon
+let _emojiBin;
+function emojiRenderer() {
+  if (_emojiBin !== undefined) return _emojiBin;
+  const src = decodeURIComponent(new URL('./emoji-render.swift', import.meta.url).pathname), dir = join(homedir(), '.cache', 'cf-emoji'), bin = join(dir, 'emoji-render');
+  try { if (!existsSync(bin)) { mkdirSync(dir, { recursive: true }); execFileSync('swiftc', ['-O', src, '-o', bin], { timeout: 180000 }); } _emojiBin = existsSync(bin) ? bin : null; }
+  catch { _emojiBin = null; }
+  return _emojiBin;
+}
 const brandFix = t => { const b=bareOf(t); if(/atarhat|avatarad|atarad|avatarhat|avataraad|avatahad|avatarhad|avataad|avataradi|avatarhds/.test(b))   // Axel 12/10 : « AVATAHADS.FR »
     return (/fr$/.test(b)||/\.?fr\b/i.test(t))?'avatarads.fr':'avatarads'; return t; };
 
@@ -136,8 +145,15 @@ function burn(video, output, words, opts = {}) {
     const L = choc.layout, end = Math.min(choc.end, dur);
     // emojis APPLE (Axel 30/09 : « bien prendre ceux d'Apple ») : image officielle (emoji-datasource-apple, 64 px) posée
     // dans le texte ; si le téléchargement échoue, repli sur la police Noto
+    // Axel 12/10 : « les émojis sont flous » (64 px agrandis) → d'abord l'emoji Apple dessiné en 256 px par usine/emoji-render.swift
+    // (police du Mac, compilé une fois, cache ~/.cache/cf-emoji) ; repli sur l'image 64 px puis sur la police Noto
     const appleEmoji = e => {
       const cps = [...e].map(c => c.codePointAt(0).toString(16)), names = [cps.join('-'), cps.filter(c => c !== 'fe0f').join('-')];
+      try {
+        const bin = emojiRenderer(), cache = join(homedir(), '.cache', 'cf-emoji'), hi = join(cache, names[0] + '-256.png');
+        if (bin && !existsSync(hi)) { mkdirSync(cache, { recursive: true }); execFileSync(bin, [e, '256', hi], { timeout: 20000 }); }
+        if (existsSync(hi)) { const f = 'emj-' + names[0] + '-hd.png'; copyFileSync(hi, join(work, f)); return f; }
+      } catch { /* repli 64 px */ }
       for (const n of names) {
         const f = 'emj-' + n + '.png';
         try { execFileSync('curl', ['-sf', '-o', join(work, f), 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/' + n + '.png']); return f; } catch { /* nom suivant */ }

@@ -29,8 +29,8 @@ test('5 formats F01…F05 : F01 = l’actuel, F02/F03 = phrase choc 3 s, F04 = g
   assert.deepEqual(F.FORMATS.map(f => f.id), ['F01', 'F02', 'F03', 'F04', 'F05']);
   const by = Object.fromEntries(F.FORMATS.map(f => [f.id, f]));
   assert.deepEqual([by.F01.choc, by.F01.subs, by.F01.renderable], [0, 'normal', true]);
-  assert.deepEqual([by.F02.choc, by.F02.chocS, by.F02.subs], ['fixe', 3, 'gros-colores']);
-  assert.deepEqual([by.F03.choc, by.F03.chocS, by.F03.subs], ['fixe', 3, 'normal']);
+  assert.deepEqual([by.F02.choc, by.F02.chocS, by.F02.subs], ['hook', 3, 'gros-colores']);
+  assert.deepEqual([by.F03.choc, by.F03.chocS, by.F03.subs], ['hook', 3, 'normal']);
   assert.deepEqual([by.F04.choc, by.F04.subs], [0, 'gros-colores']);
   assert.deepEqual([by.F05.choc, by.F05.subs, by.F05.voice, by.F05.renderable, by.F05.needs], ['hook', 'aucun', false, false, ['reaction-muette', 'demo-muette']]);
   assert.equal(new Set(F.FORMATS.map(f => f.value)).size, 5);
@@ -43,7 +43,7 @@ test('resolveFormat : par id ou par valeur ; inconnu / clés du prototype → nu
   ['F09', '', '__proto__', 'constructor', 'toString', null, 3].forEach(x => assert.equal(F.resolveFormat(x), null, String(x)));
 });
 test('chocEnd : fixe = 3 s bornées à la vidéo ; hook = durée du hook ; sans phrase = 0', () => {
-  assert.equal(F.chocEnd(F.resolveFormat('F02'), 5.1, 20), 3);
+  assert.equal(F.chocEnd(F.resolveFormat('F02'), 5.1, 20), 5.1);   // Axel 12/10 : tout le hook
   assert.equal(F.chocEnd(F.resolveFormat('F03'), 5.1, 2.5), 2.5);
   assert.equal(F.chocEnd(F.resolveFormat('F05'), 3.4, 20), 3.4);
   assert.equal(F.chocEnd(F.resolveFormat('F01'), 5.1, 20), 0);

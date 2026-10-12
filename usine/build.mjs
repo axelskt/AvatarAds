@@ -558,7 +558,8 @@ const sidecar = { format: format.id, label: format.label, subs: format.subs, tex
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
 if (FMT.hasChoc(format)) {
   const firstIll = brollEvents.filter(e => e.style === 'hook').map(e => e.at).sort((a, b) => a - b)[0];
-  const end = Math.min(FMT.chocEnd(format, durH, total), firstIll != null ? Math.max(0.8, firstIll) : 1e9);
+  // Axel 12/10 : le texte choc reste TOUT le hook (plus coupé à la 1re illustration : elle passe au centre, la phrase est en haut)
+  const end = FMT.chocEnd(format, durH, total); void firstIll;
   let fz;
   if (facesForced !== undefined) fz = { faces: Array.isArray(facesForced) ? facesForced : (facesForced && facesForced.faces) || null, frames: 0, error: null, forced: true };
   else fz = faceZones(voice, 0, end, 0.5);
