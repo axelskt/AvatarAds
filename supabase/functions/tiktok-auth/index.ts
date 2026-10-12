@@ -15,6 +15,7 @@
 // 07/10 : version épinglée — esm.sh servait une 2.117.3 cassée (module auth-js introuvable), déploiement refusé
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2'
 import { coverMatcher } from '../_shared/cover-match.ts'
+import { readCoverText, refineByText } from '../_shared/cover-ocr.ts'
 import { decodeCover } from '../_shared/cover-decode.ts'
 
 // trim : un copier-coller depuis la console TikTok peut ajouter un retour à la ligne (vécu le 03/10 au passage en production).
@@ -167,7 +168,7 @@ async function keepCover(id: string, src: string): Promise<{ url: string, bytes:
 }
 
 // ── Rapprochement vidéo TikTok → vidéo de l'usine (07/10) : code commun dans _shared/cover-match.ts (Instagram aussi) ──
-const { matchCover } = coverMatcher(svc, decodeCover)
+const { matchCover, scoreVf } = coverMatcher(svc, decodeCover)
 
 // Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
 const MEDIA_PREFIX = `${SB_URL}/storage/v1/object/public/factory-media/`
@@ -333,7 +334,7 @@ Deno.serve(async (req) => {
         // vidéos gardées en base (tiktok_videos) + copie des couvertures pas encore copiées (30 au plus par lecture)
         if (username && vids.length) {
           const ids = vids.map((v) => String(v.id)).filter(Boolean)
-          const { data: known } = await svc.from('tiktok_videos').select('id, cover_copy, vf, match_state, match_score, candidates').in('id', ids)
+          const { data: known } = await svc.from('tiktok_videos').select('id, cover_copy, vf, match_state, match_score, candidates, cover_text').in('id', ids)
           const K = new Map((known || []).map((k: any) => [String(k.id), k]))
           await svc.from('tiktok_videos').upsert(vids.map((v) => ({ id: v.id, account: username, env: r.env,
             created: v.published_at, duration: v.duration, title: v.title, share_url: v.url, cover_src: v.thumb,
@@ -349,8 +350,12 @@ Deno.serve(async (req) => {
               K.set(String(v.id), { ...(K.get(String(v.id)) || {}), cover_copy: kc.url })
             }))
           }
-          // rapprochement des vidéos jamais rapprochées (8 au plus par lecture : temps de calcul de l'edge limité)
-          const unmatched = vids.filter((v) => { const k: any = K.get(String(v.id)); return k?.cover_copy && !k.match_state }).slice(0, 8)
+          // rapprochement des vidéos jamais rapprochées (8 au plus par lecture : temps de calcul de l'edge limité) ; 12/10 : les
+          // « à vérifier » / « hors usine » dont le texte choc n'a pas encore été lu repassent une fois (lecture du texte choc)
+          const unmatched = [
+            ...vids.filter((v) => { const k: any = K.get(String(v.id)); return k?.cover_copy && !k.match_state }),
+            ...vids.filter((v) => { const k: any = K.get(String(v.id)); return k?.cover_copy && (k.match_state === 'unsure' || k.match_state === 'none') && k.cover_text == null }),
+          ].slice(0, 8)
           for (const v of unmatched) {
             const k: any = K.get(String(v.id))
             let bytes = got.get(String(v.id))
@@ -359,10 +364,21 @@ Deno.serve(async (req) => {
               if (r2?.ok) bytes = new Uint8Array(await r2.arrayBuffer())
             }
             if (!bytes) continue
-            const m = await matchCover(bytes, typeof v.duration === 'number' ? v.duration : null, String(v.title || ''))
+            const dur = typeof v.duration === 'number' ? v.duration : null
+            const m = k.match_state ? { vf: k.vf ?? null, state: k.match_state, score: k.match_score ?? null, candidates: k.candidates || [] }
+              : await matchCover(bytes, dur, String(v.title || ''))
             if (!m) continue
-            const upd = { vf: m.vf, match_state: m.state, match_score: m.score, candidates: m.candidates }
-            await svc.from('tiktok_videos').update(upd).eq('id', v.id).is('match_state', null)
+            const upd: Record<string, unknown> = { vf: m.vf, match_state: m.state, match_score: m.score, candidates: m.candidates }
+            // 12/10 : pas sûr par l'image → on lit le texte choc de la couverture et on ne garde que les vidéos qui le portent
+            if (m.state !== 'auto') {
+              const text = await readCoverText(bytes)
+              if (text != null) {
+                upd.cover_text = text
+                const rf = await refineByText(svc, text, (v.published_at as string) || null, dur, (vf) => scoreVf(bytes as Uint8Array, vf))
+                if (rf) { upd.vf = rf.vf; upd.match_state = rf.state; upd.candidates = rf.candidates; console.log('texte choc', v.id, rf.why, rf.vf || '') }
+              }
+            }
+            await svc.from('tiktok_videos').update(upd).eq('id', v.id).or('match_state.is.null,match_state.in.(unsure,none)')
             K.set(String(v.id), { ...k, ...upd })
           }
           // recette des vidéos rapprochées : la ligne du kit (factory_posts) de la même vidéo finale
