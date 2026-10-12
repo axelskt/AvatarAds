@@ -10,7 +10,7 @@
      La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
      est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
      app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-OSVOuWos7MOyL8oEyEhUmfrWQyPvWHPoBhV6Od4upw0=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-MvW+NoBy5C/dRSqUVLW7SdbcKqLJtQQdhYFRuqywBls=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -136,7 +136,16 @@ const _REVERT_TOKEN = (() => {try {const m = /^#annuler-adresse=([0-9a-f]{64})$/
 /* ── Auth réelle (même projet Supabase que /app/, session partagée same-origin) ── */
 const SUPABASE_URL = "https://guvwgiejzkiodghywpwj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck";
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* 12/10 (Axel : « Se connecter » ne fait rien en fenêtre normale, marche en navigation privée) : supabase-js prend par
+   défaut un verrou navigator.locks PARTAGÉ par tous les onglets avatarads.fr ; un onglet de l'app gelé en arrière-plan le
+   garde et la connexion attend sans fin. Verrou propre à cette page (file en mémoire, 5 s au plus par opération). */
+let _lockChain = Promise.resolve();
+function _pageLock(name, acquireTimeout, fn) {
+  const run = Promise.race([_lockChain, new Promise((ok) => setTimeout(ok, 5000))]).then(() => fn());
+  _lockChain = run.catch(() => {});
+  return run;
+}
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: _pageLock } });
 const AUTH_OTP_FN = SUPABASE_URL + "/functions/v1/auth-otp";
 async function otpCall(payload) {
   try {const r = await fetch(AUTH_OTP_FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });return await r.json();}
@@ -253,8 +262,11 @@ function Login({ go }) {
     if (!validEmail(e)) {setErr("Entre un email valide.");return;}
     if (!pwV) {setErr("Entre ton mot de passe.");return;}
     setBusy(true);setErr("");
-    const { error } = await sb.auth.signInWithPassword({ email: e, password: pwV });
+    // jamais un clic sans réponse : 20 s au plus, puis un message clair
+    const { error } = await Promise.race([sb.auth.signInWithPassword({ email: e, password: pwV }),
+      new Promise((ok) => setTimeout(() => ok({ error: { timeout: true } }), 20000))]);
     setBusy(false);
+    if (error && error.timeout) {setErr("Le serveur ne répond pas. Recharge la page et réessaie.");return;}
     if (error) {setErr("Email ou mot de passe incorrect.");return;}
     location.href = "/app/";
   }
