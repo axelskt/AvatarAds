@@ -288,10 +288,6 @@ test('publish-qc.mjs : format inconnu / F05 / phrase sans format / désaccord av
 });
 
 console.log(results.join('\n'));
-const fails = results.filter(r => r.startsWith('FAIL')).length;
-console.log(`\n${results.length - fails}/${results.length} OK`);
-process.exit(fails ? 1 : 0);
-
 test('TH27 (logos AvatarAds + Claude) : en haut sous la barre du haut (y ≥ 230), jamais sous 80 %, jamais sur les yeux', () => {
   const t = F.chocString(F.textChoc('TH27'))
   const free = F.chocLayout(t, { faces: [], center: true })
@@ -301,3 +297,8 @@ test('TH27 (logos AvatarAds + Claude) : en haut sous la barre du haut (y ≥ 230
   assert.equal(L.zone, 'haut'); assert.ok(L.y >= 230); assert.ok(L.scale >= 0.8)
   assert.ok(L.y + L.h <= (face[1] + 0.2 * face[3]) * 1920, 'au-dessus des 80 % bas du visage (yeux, bouche)')
 })
+
+const fails = results.filter(r => r.startsWith('FAIL')).length;
+console.log(`\n${results.length - fails}/${results.length} OK`);
+process.exit(fails ? 1 : 0);
+
