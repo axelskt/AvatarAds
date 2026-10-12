@@ -14,7 +14,7 @@
  *                                                  voix : rendu par usine/build-f05.mjs (06/10 : réaction Omni Flash 3 s +
  *                                                  texte choc, démo muette C-MCPM-xx, musique) — pas tiré par build.mjs
  *
- * Phrases choc = banque TH01–TH28 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
+ * Phrases choc = banque TH01–TH29 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
  * quelle, jamais inventée (usine/formats.test.mjs vérifie la copie). Générique = toute démo ; sinon seulement la démo de son
  * module (règle de la banque) ; TH13 (« ma Clio en Porsche ») seulement si le hook visuel montre TX-O02a.
  *
@@ -90,12 +90,30 @@
     // Rendu spécial (logos:true) : placement chocLogoLayout, dessin dans captions.mjs (pas de bandeau CSxx).
     { id: 'TH27', text: 'AvatarAds + Claude =', emoji: '💸💸💸', module: 'mcp-claude', logos: true },
     // 12/10 (Axel)
-    { id: 'TH28', text: 'La façon la plus débile de faire 1.000€ par jour', emoji: '🤯', module: 'generique' }
+    { id: 'TH28', text: 'La façon la plus débile de faire 1.000€ par jour', emoji: '🤯', module: 'generique' },
+    // Axel 12/10 : sirène DEVANT le texte (pre), seulement avec une démo Claude
+    { id: 'TH29', pre: '🚨', text: 'CLAUDE PEUT ENFIN GÉNÉRER DES IMAGES ET VIDÉOS...', emoji: '🤯', module: 'mcp-claude' }
   ];
+  // Format Insomnie (Axel 12/10) : « Tu essaies de dormir mais tu repenses à… » — banque À PART (factory_bricks TI…,
+  // meta.format 'insomnie'), jamais tirée avec les TH ; demos = démos muettes autorisées (sinon générique)
+  var TI_PRE = 'Tu essaies de dormir mais tu repenses à ';
+  var TEXTES_INSOMNIE = [
+    { id: 'TI02', text: TI_PRE + 'l\'argent que tu as claqué en UGC alors qu\'une IA le fait en 2 min', module: 'generique' },
+    { id: 'TI03', text: TI_PRE + 'ce que Claude fait en 30 secondes', module: 'mcp-claude' },
+    { id: 'TI04', text: TI_PRE + 'la façon la plus débile de faire 1.000€ par jour', module: 'generique' },
+    { id: 'TI05', text: TI_PRE + 'comment quitter ce 9-5', module: 'generique' },
+    { id: 'TI06', text: TI_PRE + 'comment quitter ce CDI', module: 'generique' },
+    { id: 'TI07', text: TI_PRE + 'comment prendre ta retraite', module: 'generique' },
+    { id: 'TI08', text: TI_PRE + 'ces gens multimillionnaires grâce à l\'IA', module: 'generique' },
+    { id: 'TI09', text: 'Tu essaies de dormir mais tu repenses au nombre de millionnaires que l\'IA va créer cette année', module: 'generique' },
+    { id: 'TI10', text: TI_PRE + 'quand l\'IA va remplacer ton job', module: 'generique' },
+    { id: 'TI11', text: TI_PRE + 'ce que tu vas faire de ta vie quand l\'IA aura pris ton taff', module: 'generique' }
+  ];
+  TEXTES_INSOMNIE.forEach(function (p) { p.insomnie = true; });
   var TH = Object.create(null);
-  TEXTES_CHOC.forEach(function (p) { TH[p.id] = p; });
+  TEXTES_CHOC.concat(TEXTES_INSOMNIE).forEach(function (p) { TH[p.id] = p; });
   function textChoc(id) { return typeof id === 'string' && has(TH, id) ? TH[id] : null; }
-  function chocString(p) { return p ? p.text + (p.emoji ? ' ' + p.emoji : '') : ''; }
+  function chocString(p) { return p ? (p.pre || '') + p.text + (p.emoji ? ' ' + p.emoji : '') : ''; }
 
   function meta(b) { return (b && b.meta && typeof b.meta === 'object') ? b.meta : {}; }
   function demoModuleOf(d) { return typeof d === 'string' ? d : String(meta(d).module || (d && d.subject) || ''); }
@@ -105,6 +123,7 @@
     if (!p) return 'phrase choc inconnue';
     var mod = demoModuleOf(demo);
     if (p.module !== 'generique' && p.module !== mod) return p.id + ' (' + p.module + ') ne va qu’avec une démo ' + p.module + ' (démo : ' + (mod || '?') + ')';
+    if (p.demos && !(demo && p.demos.indexOf(typeof demo === 'string' ? demo : demo.id) >= 0)) return p.id + ' ne va qu’avec les démos ' + p.demos.join(', ');
     if (p.tx && !(Array.isArray(tx) && tx.indexOf(p.tx) >= 0)) return p.id + ' exige la transformation ' + p.tx + ' dans le hook visuel' + (Array.isArray(tx) ? '' : ' (non renseignée)');
     return '';
   }
@@ -474,7 +493,7 @@
     return caps.filter(function (c) { return c.e > chocEnd + 0.06; }).map(function (c) { return c.s < chocEnd ? Object.assign({}, c, { s: chocEnd }) : c; });
   }
 
-  return { FORMATS: FORMATS, TEXTES_CHOC: TEXTES_CHOC, COMBO_KEYS: COMBO_KEYS, CANVAS: CANVAS, UI_RESERVED: UI_RESERVED, INSET_AVANT_APRES: INSET_AVANT_APRES, INSET_AVANT_APRES_CHOC: INSET_AVANT_APRES_CHOC, SOUS_MEDAILLON: SOUS_MEDAILLON,
+  return { FORMATS: FORMATS, TEXTES_CHOC: TEXTES_CHOC, TEXTES_INSOMNIE: TEXTES_INSOMNIE, COMBO_KEYS: COMBO_KEYS, CANVAS: CANVAS, UI_RESERVED: UI_RESERVED, INSET_AVANT_APRES: INSET_AVANT_APRES, INSET_AVANT_APRES_CHOC: INSET_AVANT_APRES_CHOC, SOUS_MEDAILLON: SOUS_MEDAILLON,
     resolveFormat: resolveFormat, hasChoc: hasChoc, textChoc: textChoc, chocString: chocString, chocWhy: chocWhy, eligibleFormats: eligibleFormats,
     pickFormat: pickFormat, pickChoc: pickChoc, chocEnd: chocEnd, txOfHook: txOfHook, isAvantApres: isAvantApres, comboFormatCheck: comboFormatCheck,
     mergeFormatMeta: mergeFormatMeta, formatReview: formatReview,
