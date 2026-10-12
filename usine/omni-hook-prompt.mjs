@@ -5,6 +5,9 @@
 // jamais de mot inventé, fin propre (voir express-prompts.ts).
 export const HOOK_PERFORMANCE = [
   'ENTRANCE (first 0.5 s): the clip opens already in motion, never on a frozen face — the person leans slightly toward the phone with raised eyebrows, wide expressive eyes and an excited half-smile, as if they just discovered something incredible and can not wait to tell it; they start speaking within the first 0.3 s.',
+  // Axel 12/10 (3e tour) : réf. « HANDS » et « EMOTION » de @devinjatho — une SUITE de gestes et d'émotions sur la phrase
+  'HAND CHOREOGRAPHY across the sentence, one clear gesture per idea: 1) a closed fist punching lightly forward on the first strong word, 2) both hands opening wide, palms out, fingers spread, 3) both hands cupped together as if holding the idea, 4) both hands reaching toward the camera, palms up, offering it to the viewer, 5) palms pressed together in front of the chest on the last words.',
+  'EMOTION ARC across the sentence: laughing squint at the start → warm, open, welcoming expression → big genuine smile → wide grin → star-struck excitement on the punchline.',
   'HANDS: they talk a lot with BOTH hands, visible in frame at chest height — open palms toward the camera, counting on fingers, pointing at the lens, framing an idea with both hands, a quick emphatic gesture on every key word; the hands keep moving naturally for the whole clip, never resting out of frame.',
   // Axel 12/10 (2e tour) : plus d'émotion du visage et de la tête
   'EMOTION: VERY expressive face, much more than a neutral talking head — big eyebrow raises, eyes widening on the surprising words, real smiles that reach the eyes, a playful squint or frown of disbelief, lips and cheeks moving with the emotion; the emotion visibly evolves through the sentence (surprise → excitement → conviction → a knowing smile on the punchline).',
