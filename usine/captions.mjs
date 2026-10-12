@@ -208,15 +208,16 @@ function burn(video, output, words, opts = {}) {
     (script plus bas), jamais coupé ni débordant. Axel 11/10 : « mal centré, + sur la droite » → bande CENTRÉE sur
     l'image (x 140 → 940, axe à 540) au lieu de x 80 → 880 (axe à 480, 60 px trop à gauche) ; les mots courts restent
     loin des icônes, seul un mot de 800 px frôle la colonne de droite */
+ /* Axel 12/10 : « ça sert à rien de faire les sous-titres trop gros » → tout réduit (base 82 → 70, Anton 96-98 → 72, gros 108 → 90) */
  .cap{position:absolute;left:140px;width:800px;bottom:450px;z-index:5;text-align:center;
-   font-weight:900;font-size:82px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
-   -webkit-text-stroke:8px #000;paint-order:stroke fill;
+   font-weight:900;font-size:70px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
+   -webkit-text-stroke:7px #000;paint-order:stroke fill;
    text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;line-height:1}
  /* gros sous-titres colorés : même bande basse, mot fort en jaune */
- .cap.big{bottom:450px;font-size:108px;-webkit-text-stroke:11px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
+ .cap.big{bottom:450px;font-size:90px;-webkit-text-stroke:9px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
  /* groupe de sous-titres (moments clés) : la phrase en bloc sur 2-3 lignes, chaque mot s'allume quand il est dit */
  .broll{position:absolute;z-index:4;object-fit:cover;border-radius:34px;border:5px solid #fff;box-shadow:0 22px 60px rgba(0,0,0,.45);background:transparent}
- .cap.grp{white-space:normal;font-size:76px;line-height:1.1;-webkit-text-stroke:8px #000}
+ .cap.grp{white-space:normal;font-size:64px;line-height:1.1;-webkit-text-stroke:7px #000}
  .cap.grp .gw{display:inline-block;opacity:0}
  /* style « boite » : texte noir sur pastille blanche arrondie, sans contour */
  .cap.bx{-webkit-text-stroke:0;text-shadow:none;color:#111;font-size:66px}
@@ -228,20 +229,20 @@ function burn(video, output, words, opts = {}) {
  .st-S07 .cap.bx .bw,.st-S07 .cap.bx.grp .gw{background:#e11d2e}
  .st-S05 .cap.bx .bw,.st-S05 .cap.bx.grp .gw{background:#ff2d8a;border-radius:40px}
  .st-S05 .cap.bx.grp .gw:nth-child(even){background:#ffe600;color:#111}
- .st-S01 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:80px;letter-spacing:.02em;-webkit-text-stroke:4px #000}   /* Axel 12/10 : trop gros (96 → 80) */
+ .st-S01 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:72px;letter-spacing:.02em;-webkit-text-stroke:4px #000}
  .st-S04 .cap{color:#e9fff0;-webkit-text-stroke:2px #0b2a14;text-shadow:0 0 16px #39ff88,0 0 40px #8a4dff,0 4px 12px rgba(0,0,0,.5)}
- .st-S06 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:98px;color:#ffe600;-webkit-text-stroke:7px #000}
- .st-S08 .cap{font-size:80px;-webkit-text-stroke:8px #000}   /* Axel 12/10 : trop gros (98 → 80) */
+ .st-S06 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:72px;color:#ffe600;-webkit-text-stroke:7px #000}
+ .st-S08 .cap{font-size:70px;-webkit-text-stroke:7px #000}
  .st-S09 .cap{font-family:'Inter',sans-serif;font-weight:800;text-transform:none;-webkit-text-stroke:0;font-size:74px;text-shadow:0 3px 16px rgba(0,0,0,.8)}
  .st-S10 .cap{-webkit-text-stroke:0;text-shadow:0 4px 18px rgba(0,0,0,.75),0 1px 3px rgba(0,0,0,.6)}
- .st-S11 .cap{font-size:80px;color:#ff6a1a;-webkit-text-stroke:7px #000}   /* Axel 12/10 : trop gros (96 → 80) */
+ .st-S11 .cap{font-size:70px;color:#ff6a1a;-webkit-text-stroke:6px #000}
  .st-S12 .cap{-webkit-text-stroke:3px #2a0a1c;text-shadow:0 0 18px #ff3da6,0 0 42px rgba(255,61,166,.75),0 4px 14px rgba(0,0,0,.5)}
  .st-S13 .cap{font-family:'Inter',sans-serif;font-weight:600;text-transform:none;-webkit-text-stroke:0;font-size:64px;letter-spacing:0;text-shadow:0 2px 12px rgba(0,0,0,.85)}
  .st-S14 .cap{font-family:'Playfair Display',serif;font-weight:700;font-style:italic;text-transform:none;-webkit-text-stroke:0;font-size:78px;text-shadow:0 3px 16px rgba(0,0,0,.85)}
  .st-S15 .cap{-webkit-text-stroke:6px #000;text-shadow:5px 6px 0 #ff6a1a}
  .st-S16 .cap{color:#ffe600;-webkit-text-stroke:6px #000;text-shadow:5px 6px 0 #000}
  .st-S17 .cap{-webkit-text-stroke:0;text-shadow:0 0 14px #ff1a1a,0 0 38px rgba(255,26,26,.85),0 3px 10px rgba(0,0,0,.6)}
- .st-S18 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:96px;color:#ffd24a;-webkit-text-stroke:5px #7a0c0c;text-shadow:0 5px 0 #b3121a,0 8px 18px rgba(0,0,0,.5)}
+ .st-S18 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:72px;color:#ffd24a;-webkit-text-stroke:5px #7a0c0c;text-shadow:0 5px 0 #b3121a,0 8px 18px rgba(0,0,0,.5)}
  .st-S19 .cap{font-family:'Montserrat',sans-serif;font-weight:900;color:#ffe600;-webkit-text-stroke:7px #000}
  /* phrase choc : texte « natif » TikTok, bandeau blanc par ligne, placée par chocLayout (zone sûre, hors visage) */
  .choc{position:absolute;z-index:6;font-family:'Inter',sans-serif;font-weight:700;color:#111;transform-origin:50% 50%}

@@ -85,7 +85,7 @@
     { id: 'TH24', text: 'CLAUDE PEUT FAIRE QUOI MAINTENANT ?!??', emoji: '🤯😳', module: 'mcp-claude' },
     { id: 'TH25', text: 'PQ ON M\'A PAS MONTRÉ ÇA AVANT ?!?', emoji: '😭🤯', module: 'generique' },
     // 11/10 (Axel) : seulement quand la vidéo parle de Claude (démo MCP)
-    { id: 'TH26', text: 'Claude X AvatarAds =', emoji: '💸💸💸', module: 'mcp-claude' },
+    { id: 'TH26', text: 'Claude + AvatarAds =', emoji: '💸💸💸', module: 'mcp-claude' },
     // 12/10 (Axel) : les 2 LOGOS officiels en gros (AvatarAds + Claude) et « = 💸💸💸 » dessous ; vidéos Claude seulement.
     // Rendu spécial (logos:true) : placement chocLogoLayout, dessin dans captions.mjs (pas de bandeau CSxx).
     { id: 'TH27', text: 'AvatarAds + Claude =', emoji: '💸💸💸', module: 'mcp-claude', logos: true },
