@@ -228,7 +228,7 @@ function burn(video, output, words, opts = {}) {
  .st-S07 .cap.bx .bw,.st-S07 .cap.bx.grp .gw{background:#e11d2e}
  .st-S05 .cap.bx .bw,.st-S05 .cap.bx.grp .gw{background:#ff2d8a;border-radius:40px}
  .st-S05 .cap.bx.grp .gw:nth-child(even){background:#ffe600;color:#111}
- .st-S01 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:96px;letter-spacing:.02em;-webkit-text-stroke:5px #000}
+ .st-S01 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:80px;letter-spacing:.02em;-webkit-text-stroke:4px #000}   /* Axel 12/10 : trop gros (96 → 80) */
  .st-S04 .cap{color:#e9fff0;-webkit-text-stroke:2px #0b2a14;text-shadow:0 0 16px #39ff88,0 0 40px #8a4dff,0 4px 12px rgba(0,0,0,.5)}
  .st-S06 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:98px;color:#ffe600;-webkit-text-stroke:7px #000}
  .st-S08 .cap{font-size:80px;-webkit-text-stroke:8px #000}   /* Axel 12/10 : trop gros (98 → 80) */
