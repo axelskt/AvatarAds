@@ -491,7 +491,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   async function boot(session) {
     if (!session) return loginHTML();
     var a = await sb.rpc('factory_access');
-    if (a.error || !a.data || !a.data.ok) { S.err = 'Accès réservé au propriétaire.'; return render(); }
+    if (a.error || !a.data || !a.data.ok) { try { await sb.auth.signOut({ scope: 'local' }); } catch (e) {} return loginHTML('Accès réservé au propriétaire : reconnecte-toi avec le compte propriétaire.'); }
     load();
   }
 
@@ -520,7 +520,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   }
   if (DEMO) { S.example = true; S.posts = examples(); S.cur = todo()[0].id; render(); return; }
 
-  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) { sb = null; }
+  // 13/10 : même session que Creative Factory (clé sb-cf-v2-auth, 11/10) — la session de l'app peut être un autre compte
+  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storageKey: 'sb-cf-v2-auth' } }); } catch (e) { sb = null; }
   if (!sb) { S.err = 'supabase-js n’a pas pu être chargé.'; return render(); }
   sb.auth.getSession().then(function (r) { boot(r && r.data && r.data.session); }, function () { loginHTML(); });
 })();
