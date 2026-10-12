@@ -4169,7 +4169,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Paramètres avancés
             </button>
             <button onclick="_mcGenerate()" class="btn btn-primary grow" style="font-weight:800;font-size:16.5px;padding:16px">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:3px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer le mouvement
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:3px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer le mouvement<span id="mcGenCost" style="font-weight:700;opacity:.75;margin-left:6px"></span>
             </button>
           </div>
           <div id="mcCostTxt" class="mono" style="margin-top:11px;text-align:center;font-size:12.5px;color:var(--text-2)"></div>
@@ -32405,6 +32405,7 @@ function _mcLoad(f, which){
       if(im){ im.src=b64; im.style.display='block'; }
       if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
       _mcCheckCloseUp(b64);   // LOT3-C · gros plan visage → bandeau info (non bloquant)
+      if(typeof _mcUpdateCost==='function') _mcUpdateCost();   // coût dans le bouton dès vidéo + image (Axel 12/10)
     } else if(which==='bg'){ window._mcBgB64=b64; _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost(); }
   };
   r.readAsDataURL(f);
@@ -32581,15 +32582,18 @@ function _mcUpdateCost(){
   _mcRenderVoice();   // « Remplacer l'audio » suit le mode de rendu (plein écran seulement)
   const el=document.getElementById('mcCostTxt'); if(!el) return;
   const dur=_mcRefDurEff(), rate=_mcRate();
-  if(!dur){ el.innerHTML=''; return; }
+  if(!dur){ el.innerHTML=''; const gc0=document.getElementById('mcGenCost'); if(gc0) gc0.textContent=''; return; }
   // option « fond vidéo » active (et pas de fond image perso, qui prime) → +1 cr/s
   const bgOn = !!window._mcKeepVidBg && !window._mcBgB64;
   const bgSup = bgOn ? CREDIT_COSTS.motionBgPerSec*dur : 0;
   const c=rate*dur + bgSup;
   const tierLbl = window._mcTier==='pro' ? 'Motion 3.0 · 1080p natif' : (window._mcQuality==='1080' ? 'Motion 2.6 · 1080p natif' : 'Motion 2.6 · 720p');
   const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max)</span>' : '';
-  // Axel 09/10 : plus de détail « 2 cr/s × 10 s · voix offerte » — le total, le modèle et la définition suffisent
-  el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">'+(bgOn?'· fond vidéo +'+CREDIT_COSTS.motionBgPerSec+' cr/s ':'')+'· '+tierLbl+coupe+'</span>';
+  // Axel 12/10 : le coût est DANS le bouton (« Générer le mouvement • 30 cr ») dès que la vidéo ET l'image sont posées ;
+  // plus de « Coût estimé » dans les paramètres avancés. Sous le bouton : seulement l'avertissement de coupe à 30 s.
+  void tierLbl;
+  const gc=document.getElementById('mcGenCost'); if(gc) gc.textContent = window._mcCharB64 ? '• '+c+' cr' : '';
+  el.innerHTML = coupe ? '<span style="opacity:.75">'+coupe.replace(/^ · /,'')+'</span>' : '';
 }
 // « Arrière-plan · glisse un fond » (+ « Effacer la personne du fond ») — masqué quand on garde le fond de la vidéo
 function _mcFondPersoHtml(){
@@ -32614,8 +32618,6 @@ function _mcRenderAdv(){
   const dur=_mcRefDurEff();
   // option « fond vidéo » : +1 cr/s (inactif si un fond image perso est fourni — il prime)
   const bgOn=!!window._mcKeepVidBg && !window._mcBgB64;
-  const bgSupTxt=bgOn?` + ${CREDIT_COSTS.motionBgPerSec} cr/s fond vidéo`:'';
-  const totalTxt = dur>0 ? `${rate} cr/s${bgSupTxt} × ${dur}s = ${(rate+(bgOn?CREDIT_COSTS.motionBgPerSec:0))*dur} crédits` : `${rate+(bgOn?CREDIT_COSTS.motionBgPerSec:0)} crédits / seconde`;
   const modes=[['full','Plein écran','Motion seul'],['split-bottom','Original en haut','original ↑ · motion ↓'],['split-top','Original en bas','motion ↑ · original ↓']];
   const diag=(id)=> id==='full' ? '<div style="flex:1;background:var(--accent);opacity:.5"></div>'
     : id==='split-bottom' ? '<div style="flex:1;background:var(--surface-3)"></div><div style="flex:1;background:var(--accent);opacity:.55"></div>'
@@ -32660,10 +32662,6 @@ function _mcRenderAdv(){
     <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       ${modes.map(([id,t,sub])=>{const o=rnd===id;return `<button onclick="_mcSetRender('${id}')" class="col" style="gap:8px;padding:12px 10px;border-radius:13px;align-items:center;cursor:pointer;font-family:inherit;border:${o?'2px solid var(--accent)':'1px solid var(--border)'};background:${o?'var(--accent-soft)':'var(--panel-1)'}"><div style="width:34px;height:52px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border-2);flex:0 0 auto">${diag(id)}</div><div class="col" style="gap:2px;align-items:center"><span style="font-size:12px;font-weight:${o?700:600};color:${o?'var(--text)':'var(--text-2)'};text-align:center;line-height:1.2">${t}</span><span class="faint" style="font-size:10px;text-align:center">${sub}</span></div></button>`;}).join('')}
-    </div>
-    <div class="row" style="justify-content:space-between;align-items:center;margin-top:16px;padding:12px 14px;border-radius:12px;background:var(--panel-1);border:1px solid var(--border)">
-      <span class="faint" style="font-size:12px">Coût estimé</span>
-      <span class="mono" style="font-size:13px;color:var(--accent-2);font-weight:700">${totalTxt}</span>
     </div>
     <button onclick="_mcCloseAdv()" class="btn btn-ghost" style="width:100%;margin-top:14px">Terminé</button>`;
   window._mcPrompt='';   // champ « Instructions » retiré (Axel 10/10) : le prompt de mouvement maison s'applique toujours
