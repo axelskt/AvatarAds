@@ -28,7 +28,8 @@ const GAP_HOLD = 1.0;
 // CLI HyperFrames : npx sur le Mac ; sur le serveur (Railway) le binaire installé dans l'image (CF_HF_BIN)
 const HF = process.env.CF_HF_BIN || 'npx', HF_PRE = process.env.CF_HF_BIN ? [] : ['--yes', 'hyperframes'];
 const bareOf = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
-const brandFix = t => { const b=bareOf(t); if(/atarhat|avatarad|atarad|avatarhat|avataraad/.test(b)) return (/fr$/.test(b)||/\.?fr\b/i.test(t))?'avatarads.fr':'avatarads'; return t; };
+const brandFix = t => { const b=bareOf(t); if(/atarhat|avatarad|atarad|avatarhat|avataraad|avatahad|avatarhad|avataad|avataradi|avatarhds/.test(b))   // Axel 12/10 : « AVATAHADS.FR »
+    return (/fr$/.test(b)||/\.?fr\b/i.test(t))?'avatarads.fr':'avatarads'; return t; };
 
 function transcribeWords(audio, offset) {
   const work = mkdtempSync(join(tmpdir(), 'caps-tr-'));
@@ -214,10 +215,10 @@ function burn(video, output, words, opts = {}) {
  .st-S01 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:96px;letter-spacing:.02em;-webkit-text-stroke:5px #000}
  .st-S04 .cap{color:#e9fff0;-webkit-text-stroke:2px #0b2a14;text-shadow:0 0 16px #39ff88,0 0 40px #8a4dff,0 4px 12px rgba(0,0,0,.5)}
  .st-S06 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:98px;color:#ffe600;-webkit-text-stroke:7px #000}
- .st-S08 .cap{font-size:98px;-webkit-text-stroke:10px #000}
+ .st-S08 .cap{font-size:80px;-webkit-text-stroke:8px #000}   /* Axel 12/10 : trop gros (98 → 80) */
  .st-S09 .cap{font-family:'Inter',sans-serif;font-weight:800;text-transform:none;-webkit-text-stroke:0;font-size:74px;text-shadow:0 3px 16px rgba(0,0,0,.8)}
  .st-S10 .cap{-webkit-text-stroke:0;text-shadow:0 4px 18px rgba(0,0,0,.75),0 1px 3px rgba(0,0,0,.6)}
- .st-S11 .cap{font-size:96px;color:#ff6a1a;-webkit-text-stroke:9px #000}
+ .st-S11 .cap{font-size:80px;color:#ff6a1a;-webkit-text-stroke:7px #000}   /* Axel 12/10 : trop gros (96 → 80) */
  .st-S12 .cap{-webkit-text-stroke:3px #2a0a1c;text-shadow:0 0 18px #ff3da6,0 0 42px rgba(255,61,166,.75),0 4px 14px rgba(0,0,0,.5)}
  .st-S13 .cap{font-family:'Inter',sans-serif;font-weight:600;text-transform:none;-webkit-text-stroke:0;font-size:64px;letter-spacing:0;text-shadow:0 2px 12px rgba(0,0,0,.85)}
  .st-S14 .cap{font-family:'Playfair Display',serif;font-weight:700;font-style:italic;text-transform:none;-webkit-text-stroke:0;font-size:78px;text-shadow:0 3px 16px rgba(0,0,0,.85)}

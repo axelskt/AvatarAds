@@ -432,7 +432,10 @@
     // Axel 12/10 (VF-0335…0339, A4 en voiture) : JAMAIS sous le menton. Toutes les tentatives EN HAUT (au-dessus de la tête,
     // quitte à passer sur les cheveux, plus petit, jusqu'à 6 lignes) passent AVANT le milieu ; le milieu n'est plus qu'un
     // dernier recours signalé en revue (et refusé au montage).
-    var PASS = [[wide, BIG], [core, BIG], [wide, ALL], [core, ALL]];
+    // Axel 12/10 (A4 en voiture, VF-0337/0339) : « le texte choc doit être plus gros » — visage qui bouge = boîte haute, peu de
+    // place au-dessus → on autorise le HAUT de la boîte (front / cheveux, 20 %) avant de descendre sous 54 px (comme TH27)
+    var brow = core.map(function (r) { return { x: r.x, y: r.y + 0.2 * r.h, w: r.w, h: 0.8 * r.h, why: r.why }; });
+    var PASS = [[wide, BIG], [core, BIG], [brow, BIG], [wide, ALL], [core, ALL], [brow, ALL]];
     [4, 6].some(function (maxL) {
       return PASS.some(function (pass) {
         var obstacles = fixed.concat(pass[0]);

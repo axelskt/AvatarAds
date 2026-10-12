@@ -218,7 +218,8 @@ const FACES = {
 test('chocLayout : JAMAIS sur un visage (visage élargi : front, cheveux) — selfie, hook HK-M01-02 réel, visage en bas', () => {
   Object.entries(FACES).forEach(([k, faces]) => ALL_TEXTS.forEach(t => {
     const L = F.chocLayout(t, { faces, avantApres: k === 'hkM0102' });
-    checkBox(L, t, faces.map(px));
+    // Axel 12/10 : le haut de la boîte visage (20 %, front / cheveux) est permis, jamais le reste du visage
+    checkBox(L, t, faces.map(px).map(r => ({ ...r, y: r.y + 0.2 * r.h, h: 0.8 * r.h })));
     if (k === 'hkM0102' && L.zone === 'sous-medaillon') assert.ok(L.y >= F.SOUS_MEDAILLON.top);
     // Axel 12/10 : jamais sous le menton → le milieu n'est jamais « ok » (revue, puis autre phrase au montage)
     if (L.zone === 'milieu') assert.equal(L.level, 'review', k + ' ' + t); else assert.equal(L.level, 'ok', k + ' ' + t);
