@@ -15,7 +15,8 @@ export const HOOK_PERFORMANCE = [
   'HEAD MOVEMENT (a lot, like an animated storyteller): the head is in motion on almost every word — it tilts clearly to one side then to the other, bobs with the rhythm of the words, dips the chin and closes the eyes for a beat on an emphasized word then lifts back up with wide eyes, shakes slightly in disbelief, leans in toward the lens on the key part then pulls back; the shoulders and upper body follow the head naturally. Never a static head, never robotic.',
   // Axel 12/10 (5e tour) : « encore plus d'expression au niveau de la tête » (réf. : yeux fermés en parlant, menton baissé puis relevé, moue « ooh »)
   'HEAD EXPRESSIONS (big, theatrical, like the best storytellers on TikTok): several times he keeps his EYES CLOSED while still talking for a few words, head tilted down as if savoring what he says, then snaps the head back up with wide open eyes; the chin goes up proudly on a bold claim; a pursed-lips smirk with one eyebrow raised; an open-mouthed « ooh » face with eyebrows high on the surprising part; the head moves a lot between these expressions.',
-  'DELIVERY: confident, fluid and well articulated like a charismatic content creator, energetic conversational rhythm, every word crisp and clear.'
+  // Axel 12/10 : « parler plus rapidement » (H20 en 8 s : fini à 6,3 s puis figé) → débit rapide + durée = cran juste au-dessus de la parole
+  'DELIVERY: FAST, brisk pace (about 3.5 words per second), confident, fluid and well articulated like a charismatic content creator, energetic conversational rhythm, every word crisp and clear; never slow, never drawn out.'
 ].join(' ');
 
 // Réplique + performance, dans l'ordre attendu par le MCP (la réplique entre « … » est dite mot pour mot).
