@@ -34,5 +34,5 @@ function pronunciation(line) {
 }
 // Réplique + performance, dans l'ordre attendu par le MCP (la réplique entre « … » est dite mot pour mot).
 export function hookPrompt(line) {
-  return `The person in the photo talks to their phone, which is propped up in front of them so BOTH hands are free (handheld-free UGC framing, same place, same outfit), and says in French, directly to the camera: « ${line} »${pronunciation(line)} ${HOOK_PERFORMANCE} Standard French from France, never a Canadian or Québécois accent.`;
+  return `The person in the photo talks to their phone, which is propped up in front of them so BOTH hands are free (handheld-free UGC framing, same place, same outfit), and says in French with a NEUTRAL PARISIAN accent from France (like a Paris content creator — absolutely NO Québécois, Canadian, Belgian, Swiss or southern accent, no Québécois diphthongs or vowels), directly to the camera: « ${line} »${pronunciation(line)} ${HOOK_PERFORMANCE} Standard French from France, never a Canadian or Québécois accent.`;
 }
