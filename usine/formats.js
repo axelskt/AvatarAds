@@ -85,7 +85,8 @@
     { id: 'TH24', text: 'CLAUDE PEUT FAIRE QUOI MAINTENANT ?!??', emoji: '🤯😳', module: 'mcp-claude' },
     { id: 'TH25', text: 'PQ ON M\'A PAS MONTRÉ ÇA AVANT ?!?', emoji: '😭🤯', module: 'generique' },
     // 11/10 (Axel) : seulement quand la vidéo parle de Claude (démo MCP)
-    { id: 'TH26', text: 'Claude + AvatarAds =', emoji: '💸💸💸', module: 'mcp-claude' },
+    // Axel 12/10 : « = 💸💸💸 » SOUS « Claude + AvatarAds », en gros (sep = retour à la ligne forcé)
+    { id: 'TH26', text: 'Claude + AvatarAds', sep: '\n= ', emoji: '💸💸💸', module: 'mcp-claude' },
     // 12/10 (Axel) : les 2 LOGOS officiels en gros (AvatarAds + Claude) et « = 💸💸💸 » dessous ; vidéos Claude seulement.
     // Rendu spécial (logos:true) : placement chocLogoLayout, dessin dans captions.mjs (pas de bandeau CSxx).
     { id: 'TH27', text: 'AvatarAds + Claude =', emoji: '💸💸💸', module: 'mcp-claude', logos: true },
@@ -115,7 +116,7 @@
   var TH = Object.create(null);
   TEXTES_CHOC.concat(TEXTES_INSOMNIE).forEach(function (p) { TH[p.id] = p; });
   function textChoc(id) { return typeof id === 'string' && has(TH, id) ? TH[id] : null; }
-  function chocString(p) { return p ? (p.pre || '') + p.text + (p.emoji ? ' ' + p.emoji : '') : ''; }
+  function chocString(p) { return p ? (p.pre || '') + p.text + (p.emoji ? (p.sep || ' ') + p.emoji : '') : ''; }
 
   function meta(b) { return (b && b.meta && typeof b.meta === 'object') ? b.meta : {}; }
   function demoModuleOf(d) { return typeof d === 'string' ? d : String(meta(d).module || (d && d.subject) || ''); }
@@ -371,6 +372,7 @@
     o = o || {};
     if (String(text || '').trim() === LOGO_TXT) return chocLogoLayout(o);
     var words = String(text || '').trim().split(/\s+/).filter(Boolean);
+    var segs = String(text || '').trim().split('\n').map(function (t) { return t.trim().split(/\s+/).filter(Boolean); }).filter(function (w) { return w.length; });   // \n = ligne forcée (TH26)
     var fixed = UI_RESERVED.concat(o.avantApres ? [INSET_AVANT_APRES_CHOC] : []).concat(o.reserved || []);
     var wide = faceRects(o.faces, true), core = faceRects(o.faces, false);
     // colonnes : pleine largeur centrée ; à gauche d'un obstacle du haut (médaillon, visage à droite)
@@ -385,7 +387,8 @@
       var padX = Math.round(size * 0.42), padY = Math.round(size * 0.12), lineH = Math.round(size * 1.2);
       // o.em : police plus étroite que l'estimation (CS11 = Anton condensé, Axel 11/10 : « mieux sur 2 lignes »)
       var K = o.em || 1;
-      var lines = wrap(words, size, (colW - 2 * padX) / K);
+      var lines = [];
+      for (var si = 0; si < segs.length; si++) { var part = wrap(segs[si], size, (colW - 2 * padX) / K); if (!part) { lines = null; break; } lines = lines.concat(part); }
       if (!lines || lines.length > 6) return null;
       var tw = 0; lines.forEach(function (l) { tw = Math.max(tw, textEm(l) * size * K); });
       var w = Math.min(colW, Math.ceil(tw * 1.06) + 2 * padX), h = lines.length * (lineH + 2 * padY);

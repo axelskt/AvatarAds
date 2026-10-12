@@ -71,7 +71,7 @@ test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.
   lines.forEach(l => {
     const m = /^(TH\d{2}) (.+?)\s{2,}\((.+)\)\s*$/.exec(l);
     assert.ok(m, l);
-    assert.equal(F.chocString(F.textChoc(m[1])), m[2].trim(), m[1]);
+    assert.equal(F.chocString(F.textChoc(m[1])).replace(/\s+/g, ' '), m[2].trim(), m[1]);
   });
   assert.ok(!F.TEXTES_CHOC.some(p => sec.indexOf(p.text) < 0), 'aucune phrase hors de la section VALIDÉES');
 });
