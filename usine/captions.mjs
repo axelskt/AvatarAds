@@ -145,6 +145,14 @@ function burn(video, output, words, opts = {}) {
     };
     const line = l => esc(l).replace(EMOJI, m => { const f = appleEmoji(m); return f ? `<img class="emj" src="${f}" alt="">` : `<span class="em">${m}</span>`; });
     const cs = /^CS\d{2}$/.test(String(choc.style || '')) ? choc.style : 'CS01';   // style du texte choc (Axel 01/10, 11 styles validés)
+    if (L.logos) {   // TH27 (Axel 12/10) : logos officiels AvatarAds + Claude en gros, « = 💸💸💸 » dessous, sans bandeau
+      const T = decodeURIComponent(new URL('../render-worker/assets/tuto/', import.meta.url).pathname);
+      copyFileSync(join(T, 'logo-avatarads.png'), join(work, 'lg-aa.png')); copyFileSync(join(T, 'logo-claude.png'), join(work, 'lg-claude.png'));
+      const money = line('💸💸💸');
+      chocHtml = `<div class="choc clip choc-logos" id="choc" data-start="0" data-duration="${end.toFixed(3)}" style="left:${L.x}px;top:${L.y}px;width:${L.w}px;height:${L.h}px;`
+        + `--lg:${L.logo}px;--gap:${L.gap}px;font-size:${L.size}px;line-height:${L.lineH}px">`
+        + `<div class="lg1"><img src="lg-aa.png" alt=""><span>+</span><img class="lgc" src="lg-claude.png" alt=""></div><div class="lg2"><span>=</span>${money}</div></div>`;
+    } else
     chocHtml = `<div class="choc clip cs-${cs}" id="choc" data-start="0" data-duration="${end.toFixed(3)}" data-maxw="${L.maxW}" style="left:${L.x}px;top:${L.y}px;width:${L.w}px;`
       + `--jc:${L.align === 'left' ? 'flex-start' : 'center'};font-size:${L.size}px;line-height:${L.lineH}px;--px:${L.padX}px;--py:${L.padY}px">`
       + L.lines.map(l => `<div class="cl"><span>${line(l)}</span></div>`).join('') + `</div>`;
@@ -223,6 +231,14 @@ function burn(video, output, words, opts = {}) {
  /* emoji : Noto Color Emoji (police Google, embarquée par HyperFrames) — JAMAIS Apple Color Emoji (183 Mo embarqués → rendu à court de mémoire) */
  .choc .em{font-family:'Noto Color Emoji',sans-serif;font-weight:400}
  .choc .emj{height:1.08em;width:auto;vertical-align:-0.2em;margin-left:.12em}
+ /* TH27 : 2 logos + « = 💸💸💸 » (Axel 12/10 : logos en gros, sans encadré, le « = » dessous) */
+ .choc-logos{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:var(--gap);font-family:'Arial Black','Archivo Black',sans-serif;font-weight:900;color:#fff;-webkit-text-stroke:.07em #000;paint-order:stroke fill;filter:drop-shadow(0 10px 24px rgba(0,0,0,.55))}
+ .choc-logos .lg1,.choc-logos .lg2{display:flex;align-items:center;justify-content:center;gap:calc(var(--lg) * .2)}
+ .choc-logos .lg1{font-size:calc(var(--lg) * .6);line-height:1}
+ .choc-logos .lg1 img{width:var(--lg);height:var(--lg);border-radius:calc(var(--lg) * .22);display:block}
+ .choc-logos .lg1 img.lgc{transform:scale(1.3)}
+ .choc-logos .lg2{font-size:calc(var(--lg) * .55);line-height:1;gap:calc(var(--lg) * .06)}
+ .choc-logos .lg2 .emj{height:1.15em;margin-left:0;vertical-align:middle}
  /* 11 styles de texte choc validés par Axel le 01/10 (planche CS01-CS15 ; refusés : CS04 orange, CS09 carte unique,
     CS12 dégradé, CS14 sticker penché, CS06 néon rouge ; JAMAIS de jaune ; CS16 = surligneur rouge ajouté). CS01 = la base ci-dessus (bandeau blanc natif TikTok). */
  .cs-CS02 .cl>span{background:#111;color:#fff}

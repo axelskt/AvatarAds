@@ -85,7 +85,10 @@
     { id: 'TH24', text: 'CLAUDE PEUT FAIRE QUOI MAINTENANT ?!??', emoji: '🤯😳', module: 'mcp-claude' },
     { id: 'TH25', text: 'PQ ON M\'A PAS MONTRÉ ÇA AVANT ?!?', emoji: '😭🤯', module: 'generique' },
     // 11/10 (Axel) : seulement quand la vidéo parle de Claude (démo MCP)
-    { id: 'TH26', text: 'Claude X AvatarAds =', emoji: '💸💸💸', module: 'mcp-claude' }
+    { id: 'TH26', text: 'Claude X AvatarAds =', emoji: '💸💸💸', module: 'mcp-claude' },
+    // 12/10 (Axel) : les 2 LOGOS officiels en gros (AvatarAds + Claude) et « = 💸💸💸 » dessous ; vidéos Claude seulement.
+    // Rendu spécial (logos:true) : placement chocLogoLayout, dessin dans captions.mjs (pas de bandeau CSxx).
+    { id: 'TH27', text: 'AvatarAds + Claude =', emoji: '💸💸💸', module: 'mcp-claude', logos: true }
   ];
   var TH = Object.create(null);
   TEXTES_CHOC.forEach(function (p) { TH[p.id] = p; });
@@ -299,8 +302,50 @@
   }
   // Place la phrase. o = { faces: [[x,y,w,h]…] normalisées | null (inconnues), avantApres: bool, reserved: [rects px] }.
   // Rend { zone, x, y, w, h, size, lineH, padX, padY, lines, align, maxW, level 'ok' | 'review', reasons }.
+  // TH27 : bloc fixe (ligne 1 = 2 logos carrés + « + », ligne 2 = « = 💸💸💸 »), réduit au besoin (1 → 0,62) pour tenir
+  // EN HAUT dans la zone sûre (jamais dans la barre du haut : y ≥ TOP_MIN) sans toucher le visage ; sinon sous le visage.
+  var LOGO_TXT = 'AvatarAds + Claude = 💸💸💸';
+  function chocLogoLayout(o) {
+    var wide = faceRects(o.faces, true), core = faceRects(o.faces, false);
+    var fixed = UI_RESERVED.concat(o.avantApres ? [INSET_AVANT_APRES_CHOC] : []).concat(o.reserved || []);
+    var hit = null, reasons = [];
+    // d'abord EN HAUT et le plus GROS possible (Axel 12/10 : « les 2 logos en gros ») : à chaque taille, hors visage élargi
+    // puis sur les cheveux mais hors visage ; le milieu (poitrine) en tout dernier recours
+    // Axel 12/10 : « je les veux assez gros, pas trop petit » → jamais sous 80 % ; pour y arriver, le bloc peut mordre sur le
+    // HAUT du cadre du visage (20 % supérieurs = frange / front), jamais plus bas (yeux, bouche)
+    var brow = core.map(function (r) { return { x: r.x, y: r.y + 0.2 * r.h, w: r.w, h: 0.8 * r.h, why: r.why }; });
+    var PASSES = [];
+    [1, 0.9, 0.8].forEach(function (sc) { PASSES.push([wide, 'haut', sc], [core, 'haut', sc], [brow, 'haut', sc]); });
+    [1, 0.9, 0.8].forEach(function (sc) { PASSES.push([wide, 'milieu', sc], [core, 'milieu', sc]); });
+    PASSES.some(function (pass) {
+      var obstacles = fixed.concat(pass[0]);
+      return [pass[2]].some(function (sc) {
+        var logo = Math.round(240 * sc), gap = Math.round(14 * sc), l2 = Math.round(130 * sc);
+        var w = Math.round(700 * sc), h = logo + gap + l2, x = Math.round(CANVAS.w / 2 - w / 2);
+        var ranges = pass[1] === 'haut' ? [[TOP_MIN, HAUT_MAX - h / 2, 'haut']] : [[HAUT_MAX - 40, BOTTOM_MAX - h, 'milieu']];
+        return ranges.some(function (rg) {
+          for (var y = rg[0]; y <= rg[1]; y += 10) {
+            var r = { x: x, y: y, w: w, h: h };
+            if (!obstacles.some(function (ob) { return inter(r, ob) > 0; })) {
+              hit = { zone: rg[2], x: x, y: y, w: w, h: h, scale: sc, logo: logo, gap: gap, size: l2, lineH: l2, padX: 0, padY: 0, lines: [LOGO_TXT], align: 'center', maxW: w, logos: true };
+              return true;
+            }
+          }
+          return false;
+        });
+      });
+    });
+    if (!hit) {
+      var sc = 0.8, logo = Math.round(240 * sc), gap = Math.round(14 * sc), l2 = Math.round(130 * sc), w = Math.round(700 * sc);
+      hit = { zone: 'haut', x: Math.round(CANVAS.w / 2 - w / 2), y: TOP_MIN, w: w, h: logo + gap + l2, scale: sc, logo: logo, gap: gap, size: l2, lineH: l2, padX: 0, padY: 0, lines: [LOGO_TXT], align: 'center', maxW: w, logos: true };
+      reasons.push('texte choc sur un visage : aucune zone libre dans la zone sûre');
+    }
+    if (o.faces == null) reasons.push('visages non vérifiés (détection indisponible)');
+    return Object.assign(hit, { level: reasons.length ? 'review' : 'ok', reasons: reasons });
+  }
   function chocLayout(text, o) {
     o = o || {};
+    if (String(text || '').trim() === LOGO_TXT) return chocLogoLayout(o);
     var words = String(text || '').trim().split(/\s+/).filter(Boolean);
     var fixed = UI_RESERVED.concat(o.avantApres ? [INSET_AVANT_APRES_CHOC] : []).concat(o.reserved || []);
     var wide = faceRects(o.faces, true), core = faceRects(o.faces, false);

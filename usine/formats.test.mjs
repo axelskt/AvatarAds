@@ -50,10 +50,10 @@ test('chocEnd : fixe = 3 s bornées à la vidéo ; hook = durée du hook ; sans 
 });
 
 // ── banque de phrases choc ──
-test('banque : 26 phrases TH01…TH26, modules connus, TH13 exige TX-O02a', () => {
-  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 26 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
+test('banque : 27 phrases TH01…TH27, modules connus, TH13 exige TX-O02a', () => {
+  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 27 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
   F.TEXTES_CHOC.forEach(p => assert.ok(['generique', 'mcp-claude', 'omni', 'montage-ia'].includes(p.module), p.id));
-  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26']);
+  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27']);
   assert.equal(F.textChoc('TH13').tx, 'TX-O02a');
   assert.equal(F.textChoc('TH99'), null); assert.equal(F.textChoc('__proto__'), null);
 });
@@ -63,7 +63,7 @@ test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.
   const md = readFileSync(BANK, 'utf8'), sec = md.split(/^## /m).find(x => /^VALIDÉES/.test(x));
   assert.ok(sec, 'section VALIDÉES');
   const lines = sec.split('\n').filter(l => /^TH\d{2} /.test(l));
-  assert.equal(lines.length, 26);
+  assert.equal(lines.length, 27);
   lines.forEach(l => {
     const m = /^(TH\d{2}) (.+?)\s{2,}\((.+)\)\s*$/.exec(l);
     assert.ok(m, l);
@@ -106,7 +106,7 @@ test('txOfHook / isAvantApres : hooks visuels en blocs HK-<bloc>(+<bloc>) lus da
   assert.equal(F.chocWhy(F.textChoc('TH13'), 'omni', F.txOfHook('HK-O2-0a.mp4', lib)), '');
   assert.match(F.chocWhy(F.textChoc('TH13'), 'omni', F.txOfHook('HK-O3-0a.mp4', lib)), /exige la transformation TX-O02a/);
   // Axel 06/10 : sous le médaillon « avant » (il peut toucher son bas), jamais dessus ni à côté
-  F.TEXTES_CHOC.forEach(p => { const L = F.chocLayout(F.chocString(p), { faces: [], avantApres: F.isAvantApres('HK-O2-0ab.mp4') }); assert.ok(L.y >= F.SOUS_MEDAILLON.top, p.id + ' y ' + L.y); });
+  F.TEXTES_CHOC.filter(p => !p.logos).forEach(p => { const L = F.chocLayout(F.chocString(p), { faces: [], avantApres: F.isAvantApres('HK-O2-0ab.mp4') }); assert.ok(L.y >= F.SOUS_MEDAILLON.top, p.id + ' y ' + L.y); });
 });
 
 // ── rotation (A/B) ──
@@ -136,7 +136,7 @@ test('pickFormat en série : 12 vidéos sur 3 hooks → chaque format 3 fois, ch
 });
 test('pickChoc : phrases compatibles avec la démo, la moins utilisée d’abord, préférence aux phrases qui tiennent (fits)', () => {
   const ids = new Set(); for (let i = 0; i < 40; i++) ids.add(F.pickChoc({ demo: DEMO.omni, rand: () => i / 40 }).id);
-  assert.ok(![...ids].some(id => ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26'].includes(id)), [...ids].join(','));
+  assert.ok(![...ids].some(id => ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27'].includes(id)), [...ids].join(','));
   assert.equal(ids.size, 19);   // phrases génériques (TH10-14 et TH24 = autres modules)
   const idsTx = new Set(); for (let i = 0; i < 60; i++) idsTx.add(F.pickChoc({ demo: DEMO.omni, tx: ['TX-O02a', 'TX-O01'], rand: () => i / 60 }).id);
   assert.ok(idsTx.has('TH13'));
@@ -189,7 +189,7 @@ test('formatReview : ok si phrase compatible et placement ok ; revue si placemen
 });
 
 // ── placement de la phrase choc ──
-const ALL_TEXTS = F.TEXTES_CHOC.map(F.chocString);
+const ALL_TEXTS = F.TEXTES_CHOC.filter(p => !p.logos).map(F.chocString);   // TH27 = bloc de logos (placement à part)
 function checkBox(L, text, extra) {
   assert.equal(L.lines.join(' ').replace(/\s+/g, ' '), text.replace(/\s+/g, ' '), 'mots conservés');
   assert.ok(L.lines.length >= 1 && L.lines.length <= 6, 'lignes ' + L.lines.length);
@@ -229,7 +229,7 @@ test('chocLayout : aucune place hors visage → moindre recouvrement + revue ; v
   assert.equal(U.level, 'review'); assert.match(U.reasons.join(), /visages non vérifiés/);
 });
 test('wrap : l’emoji ne reste jamais seul sur sa ligne', () => {
-  F.TEXTES_CHOC.forEach(p => [62, 50, 41].forEach(size => {
+  F.TEXTES_CHOC.filter(p => !p.logos).forEach(p => [62, 50, 41].forEach(size => {
     const L = F.wrap(F.chocString(p).split(/\s+/), size, 400);
     if (L) assert.ok(L.every(l => l.replace(/\p{Extended_Pictographic}|‍|️/gu, '').trim().length > 0), p.id + ' ' + size + ' ' + L.join(' / '));
   }));
@@ -291,3 +291,13 @@ console.log(results.join('\n'));
 const fails = results.filter(r => r.startsWith('FAIL')).length;
 console.log(`\n${results.length - fails}/${results.length} OK`);
 process.exit(fails ? 1 : 0);
+
+test('TH27 (logos AvatarAds + Claude) : en haut sous la barre du haut (y ≥ 230), jamais sous 80 %, jamais sur les yeux', () => {
+  const t = F.chocString(F.textChoc('TH27'))
+  const free = F.chocLayout(t, { faces: [], center: true })
+  assert.equal(free.zone, 'haut'); assert.ok(free.y >= 230); assert.equal(free.scale, 1); assert.ok(free.logos)
+  const face = [0.2712, 0.249, 0.4458, 0.2658]   // A3-3 H17 (test réel du 12/10)
+  const L = F.chocLayout(t, { faces: [face], center: true })
+  assert.equal(L.zone, 'haut'); assert.ok(L.y >= 230); assert.ok(L.scale >= 0.8)
+  assert.ok(L.y + L.h <= (face[1] + 0.2 * face[3]) * 1920, 'au-dessus des 80 % bas du visage (yeux, bouche)')
+})
