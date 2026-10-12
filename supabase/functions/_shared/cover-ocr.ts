@@ -67,7 +67,10 @@ export async function refineByText(svc: Svc, text: string, created: string | nul
   }
   const scored = (await Promise.all(vfs.slice(0, 25).map(async (vf) => ({ vf, s: (await scoreVf(vf))?.score ?? 999 })))).sort((a, b) => a.s - b.s)
   const cands = scored.slice(0, 5).map((x) => ({ vf: x.vf, score: +x.s.toFixed(1) }))
-  if (scored.length === 1) return { vf: scored[0].vf, state: 'auto', candidates: cands, why: 'texte choc unique' }
+  // texte unique MAIS image quand même proche (≤ 70, seuil « loin » de fp.ts) : une ancienne vidéo hors usine qui
+  // reprendrait la même phrase ne doit pas être rattachée d'office
+  if (scored.length === 1) return scored[0].s <= 70 ? { vf: scored[0].vf, state: 'auto', candidates: cands, why: 'texte choc unique' }
+    : { vf: null, state: 'unsure', candidates: cands, why: 'texte choc unique, image éloignée' }
   const [a, b] = scored
   if (a.s <= 60 && b.s >= a.s * 1.25) return { vf: a.vf, state: 'auto', candidates: cands, why: 'texte choc + image' }
   // heure : une seule de ces vidéos programmée à ± 40 min de la publication TikTok
