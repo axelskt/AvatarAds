@@ -10,7 +10,7 @@
      La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
      est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
      app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-MvW+NoBy5C/dRSqUVLW7SdbcKqLJtQQdhYFRuqywBls=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-VebGuOXhZMx4lquhQ0JfVJT8jXW2k1VMpI13jTDEXD4=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -213,6 +213,13 @@ function Login({ go }) {
   const [email, setEmail] = useStateA("");
   const [pw, setPw] = useStateA(false); // mode mot de passe
   const [pwVal, setPwVal] = useStateA("");
+  // 12/10 (Axel) : identifiant enregistré choisi au trousseau / à l'empreinte depuis le mode « code » → Safari remplit aussi
+  // le mot de passe (champ invisible) → on passe en mode mot de passe et on se connecte directement, sans clic de plus.
+  const [autoGo, setAutoGo] = useStateA(false);
+  React.useEffect(() => {if (autoGo && pw && pwVal) {setAutoGo(false);authPassword();}}, [autoGo, pw, pwVal]);
+  const hiddenPw = (st) => React.createElement("input", { type: "password", name: "password", autoComplete: "current-password", tabIndex: -1, "aria-hidden": "true",
+    style: { position: "absolute", left: 0, top: 0, width: 1, height: 1, opacity: 0, border: 0, padding: 0, pointerEvents: "none" },
+    onChange: (e) => {if (e.target.value) {setPwVal(e.target.value);setPw(true);setAutoGo(true);}} });
   const [sent, setSent] = useStateA(false); // code OTP envoyé
   const [show, setShow] = useStateA(false); // visibilité mot de passe
   const [busy, setBusy] = useStateA(false);
@@ -321,6 +328,7 @@ function Login({ go }) {
   React.createElement("input", { type: show ? "text" : "password", name: "password", autoComplete: "current-password", placeholder: "••••••••", value: pwVal, onChange: (e) => setPwVal(e.target.value), onKeyDown: (e) => {if (e.key === "Enter") {e.preventDefault();authPassword();}}, style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
   React.createElement("button", { type: "button", onClick: () => setShow(!show), style: { position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: L.sub } }, show ? "Cacher" : "Voir")
   ),
+  !pw && hiddenPw(),
 
   React.createElement("button", { type: "button", className: "btn btn-primary", style: { width: "100%", marginTop: 11, padding: "15px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
   pw ? "Se connecter" : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
@@ -391,6 +399,7 @@ function Login({ go }) {
       React.createElement("input", { type: show ? "text" : "password", name: "password", autoComplete: "current-password", placeholder: "••••••••", value: pwVal, onChange: (e) => setPwVal(e.target.value), onKeyDown: (e) => {if (e.key === "Enter") {e.preventDefault();authPassword();}}, style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
       React.createElement("button", { type: "button", onClick: () => setShow(!show), style: { position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: D.sub } }, show ? "Cacher" : "Voir")
       ),
+      !pw && hiddenPw(),
 
       React.createElement("button", { type: "button", className: "btn btn-primary", style: { width: "100%", padding: "16px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
       pw ? "Se connecter" : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
