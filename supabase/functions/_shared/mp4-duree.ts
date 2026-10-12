@@ -479,7 +479,7 @@ export const tropLongue = (sec: number, maxSec: number): boolean => r3(sec) > ma
 // donc aucun segment encodé), 1er segment = uid exact, jamais « . » / « .. » / segment vide. Les chemins de l'app sont
 // `<uid>/omni-<ms>-<a>.mp4`, `<uid>/mc-<ms>-<a>.mp4|.jpg`, `<uid>/mc-<ms>-<a>-comp.jpg`.
 export function cheminClient(u: unknown, uid: string, base: string, bucket: string): string | null {
-  const s = String(u ?? '')
+  const s = String(u ?? '').replace(/^https:\/\/([a-z0-9]+)\.storage\.supabase\.co\//, 'https://$1.supabase.co/')   // 12/10 : médias lus sur le domaine stockage (aa-media-host.js) → même chemin
   if (!base || !uid || s.length > 4096) return null
   const pre = `${base}/storage/v1/object/`
   if (!s.startsWith(pre)) return null

@@ -155,7 +155,7 @@ function omniI2vBody(raw: string): { body: string; sec: number } | { error: stri
 const IMG_DATA = /^data:([a-z0-9.+-]{1,40}\/[a-z0-9.+-]{1,80})?(;[a-z0-9=._+-]{1,60})*;base64,/i
 const IMG_MAX = 40 * 1024 * 1024   // octets des data URL (≈ 30 Mo d'image) ; l'app y met une image ≤ 2560 px (AuraSR) ou l'avatar
 function imageEntree(u: unknown): string | null {
-  const s = typeof u === 'string' ? u : ''
+  const s = (typeof u === 'string' ? u : '').replace(/^https:\/\/([a-z0-9]+)\.storage\.supabase\.co\//, 'https://$1.supabase.co/')   // 12/10 : médias lus sur le domaine stockage (aa-media-host.js) → même chemin
   if (!s || s.length > IMG_MAX) return null
   if (IMG_DATA.test(s)) return s
   if (s.length <= 4096 && SUPA_URL && s.startsWith(`${SUPA_URL}/storage/v1/object/`) && !/[\s"'<>\\]/.test(s)) return s

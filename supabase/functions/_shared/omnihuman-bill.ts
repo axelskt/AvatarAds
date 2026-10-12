@@ -100,7 +100,7 @@ export async function omnihumanAudio(audioUrl: string, bucket: string, storeSign
 
 // Entrée acceptée = URL signée de NOTRE bucket, dans le dossier de l'appelant (même règle que okInput de kie-proxy).
 export function entreeNotreStockage(u: unknown, uid: string, storeSign: string): string | null {
-  const s = String(u ?? '')
+  const s = String(u ?? '').replace(/^https:\/\/([a-z0-9]+)\.storage\.supabase\.co\//, 'https://$1.supabase.co/')   // 12/10 : médias lus sur le domaine stockage (aa-media-host.js) → même chemin
   if (!s.startsWith(storeSign)) return null
   const p = s.slice(storeSign.length).split('?')[0]
   if (!p || /\.\.|%2e|%2f|%5c|@|\\/i.test(p) || !p.startsWith(uid + '/')) return null
