@@ -10,7 +10,7 @@
      La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
      est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
      app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-T8+ladCrz/1m62OhV2Nbrgof6XHLi1LQaTWqufc356w=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-QUiw1F/axnEByrToSrBMfykXk4p6bmpvS786TRX//0U=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -246,11 +246,14 @@ function Login({ go }) {
     location.href = "/app/";
   }
   async function authPassword() {
-    const e = (email || "").trim().toLowerCase();
+    // 12/10 (Axel) : remplissage par le trousseau / empreinte → on relit aussi les champs (React ne voit pas toujours l'autofill)
+    const dom = (n) => {const x = document.querySelector('input[name="' + n + '"]');return x ? x.value : "";};
+    const e = (email || dom("email") || "").trim().toLowerCase();
+    const pwV = pwVal || dom("password");
     if (!validEmail(e)) {setErr("Entre un email valide.");return;}
-    if (!pwVal) {setErr("Entre ton mot de passe.");return;}
+    if (!pwV) {setErr("Entre ton mot de passe.");return;}
     setBusy(true);setErr("");
-    const { error } = await sb.auth.signInWithPassword({ email: e, password: pwVal });
+    const { error } = await sb.auth.signInWithPassword({ email: e, password: pwV });
     setBusy(false);
     if (error) {setErr("Email ou mot de passe incorrect.");return;}
     location.href = "/app/";
@@ -299,18 +302,18 @@ function Login({ go }) {
   React.createElement("button", { className: "btn btn-quiet btn-sm", style: { fontSize: 13, color: L.sub }, onClick: () => setSent(false) }, "← Changer d'email"),
   React.createElement("span", { style: { fontSize: 12, color: L.sub } }, "Pas reçu ? ", React.createElement("span", { className: "accent", style: { cursor: "pointer", fontWeight: 600 }, onClick: authSend }, "Renvoyer"))
   ) :
-  React.createElement(React.Fragment, null,
-  React.createElement("input", { type: "email", placeholder: "ton@email.com", value: email, onChange: (e) => setEmail(e.target.value), style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
+  React.createElement("form", { style: { display: "contents" }, onSubmit: (e) => {e.preventDefault();pw ? authPassword() : authSend();} },
+  React.createElement("input", { type: "email", name: "email", autoComplete: "username", placeholder: "ton@email.com", value: email, onChange: (e) => setEmail(e.target.value), style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
   pw &&
   React.createElement("div", { style: { position: "relative", width: "100%", marginTop: 11 } },
-  React.createElement("input", { type: show ? "text" : "password", placeholder: "••••••••", value: pwVal, onChange: (e) => setPwVal(e.target.value), onKeyDown: (e) => {if (e.key === "Enter") authPassword();}, style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
-  React.createElement("button", { onClick: () => setShow(!show), style: { position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: L.sub } }, show ? "Cacher" : "Voir")
+  React.createElement("input", { type: show ? "text" : "password", name: "password", autoComplete: "current-password", placeholder: "••••••••", value: pwVal, onChange: (e) => setPwVal(e.target.value), style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
+  React.createElement("button", { type: "button", onClick: () => setShow(!show), style: { position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: L.sub } }, show ? "Cacher" : "Voir")
   ),
 
-  React.createElement("button", { className: "btn btn-primary", style: { width: "100%", marginTop: 11, padding: "15px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
+  React.createElement("button", { type: "submit", className: "btn btn-primary", style: { width: "100%", marginTop: 11, padding: "15px 20px", fontSize: 15, fontWeight: 800 } },
   pw ? "Se connecter" : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
   ),
-  React.createElement("button", { className: "btn", style: { width: "100%", marginTop: 9, padding: "13px 20px", fontSize: 13.5, background: L.btn, border: "1px solid " + L.fieldLine, color: L.ink, fontWeight: 600 }, onClick: () => {setPw(!pw);setErr("");} },
+  React.createElement("button", { type: "button", className: "btn", style: { width: "100%", marginTop: 9, padding: "13px 20px", fontSize: 13.5, background: L.btn, border: "1px solid " + L.fieldLine, color: L.ink, fontWeight: 600 }, onClick: () => {setPw(!pw);setErr("");} },
   pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"
   )
   ),
@@ -369,18 +372,18 @@ function Login({ go }) {
       React.createElement("button", { onClick: () => setSent(false), style: { fontSize: 13, color: D.sub, fontWeight: 600 } }, "← Changer d'email")
       ) :
 
-      React.createElement("div", { className: "col", style: { gap: 11, marginTop: 14 } },
-      React.createElement("input", { type: "email", placeholder: "ton@email.com", value: email, onChange: (e) => setEmail(e.target.value), style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
+      React.createElement("form", { className: "col", style: { gap: 11, marginTop: 14 }, onSubmit: (e) => {e.preventDefault();pw ? authPassword() : authSend();} },
+      React.createElement("input", { type: "email", name: "email", autoComplete: "username", placeholder: "ton@email.com", value: email, onChange: (e) => setEmail(e.target.value), style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
       pw &&
       React.createElement("div", { style: { position: "relative" } },
-      React.createElement("input", { type: show ? "text" : "password", placeholder: "••••••••", value: pwVal, onChange: (e) => setPwVal(e.target.value), onKeyDown: (e) => {if (e.key === "Enter") authPassword();}, style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
-      React.createElement("button", { onClick: () => setShow(!show), style: { position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: D.sub } }, show ? "Cacher" : "Voir")
+      React.createElement("input", { type: show ? "text" : "password", name: "password", autoComplete: "current-password", placeholder: "••••••••", value: pwVal, onChange: (e) => setPwVal(e.target.value), style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
+      React.createElement("button", { type: "button", onClick: () => setShow(!show), style: { position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: D.sub } }, show ? "Cacher" : "Voir")
       ),
 
-      React.createElement("button", { className: "btn btn-primary", style: { width: "100%", padding: "16px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
+      React.createElement("button", { type: "submit", className: "btn btn-primary", style: { width: "100%", padding: "16px 20px", fontSize: 15, fontWeight: 800 } },
       pw ? "Se connecter" : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
       ),
-      React.createElement("button", { onClick: () => {setPw(!pw);setErr("");}, className: "btn", style: { width: "100%", padding: "13px 20px", fontSize: 13.5, background: D.field, border: "1px solid " + D.line, color: D.ink, fontWeight: 600 } },
+      React.createElement("button", { type: "button", onClick: () => {setPw(!pw);setErr("");}, className: "btn", style: { width: "100%", padding: "13px 20px", fontSize: 13.5, background: D.field, border: "1px solid " + D.line, color: D.ink, fontWeight: 600 } },
       pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"
       )
       ),
