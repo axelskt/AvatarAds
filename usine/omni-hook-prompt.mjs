@@ -19,7 +19,20 @@ export const HOOK_PERFORMANCE = [
   'DELIVERY: FAST, brisk pace (about 3.5 words per second), confident, fluid and well articulated like a charismatic content creator, energetic conversational rhythm, every word crisp and clear; never slow, never drawn out.'
 ].join(' ');
 
+// Axel 12/10 (A4-2 H78 : « IO IA ») : consigne de prononciation ajoutée dès qu'un sigle / une marque est dans la réplique
+const PRON = [
+  [/\bIA\b/, 'IA is said ONCE as the two French letters i-a, never IO, never IO IA, nothing added before it'],
+  [/AvatarAds/i, 'AvatarAds is pronounced avatar-ads, one word'],
+  [/Higgsfield/i, 'Higgsfield is pronounced higs-field'],
+  [/CapCut/i, 'CapCut is pronounced cap-cut'],
+  [/\bUGC\b/, 'UGC is said as the French letters u-gé-cé'],
+  [/10 000€|10 000 €/, '10 000€ is said dix mille euros'],
+];
+function pronunciation(line) {
+  const r = PRON.filter(([re]) => re.test(line)).map(([, t]) => t);
+  return r.length ? ' PRONUNCIATION: ' + r.join('; ') + '.' : '';
+}
 // Réplique + performance, dans l'ordre attendu par le MCP (la réplique entre « … » est dite mot pour mot).
 export function hookPrompt(line) {
-  return `The person in the photo talks to their phone, which is propped up in front of them so BOTH hands are free (handheld-free UGC framing, same place, same outfit), and says in French, directly to the camera: « ${line} » ${HOOK_PERFORMANCE} Standard French from France, never a Canadian or Québécois accent.`;
+  return `The person in the photo talks to their phone, which is propped up in front of them so BOTH hands are free (handheld-free UGC framing, same place, same outfit), and says in French, directly to the camera: « ${line} »${pronunciation(line)} ${HOOK_PERFORMANCE} Standard French from France, never a Canadian or Québécois accent.`;
 }
