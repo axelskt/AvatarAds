@@ -26,6 +26,10 @@ function _expSpeechLock(p, seg){
   // (Omni étirait la phrase : blancs de 0,3-0,45 s au milieu des phrases, ça se voit que c'est de l'IA)
   return '. VOICE: accurate lip-sync, clear audible natural voice with casual dynamic intonation.'
     + ' FLUENT, CONTINUOUS DELIVERY: the words flow into each other like a real creator talking — NO unnecessary pause, NO dead air, NO hesitation and NO silent gap between words or between sentences; only the briefest natural breath where the punctuation truly needs one.'
+    // Axel 12/10 : « l'avatar arrive brut » → arrivée pleine d'émotion, parle avec les mains, émotion qui évolue (réf. créateur face caméra).
+    + ((!seg || !seg.i) ? ' ENTRANCE: the clip opens already in motion, never on a frozen face — she leans slightly toward the camera with raised eyebrows, wide expressive eyes and an excited half-smile, as if she just discovered something incredible and can not wait to tell it.' : '')
+    + ' HANDS: she talks a lot with her hands (both hands if the phone is propped up, otherwise her free hand), visible in frame at chest height — open palm toward the camera, counting on fingers, pointing at the lens, framing an idea, a quick emphatic gesture on key words; the hands keep moving naturally, never frozen.'
+    + ' EMOTION: strong, readable emotion that evolves with the sentence — surprise and excitement, then conviction, a knowing smile or a raised eyebrow on the punchline; animated face, head nods and small head tilts. Confident, well-articulated delivery like a charismatic content creator, every word crisp and clear.'
     + (line ? ' THE ONLY WORDS SPOKEN IN THE ENTIRE CLIP, VERBATIM AND IN THIS LANGUAGE: « '+lineSpoken+' ».' : ' The person says ONLY the requested line, verbatim.')
     // Axel 08/10 : « il a inventé un mot » (H70 : « visible sur les réseaux DENTÉS ? ») → interdit explicite, partout dans la phrase
     + ' NEVER INVENT A WORD: every word spoken is a real word taken from the line, in the same order, pronounced exactly as written — no made-up word, no extra word, no extra syllable glued to a word, no deformed or repeated word, anywhere (start, middle or end of a sentence).'
@@ -113,7 +117,7 @@ export function omniEditPrompt(p: string): string{
 export function motionControlPrompt(o: { instruction?: string; camFollow?: boolean; keepVidBg?: boolean }): string {
   const window = { _mcPrompt: String(o.instruction || '').trim(), _mcCamFollow: o.camFollow !== false, _mcKeepVidBg: !!o.keepVidBg }
   const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. Natural, realistic.';
-  const _mcBgTxt = window._mcKeepVidBg
+  const _mcBgTxt = (window._mcKeepVidBg || (window._mcFondVideo && tier==='pro'))
       ? ' Keep the EXACT same background, scene and environment as the REFERENCE VIDEO: only replace the person with the provided character — everything behind them stays identical to the original video.'
       : ' Keep the EXACT same background, scene and environment as the provided image: do not change, replace, blur, crop out or regenerate anything behind the character — the decor must stay identical.';
   const _mcCamTxt = window._mcCamFollow
