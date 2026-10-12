@@ -1141,12 +1141,16 @@
     { k: 'avatar', t: 'Avatar', ic: 'user', sub: 'avatars' },
     { k: 'texte-choc', t: 'Texte choc', ic: 'zap', sub: 'phrases choc · Texte + musique' },   // Axel 27/09 (TH01…)
     { k: 'style-choc', t: 'Style texte choc', ic: 'subs', sub: 'styles tirés au hasard' },   // Axel 01/10 (CS01…)
-    { k: 'reaction', t: 'Tête choquée', ic: 'user', sub: 'réactions muettes · Texte + musique' }   // Axel 07/10 (R-F1…, Omni Flash 3 s)
+    { k: 'reaction', t: 'Tête choquée', ic: 'user', sub: 'réactions muettes · Texte + musique' },   // Axel 07/10 (R-F1…, Omni Flash 3 s)
+    { k: 'insomnie', t: 'Insomnie', ic: 'user', sub: 'n’arrive pas à dormir · Texte + musique' },   // Axel 12/10 (R-I-…, 4 s, au lit yeux fermés)
+    { k: 'texte-insomnie', t: 'Texte insomnie', ic: 'zap', sub: '« Tu essaies de dormir mais tu repenses à… »' }   // Axel 12/10 (TI01…), jamais mélangé aux TH
   ];
   var PKM = {};
   PK.forEach(function (x) { PKM[x.k] = x; });
   // case de la bibliothèque d'une brique : une démo SANS voix (C-xxM-…, meta.voice false) a la sienne, à côté des démos parlées
-  function tileKind(b) { return b.kind === 'contenu' && (/^C-[A-Z]+M-/.test(String(b.id || '')) || (b.meta && (b.meta.voice === false || b.meta.muette === true))) ? 'demo-muette' : b.kind; }
+  function tileKind(b) {
+    if (b.meta && b.meta.format === 'insomnie') return b.kind === 'texte-choc' ? 'texte-insomnie' : 'insomnie';   // format Insomnie (12/10) : son propre onglet
+    return b.kind === 'contenu' && (/^C-[A-Z]+M-/.test(String(b.id || '')) || (b.meta && (b.meta.voice === false || b.meta.muette === true))) ? 'demo-muette' : b.kind; }
   // Sélecteurs des briques plus / moins performantes et de la fraîcheur (maquette). Seules les briques PARLÉES (hook,
   // liaison, CTA) sont reconnues dans l'audio des reels : les autres ne sont « pas encore mesurables ».
   var PERF_KINDS = [['hook', 'Hooks'], ['avatar', 'Avatars'], ['cta', 'CTA'], ['liaison', 'Liaisons'], ['contenu', 'Démos'], ['musique', 'Musiques'], ['sous-titre', 'Sous-titres'], ['style-choc', 'Styles choc']];
@@ -2043,6 +2047,7 @@
     else if (b.kind === 'contenu') tag = subjName(b.subject || '?');
     else if (b.kind === 'texte-choc') { var nC = chocUses(b.id); tag = nC == null ? '' : 'utilisé ' + fInt(nC) + NB + 'fois'; }
     // moteur lu dans meta.engine (07/10 : R-H3…R-H9 = vraies vidéos selfie d'Axel, pas de l'IA) ; ancien repli sur le libellé
+    else if (b.kind === 'reaction' && m.format === 'insomnie') tag = 'Au lit, yeux fermés · ' + (m.duration_s || 4) + ' s';
     else if (b.kind === 'reaction') tag = (m.engine === 'video-reelle' ? 'Vidéo réelle' : m.engine === 'veo-lite' || /veo/i.test(b.label || '') ? 'Veo Lite (test)' : 'Omni Flash') + ' · 3 s';
     else if (b.kind === 'transformation') tag = subjName(b.subject || '?');
     else if (b.kind === 'avatar') { var np = avPhotos(b).length; tag = np + ' ' + plural(np, 'photo'); }
