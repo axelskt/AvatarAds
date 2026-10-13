@@ -1148,6 +1148,9 @@
   var PKM = {};
   PK.forEach(function (x) { PKM[x.k] = x; });
   // case de la bibliothèque d'une brique : une démo SANS voix (C-xxM-…, meta.voice false) a la sienne, à côté des démos parlées
+  // 13/10 (Axel : « mettre la première frame pour chaque contenu ») : Safari laisse un lecteur NOIR tant que la vidéo n'est
+  // pas lancée ; le fragment #t=0.001 lui fait décoder et afficher la 1re image (sans rien télécharger de plus que preload=metadata).
+  function vFirst(u) { u = String(u || ''); return u && u.indexOf('#') < 0 ? u + '#t=0.001' : u; }
   function tileKind(b) {
     if (b.meta && b.meta.format === 'insomnie') return b.kind === 'texte-choc' ? 'texte-insomnie' : 'insomnie';   // format Insomnie (12/10) : son propre onglet
     return b.kind === 'contenu' && (/^C-[A-Z]+M-/.test(String(b.id || '')) || (b.meta && (b.meta.voice === false || b.meta.muette === true))) ? 'demo-muette' : b.kind; }
@@ -1775,7 +1778,7 @@
     }).join('') + '</div>';
     var vsrc = mediaSrc(q.video), psrc = mediaSrc(q.poster);
     var media = '<div class="cf-vf-stage"><div class="cf-vf-frame cf-mbox' + (vsrc ? '' : ' is-broken') + '">'
-      + (vsrc ? '<video controls playsinline preload="metadata" src="' + esc(vsrc) + '"' + (psrc ? ' poster="' + esc(psrc) + '"' : '') + '></video><span class="cf-vmsg">vidéo illisible (fichier introuvable ou refusé)</span>'
+      + (vsrc ? '<video controls playsinline preload="metadata" src="' + esc(psrc ? vsrc : vFirst(vsrc)) + '"' + (psrc ? ' poster="' + esc(psrc) + '"' : '') + '></video><span class="cf-vmsg">vidéo illisible (fichier introuvable ou refusé)</span>'
         : '<span class="cf-vmsg is-on">vidéo introuvable · ' + esc(q.videoWhy || 'aucune vidéo') + '</span>') + '</div></div>';
     var LB = { avatar: 'avatar', assemblage: 'assemblage', hook: 'hook', liaison: 'liaison', contenu: 'démo', cta: 'CTA', musique: 'musique', sous_titre: 'sous-titres' };
     var comps = q.combo ? '<div class="cf-vf-chips">' + COMBO_ORDER.filter(function (k) { return q.combo[k]; }).map(function (k) {
@@ -1973,7 +1976,7 @@
         var mine = fv.filter(function (x) { return (COH.photoParent ? COH.photoParent(x.photo) : x.photo) === a.id; }).slice(0, NP), out = [];
         for (var i = 0; i < NP; i++) {
           var x = mine[i], src = x && mediaSrc(x.url);
-          if (src) { done += 1; out.push('<figure class="cf-bsf-v"><video controls playsinline preload="metadata" src="' + esc(src) + '"></video><figcaption><span class="cf-chip is-mod">' + esc(x.photo) + '</span></figcaption></figure>'); }
+          if (src) { done += 1; out.push('<figure class="cf-bsf-v"><video controls playsinline preload="metadata" src="' + esc(vFirst(src)) + '"></video><figcaption><span class="cf-chip is-mod">' + esc(x.photo) + '</span></figcaption></figure>'); }
           else out.push('<div class="cf-bsf-v is-wait"><span>' + esc(a.id) + ' · photo ' + (i + 1) + '</span><b>en attente d’être créée</b></div>');
         }
         return out.join('');
@@ -2047,8 +2050,8 @@
     else if (b.kind === 'contenu') tag = subjName(b.subject || '?');
     else if (b.kind === 'texte-choc') { var nC = chocUses(b.id); tag = nC == null ? '' : 'utilisé ' + fInt(nC) + NB + 'fois'; }
     // moteur lu dans meta.engine (07/10 : R-H3…R-H9 = vraies vidéos selfie d'Axel, pas de l'IA) ; ancien repli sur le libellé
-    else if (b.kind === 'reaction' && m.format === 'insomnie') tag = 'Au lit, yeux fermés · ' + (m.duration_s || 4) + ' s';
-    else if (b.kind === 'reaction') tag = (m.engine === 'video-reelle' ? 'Vidéo réelle' : m.engine === 'veo-lite' || /veo/i.test(b.label || '') ? 'Veo Lite (test)' : 'Omni Flash') + ' · 3 s';
+    else if (b.kind === 'reaction' && m.format === 'insomnie') tag = 'Au lit, yeux fermés · ' + (m.duration || 4) + ' s';
+    else if (b.kind === 'reaction') tag = (m.engine === 'video-reelle' ? 'Vidéo réelle' : m.engine === 'veo-lite' || /veo/i.test(b.label || '') ? 'Veo Lite (test)' : 'Omni Flash') + ' · ' + (m.duration || 3) + ' s';   // 13/10 : durée réelle (R-LIT = 4 s)
     else if (b.kind === 'transformation') tag = subjName(b.subject || '?');
     else if (b.kind === 'avatar') { var np = avPhotos(b).length; tag = np + ' ' + plural(np, 'photo'); }
     if (isProposal(b)) tag = 'proposition';
@@ -2131,7 +2134,7 @@
     var cl = recClips(r), line = r.label || cl.map(function (c) { return c.t; }).join(' → ');
     var v = mediaSrc(r.render);
     var media = '<div class="cf-vf-stage"><div class="cf-vf-frame cf-mbox' + (v ? '' : ' is-broken') + '">'
-      + (v ? '<video controls playsinline preload="metadata" src="' + esc(v) + '"></video><span class="cf-vmsg">rendu illisible (fichier introuvable ou refusé)</span>'
+      + (v ? '<video controls playsinline preload="metadata" src="' + esc(vFirst(v)) + '"></video><span class="cf-vmsg">rendu illisible (fichier introuvable ou refusé)</span>'
         : '<span class="cf-vmsg is-on">rendu introuvable · ' + esc(r.renderWhy || 'aucun lien') + '</span>') + '</div></div>';
     return '<div class="cf-vf cf-asmf" data-rid="' + esc(r.id) + '">' + underBack('asm-back') + '<div class="cf-vf-h"><h2 class="cf-vf-t" id="cfModalTitle">' + esc(r.id) + '</h2><span class="cf-meta">' + esc(meta) + '</span>'
       + (line ? '<span class="cf-asmf-l">' + esc(line) + '</span>' : '')
@@ -2229,7 +2232,7 @@
   function qcShellHTML(R, q) {
     var n = R.ids.length, pos = R.i + 1;
     var vsrc = mediaSrc(q.video), psrc = mediaSrc(q.poster);
-    var media = vsrc ? '<video class="cf-qc-vid" controls playsinline preload="metadata" src="' + esc(vsrc) + '"' + (psrc ? ' poster="' + esc(psrc) + '"' : '') + '></video>'
+    var media = vsrc ? '<video class="cf-qc-vid" controls playsinline preload="metadata" src="' + esc(psrc ? vsrc : vFirst(vsrc)) + '"' + (psrc ? ' poster="' + esc(psrc) + '"' : '') + '></video>'
       + '<span class="cf-vmsg">vidéo illisible (fichier introuvable ou refusé)</span>'
       : '<span class="cf-vmsg is-on">vidéo introuvable · ' + esc(q.videoWhy || 'aucune vidéo') + '</span>';
     return '<div class="cf-qc" data-qid="' + esc(q.id) + '"><div class="cf-qc-top"><h2 class="cf-h2" id="cfModalTitle">Revue QC</h2>'
@@ -2314,7 +2317,7 @@
   }
   function videoModalHTML(v) {
     return '<div class="cf-vsheet"><h2 class="cf-h2" id="cfModalTitle">' + esc(v.title) + '</h2><div class="cf-meta">' + esc(v.sub) + '</div>'
-      + '<div class="cf-vbox cf-mbox"><video class="cf-rvid" controls playsinline preload="metadata" src="' + esc(v.url) + '"></video><span class="cf-vmsg">rendu introuvable (fichier illisible)</span></div></div>';
+      + '<div class="cf-vbox cf-mbox"><video class="cf-rvid" controls playsinline preload="metadata" src="' + esc(vFirst(v.url)) + '"></video><span class="cf-vmsg">rendu introuvable (fichier illisible)</span></div></div>';
   }
 
   // ── onglets pas encore branchés ──
@@ -3663,7 +3666,8 @@
     // colonne de gauche (200 px, maquette) selon le type ; la musique a son lecteur pleine largeur au-dessus
     var top = '', media = null, chocUseLine = '';
     if (b.kind === 'contenu' || b.kind === 'reaction') {   // réaction (07/10) : même lecteur que la démo
-      media = fb && mediaSrc(fb.video) ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(mediaSrc(fb.video)) + '"></video><span class="cf-vmsg">vidéo illisible</span></div>'
+      var vpo = fb && (mediaSrc(fb.poster) || mediaSrc(fb.image));   // affiche si la brique en a une, sinon 1re image (13/10)
+      media = fb && mediaSrc(fb.video) ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(vpo ? mediaSrc(fb.video) : vFirst(mediaSrc(fb.video))) + '"' + (vpo ? ' poster="' + esc(vpo) + '"' : '') + '></video><span class="cf-vmsg">vidéo illisible</span></div>'
         : ph('démo · ' + b.id) + miss('vidéo de démo');
     } else if (b.kind === 'avatar') {
       // toutes les photos de l'avatar : la grande (couverture par défaut) + les vignettes, un clic l'affiche en grand
@@ -3696,7 +3700,7 @@
     } else if (b.kind === 'sous-titre') {
       // aperçu vidéo du style (meta.media) et sa vignette (meta.poster / cover)
       var sv = fb && mediaSrc(fb.video), sp = fb && (mediaSrc(fb.poster) || mediaSrc(fb.image));
-      media = sv ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(sv) + '"' + (sp ? ' poster="' + esc(sp) + '"' : '') + '></video><span class="cf-vmsg">vidéo illisible</span></div>'
+      media = sv ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(sp ? sv : vFirst(sv)) + '"' + (sp ? ' poster="' + esc(sp) + '"' : '') + '></video><span class="cf-vmsg">vidéo illisible</span></div>'
         : sp ? '<div class="cf-sheet-media"><img src="' + esc(sp) + '" alt="' + esc('Aperçu du style ' + b.id) + '" decoding="async"></div>'
           : ph('style · ' + (m.value || b.id)) + (fb && fb.hasMedia ? miss('aperçu') : '<span class="cf-meta">aperçu du style : pas encore en ligne</span>');
     } else if (b.kind === 'texte-choc') {
