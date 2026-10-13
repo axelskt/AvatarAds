@@ -277,6 +277,42 @@ async function veoPass(minAge: number, maxAge: number, limit: number): Promise<T
   return t
 }
 
+// 13/10 : tirages RENDUS à la réserve par openai-proxy / google-ai-proxy / hedra-proxy après un échec du fournisseur
+// (table release_watch). L'app rembourse elle-même ce qui reste ; onglet fermé → personne ne le faisait. Après 30 min, une op
+// toujours INTACTE (ni réglée, ni remboursée, ni liée à un job, réserve = montant) est remboursée (refund_op_terminal : cas
+// propre seulement, refuse au-delà de 2 h). Op re-tirée par un repli (réserve < montant) : on attend sa fin, puis on clôt.
+async function releasePass(limit: number): Promise<Tally> {
+  const t: Tally = { scanned: 0, refunded: 0, closed: 0, waiting: 0, errors: 0 }
+  const { data, error } = await svc.from('release_watch').select('op_id, user_id, released_at').is('closed_at', null)
+    .lt('released_at', new Date(Date.now() - 30 * 60000).toISOString()).order('released_at', { ascending: true }).limit(Math.min(100, limit))
+  if (error) { if (!/release_watch|42P01/.test(error.message)) console.error('[reconcile] release_watch', error.message); return t }
+  const close = (op: string, outcome: string) => svc.from('release_watch').update({ closed_at: new Date().toISOString(), outcome }).eq('op_id', op).is('closed_at', null)
+  for (const w of (data || []) as Array<{ op_id: string; user_id: string; released_at: string }>) {
+    t.scanned++
+    try {
+      const { data: o, error: e } = await svc.from('credit_ops').select('amount, reserved_remaining, settled_at, refunded_at, provider_job, created_at')
+        .eq('id', w.op_id).eq('user_id', w.user_id).maybeSingle()
+      if (e) { t.errors++; continue }
+      const op = o as { amount: number; reserved_remaining: number | null; settled_at: string | null; refunded_at: string | null; provider_job: string | null; created_at: string } | null
+      if (!op) { await close(w.op_id, 'op_inconnue'); t.closed++; continue }
+      if (op.refunded_at) { await close(w.op_id, 'deja_rembourse'); t.closed++; continue }
+      if (op.settled_at) { await close(w.op_id, 'livre'); t.closed++; continue }
+      if (op.provider_job) { await close(w.op_id, 'job'); t.closed++; continue }   // job lié : les passes par job tranchent
+      const intacte = op.reserved_remaining == null || Number(op.reserved_remaining) >= Number(op.amount)
+      if (!intacte) {   // re-tirée par un repli encore en cours (ou consommée sans règlement) : jamais remboursée ici
+        if (Date.now() - Date.parse(w.released_at) > 2 * H * 60000) { await close(w.op_id, 'retiree'); t.closed++ } else t.waiting++
+        continue
+      }
+      const { data: r, error: re } = await svc.rpc('refund_op_terminal', { p_user: w.user_id, p_op: w.op_id, p_restore: 0 })
+      const d = (r || {}) as { ok?: boolean; reason?: string; refunded?: number }
+      if (re) { t.errors++; continue }
+      if (d.ok) { t.refunded++; await close(w.op_id, 'rembourse'); console.log('[reconcile] tirage rendu remboursé', w.op_id, d.refunded) }
+      else { await close(w.op_id, 'refus:' + (d.reason || '?')); t.closed++; console.log('[reconcile] remboursement refusé', w.op_id, d.reason) }
+    } catch (e) { t.errors++; console.error('[reconcile] release', w.op_id, (e as Error)?.message) }
+  }
+  return t
+}
+
 // 13/10 : jobs Hedra (v3) liés à leur op — voir l'en-tête.
 async function hedraPass(minAge: number, maxAge: number, limit: number): Promise<Tally> {
   const t: Tally = { scanned: 0, refunded: 0, delivered: 0, settled: 0, running: 0, unresolved: 0, errors: 0 }
@@ -360,8 +396,9 @@ serve(async (req: Request) => {
     const factures = await billsPass(minAge, maxAge, limit)   // APRÈS falPass : un job qu'il vient de livrer a sa facture close
     const veo = await veoPass(minAge, maxAge, limit)
     const hedra = await hedraPass(minAge, maxAge, limit)
-    console.log(`[reconcile] fal=${JSON.stringify(fal)} factures=${JSON.stringify(factures)} veo=${JSON.stringify(veo)} hedra=${JSON.stringify(hedra)}`)
-    return { fal, factures, veo, hedra }
+    const rendus = await releasePass(limit)   // APRÈS les passes par job : une op liée entre-temps est laissée aux filets par job
+    console.log(`[reconcile] fal=${JSON.stringify(fal)} factures=${JSON.stringify(factures)} veo=${JSON.stringify(veo)} hedra=${JSON.stringify(hedra)} rendus=${JSON.stringify(rendus)}`)
+    return { fal, factures, veo, hedra, rendus }
   })()
   if (wait) return json({ ok: true, ...(await work) })
   const ru = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime

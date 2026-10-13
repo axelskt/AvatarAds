@@ -25,7 +25,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { estCleService, safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob, hedraStatusGate, providerPause, retryAfterS, svc } from '../_shared/guard.ts'
+import { estCleService, safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, watchRelease, bindJob, releaseByJob, settleByJob, reconcileJob, hedraStatusGate, providerPause, retryAfterS, svc } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -371,7 +371,7 @@ serve(async (req: Request) => {
           if (drawnOp) { const f = await factureOuvre(user.id, drawnOp, 'hedra:' + jid, demandeHd, drawnAmt); if (f) console.log(`[hedra-facture] job=${jid} ${JSON.stringify(f)}`) }
         }
       }
-      else if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) await releaseOp(user.id, drawnOp, drawnAmt)                                                                              // soumission refusée → rend EXACTEMENT le tiré
+      else if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) { await releaseOp(user.id, drawnOp, drawnAmt); await watchRelease(user.id, drawnOp, 'hedra') }                                                                              // soumission refusée → rend EXACTEMENT le tiré
       else if (req.method === 'GET' && hedraRes.ok && /"status"\s*:\s*"(failed|error|errored|cancelled|canceled)"/i.test(body)) { if (jobId) await releaseByJob(user.id, 'hedra:' + jobId) }                // job échoué → rend l'op LIÉE
     }
     // Génération aboutie → RÉCONCILIATION À LA DURÉE RÉELLE (calibré 07/09 : la réponse complète /v3/jobs/<id>
@@ -412,7 +412,7 @@ serve(async (req: Request) => {
       },
     })
   } catch (err) {
-    if (!estLeMoteur && user) await releaseOp(user.id, drawnOp, drawnAmt || 1).catch(() => {})
+    if (!estLeMoteur && user) { await releaseOp(user.id, drawnOp, drawnAmt || 1).catch(() => {}); await watchRelease(user.id, drawnOp, 'hedra') }
     console.error('hedra-proxy error:', err)
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,

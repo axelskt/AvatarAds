@@ -11,7 +11,7 @@
 // plafond + preuve de débit + RÉSERVATION (draw le coût de l'op x-aa-op, settle à la livraison).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, wantsNanoChain, chainCreditAdd, CHAIN_NANO_COST, wantsOmniStart, omniStartAdd, omniStartClaim, omniStartDone, omniStartFail, omniStartFreeDone, svc } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, watchRelease, wantsNanoChain, chainCreditAdd, CHAIN_NANO_COST, wantsOmniStart, omniStartAdd, omniStartClaim, omniStartDone, omniStartFail, omniStartFreeDone, svc } from '../_shared/guard.ts'
 import { lireWav, lireMp3, dureeAudioAutres } from '../_shared/lipsync-audio.ts'
 import { dureeMp4Octets } from '../_shared/mp4-duree.ts'
 
@@ -212,6 +212,7 @@ serve(async (req: Request) => {
     if (!(drawnReal > 0)) return
     if (startMode === 'paid' && (await omniStartFail(uid, drawnOp)) === 'keep') return
     await releaseOp(uid, drawnOp, drawnReal)
+    await watchRelease(uid, drawnOp, 'openai')
   }
   // Audit 04/10 (EXP-2) : relance gratuite en échec → ce qu'elle avait mis de côté revient à la réserve (une seule fois).
   const releaseFree = async () => {

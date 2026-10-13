@@ -247,6 +247,12 @@ export async function releaseOp(userId: string, opId: string | undefined, cost: 
   if (!opId) return
   try { await svc().rpc('release_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)) }) } catch { /* best-effort */ }
 }
+// 13/10 : libération notée (filet release_watch) — si l'app ne rembourse ni ne réutilise ce tirage rendu (onglet fermé),
+// reconcile-fal-orphans rembourse l'op intacte après 30 min. Best-effort : un hoquet ici ne bloque jamais la réponse.
+export async function watchRelease(userId: string, opId: string | undefined, proxy: 'openai' | 'google' | 'hedra'): Promise<void> {
+  if (!opId || !userId) return
+  try { await svc().from('release_watch').upsert({ op_id: opId, user_id: userId, proxy, released_at: new Date().toISOString(), closed_at: null, outcome: null }) } catch { /* best-effort */ }
+}
 // `drawn` = montant tiré par CE job → mémorisé (job_drawn) pour une restauration EXACTE au release. Omis
 // (ancien appelant) → job_drawn reste NULL → release retombe sur son p_cost (compat pendant le rollout).
 export async function bindJob(userId: string, opId: string | undefined, job: string, drawn?: number, path?: string): Promise<void> {

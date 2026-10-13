@@ -13,7 +13,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, userPlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, opHasJob, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain, svc } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, userPlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, opHasJob, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain, svc, watchRelease } from '../_shared/guard.ts'
 import { KIE_OPEN } from '../_shared/kie.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
@@ -250,7 +250,7 @@ serve(async (req: Request) => {
     if (settled || gaveBack) return
     gaveBack = true
     if (chainOp) await chainCreditGiveBack(uid, chainOp)
-    else if (drawn > 0) await releaseOmniOp(uid, drawnOp, drawn, startImg)   // startImg 0 (Nano, Veo sans image offerte) = releaseOp
+    else if (drawn > 0) { await releaseOmniOp(uid, drawnOp, drawn, startImg); await watchRelease(uid, drawnOp, 'google') }   // startImg 0 (Nano, Veo sans image offerte) = releaseOp
   }
   try {
     const headers: Record<string, string> = { 'x-goog-api-key': googleKey }
@@ -358,7 +358,7 @@ serve(async (req: Request) => {
           const full = (body.match(/"name"\s*:\s*"(models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+)"/) || [])[1] || ''
           if (name && drawn > 0) await bindJob(uid, drawnOp, 'veo:' + name, drawn, full ? `${GOOGLE_AI_BASE}/v1beta/${full}` : undefined)
         }
-        else if (drawn > 0) { await releaseOmniOp(uid, drawnOp, drawn, startImg); gaveBack = true }
+        else if (drawn > 0) { await releaseOmniOp(uid, drawnOp, drawn, startImg); gaveBack = true; await watchRelease(uid, drawnOp, 'google') }
       } else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body)) {
         // Poll d'une opération Veo terminée. Livrée = une VIDÉO est présente (octets, uri ou files/…). « done » sans vidéo
         // (erreur, ou vidéo bloquée par le filtre RAI : raiMediaFilteredCount > 0) = échec NON facturé par Google →
