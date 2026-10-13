@@ -3857,7 +3857,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
             </div>
             <div style="text-align:center">
-              <div style="font-size:16px;font-weight:800;letter-spacing:-.3px">Transformation en cours…</div>
+              <div id="omniProgLabel" style="font-size:16px;font-weight:800;letter-spacing:-.3px">Transformation en cours…</div>
             </div>
           </div>
 
@@ -5920,7 +5920,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-13-1600'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-13-1640'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -5934,9 +5934,9 @@ function _aaFetch(input, init){
   const court = !opt.signal && typeof AbortController !== 'undefined'
     && ((/^\/rest\/v1\//.test(path) && (method === 'GET' || method === 'HEAD')) || /^\/auth\/v1\/(user|token)/.test(path));
   if(!court) return fetch(input, opt);
-  const waits = [5000, 8000, 12000];
+  const waits = [5000, 8000, 0];   // 0 = dernier essai sans limite : la relance ne crée jamais d'échec de plus
   const essai = function(i){
-    const ac = new AbortController(), t = setTimeout(function(){ ac.abort(); }, waits[i]);
+    const ac = new AbortController(), t = waits[i] ? setTimeout(function(){ ac.abort(); }, waits[i]) : null;
     return fetch(input, Object.assign({}, opt, { signal: ac.signal })).then(function(r){ clearTimeout(t); return r; }, function(e){
       clearTimeout(t);
       if(i + 1 < waits.length && e && e.name === 'AbortError'){ console.warn('[réseau] relance', path); return essai(i + 1); }
@@ -5965,6 +5965,13 @@ function _safeUrl(u){ const s=String(u||'').trim(); return /^(https?:\/\/|blob:|
 function _safeSrc(u){ const s=String(u||'').trim(); return _escH(_safeUrl(s) || (/^(?![a-z][a-z0-9+.\-]*:|\/\/)[^\s"'<>\\]+$/i.test(s) ? s : '')); }
 function _safeCss(v){ const s=String(v||''); return (/^[#a-zA-Z0-9(),.%\s\-\/]*$/.test(s) && !/url|expression|javascript|import/i.test(s)) ? s : ''; }
 
+// 13/10 (Axel : Omni « bloqué à 99 % puis crash ») : les suivis de génération gardaient le jeton lu au LANCEMENT ; passé
+// l'heure de vie du jeton, le proxy répondait « session expirée » en pleine génération. Chaque relecture de statut reprend
+// donc le jeton À JOUR (getSession le renouvelle s'il expire), en gardant les autres en-têtes (x-aa-op).
+async function _aaAuthFresh(H){
+  try{ const { data:{ session } } = await sb.auth.getSession(); if(session && session.access_token) return Object.assign({}, H, { Authorization: 'Bearer ' + session.access_token }); }catch(_){}
+  return H;
+}
 async function getAuthHeader(){
   const { data: { session } } = await sb.auth.getSession();
   const token = session?.access_token || SUPABASE_KEY; // fallback anon si pas de session
@@ -15733,7 +15740,7 @@ async function _omnihFal(imgUrl, audUrl, prompt){
   const PROXY = SUPABASE_URL+'/functions/v1/fal-proxy';
   const H = await getAuthHeader();
   const fPost = (p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
-  const fGet  = (p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+  const fGet  = async (p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:await _aaAuthFresh(H)});
   const sub = await fPost(FAL_OMNI, { image_url:imgUrl, audio_url:audUrl, resolution:'1080p', prompt });   // fal-proxy repasse en 720p au-delà de 30 s
   if(!sub.ok){ const t = await sub.text(); let m = ''; try{ m = JSON.parse(t).error || ''; }catch(_){ m = t.slice(0,120); } throw new Error('Avatar '+sub.status+(m ? ' — '+String(m).slice(0,120) : '')); }
   const sd = await sub.json().catch(()=>({}));
@@ -33186,7 +33193,7 @@ function _omniProg(txt,pct){
     clearInterval(_omniProgTimer);
     _omniProgTimer=setInterval(()=>{
       const t=document.getElementById('omniProgTimer'); if(t && _omniProgT0){ const s=Math.floor((Date.now()-_omniProgT0)/1000); t.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
-      if(_omniProgVal<99) _omniSetProg(_omniProgVal + Math.max(0.08,(99-_omniProgVal)*0.015));   // progression douce (fal ne renvoie pas de % réel) : approche LENTE et continue de 99 (ne se fige plus à 95) ; le chrono mm:ss rassure à côté ; le 100 arrive à la fin
+      if(_omniProgVal<95) _omniSetProg(_omniProgVal + Math.max(0.02,(95-_omniProgVal)*0.004));   /* 13/10 : plus lente, plafonnée à 95 % (« bloqué à 99 % ») */   // progression douce (fal ne renvoie pas de % réel) : approche LENTE et continue de 99 (ne se fige plus à 95) ; le chrono mm:ss rassure à côté ; le 100 arrive à la fin
     }, 400);
   }
   const l=document.getElementById('omniProgLabel'); if(l && txt!=null) l.textContent=_sansModele(txt);
@@ -33289,7 +33296,7 @@ async function _omniGenerate(){
     const H=await getAuthHeader();
     const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
     const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
-    const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+    const fGet =async (p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:await _aaAuthFresh(H)});
     // v1.1 (et non l'endpoint de base) : moins cher en 720p (0,10 $ vs 0,13 $/s),
     // qualité supérieure, et débloque 1080p/4K si on ajoute `resolution` plus tard.
     const model='/google/gemini-omni-flash/v1.1/edit';
@@ -33305,10 +33312,18 @@ async function _omniGenerate(){
     if(!outUrl && (sd.status_url||sd.request_id)){
       const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
       const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
-      for(let i=0;i<100;i++){
+      // 13/10 (Axel) : 15 min d'attente (une vidéo longue dépassait les 5 min d'avant) et un message qui DONNE DES NOUVELLES
+      // (file d'attente, temps écoulé) au lieu de « Transformation en cours… » figé.
+      const _t0=Date.now();
+      for(let i=0;i<300;i++){
         await new Promise(r=>setTimeout(r,3000));
         const st=await (await fGet(stP)).json();
-        if(st.status==='COMPLETED'){ const rr=await (await fGet(reP)).json(); outUrl=pick(rr); if(!outUrl) throw new Error(_omniErr(rr)); break; }
+        { const sec=(Date.now()-_t0)/1000, q=Number(st.queue_position);
+          _omniProg(st.status==='IN_QUEUE' ? (q>0 ? 'En file d’attente — '+q+' vidéo'+(q>1?'s':'')+' avant la tienne…' : 'En file d’attente, ça démarre…')
+            : sec<45 ? 'L’IA analyse ta vidéo image par image…' : sec<100 ? 'Transformation des images en cours…'
+            : sec<170 ? 'Rendu de la vidéo finale…' : sec<300 ? 'Les vidéos longues prennent un peu plus de temps, ça avance…'
+            : 'Presque fini — on attend les dernières images…'); }
+        if(st.status==='COMPLETED'){ _omniProg('Téléchargement du résultat…'); const rr=await (await fGet(reP)).json(); outUrl=pick(rr); if(!outUrl) throw new Error(_omniErr(rr)); break; }
         if(st.status==='FAILED'||st.status==='ERROR'||st.status==='CANCELLED'||st.error) throw new Error(_omniErr(st));
         // La barre avance seule (timer fluide monotone) — fal ne renvoie pas de % réel, donc on
         // n'écrit AUCUN pourcentage dans le label (fini le zig-zag et le doublon de texte).
@@ -33395,7 +33410,7 @@ async function _mcGenerate(){
     const H=await getAuthHeader();
     const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
     const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
-    const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+    const fGet =async (p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:await _aaAuthFresh(H)});
     const base=user.id+'/mc-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
     const vPath=base+'.mp4', iPath=base+'.jpg';
     // LOT5 · CADRAGE ANCRÉ SUR LA RÉF : une frame de la vidéo de référence +
@@ -33831,7 +33846,7 @@ async function _mcCleanBgImage(b64){
 async function _mcApplyBg(charUrl, bgB64, H){
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
   const post=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
-  const get =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+  const get =async (p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:await _aaAuthFresh(H)});
   // Détourage du perso — plusieurs modèles fal en repli. birefnet/v2 est parfois
   // « gated » côté fal (402 même avec du solde) → repli sur rembg puis birefnet v1.
   const CUTOUT=[
@@ -34575,7 +34590,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   const H={ ...(await getAuthHeader()), ...(op ? { 'x-aa-op': String(op) } : {}) };   // carré 1:1 : même op explicite
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
   const fPost=(pp,b)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
-  const fGet =(pp)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'GET',headers:{...H}});
+  const fGet =async (pp)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'GET',headers:await _aaAuthFresh(H)});
   const model='/google/gemini-omni-flash/v1.1/image-to-video';
   step(42,'Flash — génération…');
   const sub=await fPost(model, {

@@ -1687,9 +1687,9 @@
       if ((CF.status === 'boot' || CF.status === 'loading') && !opt.signal && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opt = Object.assign({}, opt, { signal: AbortSignal.timeout(15000) });
       return fetch(input, opt).finally(done);
     }
-    var waits = [5000, 8000, 12000];
+    var waits = [5000, 8000, 0];   // 0 = dernier essai sans limite (la relance ne crée jamais d'échec de plus)
     var attempt = function (i) {
-      var ac = new AbortController(), t = setTimeout(function () { ac.abort(); }, waits[i]);
+      var ac = new AbortController(), t = waits[i] ? setTimeout(function () { ac.abort(); }, waits[i]) : null;
       return fetch(input, Object.assign({}, opt, { signal: ac.signal })).then(function (r) { clearTimeout(t); return r; }, function (e) {
         clearTimeout(t);
         if (i + 1 < waits.length && e && e.name === 'AbortError') { logNet(path + ' relancée (connexion muette)'); return attempt(i + 1); }
