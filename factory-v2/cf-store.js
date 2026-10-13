@@ -902,7 +902,8 @@
     // de sous-titres (usine/coherence.js lit lipsync, hook_mode, overlay_required)
     'm_lipsync:meta->lipsync', 'm_hook_mode:meta->>hook_mode', 'm_overlay:meta->>overlay_required', 'm_images:meta->images', 'm_thumbs:meta->thumbs', 'm_emoji:meta->>emoji', 'm_full:meta->>full',
     'm_voices:meta->voices',   // 28/09 : voix autorisées d'une brique parlée (H19 / H74 = ['omni'], voix native uniquement)
-    'm_poster:meta->>poster', 'm_proposal:meta->proposal'].join(',');
+    'm_poster:meta->>poster', 'm_proposal:meta->proposal',
+    'm_format:meta->>format'].join(',');   // 13/10 : format Insomnie (R-I-…, TI…) — sans lui, comptés dans Tête choquée / Texte choc
   // factory_recipes : meta.label / group / module / code / clips (assemblages avant / après, usine/assemble-hk.mjs)
   var REC_SEL = ['id', 'kind', 'subject', 'components', 'status', 'render_url', 'created_at', 'updated_at',
     'm_label:meta->>label', 'm_group:meta->>group', 'm_code:meta->>code', 'm_clips:meta->clips', 'm_duration:meta->duration_s'].join(',');
@@ -957,7 +958,7 @@
         // texte choc : émoji(s) de fin et phrase complète telle qu'à l'écran (Axel 07/10 : « ajoute les émojis »)
         emoji: txt(b.m_emoji, 24), full: txt(b.m_full, 300),
         thumbs: Array.isArray(b.m_thumbs) ? b.m_thumbs.map(function (u) { return pubFile(u, IMG_EXT); }).slice(0, 40) : [],
-        proposal: b.m_proposal === true },
+        proposal: b.m_proposal === true, format: txt(b.m_format, 30) },
       poster: pubFile(txt(b.m_poster, 400), IMG_EXT),
       audio: pubFile(media, AUDIO_EXT), video: pubFile(media, VIDEO_EXT), image: pubFile(cover || media, IMG_EXT),
       hasMedia: !!(media || cover), mediaWhy: fileWhy(cover || media)
