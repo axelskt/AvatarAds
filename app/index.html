@@ -5920,21 +5920,10 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-13-1500'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-13-1530'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
-// Axel 13/10 (« ça bug souvent, l'interface se charge mal en haut / ton compte n'a pas pu se charger ») : la lecture du profil
-// n'ARRIVAIT jamais au serveur. supabase-js prend avant chaque requête un verrou de session PARTAGÉ entre tous les onglets
-// avatarads.fr (navigator.locks) ; un onglet en veille (Safari) qui le garde fige tous les autres. Même correctif que Factory V2
-// (07/10) : verrou propre à l'onglet (file en mémoire), une opération bloquée ne retient les suivantes que 5 s. Le jeton de
-// rafraîchissement supporte une réutilisation proche par deux onglets (fenêtre de réutilisation Supabase) : pas de déconnexion.
-let _aaLockChain = Promise.resolve();
-function _aaAuthLock(name, acquireTimeout, fn){
-  const run = Promise.race([_aaLockChain, new Promise(function(ok){ setTimeout(ok, 5000); })]).then(function(){ return fn(); });
-  _aaLockChain = run.catch(function(){});
-  return run;
-}
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: _aaAuthLock } });
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // Proxies Supabase — les clés API restent côté serveur (secrets Supabase)
 const OPENAI_PROXY   = SUPABASE_URL + '/functions/v1/openai-proxy';
 const EL_PROXY       = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
@@ -7207,7 +7196,14 @@ function _aaBootEchec(){
     +'<button type="button" class="btn btn-sm" style="flex:0 0 auto;background:var(--accent);color:#fff;border:0;font-weight:700" onclick="location.reload()">Recharger</button>';
   document.body.appendChild(d);
 }
-async function loadProfile(user){
+let _aaProfileRun = null;
+function loadProfile(user){
+  if(!user) return Promise.resolve();
+  if(_aaProfileRun) return _aaProfileRun;   // 13/10 : démarrage + rappel de session = une seule lecture en cours
+  _aaProfileRun = _aaLoadProfile(user).finally(function(){ _aaProfileRun = null; });
+  return _aaProfileRun;
+}
+async function _aaLoadProfile(user){
   if(!user){ return; }
   const lire = async function(){
     try{ return await _aaBorne(sb.from('profiles').select('*').eq('id', user.id).maybeSingle(), 8000); }
@@ -7701,12 +7697,18 @@ async function initAuth(){
     }
   }
   // Écouter les changements de session (retour OAuth Google inclus)
-  sb.auth.onAuthStateChange(async (_event, session) => {
-    if(session && session.user && !currentMember){
+  // Axel 13/10 (« ça bug souvent… ton compte n'a pas pu se charger ») : supabase-js ATTEND ce rappel avant de finir un
+  // renouvellement de session (TOKEN_REFRESHED, onglet qui revient de veille). Y lire le profil (requête → jeton → même
+  // renouvellement) bloquait les deux : la lecture n'arrivait jamais au serveur. On ne fait donc RIEN de supabase dans le
+  // rappel lui-même : on diffère (même règle que Factory V2).
+  sb.auth.onAuthStateChange((_event, session) => {
+    if(!(session && session.user) || currentMember) return;
+    setTimeout(async function(){
+      if(currentMember) return;
       if(!localStorage.getItem('aa_login_at')) localStorage.setItem('aa_login_at', String(Date.now()));
       await loadProfile(session.user);
       _applyStartTool();  // retour OAuth Google → ouvre le modèle choisi depuis la LP
-    }
+    }, 0);
   });
 }
 
