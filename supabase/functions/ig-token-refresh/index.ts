@@ -2,10 +2,10 @@
 // Un token long d'Instagram vit 60 jours ; sans renouvellement, l'auto-DM (« Commente CLAUDE » → lien en DM), la relance
 // et les insights s'arrêtent net, sans erreur visible (le 1er expirait le 21/11). Instagram le prolonge de 60 jours via
 // GET graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token, à condition qu'il ait plus de 24 h et ne soit
-// pas encore expiré. Déclenché chaque jour par pg_cron (POST + x-cron-key = CRON_SECRET) :
+// pas encore expiré. Déclenché le 1er de chaque mois par pg_cron (Axel 13/10 : « tous les mois suffit ») (POST + x-cron-key) :
 //   • renouvelle chaque compte de OWN_USERNAMES (jamais un compte relié par un tiers / le reviewer Meta) dont le token
-//     expire dans moins de 30 jours ;
-//   • échec → e-mail à Axel si l'expiration est à moins de 10 jours (au plus un par jour : le cron ne passe qu'une fois),
+//     expire dans moins de 45 jours (un mois d'écart entre deux passages : un token renouvelé à 60 j en a ~30 au suivant) ;
+//   • échec → e-mail à Axel TOUT DE SUITE (le passage suivant serait dans un mois, trop tard),
 //     avec le geste de secours : « Connecter » le compte depuis le dashboard Creative Factory.
 // Le token n'apparaît jamais dans une réponse ni dans un log.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -52,8 +52,8 @@ serve(async (req: Request) => {
     if (!OWN_USERNAMES.includes(u) || !a.access_token) continue
     const exp = a.token_expires_at ? Date.parse(a.token_expires_at) : 0
     const age = a.updated_at ? Date.now() - Date.parse(a.updated_at) : Infinity
-    // Instagram refuse un token de moins de 24 h ; au-delà de 30 jours restants, rien à faire.
-    if (age < DAY || (!force && exp && exp - Date.now() > 30 * DAY)) { out.push({ username: u, action: 'pas_encore', expire_le: a.token_expires_at }); continue }
+    // Instagram refuse un token de moins de 24 h ; au-delà de 45 jours restants, rien à faire.
+    if (age < DAY || (!force && exp && exp - Date.now() > 45 * DAY)) { out.push({ username: u, action: 'pas_encore', expire_le: a.token_expires_at }); continue }
     try {
       const r = await fetch('https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=' + encodeURIComponent(a.access_token), { signal: AbortSignal.timeout(20000) })
       const j = await r.json().catch(() => ({})) as { access_token?: string; expires_in?: number; error?: { message?: string } }
@@ -65,7 +65,7 @@ serve(async (req: Request) => {
       out.push(e ? { username: u, action: 'echec', expire_le: a.token_expires_at, detail: 'écriture : ' + e.message } : { username: u, action: 'renouvele', expire_le: nouvelle })
     } catch (e) { out.push({ username: u, action: 'echec', expire_le: a.token_expires_at, detail: masque(String((e as Error)?.message || e)) }) }
   }
-  const urgents = out.filter((x) => x.action === 'echec' && (!x.expire_le || Date.parse(x.expire_le) - Date.now() < 10 * DAY))
+  const urgents = out.filter((x) => x.action === 'echec')
   await alerte(urgents)
   console.log('[ig-token-refresh]', JSON.stringify(out))
   return json({ ok: true, comptes: out, alertes: urgents.length })

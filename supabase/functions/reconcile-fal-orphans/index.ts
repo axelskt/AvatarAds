@@ -298,13 +298,13 @@ async function hedraPass(minAge: number, maxAge: number, limit: number): Promise
       if (!/^[A-Za-z0-9._-]{1,200}$/.test(id)) { t.unresolved++; continue }
       if (!(await hedraStatusGate(id))) { t.running++; continue }   // budget 60 req/min partagé avec hedra-proxy
       const st = await get(encodeURIComponent(id) + '/status')
-      if (!st.ok) { t.unresolved++; continue }   // 404 (ancienne API) / hoquet : jamais de décision sans preuve
+      if (!st.ok) { t.unresolved++; console.log('[reconcile] hedra statut', o.provider_job, st.status, st.text.slice(0, 160)); continue }   // 404 (ancienne API) / hoquet : jamais de décision sans preuve
       const status = ((st.text.match(/"status"\s*:\s*"([^"]+)"/) || [])[1] || '').toUpperCase()
       if (/^(FAILED|ERROR|ERRORED|CANCELLED|CANCELED)$/.test(status)) { await refund(o, t); continue }
       if (status !== 'COMPLETED') { if (age > 6 * H) await refund(o, t); else t.running++; continue }
       // COMPLETED au statut ne prouve pas la livraison (Hedra « COMPLETED » ≠ réussi) : on lit le résultat complet.
       const re = await get(encodeURIComponent(id))
-      if (!re.ok) { t.unresolved++; continue }
+      if (!re.ok) { t.unresolved++; console.log('[reconcile] hedra résultat', o.provider_job, re.status, re.text.slice(0, 160)); continue }
       let parsed: { outputs?: Array<{ url?: string; status?: string; duration_ms?: number; error?: unknown }>; error?: unknown } | null = null
       try { parsed = JSON.parse(re.text) } catch { /* illisible */ }
       if (!parsed) { t.unresolved++; continue }
@@ -313,7 +313,7 @@ async function hedraPass(minAge: number, maxAge: number, limit: number): Promise
         // terminé sans aucune sortie (erreur masquée) → échec confirmé ; sortie encore absente sans erreur → on repasse
         if (parsed.error || (parsed.outputs || []).some((x) => x && (x.error || /FAIL|ERROR/i.test(String(x.status || ''))))) await refund(o, t)
         else if (age > DAY) await refund(o, t)
-        else t.unresolved++
+        else { t.unresolved++; console.log('[reconcile] hedra sans sortie', o.provider_job, re.text.slice(0, 300)) }
         continue
       }
       const sumMs = outs.reduce((n, x) => n + (Number(x.duration_ms) || 0), 0)
@@ -328,7 +328,7 @@ async function hedraPass(minAge: number, maxAge: number, limit: number): Promise
       }
       const dl = await kieDownload(outs[0].url as string)   // https seulement, hôtes internes refusés, redirections vérifiées
       const livre = dl ? await deliver(o, dl.buf, dl.ct, t, regler) : false
-      if (!livre) { if (age > DAY) await refund(o, t); else t.unresolved++ }
+      if (!livre) { console.log('[reconcile] hedra livraison ratée', o.provider_job, dl ? dl.ct : 'téléchargement refusé'); if (age > DAY) await refund(o, t); else t.unresolved++ }
     } catch (e) {
       if ((e as Error)?.message === '429') { t.unresolved++; break }
       t.errors++; console.error('[reconcile] hedra', o.provider_job, (e as Error)?.message)
