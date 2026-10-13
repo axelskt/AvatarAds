@@ -68,6 +68,8 @@ function burn(video, output, words, opts = {}) {
     // carte au format EXACT du média : si la hauteur est plafonnée, la largeur suit (VF-0017 : static ad 9:16 coupée en haut)
     const Wmax = b.style === 'hook' ? 720 : 460, Hmax = b.style === 'hook' ? 1040 : 760;
     const H = Math.min(Hmax, Math.round(Wmax / ar)), W = Math.round(H * ar) > Wmax ? Wmax : Math.round(H * ar);
+    // 13/10 (Axel) : avant / après en DEUX cartes séparées d'un petit espace — l'avant entre par la gauche, l'après par la droite
+    if (b.pair) { const name2 = 'broll' + k + 'b' + ext; copyFileSync(b.pair, join(work, name2)); return { ...b, name, name2, k, W: 400, H: 711 }; }
     return { ...b, name, k, W, H };
   });
   words = words.slice().sort((a,b)=>a.start-b.start);
@@ -179,13 +181,23 @@ function burn(video, output, words, opts = {}) {
     chocAnim = `tl.set('#choc',{autoAlpha:1,scale:1}, 0);\n      tl.to('#choc',{autoAlpha:0,scale:0.96,duration:0.16,ease:'power1.in'}, ${Math.max(0, end - 0.16).toFixed(3)});`;
   }
   const cardStyle = b => `style="left:${540 - b.W / 2}px;top:${Math.round(800 - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
-  const brollHtml = broll.map(b => b.image
+  const GAP = 28;   // espace entre les deux cartes d'un avant / après
+  const pairStyle = (b, side) => `style="left:${side ? 540 + GAP / 2 : 540 - GAP / 2 - b.W}px;top:${Math.round(800 - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
+  const brollHtml = broll.map(b => b.pair
+    ? `<video class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${pairStyle(b, 0)} muted playsinline></video>`
+      + `\n      <video class="broll clip" id="br${b.k}b" src="${b.name2}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${pairStyle(b, 1)} muted playsinline></video>`
+    : b.image
     ? `<img class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${cardStyle(b)} alt="">`
     : `<video class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${cardStyle(b)} muted playsinline></video>`).join('\n      ');
   // 1re carte : pop au centre ; chaque carte suivante arrive par la droite pendant que la précédente se pousse à gauche
   // (les deux restent à l'écran, côte à côte) ; toutes repartent ensemble à la fin
   const brollAnim = broll.map((b, i) => {
     // illustration du hook : entre par la droite, repart par la gauche
+    // avant / après en deux cartes : la gauche arrive de la gauche, la droite de la droite (léger décalage), et repartent chacune de leur côté
+    if (b.pair) { const out = Math.max(b.at + 0.4, b.at + b.dur - 0.3).toFixed(3);
+      return `tl.fromTo('#br${b.k}',{autoAlpha:1,x:-1100},{x:0,duration:0.36,ease:'power3.out'}, ${b.at.toFixed(3)});`
+        + `tl.fromTo('#br${b.k}b',{autoAlpha:1,x:1100},{x:0,duration:0.36,ease:'power3.out'}, ${(b.at + 0.07).toFixed(3)});`
+        + `tl.to('#br${b.k}',{x:-1100,duration:0.3,ease:'power3.in'}, ${out});tl.to('#br${b.k}b',{x:1100,duration:0.3,ease:'power3.in'}, ${out});`; }
     if (b.style === 'hook') return `tl.fromTo('#br${b.k}',{autoAlpha:1,x:1100},{x:0,duration:0.34,ease:'power3.out'}, ${b.at.toFixed(3)});`
       + `tl.to('#br${b.k}',{x:-1100,duration:0.3,ease:'power3.in'}, ${Math.max(b.at + 0.4, b.at + b.dur - 0.3).toFixed(3)});`;
     const prevs = broll.slice(0, i).filter(x => x.style !== 'hook');

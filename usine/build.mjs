@@ -434,9 +434,11 @@ if (OPT.illus) {
     const genre = f => /garcon/.test(f) ? 'g' : /fille/.test(f) ? 'f' : '', rot = free.map((_, i) => free[(seedN + used.size + i) % free.length]);
     const ref = rot.find(f => !genre(f) || genre(f) !== pick.last) || rot[0]; used.add(basename(ref)); if (genre(ref)) pick.last = genre(ref);
     if (brand(ref)) usedBrands.add(brand(ref));
-    if (!/^https?:/.test(ref)) return join(BR, ref);
-    const f = join(work, 'illus-' + basename(ref));                     // média distant (assemblage avant / après) : copie de travail
-    try { execFileSync('curl', ['-sfL', '-o', f, ref]); return f; } catch { return null; }
+    // 13/10 : « avant::après » = deux clips montrés en deux cartes (captions.mjs, pair) ; chacun téléchargé à part
+    const one = r => { if (!/^https?:/.test(r)) return join(BR, r); const f = join(work, 'illus-' + basename(r));   // média distant : copie de travail
+      try { execFileSync('curl', ['-sfL', '-o', f, r]); return f; } catch { return null; } };
+    if (ref.includes('::')) { const [a, b] = ref.split('::').map(one); return a && b ? a + '::' + b : null; }
+    return one(ref);
   };
   const want = [];   // { file|type, in, out, from, to, endDef }
   if (OPT.illus === 'auto') {
@@ -457,9 +459,10 @@ if (OPT.illus) {
     // image, 2,6 s pour une vidéo, dans la limite de la fin du hook / de la liaison
     if (file) endAt = Math.min(O1, Math.max(endAt, at + (IMG_RE.test(file) ? 1.5 : 2.6)));
     if (endAt - at < 0.7) { console.warn('⚠ illustration ignorée (' + e.src + ') : fenêtre trop courte (' + (endAt - at).toFixed(2) + ' s)'); continue; }
-    if (!file || !existsSync(file)) { console.warn('⚠ illustration ignorée (' + e.src + ') : aucun média « ' + (e.type || e.file) + ' » (module de la démo : ' + (mod || 'inconnu') + ')'); continue; }
-    brollEvents.push({ file, at, dur: endAt - at, image: IMG_RE.test(file), style: 'hook' });
-    illusLog.push({ brique: e.src, mots: e.in, sortie: e.out || null, media: basename(file), de: +at.toFixed(2), a: +endAt.toFixed(2) });
+    const [file1, pair] = String(file || '').split('::');
+    if (!file || !existsSync(file1) || (pair && !existsSync(pair))) { console.warn('⚠ illustration ignorée (' + e.src + ') : aucun média « ' + (e.type || e.file) + ' » (module de la démo : ' + (mod || 'inconnu') + ')'); continue; }
+    brollEvents.push({ file: file1, pair: pair || null, at, dur: endAt - at, image: IMG_RE.test(file1), style: 'hook' });
+    illusLog.push({ brique: e.src, mots: e.in, sortie: e.out || null, media: basename(file1) + (pair ? ' + ' + basename(pair) : ''), de: +at.toFixed(2), a: +endAt.toFixed(2) });
     cursor = iIn + 1;
   }
   // deux illustrations qui se suivent : la première repart quand la suivante arrive (jamais deux grandes cartes empilées)
@@ -553,7 +556,7 @@ if (ctaW.length > 1) {
 allWords.push(...hookW, ...demoW, ...ctaW);
 const wj = join(work, 'allWords.json'); writeFileSync(wj, JSON.stringify(allWords));
 // format : phrase choc (placée hors visage, zone sûre) + style des sous-titres
-const capOpts = { subs: format.subs, style: OPT['subs-style'] || 'contour', broll: brollEvents.map(e => ({ file: e.file, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image, style: e.style || 'card' })) };
+const capOpts = { subs: format.subs, style: OPT['subs-style'] || 'contour', broll: brollEvents.map(e => ({ file: e.file, pair: e.pair || undefined, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image, style: e.style || 'card' })) };
 const sidecar = { format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
 if (FMT.hasChoc(format)) {
