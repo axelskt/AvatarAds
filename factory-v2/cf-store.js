@@ -1083,6 +1083,18 @@
     res.data.forEach(function (p) {
       if (p && (p.status === 'scheduled' || p.status === 'published') && typeof p.vf === 'string' && /^VF-[0-9]{4}$/.test(p.vf)) set[p.vf] = 1;
     });
+    // 13/10 (Axel : « prendre directement la data d'Instagram du nombre de posts moyen sous 7 j ») : reels du kit PARTIS sur
+    // Instagram, tous comptes — reconnus (statut 'published', media_id posé par ig-insights) ou programmés dans Instagram
+    // dont l'heure est passée (Instagram les publie seul ; reconnus au relevé du soir). Recoupé le 13/10 avec ig_media_stats :
+    // 15 / 7 / 8 / 8 / 8 / 8 reels du 12 au 07/10. Moyenne sur les 7 derniers jours COMPLETS (jour de Paris), aujourd'hui exclu.
+    var DAY = 864e5, PARIS = 2 * 3600e3, now = Date.now(), today = Math.floor((now + PARIS) / DAY), n7 = 0;
+    res.data.forEach(function (p) {
+      var t = p ? ms(p.at) : null;
+      if (t == null || !(p.status === 'published' || (p.status === 'scheduled' && t < now))) return;
+      var d = Math.floor((t + PARIS) / DAY);
+      if (d < today && d >= today - 7) n7 += 1;
+    });
+    set.__ig7 = { perDay: n7 / 7, n: n7, end: (today - 1) * DAY };
     return set;
   }
   function normProd(rb, rr, rq, stats, at, classifyMissing, posted) {
@@ -1125,6 +1137,7 @@
     // en stock = approuvées pas encore programmées / postées (template = identifiant VF de la vidéo finale)
     Q.posted = posted ? rq.filter(function (q) { return q && q.status === 'approved' && typeof q.template === 'string' && posted[q.template] === 1; }).length : 0;
     Q.stock = Q.approved - Q.posted;
+    Q.ig7 = posted && posted.__ig7 ? posted.__ig7 : null;   // rythme réel Instagram (7 j), voir postedVfs
     return { fetchedAt: at, bricks: B, recipes: R, qc: Q, stats: stats };
   }
   function qcQuery(withClassified) {
@@ -1152,7 +1165,7 @@
           sb.from('factory_recipes').select(REC_SEL, { count: 'exact' }).limit(PROD_MAX),
           qcQuery(true),
           Promise.resolve().then(function () { return sb.rpc('factory_prod_stats'); }).catch(function (e) { return { error: { message: errText(e) } }; }),
-          Promise.resolve().then(function () { return sb.from('factory_posts').select('status,vf:combo->>vf').limit(PROD_MAX); }).catch(function (e) { return { error: { message: errText(e) } }; })
+          Promise.resolve().then(function () { return sb.from('factory_posts').select('status,vf:combo->>vf,at:scheduled_at').limit(PROD_MAX); }).catch(function (e) { return { error: { message: errText(e) } }; })
         ]);
         var rq = r[2], missing = false;
         if (noClassifiedCol(rq)) {   // migration 20260925210000 pas encore appliquée : tout est lu, « Classer » attend la colonne

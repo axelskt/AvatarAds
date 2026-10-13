@@ -546,13 +546,19 @@
       var s = VOICES.indexOf(v) >= 0 ? possible[v] : null, set = s && has(s, p[2]) ? s[p[2]] : null;
       if (p.length === 4 && has(av, p[1]) && avatarVoiceOk(avB[p[1]], v) && set && has(set, p[3])) modes[v].done += 1; else outside += 1;
     });
+    // Axel 13/10 (« Audio d'Axel on peut oublier ») : opts.offVoices = modes RETIRÉS du total (le dashboard passe ['axel']).
+    // Leurs chiffres restent calculés dans modes[v] (off: true) mais ne comptent ni dans total / done / remaining, ni dans
+    // voices / modeKeys, ni dans impact(). Sans l'option : calcul inchangé (usine, tests).
+    var OFF = (opts.offVoices || []).filter(function (v) { return MODES.indexOf(v) >= 0; });
+    var VON = VOICES.filter(function (v) { return OFF.indexOf(v) < 0; }), MON = MODES.filter(function (v) { return OFF.indexOf(v) < 0; });
+    OFF.forEach(function (v) { modes[v].off = true; });
     var total = 0, doneN = 0;
-    MODES.forEach(function (v) { var m = modes[v]; m.remaining = Math.max(0, m.total - m.done); total += m.total; doneN += m.done; });
+    MODES.forEach(function (v) { var m = modes[v]; m.remaining = Math.max(0, m.total - m.done); if (OFF.indexOf(v) >= 0) return; total += m.total; doneN += m.done; });
     return { avatars: L.avatars.length, photosPerAvatar: PHOTOS_PAR_AVATAR, avatarSlots: A, hooks: L.hooks.length, lipsyncHooks: L.lipsyncHooks.length, aaHooks: L.aaHooks.map(function (h) { return h.id; }),
       liaisons: L.liaisons.length, demos: L.demos.length, ctas: L.ctas.length,
       genericLiaisons: L.liaisons.filter(isGenericLiaison).length, pairs: pairsAll, matrix: !!M, notInMatrix: notInMatrix,
-      overlayRequired: ov, modes: modes, voices: VOICES.slice(), modeKeys: MODES.slice(), avantApres: modes.aa,
-      lipsyncTotal: modes.axel.total + modes.omni.total, total: total, done: doneN, remaining: Math.max(0, total - doneN), outside: outside,
+      overlayRequired: ov, modes: modes, voices: VON, modeKeys: MON, offVoices: OFF, avantApres: modes.aa,
+      lipsyncTotal: VON.reduce(function (t, v) { return t + modes[v].total; }, 0), total: total, done: doneN, remaining: Math.max(0, total - doneN), outside: outside,
       declinaisons: { max: DECLINAISONS_MAX, total: (total - modes.aa.total) * DECLINAISONS_MAX + modes.aa.total } };   // avant / après : les déclinaisons comptent dans le palier de la transformation
   }
 
@@ -563,7 +569,7 @@
   //   +1 démo / CTA / musique / sous-titres = variété (tirés au hasard) : +0 vidéo.
   function impact(cap) {
     var A = cap.avatars, out = { avatar: 0, hook: 0, liaison: 0, variety: 0, avgLiaisonsPerHook: 0, avgHooksPerLiaison: 0, aa: { avatar: 0, liaison: 0 } };
-    VOICES.forEach(function (v) {
+    (cap.voices || VOICES).forEach(function (v) {   // 13/10 : sans les voix retirées (offVoices)
       var m = cap.modes[v], Av = m.avatars != null ? m.avatars : A;
       out.avatar += m.hooks + m.pairs;
       out.hook += Av * (1 + (m.hooks ? m.pairs / m.hooks : 0));

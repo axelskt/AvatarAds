@@ -1162,6 +1162,9 @@
   var NOT_YET = 'pas encore mesurable';   // briques non parlées : pas reconnues dans l'audio des reels (arrivera avec les productions)
   var MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   var TRACK_NA = 'TrackAds pas encore lancé';
+  // Axel 13/10 : « "audio d'Axel" on peut oublier, pas fan de Character-3 pour créer le contenu » → hors des vidéos possibles,
+  // du stock à générer et des briques qui manquent (usine/coherence.js, opts.offVoices). Les vidéos déjà faites restent en base.
+  var OFF_VOICES = ['axel'];
   var VOICE_SHORT = { axel: 'audio d’Axel', omni: 'voix Omni', aa: 'avant / après', muet: 'texte + musique' };
   // modes de la capacité (usine/coherence.js) : Audio d'Axel, Voix native Omni, Avant / après (3e mode, 26/09)
   // 'muet' (Texte + musique, 27/09) : affiché dès qu'au moins un texte choc est prêt
@@ -1207,11 +1210,11 @@
         keys.push(k);
         if (q.status !== 'pending') seen.push(k);
       });
-      var cap = COH.capacity(D.bricks.list, keys, MX, { demoRequired: true });   // 07/10 : module sans démo (motion-control) hors du stock avant / après
+      var cap = COH.capacity(D.bricks.list, keys, MX, { demoRequired: true, offVoices: OFF_VOICES });   // 07/10 : module sans démo (motion-control) hors du stock avant / après
       M.L = L; M.cap = cap;
       // générées = clés dont au moins une vidéo est déjà revue (approuvée ou refusée) ; en QC = clés rendues dont AUCUNE
       // vidéo n'est encore revue (un top décliné en QC ne fait pas disparaître sa version approuvée) ; générées + en QC = done
-      M.capGen = seen.length ? COH.capacity(D.bricks.list, seen, MX, { demoRequired: true }).done : 0;
+      M.capGen = seen.length ? COH.capacity(D.bricks.list, seen, MX, { demoRequired: true, offVoices: OFF_VOICES }).done : 0;
       M.capPending = cap.done - M.capGen;
       M.genSub = capModes(cap).map(function (v) { return fInt(cap.modes[v].remaining) + ' ' + VOICE_SHORT[v]; }).join(' · ');   // Accueil ET onglet
       // Variantes lipsync (pipeline) : 1 avatar × 1 brique parlée (hooks sans alias + liaisons + CTA) ; générées = factory_prod_stats
@@ -1243,10 +1246,14 @@
     M.prodDay = D ? D.qc.list.filter(function (q) { return q.created != null && Date.now() - q.created <= 30 * 864e5; }).length / 30 : null;
     // Jours de contenu (Axel 29/09 : simple) = vidéos PRÊTES (en stock) ÷ l'objectif de 5 posts / jour. Les vidéos seulement
     // « possibles » n'entrent plus dedans : elles donnaient des milliers de jours qui ne veulent rien dire.
-    var d = { v: null, txt: '—', sub: '', wait: false }, goalDay = GOAL.perDay.target;
+    // 13/10 (Axel) : besoin = le VRAI rythme Instagram (reels reconnus, tous comptes, moyenne 7 j) ; repli sur l'objectif de 5 / jour
+    // tant que rien n'est publié. Sert aux jours de contenu, au besoin / jour et aux jours possibles.
+    var ig7 = D && D.qc.ig7 && D.qc.ig7.perDay > 0 ? D.qc.ig7 : null;
+    M.need = ig7 ? { v: ig7.perDay, real: true, n: ig7.n } : { v: GOAL.perDay.target, real: false, n: null };
+    var d = { v: null, txt: '—', sub: '', wait: false }, goalDay = M.need.v;
     if (M.pending) { d.txt = '…'; d.sub = 'chargement'; d.wait = true; }
     else if (!D) d.sub = M.why;
-    else { d.v = M.stock / goalDay; d.txt = M.stock ? fDays(d.v) : '0' + NB + 'j'; d.sub = 'vidéos prêtes ÷ ' + goalDay + ' posts' + NB + '/' + NB + 'jour'; }
+    else { d.v = M.stock / goalDay; d.txt = M.stock ? fDays(d.v) : '0' + NB + 'j'; d.sub = 'vidéos prêtes ÷ ' + fRate2(goalDay) + ' posts' + NB + '/' + NB + 'jour' + (M.need.real ? ' (Instagram, 7' + NB + 'j)' : ''); }
     M.days = d;
     pmCache = { ver: CF.ver, m: M };
     return M;
@@ -1260,7 +1267,7 @@
     // sous-titres courts comme la maquette (« 1 variante par avatar »), jamais la formule : A et V restent dans le chiffre
     var per = V > 1 ? ', par avatar et par voix' : ' par avatar', nL = Math.round(I.avgLiaisonsPerHook), nH = Math.round(I.avgHooksPerLiaison);
     var rows = [
-      { k: 'avatar', t: '+1 avatar', gain: I.avatar, sub: 'se combine avec les ' + c.lipsyncHooks + ' ' + plural(c.lipsyncHooks, 'hook lipsync', 'hooks lipsync') + ' et les ' + c.liaisons + ' ' + plural(c.liaisons, 'liaison') + (V > 1 ? ', en ' + V + NB + 'voix' : '') + (c.modes && c.modes.aa && c.modes.aa.total ? ', + l’avant / après' : '') },
+      { k: 'avatar', t: '+1 avatar', gain: I.avatar, sub: 'se combine avec les ' + c.lipsyncHooks + ' ' + plural(c.lipsyncHooks, 'hook parlé', 'hooks parlés') + ' et les ' + c.liaisons + ' ' + plural(c.liaisons, 'liaison') + (V > 1 ? ', en ' + V + NB + 'voix' : '') + (c.modes && c.modes.aa && c.modes.aa.total ? ', + l’avant / après' : '') },
       { k: 'liaison', t: '+1 liaison', gain: I.liaison, sub: 's’enchaîne avec ≈' + NB + nH + ' ' + plural(nH, 'hook') + per },
       { k: 'hook', t: '+1 hook', gain: I.hook, sub: '1 format court + ≈' + NB + nL + ' ' + plural(nL, 'long', 'longs') + per }
     ].sort(function (a, b) { return b.gain - a.gain; });
@@ -1422,9 +1429,9 @@
     var wait = M.pending ? '…' : null;
     var tiles = tile('stock', wait || (D ? fInt(M.stock) : '—'), 'En stock', D ? 'approuvées · prêtes à poster' : M.why, 'is-acc')
       + tile('days', d.txt, 'Jours de contenu', d.sub, d.v != null && d.v < 2 ? 'is-err' : '');
-    var need = GOAL.perDay.target, pd = M.prodDay;   // besoin = l'objectif de publication (5 / jour)
+    var need = M.need ? M.need.v : GOAL.perDay.target, pd = M.prodDay;   // 13/10 : rythme Instagram réel (7 j), sinon l'objectif   // besoin = l'objectif de publication (5 / jour)
     var bar = need && pd != null ? Math.min(100, pd / need * 100) : 0;
-    var flow = '<div class="cf-sflow"><div class="cf-sflow-l"><span>besoin' + NB + '/' + NB + 'jour · ' + esc(need == null ? '—' : fRate2(need) + ' ' + plural(need, 'vidéo')) + '</span>'
+    var flow = '<div class="cf-sflow"><div class="cf-sflow-l"><span>besoin' + NB + '/' + NB + 'jour · ' + esc(need == null ? '—' : fRate2(need) + ' ' + plural(need, 'vidéo') + (M.need && M.need.real ? ' · moyenne Instagram 7' + NB + 'j' : ' · objectif')) + '</span>'
       + '<span>production' + NB + '/' + NB + 'jour · ' + esc(pd == null ? '—' : fRate2(pd) + ' ' + plural(pd, 'vidéo')) + '</span></div>'
       + '<div class="cf-sflow-b"><i class="' + (need != null && pd != null && pd >= need ? 'is-ok' : '') + '" style="width:' + bar.toFixed(1) + '%"></i></div>'
       + (need != null && pd != null ? (pd >= need ? '<div class="cf-sflow-m is-ok">La production suit le rythme de publication.</div>'
@@ -1436,7 +1443,7 @@
     var sumLeft = left.reduce(function (a, x) { return a + x.r; }, 0);
     var todo = '<div class="cf-stile cf-stodo" data-s="left"><b class="' + (G ? '' : 'is-na') + '">' + esc(G ? fInt(sumLeft) : (wait || '—')) + '</b><span class="cf-stile-l">Briques restantes à générer</span>'
       + (G ? (left.length ? '<span class="cf-stodo-l">' + left.map(function (x) { return '<span><span>' + esc(x.t) + '</span><b>' + esc(fInt(x.r)) + '</b></span>'; }).join('') + '</span>' : '<span class="cf-stile-s">tout est généré</span>') : '<span class="cf-stile-s">' + esc(M.why || 'chargement') + '</span>') + '</div>';
-    var pd2 = M.cap ? M.cap.total / GOAL.perDay.target : null;
+    var pd2 = M.cap && need ? M.cap.total / need : null;
     // objectif (Axel 29/09) : 1 an de contenu d'avance ; au-delà, on produit et on poste (et on recrute des posteurs)
     var mo = pd2 == null ? null : pd2 / 30.4, okY = mo != null && mo >= 12;
     var poss = '<div class="cf-stile" data-s="possible"><b class="' + (mo == null ? 'is-na' : '') + '">' + esc(wait || (pd2 == null ? '—' : fDays(pd2))) + '</b><span class="cf-stile-l">Jours de contenu possibles</span>'
@@ -1924,7 +1931,7 @@
   // Vidéos d'une brique par FORMAT (Axel 27/09) : brique parlée → Audio d'Axel + Voix native Omni ; texte choc → Texte +
   // musique ; chaque format = PHOTOS_PAR_AVATAR emplacements par avatar, remplis par les vidéos de factory_variants (photo
   // réelle A1-2…, plus ancienne d'abord) sinon « en attente d'être créée ». Hook avant / après : aucun avatar (voix off).
-  var FMT_ORDER = { spoken: ['axel', 'omni'], 'texte-choc': ['muet'] };
+  var FMT_ORDER = { spoken: ['omni'], 'texte-choc': ['muet'] };   // 13/10 : plus d'Audio d'Axel (OFF_VOICES)
   // 08/10 (Axel : « on ne générera pas d'autre lipsync avec A3 ») : avatars qui ont des emplacements dans ce format
   // (meta.voices de la brique avatar, usine/coherence.js avatarVoiceOk) — A3 = Omni seulement
   function avatarsFor(L, f) { return L.avatars.filter(function (a) { return !COH || !COH.avatarVoiceOk || COH.avatarVoiceOk(a, f); }); }
