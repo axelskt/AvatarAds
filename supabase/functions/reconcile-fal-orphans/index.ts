@@ -31,10 +31,17 @@
 //   • MC-3 : le job Kling de « Glisse un fond » est désormais LIÉ à son op (le détourage ne lie plus, il règle l'op) ; son échec
 //     confirmé par fal, client parti, est remboursé ici (refund_job_open : le tirage du job, étapes annexes payées) au lieu de
 //     fermer la facture sans rien rendre.
+// 13/10 (Axel : « un client qui perd des crédits sur un lipsync raté, c'est un client qui part ») : 3e passe hedraPass —
+// les jobs Hedra liés à leur op (hedra-proxy : bindJob 'hedra:<job_id>') dont personne n'a observé la fin. Mêmes décisions
+// que fal : FAILED → remboursé ; COMPLETED avec vidéo → rangée en Bibliothèque puis réglée au tarif de la facture du job
+// (reconcile_hedra_job_tarif, comme hedra-proxy) ; en cours → on repasse, remboursé après 6 h (job bloqué à 90 % chez
+// Hedra) ; réserve rendue par l'app ('released') puis onglet fermé → remboursée après 30 min. Statut 404 / illisible →
+// AUCUNE décision (un job de l'ancienne API Hedra n'est pas lisible en v3 : jamais de remboursement sans preuve d'échec).
+// Hedra = 60 requêtes / min par clé : au plus 10 jobs par passage, et rien si une pause 429 est en cours.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { kieDownload, kieKindOf } from '../_shared/kie.ts'
-import { reglerJobFal, fermerFactureFal, tarifJobFal, falReconcileEnforce, urlSortieFal, lecteurSortieFal, avecDelai } from '../_shared/guard.ts'
+import { reglerJobFal, fermerFactureFal, tarifJobFal, falReconcileEnforce, urlSortieFal, lecteurSortieFal, avecDelai, providerPaused, providerPause, retryAfterS, hedraStatusGate } from '../_shared/guard.ts'
 import { dureeMp4, dureeMp4Octets, secondesFacturees } from '../_shared/mp4-duree.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
@@ -42,6 +49,8 @@ const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const CRON_SECRET  = Deno.env.get('CRON_SECRET') ?? ''
 const FAL_KEY = ['FALAI_API_KEY', 'FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI_KEY', 'FAL_SECRET'].map(n => Deno.env.get(n) ?? '').find(Boolean) ?? ''
 const GOOGLE_KEY = Deno.env.get('GOOGLE_AI_KEY') ?? ''
+const HEDRA_KEY = Deno.env.get('HEDRA_V3_KEY') ?? ''
+const LIPSYNC_PAD_MS = 500   // marge de silence ajoutée par l'app, retirée de la durée facturée (comme hedra-proxy)
 const VEO_BASE = 'https://generativelanguage.googleapis.com/v1beta/'
 const VEO_MODELS = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview']   // les seuls que google-ai-proxy soumet
 const svc = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
@@ -83,7 +92,7 @@ const retenuAvantCopie = async (o: Job, url: string): Promise<boolean> => {
 }
 // Range la vidéo en Bibliothèque (idempotent) puis règle le job. false = à retenter au prochain passage ; 'retenu' (MC-5) = écart
 // non couvert, à retenter aussi mais JAMAIS remboursé.
-const deliver = async (o: Job, buf: ArrayBuffer, ct: string, t: Tally): Promise<boolean | 'retenu'> => {
+const deliver = async (o: Job, buf: ArrayBuffer, ct: string, t: Tally, regler?: () => Promise<void>): Promise<boolean | 'retenu'> => {
   const k = kieKindOf(ct, buf)
   if (!k || k.kind !== 'video') { console.log('[reconcile] sortie non vidéo', o.provider_job, ct); return false }
   // Audit 04/10 (MC-5) : écart non couvert → ni dépôt ni règlement (le dépôt PRÉCÈDE le règlement : un dépôt raté est retenté)
@@ -115,7 +124,8 @@ const deliver = async (o: Job, buf: ArrayBuffer, ct: string, t: Tally): Promise<
       return 'retenu'
     }
     if (r.mode === 'reconcile') { t.reconciled = (t.reconciled || 0) + 1; t.charged = (t.charged || 0) + (Number(r.charged) || 0) }
-  } else await svc.rpc('settle_by_job', { p_user: o.user_id, p_job: o.provider_job })
+  } else if (regler) await regler()
+  else await svc.rpc('settle_by_job', { p_user: o.user_id, p_job: o.provider_job })
   t.delivered++
   return true
 }
@@ -267,6 +277,66 @@ async function veoPass(minAge: number, maxAge: number, limit: number): Promise<T
   return t
 }
 
+// 13/10 : jobs Hedra (v3) liés à leur op — voir l'en-tête.
+async function hedraPass(minAge: number, maxAge: number, limit: number): Promise<Tally> {
+  const t: Tally = { scanned: 0, refunded: 0, delivered: 0, settled: 0, running: 0, unresolved: 0, errors: 0 }
+  if (!HEDRA_KEY || await providerPaused('hedra')) return t
+  const { data, error } = await svc.rpc('list_open_jobs', { p_prefix: 'hedra:', p_min_age_min: Math.max(30, minAge), p_max_age_min: maxAge, p_limit: Math.min(10, limit) })
+  if (error) { console.error('[reconcile] hedra list', error.message); return t }
+  const auth = { 'Authorization': `Key ${HEDRA_KEY}` }
+  const get = async (path: string) => {
+    const r = await fetch('https://api.hedra.com/v3/jobs/' + path, { headers: auth, signal: AbortSignal.timeout(20000) })
+    if (r.status === 429) { await providerPause('hedra', retryAfterS(r)); throw new Error('429') }
+    return { ok: r.ok, status: r.status, text: await r.text().catch(() => '') }
+  }
+  for (const o of (data as Job[]) || []) {
+    t.scanned++
+    try {
+      const age = (Date.now() - Date.parse(o.created_at)) / 60000
+      if (o.job_bill_state === 'released') { if (age >= 30) await refund(o, t); else t.running++; continue }
+      const id = o.provider_job.slice('hedra:'.length)
+      if (!/^[A-Za-z0-9._-]{1,200}$/.test(id)) { t.unresolved++; continue }
+      if (!(await hedraStatusGate(id))) { t.running++; continue }   // budget 60 req/min partagé avec hedra-proxy
+      const st = await get(encodeURIComponent(id) + '/status')
+      if (!st.ok) { t.unresolved++; continue }   // 404 (ancienne API) / hoquet : jamais de décision sans preuve
+      const status = ((st.text.match(/"status"\s*:\s*"([^"]+)"/) || [])[1] || '').toUpperCase()
+      if (/^(FAILED|ERROR|ERRORED|CANCELLED|CANCELED)$/.test(status)) { await refund(o, t); continue }
+      if (status !== 'COMPLETED') { if (age > 6 * H) await refund(o, t); else t.running++; continue }
+      // COMPLETED au statut ne prouve pas la livraison (Hedra « COMPLETED » ≠ réussi) : on lit le résultat complet.
+      const re = await get(encodeURIComponent(id))
+      if (!re.ok) { t.unresolved++; continue }
+      let parsed: { outputs?: Array<{ url?: string; status?: string; duration_ms?: number; error?: unknown }>; error?: unknown } | null = null
+      try { parsed = JSON.parse(re.text) } catch { /* illisible */ }
+      if (!parsed) { t.unresolved++; continue }
+      const outs = (parsed.outputs || []).filter((x) => x && typeof x.url === 'string' && /^https:\/\//.test(x.url))
+      if (!outs.length) {
+        // terminé sans aucune sortie (erreur masquée) → échec confirmé ; sortie encore absente sans erreur → on repasse
+        if (parsed.error || (parsed.outputs || []).some((x) => x && (x.error || /FAIL|ERROR/i.test(String(x.status || ''))))) await refund(o, t)
+        else if (age > DAY) await refund(o, t)
+        else t.unresolved++
+        continue
+      }
+      const sumMs = outs.reduce((n, x) => n + (Number(x.duration_ms) || 0), 0)
+      const secs = Math.ceil(Math.max(0, sumMs - LIPSYNC_PAD_MS) / 1000)
+      // Règlement comme hedra-proxy : au tarif de la facture du job ; sans facture (job ancien) → réglé tel quel, jamais chargé ici.
+      const regler = async () => {
+        const enforce = (Deno.env.get('HEDRA_RECONCILE') ?? '0') === '1'
+        const { data: r, error: e } = await svc.rpc('reconcile_hedra_job_tarif', { p_user: o.user_id, p_job: o.provider_job, p_secs: secs, p_enforce: enforce })
+        const reason = (r as { reason?: string } | null)?.reason
+        if (e || reason === 'no_bill' || reason === 'bad_args') await svc.rpc('settle_by_job', { p_user: o.user_id, p_job: o.provider_job })
+        else { t.reconciled = (t.reconciled || 0) + 1; t.charged = (t.charged || 0) + (Number((r as { charged?: number }).charged) || 0) }
+      }
+      const dl = await kieDownload(outs[0].url as string)   // https seulement, hôtes internes refusés, redirections vérifiées
+      const livre = dl ? await deliver(o, dl.buf, dl.ct, t, regler) : false
+      if (!livre) { if (age > DAY) await refund(o, t); else t.unresolved++ }
+    } catch (e) {
+      if ((e as Error)?.message === '429') { t.unresolved++; break }
+      t.errors++; console.error('[reconcile] hedra', o.provider_job, (e as Error)?.message)
+    }
+  }
+  return t
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok')
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
@@ -289,8 +359,9 @@ serve(async (req: Request) => {
     const fal = await falPass(minAge, maxAge, limit)
     const factures = await billsPass(minAge, maxAge, limit)   // APRÈS falPass : un job qu'il vient de livrer a sa facture close
     const veo = await veoPass(minAge, maxAge, limit)
-    console.log(`[reconcile] fal=${JSON.stringify(fal)} factures=${JSON.stringify(factures)} veo=${JSON.stringify(veo)}`)
-    return { fal, factures, veo }
+    const hedra = await hedraPass(minAge, maxAge, limit)
+    console.log(`[reconcile] fal=${JSON.stringify(fal)} factures=${JSON.stringify(factures)} veo=${JSON.stringify(veo)} hedra=${JSON.stringify(hedra)}`)
+    return { fal, factures, veo, hedra }
   })()
   if (wait) return json({ ok: true, ...(await work) })
   const ru = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime
