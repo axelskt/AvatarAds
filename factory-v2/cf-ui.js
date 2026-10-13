@@ -1270,7 +1270,12 @@
       { k: 'avatar', t: '+1 avatar', gain: I.avatar, sub: 'se combine avec les ' + c.lipsyncHooks + ' ' + plural(c.lipsyncHooks, 'hook parlé', 'hooks parlés') + ' et les ' + c.liaisons + ' ' + plural(c.liaisons, 'liaison') + (V > 1 ? ', en ' + V + NB + 'voix' : '') + (c.modes && c.modes.aa && c.modes.aa.total ? ', + l’avant / après' : '') },
       { k: 'liaison', t: '+1 liaison', gain: I.liaison, sub: 's’enchaîne avec ≈' + NB + nH + ' ' + plural(nH, 'hook') + per },
       { k: 'hook', t: '+1 hook', gain: I.hook, sub: '1 format court + ≈' + NB + nL + ' ' + plural(nL, 'long', 'longs') + per }
-    ].sort(function (a, b) { return b.gain - a.gain; });
+    ];
+    // 13/10 (Axel : « mets à jour les suggestions ») : la brique la moins chère, une tête choquée (photo + 3-4 s de vidéo
+    // muette), ajoute ses propres vidéos Texte + musique (une par démo muette, plafond REACTION_DEMOS_MAX = 5)
+    var mu = c.modes.muet;
+    if (mu && mu.demos) rows.push({ k: 'reaction', t: '+1 tête choquée', gain: Math.min(5, mu.demos), sub: 'réaction muette de 3-4 s + texte choc + démo sans voix · aucune voix ni lipsync à générer' });
+    rows.sort(function (a, b) { return b.gain - a.gain; });
     rows.push({ k: 'variety', t: '+1 démo, CTA ou musique', gain: 0, sub: 'tirés au hasard : de la variété, pas une nouvelle vidéo' });
     return { rows: rows, empty: false };
   }
@@ -1441,13 +1446,13 @@
     if (G) Object.keys(G.kinds).forEach(function (k) { G.kinds[k].forEach(function (x) { var r = x.total - x.done; if (r > 0) left.push({ t: NAME[k] + ' · ' + FMT_SHORT[x.f], r: r }); }); });
     left.sort(function (a, b) { return b.r - a.r; });
     var sumLeft = left.reduce(function (a, x) { return a + x.r; }, 0);
-    var todo = '<div class="cf-stile cf-stodo" data-s="left"><b class="' + (G ? '' : 'is-na') + '">' + esc(G ? fInt(sumLeft) : (wait || '—')) + '</b><span class="cf-stile-l">Briques restantes à générer</span>'
+    var todo = '<div class="cf-stile cf-stodo" data-s="left"><b class="' + (G ? '' : 'is-na') + '">' + esc(G ? fInt(sumLeft) : (wait || '—')) + '</b><span class="cf-stile-l">Briques restantes à générer</span><span class="cf-stile-s">clips parlés pas encore faits (hook, CTA, liaison × chaque photo d’avatar), nécessaires pour monter toutes les vidéos possibles</span>'
       + (G ? (left.length ? '<span class="cf-stodo-l">' + left.map(function (x) { return '<span><span>' + esc(x.t) + '</span><b>' + esc(fInt(x.r)) + '</b></span>'; }).join('') + '</span>' : '<span class="cf-stile-s">tout est généré</span>') : '<span class="cf-stile-s">' + esc(M.why || 'chargement') + '</span>') + '</div>';
     var pd2 = M.cap && need ? M.cap.total / need : null;
     // objectif (Axel 29/09) : 1 an de contenu d'avance ; au-delà, on produit et on poste (et on recrute des posteurs)
     var mo = pd2 == null ? null : pd2 / 30.4, okY = mo != null && mo >= 12;
     var poss = '<div class="cf-stile" data-s="possible"><b class="' + (mo == null ? 'is-na' : '') + '">' + esc(wait || (pd2 == null ? '—' : fDays(pd2))) + '</b><span class="cf-stile-l">Jours de contenu possibles</span>'
-      + '<span class="cf-stile-s">' + (mo == null ? esc(M.why || '') : '≈' + NB + esc(fDec(mo, 0)) + NB + 'mois · <span class="cf-goal-t ' + (okY ? 'is-ok' : 'is-ko') + '">objectif 12' + NB + 'mois</span>') + '</span></div>';
+      + '<span class="cf-stile-s">' + (mo == null ? esc(M.why || '') : esc(fInt(M.cap.total) + ' vidéos possibles ÷ ' + fRate2(need) + ' posts / jour, une fois toutes les briques générées') + '<br>≈' + NB + esc(fDec(mo, 0)) + NB + 'mois · <span class="cf-goal-t ' + (okY ? 'is-ok' : 'is-ko') + '">objectif 12' + NB + 'mois</span>') + '</span></div>';
     return '<section class="cf-card cf-stock" data-block="stock">' + head + '<div class="cf-stiles is-2">' + tiles + '</div>' + flow
       + '<div class="cf-stiles is-2 cf-stiles-b">' + todo + poss + '</div></section>';
   }
