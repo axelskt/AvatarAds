@@ -521,7 +521,10 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   if (DEMO) { S.example = true; S.posts = examples(); S.cur = todo()[0].id; render(); return; }
 
   // 13/10 : même session que Creative Factory (clé sb-cf-v2-auth, 11/10) — la session de l'app peut être un autre compte
-  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storageKey: 'sb-cf-v2-auth' } }); } catch (e) { sb = null; }
+  // 13/10 : verrou de session propre à l'onglet (comme l'app et Factory V2) — un onglet en veille ne fige plus le kit
+  var lockChain = Promise.resolve();
+  function pageLock(name, t, fn) { var run = Promise.race([lockChain, new Promise(function (ok) { setTimeout(ok, 5000); })]).then(function () { return fn(); }); lockChain = run.catch(function () {}); return run; }
+  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storageKey: 'sb-cf-v2-auth', lock: pageLock } }); } catch (e) { sb = null; }
   if (!sb) { S.err = 'supabase-js n’a pas pu être chargé.'; return render(); }
   sb.auth.getSession().then(function (r) { boot(r && r.data && r.data.session); }, function () { loginHTML(); });
 })();
