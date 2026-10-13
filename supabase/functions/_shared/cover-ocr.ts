@@ -45,11 +45,23 @@ export async function readCoverText(bytes: Uint8Array): Promise<string | null> {
   } catch (e) { console.log('lecture couverture', String((e as Error)?.message || e).slice(0, 120)); return null }
 }
 
+// 13/10 (Axel : « ia.axl ça détecte mal ») : la légende TikTok = la légende du kit (CTA complet) qu'Axel colle. Parmi des
+// candidates déjà proches (même texte choc ou mêmes images), celles dont une ligne du kit (factory_posts, tous comptes) a
+// la MÊME légende. Comparée sur ses 8 premiers mots normalisés (TikTok tronque, l'emoji / les hashtags varient). Axel colle
+// parfois une autre légende (VF-0026 / « UGC ») : la légende ne sert qu'à DÉPARTAGER, jamais à proposer une vidéo seule.
+export async function pickByCaption(svc: Svc, title: string, vfs: string[]): Promise<string[]> {
+  const key = words(title).slice(0, 8).join(' ')
+  if (key.split(' ').length < 5 || !vfs.length) return []
+  const { data } = await svc.from('factory_posts').select('caption, combo').in('combo->>vf', vfs.slice(0, 40)).limit(200)
+  return [...new Set<string>((data || []).filter((p: any) => words(String(p.caption || '')).slice(0, 8).join(' ') === key)
+    .map((p: any) => String(p.combo?.vf || '')).filter((v: string) => vfs.includes(v)))]
+}
+
 export type Refined = { vf: string | null, state: 'auto' | 'unsure' | 'none', candidates: { vf: string, score: number }[], why: string }
 
 // Candidates de l'usine portant le même texte choc que la couverture, départagées par l'image puis par l'heure du kit.
 export async function refineByText(svc: Svc, text: string, created: string | null, duration: number | null,
-  scoreVf: (vf: string) => Promise<{ score: number } | null>): Promise<Refined | null> {
+  scoreVf: (vf: string) => Promise<{ score: number } | null>, title = ''): Promise<Refined | null> {
   if (!text) return null
   const { data: th } = await svc.from('factory_bricks').select('id, label').eq('kind', 'texte-choc')
   const hits = (th || []).map((b: any) => ({ id: String(b.id), o: overlap(text, String(b.label || '')) })).filter((x: any) => x.o >= 0.6)
@@ -73,6 +85,8 @@ export async function refineByText(svc: Svc, text: string, created: string | nul
     : { vf: null, state: 'unsure', candidates: cands, why: 'texte choc unique, image éloignée' }
   const [a, b] = scored
   if (a.s <= 60 && b.s >= a.s * 1.25) return { vf: a.vf, state: 'auto', candidates: cands, why: 'texte choc + image' }
+  // 13/10 : même texte choc, une seule de ces vidéos a la légende TikTok dans le kit
+  if (title) { const cap = await pickByCaption(svc, title, vfs); if (cap.length === 1) return { vf: cap[0], state: 'auto', candidates: cands, why: 'texte choc + légende du kit' } }
   // heure : une seule de ces vidéos programmée à ± 40 min de la publication TikTok
   if (created) {
     const t = Date.parse(created), lo = new Date(t - 40 * 60000).toISOString(), hi = new Date(t + 40 * 60000).toISOString()

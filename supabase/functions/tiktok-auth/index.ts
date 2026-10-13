@@ -15,7 +15,7 @@
 // 07/10 : version épinglée — esm.sh servait une 2.117.3 cassée (module auth-js introuvable), déploiement refusé
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2'
 import { coverMatcher } from '../_shared/cover-match.ts'
-import { readCoverText, refineByText } from '../_shared/cover-ocr.ts'
+import { readCoverText, refineByText, pickByCaption } from '../_shared/cover-ocr.ts'
 import { decodeCover } from '../_shared/cover-decode.ts'
 
 // trim : un copier-coller depuis la console TikTok peut ajouter un retour à la ligne (vécu le 03/10 au passage en production).
@@ -375,12 +375,22 @@ Deno.serve(async (req) => {
               if (text != null) {
                 upd.cover_text = text
                 const rf = await refineByText(svc, text, null, dur,   // pas d'heure : sur TikTok Axel poste « un peu au hasard », hors kit (12/10)
-                   (vf) => scoreVf(bytes as Uint8Array, vf))
+                   (vf) => scoreVf(bytes as Uint8Array, vf), String(v.title || ''))
                 if (rf) { upd.vf = rf.vf; upd.match_state = rf.state; upd.candidates = rf.candidates; console.log('texte choc', v.id, rf.why, rf.vf || '') }
               }
             }
             await svc.from('tiktok_videos').update(upd).eq('id', v.id).or('match_state.is.null,match_state.in.(unsure,none)')
             K.set(String(v.id), { ...k, ...upd })
+          }
+          // 13/10 : « à vérifier » restantes (texte choc déjà lu, ou image seule) → départage par la légende du kit, sans relire
+          // l'image : une seule candidate porte la légende TikTok → rattachée (« auto »). Rien ne change sinon.
+          for (const v of vids) {
+            const k: any = K.get(String(v.id))
+            if (k?.match_state !== 'unsure' || !(k.candidates || []).length) continue
+            const cap = await pickByCaption(svc, String(v.title || ''), (k.candidates || []).map((c: any) => String(c.vf)))
+            if (cap.length !== 1) continue
+            const { data: ok } = await svc.from('tiktok_videos').update({ vf: cap[0], match_state: 'auto' }).eq('id', v.id).eq('match_state', 'unsure').select('id')
+            if (ok?.length) { K.set(String(v.id), { ...k, vf: cap[0], match_state: 'auto' }); console.log('légende du kit', v.id, cap[0]) }
           }
           // recette des vidéos rapprochées : la ligne du kit (factory_posts) de la même vidéo finale
           const vfs = [...new Set([...K.values()].flatMap((k: any) => [k.vf, ...((k.candidates || []).map((c: any) => c.vf))]).filter(Boolean))]
