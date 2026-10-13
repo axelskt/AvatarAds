@@ -1246,7 +1246,7 @@
     M.prodDay = D ? D.qc.list.filter(function (q) { return q.created != null && Date.now() - q.created <= 30 * 864e5; }).length / 30 : null;
     // Jours de contenu (Axel 29/09 : simple) = vidéos PRÊTES (en stock) ÷ l'objectif de 5 posts / jour. Les vidéos seulement
     // « possibles » n'entrent plus dedans : elles donnaient des milliers de jours qui ne veulent rien dire.
-    // 13/10 (Axel) : besoin = le VRAI rythme Instagram (reels reconnus, tous comptes, moyenne 7 j) ; repli sur l'objectif de 5 / jour
+    // 13/10 (Axel) : besoin = le VRAI rythme Instagram (reels publiés, nos comptes, moyenne des 7 derniers jours ; rpc factory_ig_rhythm) ; repli sur l'objectif de 5 / jour
     // tant que rien n'est publié. Sert aux jours de contenu, au besoin / jour et aux jours possibles.
     var ig7 = D && D.qc.ig7 && D.qc.ig7.perDay > 0 ? D.qc.ig7 : null;
     M.need = ig7 ? { v: ig7.perDay, real: true, n: ig7.n } : { v: GOAL.perDay.target, real: false, n: null };

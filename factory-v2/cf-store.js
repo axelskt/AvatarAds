@@ -1083,19 +1083,13 @@
     res.data.forEach(function (p) {
       if (p && (p.status === 'scheduled' || p.status === 'published') && typeof p.vf === 'string' && /^VF-[0-9]{4}$/.test(p.vf)) set[p.vf] = 1;
     });
-    // 13/10 (Axel : « prendre directement la data d'Instagram du nombre de posts moyen sous 7 j ») : reels du kit PARTIS sur
-    // Instagram, tous comptes — reconnus (statut 'published', media_id posé par ig-insights) ou programmés dans Instagram
-    // dont l'heure est passée (Instagram les publie seul ; reconnus au relevé du soir). Recoupé le 13/10 avec ig_media_stats :
-    // 15 / 7 / 8 / 8 / 8 / 8 reels du 12 au 07/10. Moyenne sur les 7 derniers jours COMPLETS (jour de Paris), aujourd'hui exclu.
-    var DAY = 864e5, PARIS = 2 * 3600e3, now = Date.now(), today = Math.floor((now + PARIS) / DAY), n7 = 0;
-    res.data.forEach(function (p) {
-      var t = p ? ms(p.at) : null;
-      if (t == null || !(p.status === 'published' || (p.status === 'scheduled' && t < now))) return;
-      var d = Math.floor((t + PARIS) / DAY);
-      if (d < today && d >= today - 7) n7 += 1;
-    });
-    set.__ig7 = { perDay: n7 / 7, n: n7, end: (today - 1) * DAY };
     return set;
+  }
+  // rythme Instagram (rpc factory_ig_rhythm, 13/10) : { perDay, n, from, to } ; null si illisible ou refusé (repli sur l'objectif)
+  function igRhythm(res) {
+    var d = res && !res.error ? res.data : null;
+    if (!d || d.error || typeof d.posts !== 'number') return null;
+    return { perDay: d.posts / 7, n: d.posts, from: txt(d.from, 12), to: txt(d.to, 12) };
   }
   function normProd(rb, rr, rq, stats, at, classifyMissing, posted) {
     var B = { total: rb.length, ready: 0, flagged: 0, retired: 0, other: 0, byKind: {}, lastAt: null, lastKind: null, list: rb.map(normBrick).filter(Boolean) };
@@ -1137,7 +1131,6 @@
     // en stock = approuvées pas encore programmées / postées (template = identifiant VF de la vidéo finale)
     Q.posted = posted ? rq.filter(function (q) { return q && q.status === 'approved' && typeof q.template === 'string' && posted[q.template] === 1; }).length : 0;
     Q.stock = Q.approved - Q.posted;
-    Q.ig7 = posted && posted.__ig7 ? posted.__ig7 : null;   // rythme réel Instagram (7 j), voir postedVfs
     return { fetchedAt: at, bricks: B, recipes: R, qc: Q, stats: stats };
   }
   function qcQuery(withClassified) {
@@ -1165,7 +1158,9 @@
           sb.from('factory_recipes').select(REC_SEL, { count: 'exact' }).limit(PROD_MAX),
           qcQuery(true),
           Promise.resolve().then(function () { return sb.rpc('factory_prod_stats'); }).catch(function (e) { return { error: { message: errText(e) } }; }),
-          Promise.resolve().then(function () { return sb.from('factory_posts').select('status,vf:combo->>vf,at:scheduled_at').limit(PROD_MAX); }).catch(function (e) { return { error: { message: errText(e) } }; })
+          Promise.resolve().then(function () { return sb.from('factory_posts').select('status,vf:combo->>vf').limit(PROD_MAX); }).catch(function (e) { return { error: { message: errText(e) } }; }),
+          // 13/10 (Axel) : rythme RÉEL = reels publiés sur Instagram, moyenne des 7 derniers jours complets (rpc factory_ig_rhythm)
+          Promise.resolve().then(function () { return sb.rpc('factory_ig_rhythm'); }).catch(function (e) { return { error: { message: errText(e) } }; })
         ]);
         var rq = r[2], missing = false;
         if (noClassifiedCol(rq)) {   // migration 20260925210000 pas encore appliquée : tout est lu, « Classer » attend la colonne
@@ -1175,6 +1170,7 @@
         }
         patch = { state: 'ready', kind: null, error: null,
           data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(rq, 'factory_qc'), normStats(r[3]), Date.now(), missing, postedVfs(r[4])) };
+        patch.data.qc.ig7 = igRhythm(r[5]);
       } catch (e) {
         patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
         if (e.kind && e.kind !== 'http' && e.kind !== 'error') patch.data = null;   // réseau ou 500 : chiffres précédents gardés, datés
