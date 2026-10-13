@@ -219,12 +219,12 @@
     logNet('rpc factory_access');
     var deadline = function (p, ms) { return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej({ message: 'délai dépassé (' + Math.round(ms / 1000) + ' s)' }); }, ms); })]); };
     return Promise.resolve()
-      .then(function () { bootStep('contrôle d’accès'); return deadline(sb.rpc('factory_access'), 8000).catch(function (e) {
+      .then(function () { bootStep('contrôle d’accès'); return deadline(sb.rpc('factory_access'), 27000).catch(function (e) {
         // une seule nouvelle tentative silencieuse (réseau lent, réveil de l'onglet) avant d'afficher l'erreur
         if (!e || !/délai/.test(String(e.message))) throw e;
         logNet('rpc factory_access (2e essai)');
         bootStep('contrôle d’accès, 2e essai');
-        return deadline(sb.rpc('factory_access'), 10000);
+        return deadline(sb.rpc('factory_access'), 27000);
       }); })
       .then(function (res) {
         if (my !== gateSeq || ep !== epoch) return;
@@ -1675,8 +1675,28 @@
     // jamais une requête sans fin PENDANT LE DÉMARRAGE : 15 s au plus. Après (status ready), aucune limite ajoutée : la
     // 1re version la posait partout et coupait les lectures longues (Auto-DM, briques de Production : « AbortError »).
     var opt = init || {};
-    if ((CF.status === 'boot' || CF.status === 'loading') && !opt.signal && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opt = Object.assign({}, opt, { signal: AbortSignal.timeout(15000) });
-    return fetch(input, opt).finally(function () { if (CF.boot.net === rec) { CF.boot.net = null; emit('boot'); } });
+    // 13/10 (Axel : « je ne peux jamais actualiser sans que ça fasse ça ») : la requête partait du navigateur sans JAMAIS arriver
+    // au serveur (journaux du 13/10 14:47) — Safari réutilise une connexion à Supabase morte après une veille et attend dans le
+    // vide. Les appels COURTS (lectures, contrôle d'accès, session) sont donc coupés à 5 s puis relancés (2 fois, 5 s → 8 s
+    // → 12 s) : la coupure force une connexion neuve. Jamais sur un envoi de fichier ni une edge function (longs, non rejouables).
+    var method = String((opt.method || (input && input.method) || 'GET')).toUpperCase();
+    var shortCall = !opt.signal && /\/(rest\/v1\/|auth\/v1\/(user|token))/.test(path) && (method === 'GET' || method === 'HEAD'
+      || /^\/rest\/v1\/rpc\/(factory_access|factory_prod_stats|factory_ig_rhythm|ig_dashboard_stats)/.test(path) || /^\/auth\/v1\/token/.test(path));
+    var done = function () { if (CF.boot.net === rec) { CF.boot.net = null; emit('boot'); } };
+    if (!shortCall || typeof AbortController === 'undefined') {
+      if ((CF.status === 'boot' || CF.status === 'loading') && !opt.signal && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opt = Object.assign({}, opt, { signal: AbortSignal.timeout(15000) });
+      return fetch(input, opt).finally(done);
+    }
+    var waits = [5000, 8000, 12000];
+    var attempt = function (i) {
+      var ac = new AbortController(), t = setTimeout(function () { ac.abort(); }, waits[i]);
+      return fetch(input, Object.assign({}, opt, { signal: ac.signal })).then(function (r) { clearTimeout(t); return r; }, function (e) {
+        clearTimeout(t);
+        if (i + 1 < waits.length && e && e.name === 'AbortError') { logNet(path + ' relancée (connexion muette)'); return attempt(i + 1); }
+        throw e;
+      });
+    };
+    return attempt(0).finally(done);
   }
   // 11/10 (Axel : « Erreur de chargement » / « Vérification de l'accès… » en boucle) : la page partageait la session
   // de l'app (même clé de stockage, même jeton de rafraîchissement). Avec l'app ouverte dans un autre onglet, les deux
@@ -1699,9 +1719,9 @@
     function (r) { bootStep('session lue'); onSession(r && r.data && r.data.session); },
     function (e) { setStatus('error', 'Session illisible : ' + errText(e)); }
   );
-  setTimeout(function () {   // filet : lecture de session toujours en cours après 6 s → écran de connexion (Axel 11/10)
+  setTimeout(function () {   // filet : lecture de session toujours en cours après 25 s → écran de connexion (13/10 : les relances de bootFetch d'abord)
     if (CF.status === 'boot') forgetSession('La session ne répondait pas : reconnecte-toi.');
-  }, 6000);
+  }, 25000);
   window.addEventListener('message', function (e) { if (e.origin === location.origin) { onOauth(e.data); onTkOauth(e.data); } });
   try {
     var bc = new BroadcastChannel('ig-oauth');

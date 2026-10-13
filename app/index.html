@@ -5920,10 +5920,32 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-13-1530'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-13-1600'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
+// Supabase déjà MORTE et la requête attend dans le vide (journaux du 13/10 : lecture du profil jamais arrivée au serveur).
+// Les appels COURTS et rejouables (lectures GET, session /auth/v1/user et /token) sont coupés à 5 s puis relancés (5 → 8 →
+// 12 s) : la coupure force une connexion neuve. Jamais les écritures, envois de fichiers ni edge functions.
+function _aaFetch(input, init){
+  const opt = init || {}, url = typeof input === 'string' ? input : (input && input.url) || '';
+  const path = String(url).replace(SUPABASE_URL, '').split('?')[0];
+  const method = String(opt.method || (input && input.method) || 'GET').toUpperCase();
+  const court = !opt.signal && typeof AbortController !== 'undefined'
+    && ((/^\/rest\/v1\//.test(path) && (method === 'GET' || method === 'HEAD')) || /^\/auth\/v1\/(user|token)/.test(path));
+  if(!court) return fetch(input, opt);
+  const waits = [5000, 8000, 12000];
+  const essai = function(i){
+    const ac = new AbortController(), t = setTimeout(function(){ ac.abort(); }, waits[i]);
+    return fetch(input, Object.assign({}, opt, { signal: ac.signal })).then(function(r){ clearTimeout(t); return r; }, function(e){
+      clearTimeout(t);
+      if(i + 1 < waits.length && e && e.name === 'AbortError'){ console.warn('[réseau] relance', path); return essai(i + 1); }
+      throw e;
+    });
+  };
+  return essai(0);
+}
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: _aaFetch } });
 // Proxies Supabase — les clés API restent côté serveur (secrets Supabase)
 const OPENAI_PROXY   = SUPABASE_URL + '/functions/v1/openai-proxy';
 const EL_PROXY       = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
@@ -7206,7 +7228,7 @@ function loadProfile(user){
 async function _aaLoadProfile(user){
   if(!user){ return; }
   const lire = async function(){
-    try{ return await _aaBorne(sb.from('profiles').select('*').eq('id', user.id).maybeSingle(), 8000); }
+    try{ return await _aaBorne(sb.from('profiles').select('*').eq('id', user.id).maybeSingle(), 26000); }
     catch(e){ return { data:null, error:{ message:(e && e.message) || 'erreur', code:'TIMEOUT' } }; }
   };
   let profile = null, absent = 0;
@@ -7672,7 +7694,7 @@ async function initAuth(){
   }
   // session lue en 10 s au plus : plusieurs onglets ouverts peuvent bloquer le verrou de session de supabase-js
   let session = null, sessionBloquee = false;
-  try{ session = (await _aaBorne(sb.auth.getSession(), 10000)).data.session; }catch(e){ sessionBloquee = true; console.warn('[compte] session :', e && e.message); }
+  try{ session = (await _aaBorne(sb.auth.getSession(), 26000)).data.session; }catch(e){ sessionBloquee = true; console.warn('[compte] session :', e && e.message); }
   if(sessionBloquee){ _aaBootEchec(); return; }
   if(session && session.user){
     if(!born) localStorage.setItem('aa_login_at', String(Date.now())); // sessions d'avant l'OTP : on démarre le compteur maintenant
