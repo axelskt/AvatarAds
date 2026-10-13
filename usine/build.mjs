@@ -121,7 +121,7 @@ if (OPT.format === 'auto' || defRetired) {
 let chocForced = null;
 if (FMT.hasChoc(format) && OPT.choc && OPT.choc !== 'auto') {
   chocForced = FMT.textChoc(OPT.choc);
-  if (!chocForced) { console.error('✗ texte choc « ' + OPT.choc + ' » absent de la banque validée (TH01–TH30)'); process.exit(2); }
+  if (!chocForced) { console.error('✗ texte choc « ' + OPT.choc + ' » absent de la banque validée (TH01–TH31)'); process.exit(2); }
   const why = FMT.chocWhy(chocForced, demoRef, tx);
   if (why) console.warn('⚠ ' + why + ' → la vidéo partira en revue QC');
 }
