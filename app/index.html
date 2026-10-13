@@ -5916,7 +5916,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-13-1700'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-13-1715'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -6539,11 +6539,12 @@ function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='med
 // or le débit est un aller-retour réseau (~200 ms). Un double-clic lançait donc
 // DEUX débits (et deux générations). Les débits successifs d'un même flux ne sont
 // pas concernés : ils sont séquentiels, jamais simultanés.
-let _spendLock = false;
+let _spendLock = false, _spendLockAt = 0;
 async function spendCreditsFor(amount, label){
   window._aaSpendFail = null; window._aaLastSpendOp = null;   // lot 4K : motif d'échec + op EXACTE de ce débit
   if(typeof currentMember==='undefined' || !currentMember){ showPaywall(); return false; }
   if(!(amount > 0)) return true;   // action GRATUITE (réutiliser un avatar, transcription) → aucun débit, aucun paywall
+  if(_spendLock && Date.now() - _spendLockAt > 30000) _spendLock = false;   // 13/10 : jamais un verrou figé plus de 30 s
   if(_spendLock){ window._aaSpendFail='lock'; toast('Une génération est déjà en cours — patiente'); return false; }
   if(['developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner) return true;
   // Free → paywall direct dès qu'une action payante (API) se lance — #69/#40 « à l'action »
@@ -6554,10 +6555,32 @@ async function spendCreditsFor(amount, label){
     _insufficientCredits(amount - creditsBalance());
     return false;
   }
-  _spendLock = true;
+  _spendLock = true; _spendLockAt = Date.now();
   let data, error;
-  try { ({ data, error } = await sb.rpc('spend_credits', { p_secs: amount, p_reason: label || null })); }
+  // 13/10 (Axel : « une génération est déjà en cours » sans rien en cours) : après une veille, Safari envoyait le débit sur une
+  // connexion morte — il n'arrivait jamais au serveur et le verrou restait pris. Débit borné à 8 s ; à l'abandon, on regarde
+  // d'abord s'il a QUAND MÊME été enregistré (credit_ops, lecture de ses propres opérations) — jamais deux débits — puis on
+  // relance une seule fois (15 s).
+  const t0 = new Date(Date.now() - 5000).toISOString();
+  const essai = async function(ms){
+    const ac = new AbortController(), t = setTimeout(function(){ ac.abort(); }, ms);
+    try { return await sb.rpc('spend_credits', { p_secs: amount, p_reason: label || null }).abortSignal(ac.signal); }
+    finally { clearTimeout(t); }
+  };
+  try {
+    ({ data, error } = await essai(8000));
+    if(error && /abort/i.test(String(error.message || error.name || error.code || ''))){
+      const { data: ops } = await sb.from('credit_ops').select('id, amount').eq('user_id', currentMember.id).eq('amount', amount)
+        .eq('reason', label || null).gte('created_at', t0).is('refunded_at', null).order('created_at', { ascending: false }).limit(1);
+      if(ops && ops[0]){
+        const { data: pr } = await sb.from('profiles').select('credits_remaining').eq('id', currentMember.id).maybeSingle();
+        data = { ok: true, op_id: ops[0].id, balance: pr ? pr.credits_remaining : creditsBalance() - amount }; error = null;
+      } else ({ data, error } = await essai(15000));
+    }
+  }
+  catch(e){ error = e; }
   finally { _spendLock = false; }
+  if(error && /abort/i.test(String(error.message || error.name || error.code || ''))){ window._aaSpendFail='rpc'; toast('Connexion lente — aucun crédit débité, réessaie'); return false; }
   if(error){ window._aaSpendFail='rpc'; console.warn('spend_credits:', error); toast('Erreur crédits — réessaie'); return false; }
   if(!data || data.ok !== true){ _insufficientCredits(Math.max(1, amount - creditsBalance())); return false; }
   currentMember.credits_remaining = data.balance;
