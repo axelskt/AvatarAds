@@ -3870,11 +3870,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <!-- Taille CONTENUE : une vidéo 9:16 en width:100% dépassait l'écran (retour Axel 13/09).
                  max-height borne la hauteur → la vidéo tient en entier, bouton Télécharger visible dessous. -->
             <div style="position:relative;width:fit-content;max-width:100%;margin:0 auto">
-              <video id="omniOut" controls playsinline onplay="var o=document.getElementById('omniPlayOv');if(o)o.style.display='none'" onpause="var o=document.getElementById('omniPlayOv');if(o)o.style.display='flex'" style="display:block;max-width:100%;max-height:min(66vh,620px);width:auto;border-radius:14px;background:#000"></video>
-              <!-- Bouton play TOUJOURS visible quand en pause (pas seulement au survol). pointer-events:none sur le calque → les contrôles natifs restent cliquables ; seul le rond central lance la lecture. -->
-              <div id="omniPlayOv" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-                <span onclick="var v=document.getElementById('omniOut');if(v)v.play()" style="pointer-events:auto;cursor:pointer;width:62px;height:62px;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px -4px rgba(0,0,0,.5)"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
-              </div>
+              <video id="omniOut" controls playsinline style="display:block;max-width:100%;max-height:min(66vh,620px);width:auto;border-radius:14px;background:#000"></video>
             </div>
             <div class="row" style="gap:8px;margin:12px 0 44px">
               <button onclick="_omniDownload()" class="btn btn-primary" style="flex:1;padding:13px;border-radius:12px;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
@@ -5920,7 +5916,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-13-1640'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-13-1700'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -33234,6 +33230,14 @@ function _omniBuildPrompt(p){
     // ⚠️ FIDÉLITÉ LOGO (Axel 15/09, choix C assumé — testé OK avec Patek Philippe). Gaté par _OMNI_LOGO_FIDELITY (kill-switch).
     if(_OMNI_LOGO_FIDELITY) s+=' Any lettering, badge, model name, emblem or logo that DOES appear (including one the request asks for) MUST use its EXACT official correct spelling and be rendered crisp, sharp, straight and fully legible — never garbled, misspelled, warped, blurred, doubled, gibberish or made-up fantasy characters. If a real brand or model is requested, reproduce ONLY its authentic real name and logo exactly as officially written; when unsure of the exact wording, leave that text out rather than invent it.';
   }
+  // 13/10 (Axel, avant/après Clio → Lamborghini) : la portière s'ouvrait TOUTE SEULE alors que sa main l'ouvre dans la source,
+  // ses vêtements avaient changé, l'écriture « Lamborghini » était inventée et la montre manquait de détail.
+  if(!/(same (hand|gesture|action)|m[êe]mes? (gestes?|mouvements? des mains))/i.test(s))
+    s+=' Reproduce every action of the source exactly: the same hands doing the same gestures at the same moments (a door, lid or object only moves when the hand moves it, exactly as in the source — nothing opens or moves by itself).';
+  if(!/(v[êe]tement|tenue|habit|outfit|clothes|clothing|t-shirt|pull|veste|chemise|pantalon|robe)/i.test(s))
+    s+=' The person keeps exactly the same clothes, accessories, skin and hair as in the source.';
+  s+=' Never invent lettering: a word or emblem that cannot be reproduced exactly stays plain, without letters, rather than showing made-up letters.';
+  s+=' The changed object is rendered in photorealistic high detail — sharp edges, real materials, reflections and fine details (dials, stitching, metal), never soft, plastic or low-detail.';
   return s;
 }
 function _omniErr(d){ try{ let m=d&&(d.detail||(d.error&&(d.error.message||d.error))||d.message); if(Array.isArray(m)) m=m.map(x=>(x&&(x.msg||x.message))||x).join(' · '); return String(m||'Erreur'); }catch(_){ return 'Erreur'; } }
@@ -33332,12 +33336,19 @@ async function _omniGenerate(){
     if(!outUrl) throw new Error('Aucune vidéo renvoyée');
     _omniProg('Terminé ✓',100);
     _omniOutUrl=outUrl;
-    const out=document.getElementById('omniOut'); if(out) out.src=outUrl;
-    { const _ov=document.getElementById('omniPlayOv'); if(_ov) _ov.style.display='flex'; }   // bouton play visible sur le nouveau résultat
+    // 13/10 (Axel : « la vidéo coupe, reprend, coupe… ») : le résultat pèse ~37 Mbit/s ; lu EN DIRECT depuis le serveur, Safari
+    // n'arrive pas à suivre. On le télécharge en entier puis on le lit depuis la mémoire (fluide) ; le même fichier sert à la
+    // Bibliothèque (plus de second téléchargement). Échec du téléchargement → lecture directe comme avant.
+    _omniProg('Téléchargement du résultat…', 99);
+    let _oBlob=null;
+    try{ const rr=await fetch(outUrl); if(rr.ok) _oBlob=await rr.blob(); }catch(_){}
+    const out=document.getElementById('omniOut');
+    if(out){ try{ if(out.src && out.src.indexOf('blob:')===0) URL.revokeObjectURL(out.src); }catch(_){} out.src=_oBlob ? URL.createObjectURL(_oBlob) : outUrl; }
+    _omniProg('Terminé ✓',100);
     if(res) res.style.display='block';
     setTimeout(()=>{ _omniProgHide(); }, 500);
     // Auto-save en Bibliothèque (le bouton « Enregistrer » manuel a été retiré — Axel 31/08)
-    (async()=>{ try{ if(typeof _libAutoSaveVideo==='function'){ const rr=await fetch(outUrl); if(rr.ok) await _libAutoSaveVideo(await rr.blob(), 'Omni '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}), ['Omni','Vidéo'], '🎬', 'OMNI'); } }catch(e){ console.warn('omni autosave:', e); } })();
+    (async()=>{ try{ if(typeof _libAutoSaveVideo==='function'){ const rr=_oBlob ? null : await fetch(outUrl); if(_oBlob || (rr && rr.ok)) await _libAutoSaveVideo(_oBlob || await rr.blob(), 'Omni '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}), ['Omni','Vidéo'], '🎬', 'OMNI'); } }catch(e){ console.warn('omni autosave:', e); } })();
     if(typeof creditsFlowDone==='function') creditsFlowDone();
     toast('Vidéo transformée ✓');
   }catch(e){

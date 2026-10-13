@@ -114,6 +114,14 @@ export function omniEditPrompt(p: string): string{
     // ⚠️ FIDÉLITÉ LOGO (Axel 15/09, choix C assumé — testé OK avec Patek Philippe). Gaté par _OMNI_LOGO_FIDELITY (kill-switch).
     if(_OMNI_LOGO_FIDELITY) s+=' Any lettering, badge, model name, emblem or logo that DOES appear (including one the request asks for) MUST use its EXACT official correct spelling and be rendered crisp, sharp, straight and fully legible — never garbled, misspelled, warped, blurred, doubled, gibberish or made-up fantasy characters. If a real brand or model is requested, reproduce ONLY its authentic real name and logo exactly as officially written; when unsure of the exact wording, leave that text out rather than invent it.';
   }
+  // 13/10 (Axel, avant/après Clio → Lamborghini) : la portière s'ouvrait TOUTE SEULE alors que sa main l'ouvre dans la source,
+  // ses vêtements avaient changé, l'écriture « Lamborghini » était inventée et la montre manquait de détail.
+  if(!/(same (hand|gesture|action)|m[êe]mes? (gestes?|mouvements? des mains))/i.test(s))
+    s+=' Reproduce every action of the source exactly: the same hands doing the same gestures at the same moments (a door, lid or object only moves when the hand moves it, exactly as in the source — nothing opens or moves by itself).';
+  if(!/(v[êe]tement|tenue|habit|outfit|clothes|clothing|t-shirt|pull|veste|chemise|pantalon|robe)/i.test(s))
+    s+=' The person keeps exactly the same clothes, accessories, skin and hair as in the source.';
+  s+=' Never invent lettering: a word or emblem that cannot be reproduced exactly stays plain, without letters, rather than showing made-up letters.';
+  s+=' The changed object is rendered in photorealistic high detail — sharp edges, real materials, reflections and fine details (dials, stitching, metal), never soft, plastic or low-detail.';
   return s;
 }
 // MOTION CONTROL (module de l'app) : instruction de mouvement (celle de l'utilisateur, sinon celle de l'app) + verrous
