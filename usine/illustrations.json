@@ -70,8 +70,6 @@
    "produit-creme-fille.mp4"
   ],
   "omni": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O1-0a.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0b.mp4",
@@ -165,8 +163,6 @@
    "avatar-ia-fille-4k-e.jpg"
   ],
   "C-OMNI-01": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O1-0a.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0b.mp4",
@@ -174,8 +170,6 @@
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O3-0a.mp4"
   ],
   "C-OMNI-02": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O1-0a.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0b.mp4",
@@ -183,8 +177,6 @@
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O3-0a.mp4"
   ],
   "C-OMNI-03": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O1-0a.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0b.mp4",
@@ -192,8 +184,6 @@
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O3-0a.mp4"
   ],
   "C-OMNI-04": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O1-0a.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0b.mp4",
@@ -222,12 +212,8 @@
    "avatar-ia-garcon-4k-d.jpg",
    "avatar-ia-fille-4k-e.jpg"
   ],
-  "C-MCP-09": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4"
-  ],
-  "C-MCP-12": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4"
-  ],
+  "C-MCP-09": [],
+  "C-MCP-12": [],
   "C-MCP-10": [
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4"
   ],
