@@ -207,7 +207,7 @@ test('chocLayout sans visage : EN HAUT (y = 230), zone sûre TikTok/Reels, 19 ph
 });
 test('chocLayout hook avant/après : CENTRÉ juste sous le médaillon « avant » (Axel 06/10), rectangle large, zone sûre', () => {
   ALL_TEXTS.forEach(t => { const L = F.chocLayout(t, { faces: [], avantApres: true }); checkBox(L, t); assert.ok(L.lines.length <= 4, 'rectangle, pas une colonne : ' + L.lines.length + ' lignes'); assert.equal(L.level, 'ok');
-    assert.equal(L.zone, 'sous-medaillon'); assert.equal(L.y, F.SOUS_MEDAILLON.top, 'touche le bas du médaillon'); assert.ok(Math.abs(L.x + L.w / 2 - 510) <= 1, 'centré'); });
+    assert.equal(L.zone, 'sous-medaillon'); assert.equal(L.y, F.SOUS_MEDAILLON.top, 'touche le bas du médaillon'); assert.ok(Math.abs(L.x + L.w / 2 - 540) <= 1, 'centré sur l’axe de l’image (14/10)'); });
   assert.equal(F.chocLayout(F.chocString(F.textChoc('TH13')), { faces: [], avantApres: true }).zone, 'sous-medaillon');
 });
 const FACES = {

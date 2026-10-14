@@ -55,8 +55,8 @@ writeFileSync(join(work, 'index.html'), `<!doctype html><html lang="fr"><head><m
  body{margin:0;background:#000}
  #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000}
  #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
- /* zone sûre : x 80 → 880 (200 px libres à droite pour les icônes), y ≤ 1480 */
- .card{position:absolute;left:80px;width:800px;z-index:5;text-align:center;transform-origin:50% 50%}
+ /* zone sûre CENTRÉE (Axel 14/10 : « pas centré ») : x 140 → 940 comme les sous-titres de captions.mjs (axe à 540), y ≤ 1480 */
+ .card{position:absolute;left:140px;width:800px;z-index:5;text-align:center;transform-origin:50% 50%}
  .card .l{display:block;margin:0;white-space:nowrap}
  .card .l>span{display:inline-block}
  /* largeur fixée (PNG Apple carrés) : la mesure de la zone sûre ne dépend pas du chargement de l'image */

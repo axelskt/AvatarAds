@@ -274,7 +274,7 @@
   var TOP_MIN = 230, BOTTOM_MAX = 1440, HAUT_MAX = 780;   // centre de la phrase au-dessus de HAUT_MAX = « en haut »
   // Axel 06/10 (VF-0043) : sur un avant / après, la phrase est CENTRÉE (dans la zone sûre) juste SOUS le médaillon — elle peut
   // toucher son bas (bord à 889 px) —, plus jamais en haut à gauche contre le médaillon.
-  var SOUS_MEDAILLON = { zone: 'sous-medaillon', align: 'center', left: 90, right: 930, top: 889 - 16 };
+  var SOUS_MEDAILLON = { zone: 'sous-medaillon', align: 'center', left: 150, right: 930, top: 889 - 16 };   // axe 540 (14/10)
   // Axel 01/10 (VF-0023 / 0028 / 0030) : phrase trop petite → plus gros, toujours dans la zone sûre (62 px au plus avant).
   var SIZES = [78, 72, 66, 60, 54, 48, 44, 41];   // la plus grande qui tient ; 44 / 41 = repli quand les visages prennent toute la place
   // largeur approchée d'un caractère (em) — police de la phrase : Inter 700 ; filet de sécurité à l'affichage (fit).
@@ -382,9 +382,15 @@
     // colonnes : pleine largeur centrée ; à gauche d'un obstacle du haut (médaillon, visage à droite)
     var leftEdge = CANVAS.w;
     fixed.concat(wide).forEach(function (r) { if (r.y < HAUT_MAX && r.y + r.h > TOP_MIN && r.x > CANVAS.w * 0.4) leftEdge = Math.min(leftEdge, r.x); });
-    var cols = [{ zone: 'haut', align: 'center', left: 90, right: 930, top: true },
+    // 14/10 : la zone « à gauche » (texte aligné à gauche) ne sert QUE si un VISAGE occupe le haut à droite ; sans visage, le
+    // texte reste centré (axe 540), quitte à prendre une ligne de plus
+    var faceTop = wide.some(function (r) { return r.y < HAUT_MAX && r.y + r.h > TOP_MIN; });
+    // Axel 14/10 : « check si tous les textes choc sont bien centrés » → 'haut' et 'sous-medaillon' étaient axés à 510 (90 → 930) :
+    // bandes SYMÉTRIQUES autour de 540 (en haut il n'y a pas d'icônes à droite ; elles commencent à y 620, obstacle déjà testé)
+    var cols = [{ zone: 'haut', align: 'center', left: 90, right: 990, top: true },
+      { zone: 'haut', align: 'center', left: 150, right: 930, top: true },   // texte haut qui descendrait sur les icônes : plus étroit, toujours axé à 540
       { zone: 'haut-gauche', align: 'left', left: 70, right: Math.min(CANVAS.w - 70, leftEdge - 24), top: true },
-      { zone: 'milieu', align: 'center', left: 150, right: 930, top: false }].filter(function (c) { return !o.center || c.align === 'center'; });   // o.center (F05, Axel 07/10) : toujours centré
+      { zone: 'milieu', align: 'center', left: 150, right: 930, top: false }].filter(function (c) { return (!o.center || c.align === 'center') && (c.zone !== 'haut-gauche' || faceTop); });   // o.center (F05, Axel 07/10) : toujours centré
     function box(col, size) {
       var colW = col.right - col.left;
       if (colW < 360) return null;
