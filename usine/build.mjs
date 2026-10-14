@@ -606,8 +606,11 @@ const SFX_POOL = {
   group:  ['ed-swish-1.mp3', 'mo-swipe-2.mp3', 'mo-tick-1.mp3', 'mo-tap-1.mp3', 'ed-click-1.mp3'],
   entree: ['woosh.mp3', 'whoosh.mp3', 'mo-whoosh-1.mp3', 'mo-swipe-1.mp3'],
   photo:  ['snap.mp3', 'mo-pop-2.mp3', 'pop.mp3'],   // Axel 14/10 : ni camera-shutter ni camera-click ; click = snap (même fichier)
-  debut:  ['woosh.mp3', 'whoosh.mp3', 'cinematic-impact.mp3', 'metallic-riser.mp3', 'reverse-crash.mp3', 'hit.mp3',
-           'tk-taco-bell.mp3', 'tk-vine-boom.mp3', 'tk-tindeck.mp3'],   // mo-pop-1 retiré (pas assez fort) ; kaching → « BOUM » de la démo   // Axel 14/10 : dès la 1re image (tk- = découpés de la vidéo TikTok)
+  // 14/10 (Axel : « on n'entend pas le bruitage du début ») : versions debut-* = coupées au début de leur coup (les montées
+  // cinematic-impact / metallic-riser / reverse-crash n'étaient audibles qu'après 0,7-1,7 s, sous la voix) et mises au même
+  // niveau (pic −6 dB), jouées à 0 dB
+  debut:  ['debut-woosh.mp3', 'debut-whoosh.mp3', 'debut-cinematic-impact.mp3', 'debut-metallic-riser.mp3', 'debut-reverse-crash.mp3', 'debut-hit.mp3',
+           'debut-tk-taco-bell.mp3', 'debut-tk-vine-boom.mp3', 'debut-tk-tindeck.mp3'],   // mo-pop-1 retiré (pas assez fort) ; kaching → « BOUM » de la démo   // Axel 14/10 : dès la 1re image (tk- = découpés de la vidéo TikTok)
   sortie: ['mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
 };
 const sfxPick = (() => { let h = 2166136261; for (const c of basename(out || '') + '|' + (hookId || '') + '|' + (OPT.demo || '')) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
@@ -637,13 +640,24 @@ if (!sansVoix) {
   } finally { if (held) rmSync(LK, { recursive: true, force: true }); }
 }
 // Axel 14/10 : les woosh / whoosh à 0 dB, où qu'ils jouent (transition, illustration, 1re image)
-const addSfx = (file, at, vol, tag) => { if (sansVoix) return; if (/(^|\/)(mo-)?w+h?oosh(-\d+)?\.mp3$/.test(file)) vol = '0dB'; else if (parseFloat(vol) < -7) vol = '-7dB';   // Axel 14/10 : rien sous −7 dB
-  sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
-addSfx(wh, B1 - 0.20, '-4dB', 'w1'); addSfx(imp, B1 + 0.06, '-7dB', 'i1');
-if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', 'i2'); }
+// Les sons sont d'abord mis en file (avec leur pool), puis posés par ordre de temps : Axel 14/10 « il ne faut JAMAIS mettre
+// le même bruitage à la suite » → un son identique au précédent est remplacé par un autre de son pool.
+const sfxQ = [];
+const addSfx = (file, at, vol, tag, pool = null) => { if (sansVoix) return; sfxQ.push({ file, at, vol, tag, pool }); };
+const flushSfx = () => {
+  sfxQ.sort((a, b) => a.at - b.at);
+  sfxQ.forEach((e, i) => { const prev = sfxQ[i - 1], next = sfxQ[i + 1];
+    if (!prev || basename(prev.file) !== basename(e.file)) return;
+    const alt = e.pool && SFX_POOL[e.pool].find(f => f !== basename(e.file) && f !== basename(prev.file) && (!next || f !== basename(next.file)));
+    if (alt) { console.log('  bruitage répété évité : ' + basename(e.file) + ' → ' + alt); e.file = join(SFX, alt); } });
+  for (const e of sfxQ) { let vol = e.vol;
+    if (/(^|\/)(mo-)?w+h?oosh(-\d+)?\.mp3$/.test(e.file)) vol = '0dB'; else if (parseFloat(vol) < -7) vol = '-7dB';   // Axel 14/10 : woosh 0 dB, rien sous −7 dB
+    sfxIn.push('-i', e.file); sfxFilt.push(`[SFXIDX]adelay=${dly(e.at)},volume=${vol}[${e.tag}]`); sfxLabels.push(`[${e.tag}]`); } };
+addSfx(wh, B1 - 0.20, '-4dB', 'w1', 'whoosh'); addSfx(imp, B1 + 0.06, '-7dB', 'i1', 'impact');
+if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2', 'whoosh'); addSfx(imp, B2 + 0.06, '-7dB', 'i2', 'impact'); }
 // ── BRUITAGES LIÉS À L'ACTION (Axel 29/09) : jamais un son sans quelque chose à l'écran ──
 { let q = 0; const sx = f => join(SFX, f);
-  addSfx(sx(sfxPick.debut), 0, '-8dB', 'x' + q++);                                                          // Axel 14/10 : un bruitage dès la première image
+  addSfx(sx(sfxPick.debut), 0, '0dB', 'x' + q++, 'debut');                                                          // Axel 14/10 : un bruitage dès la première image
   // 14/10 (Axel) : plus de pop à l'apparition du texte choc (« ça sert à rien ») ; mo-pop-1 passe dans « dès la 1re image »
   // Axel 14/10 : Kaching à chaque « BOUM » dit dans la démo (« t'appuies sur Générer et boum ») — calé sur le mot
   demoW.filter(w => /^bo+u?m$/.test(bare(w.text))).forEach(w => addSfx(sx('tk-kaching.mp3'), Math.max(0, w.start - 0.02), '-5dB', 'x' + q++));
@@ -653,23 +667,30 @@ if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', '
     if (!ctaW.slice(Math.max(0, i - 2), i).some(v => /^(comment|marque|ecri|tape)/.test(bare(v.text)) && !/^commentaire/.test(bare(v.text)))) return;
     addSfx(sx('mac-typing.mp3'), Math.max(0, w.start - 0.03), '+3dB', 'x' + q++); });
   const gs = {}; allWords.forEach(w => { if (w.g && !(w.g in gs)) gs[w.g] = w.start; });
-  Object.values(gs).forEach(t => addSfx(sx(sfxPick.group), Math.max(0, t - 0.1), '-14dB', 'x' + q++));       // groupe de sous-titres
-  brollEvents.forEach(e => { addSfx(sx(sfxPick.entree), Math.max(0, e.at - 0.15), '-9dB', 'x' + q++);            // image qui entre
-    if (e.image) addSfx(sx(sfxPick.photo), e.at + 0.02, '-12dB', 'x' + q++);
-    if (e.style === 'hook') addSfx(sx(sfxPick.sortie), Math.max(0, e.at + e.dur - 0.3), '-16dB', 'x' + q++); });   // … et qui repart
+  Object.values(gs).forEach(t => addSfx(sx(sfxPick.group), Math.max(0, t - 0.1), '-14dB', 'x' + q++, 'group'));       // groupe de sous-titres
+  brollEvents.forEach(e => { addSfx(sx(sfxPick.entree), Math.max(0, e.at - 0.15), '-9dB', 'x' + q++, 'entree');            // image qui entre
+    if (e.image) addSfx(sx(sfxPick.photo), e.at + 0.02, '-12dB', 'x' + q++, 'photo');
+    if (e.style === 'hook') addSfx(sx(sfxPick.sortie), Math.max(0, e.at + e.dur - 0.3), '-16dB', 'x' + q++, 'sortie'); });   // … et qui repart
   // démo : clic / génération / résultat d'après les mots dits (2,5 s d'écart au moins, 5 au plus)
   const RULES = [[/^(clique|cliques|cliquer|clic|selectionne|selectionnes|choisis|appuie|appuies|tape|tapes)$/, 'mouse-click.mp3', '-10dB'],
     [/^(genere|generer|generes|lance|lances|creer|cree|crees)$/, 'magic.mp3', '-14dB'],
     [/^(voila|resultat|incroyable|regarde)$/, 'success.mp3', '-15dB']];
   void RULES;   // 29/09 : désactivés dans la démo (Axel : « bruitage nul ») ; gardés pour un futur calage sur l'image
   if (q) console.log('  bruitages liés à l\'action : ' + q); }
+flushSfx();
 
 if (music) {
   const in2 = ['-i', capt, '-stream_loop','-1','-i', music, ...sfxIn];
   let idx = 2; const sf = sfxFilt.map(f => f.replace('[SFXIDX]', `[${idx++}:a]`));
-  // musique de fond : −11 dB jusqu'au 06/10, −9 dB depuis (Axel : « un peu plus fort, pas trop »), toujours baissée sous la voix
+  // musique de fond : −11 dB jusqu'au 06/10, −9 dB depuis (Axel : « un peu plus fort, pas trop »), toujours baissée sous la voix.
+  // 14/10 (Axel, VF-0417 : « on n'entend pas assez la musique ») : chaque piste ramenée à la même loudness (−11,5 LUFS mesurés
+  // sur 60 s : les pistes vont de −8,7 à −17,9) puis +2 dB → −7 dB au lieu de −9
+  const mLufs = (() => { try { const o = spawnSync('ffmpeg', ['-hide_banner', '-t', '60', '-i', music, '-af', 'ebur128', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
+    const m = o.match(/I:\s+(-?[\d.]+) LUFS/g); return m ? parseFloat(m[m.length - 1].replace(/[^\d.-]/g, '')) : -11.5; } catch { return -11.5; } })();
+  const mGain = Math.max(-8, Math.min(8, -11.5 - mLufs)) - 7;
+  console.log(`  musique ${mLufs.toFixed(1)} LUFS → ${mGain.toFixed(1)} dB`);
   const filt =
-    `[1:a]${AFMT},volume=-9dB,afade=t=in:st=0:d=0.6,afade=t=out:st=${(total-0.9).toFixed(3)}:d=0.9[m];`+
+    `[1:a]${AFMT},volume=${mGain.toFixed(1)}dB,afade=t=in:st=0:d=0.6,afade=t=out:st=${(total-0.9).toFixed(3)}:d=0.9[m];`+
     `[m][0:a]sidechaincompress=threshold=0.03:ratio=8:attack=5:release=260[mduck];`+
     sf.join(';')+`;`+
     `[0:a][mduck]${sfxLabels.join('')}amix=inputs=${2+sfxLabels.length}:duration=first:normalize=0,alimiter=limit=0.95[a]`;

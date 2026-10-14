@@ -62,7 +62,7 @@
     { id: 'TH03', text: 'Ok là c\'est officiel, l\'IA est allée trop loin', emoji: '😳', module: 'generique' },
     { id: 'TH04', text: 'Les agences vont détester que je montre ça', emoji: '😅', module: 'generique' },
     { id: 'TH05', text: 'Mon cerveau a buggé la première fois que j\'ai vu ça', emoji: '🫠', module: 'generique' },
-    { id: 'TH06', text: 'Ce site va faire perdre leur boulot à pas mal de monde', emoji: '😬', module: 'generique' },
+    { id: 'TH06', text: 'Ce site va faire perdre le boulot de pas mal de monde', emoji: '😬', module: 'generique' },   // Axel 14/10 : « le boulot de », plus « leur boulot à »
     { id: 'TH07', text: 'Je suis obligé de supprimer cette vidéo dans 24 heures', emoji: '😳', module: 'generique' },
     { id: 'TH08', text: 'Nan vraiment, l\'IA c\'est trop ce qu\'elle fait maintenant', emoji: '😳', module: 'generique' },
     { id: 'TH09', text: 'Je pourrais littéralement embrasser la personne qui m\'a montré ça', emoji: '🤯', module: 'generique' },
