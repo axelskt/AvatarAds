@@ -14,7 +14,7 @@
  *                                                  voix : rendu par usine/build-f05.mjs (06/10 : réaction Omni Flash 3 s +
  *                                                  texte choc, démo muette C-MCPM-xx, musique) — pas tiré par build.mjs
  *
- * Phrases choc = banque TH01–TH31 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
+ * Phrases choc = banque TH01–TH34 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
  * quelle, jamais inventée (usine/formats.test.mjs vérifie la copie). Générique = toute démo ; sinon seulement la démo de son
  * module (règle de la banque) ; TH13 (« ma Clio en Porsche ») seulement si le hook visuel montre TX-O02a.
  *
@@ -96,7 +96,10 @@
     { id: 'TH29', pre: '🚨', text: 'CLAUDE PEUT ENFIN GÉNÉRER DES IMAGES ET VIDÉOS...', emoji: '🤯', module: 'mcp-claude' },
     // Axel 12/10 : texte seul, sans logo, seulement avec une démo Claude
     { id: 'TH30', text: 'Claude + AI =', emoji: '💰💰💰', module: 'mcp-claude' },
-    { id: 'TH31', text: "7 mois que j'utilise Claude et je trouve ça que maintenant ?!!", emoji: '😳', module: 'mcp-claude' }   // Axel 13/10
+    { id: 'TH31', text: "7 mois que j'utilise Claude et je trouve ça que maintenant ?!!", emoji: '😳', module: 'mcp-claude' },   // Axel 13/10
+    { id: 'TH32', text: 'Claude me rend riche et ça me fait peur', emoji: '😳', module: 'mcp-claude' },   // Axel 14/10
+    { id: 'TH33', text: '8 ans de galère au SMIC et je vois ça MTN', emoji: '😭', module: 'generique' },   // Axel 14/10
+    { id: 'TH34', text: "8 ANS QUE J'ATTEND CE JOUR", emoji: '😭😭😭', module: 'generique' }   // Axel 14/10 (orthographe d'Axel)
   ];
   // Format Insomnie (Axel 12/10) : « Tu essaies de dormir mais tu repenses à… » — banque À PART (factory_bricks TI…,
   // meta.format 'insomnie'), jamais tirée avec les TH ; demos = démos muettes autorisées (sinon générique)
