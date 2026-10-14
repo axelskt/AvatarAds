@@ -20,7 +20,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 await import(new URL('./formats.js', import.meta.url).href);
 await import(new URL('./coherence.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS, COH = globalThis.CF_COHERENCE;
-const SFX = join(HERE, '..', 'render-worker', 'assets', 'sfx');
+// Format sans voix : AUCUN bruitage, musique seule (Axel 11/10, redit le 14/10) — ne jamais en ajouter ici.
 const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds');
 const FPS = 60, TS = 0.25;
 

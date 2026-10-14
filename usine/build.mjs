@@ -615,7 +615,11 @@ console.log('  bruitages : ' + Object.values(sfxPick).join(', '));
 const wh = join(SFX, sfxPick.whoosh), imp = join(SFX, sfxPick.impact);
 const dly = s => { const ms = Math.max(0, Math.round(s*1000)); return `${ms}|${ms}`; };
 const sfxIn=[], sfxFilt=[], sfxLabels=[];
-const addSfx = (file, at, vol, tag) => { sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
+// Axel 14/10 : « pas de bruitage sur les formats no voice » → une vidéo sans AUCUNE voix (hook muet, démo muette, pas de
+// CTA parlé) ne reçoit aucun bruitage, seulement la musique (même règle que build-f05.mjs).
+const sansVoix = OPT.voice === 'muet' || (!hookVoice && demoMuette && !cta);
+if (sansVoix) console.log('  format sans voix : aucun bruitage');
+const addSfx = (file, at, vol, tag) => { if (sansVoix) return; sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
 addSfx(wh, B1 - 0.20, '-4dB', 'w1'); addSfx(imp, B1 + 0.06, '-7dB', 'i1');
 if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', 'i2'); }
 // ── BRUITAGES LIÉS À L'ACTION (Axel 29/09) : jamais un son sans quelque chose à l'écran ──
