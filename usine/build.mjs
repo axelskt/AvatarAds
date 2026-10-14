@@ -600,7 +600,7 @@ const B1 = O1 + TS/2, B2 = cta ? (O2 + TS/2) : null;   // milieu des glissements
 // hook + démo) : chaque vidéo garde des sons cohérents entre ses raccords, mais deux vidéos ne sonnent plus pareil.
 const SFX_POOL = {
   whoosh: ['mo-whoosh-1.mp3', 'whoosh.mp3', 'woosh.mp3', 'mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
-  impact: ['mo-impact-1.mp3', 'mo-impact-2.mp3', 'mo-impact-3.mp3', 'ed-hit-1.mp3', 'ed-thud-1.mp3', 'ed-thud-2.mp3', 'hit.mp3'],
+  impact: ['mo-impact-1.mp3', 'mo-impact-2.mp3', 'mo-impact-3.mp3', 'ed-hit-1.mp3', 'ed-thud-1.mp3', 'ed-thud-2.mp3'],   // 14/10 : hit retiré (Axel)
   pop:    ['mo-pop-1.mp3', 'mo-pop-2.mp3', 'mo-pop-3.mp3', 'ed-pop-1.mp3', 'pop.mp3'],
   group:  ['ed-swish-1.mp3', 'mo-swipe-2.mp3', 'mo-tick-1.mp3', 'mo-tap-1.mp3', 'ed-click-1.mp3'],
   entree: ['woosh.mp3', 'whoosh.mp3', 'mo-whoosh-1.mp3', 'mo-swipe-1.mp3'],
