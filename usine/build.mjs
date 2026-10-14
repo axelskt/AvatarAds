@@ -636,7 +636,8 @@ if (!sansVoix) {
   } finally { if (held) rmSync(LK, { recursive: true, force: true }); }
 }
 // Axel 14/10 : les woosh / whoosh à 0 dB, où qu'ils jouent (transition, illustration, 1re image)
-const addSfx = (file, at, vol, tag) => { if (sansVoix) return; if (/(^|\/)(mo-)?w+h?oosh(-\d+)?\.mp3$/.test(file)) vol = '0dB'; sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
+const addSfx = (file, at, vol, tag) => { if (sansVoix) return; if (/(^|\/)(mo-)?w+h?oosh(-\d+)?\.mp3$/.test(file)) vol = '0dB'; else if (parseFloat(vol) < -7) vol = '-7dB';   // Axel 14/10 : rien sous −7 dB
+  sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
 addSfx(wh, B1 - 0.20, '-4dB', 'w1'); addSfx(imp, B1 + 0.06, '-7dB', 'i1');
 if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', 'i2'); }
 // ── BRUITAGES LIÉS À L'ACTION (Axel 29/09) : jamais un son sans quelque chose à l'écran ──
