@@ -1,0 +1,62 @@
+[
+ {
+  "start": 0.0,
+  "end": 3.6,
+  "text": "Va sur AvatarAds.fr",
+  "style": "step"
+ },
+ {
+  "start": 3.6,
+  "end": 4.9,
+  "text": "Clique sur « Commencer »",
+  "style": "step"
+ },
+ {
+  "start": 4.9,
+  "end": 6.9,
+  "text": "Va dans l'onglet Omni",
+  "style": "step"
+ },
+ {
+  "start": 6.9,
+  "end": 8.7,
+  "text": "Importe ta vidéo",
+  "style": "step"
+ },
+ {
+  "start": 8.7,
+  "end": 10.0,
+  "text": "Écris un prompt simple",
+  "style": "step"
+ },
+ {
+  "start": 10.0,
+  "end": 11.5,
+  "text": "Choisis la qualité",
+  "style": "step"
+ },
+ {
+  "start": 11.5,
+  "end": 12.6,
+  "text": "Appuie sur Générer",
+  "style": "step"
+ },
+ {
+  "start": 12.6,
+  "end": 15.9,
+  "text": "BOOM !\nTransformation 🤯",
+  "style": "punch"
+ },
+ {
+  "start": 15.9,
+  "end": 18.7,
+  "text": "Avant / après\nultra-réaliste 🤯",
+  "style": "punch"
+ },
+ {
+  "start": 12.6,
+  "end": 18.7,
+  "text": "Commente \"SITE\" et je t'envoie le lien 📩",
+  "style": "cta"
+ }
+]

@@ -1,0 +1,71 @@
+[
+ {
+  "start": 0,
+  "end": 3.88,
+  "text": "Va sur AvatarAds.fr",
+  "style": "step"
+ },
+ {
+  "start": 3.88,
+  "end": 5.71,
+  "text": "Clique sur « Commencer »",
+  "style": "step",
+  "top": 1350
+ },
+ {
+  "start": 5.71,
+  "end": 7.45,
+  "text": "Va dans l'onglet Images IA",
+  "style": "step"
+ },
+ {
+  "start": 7.45,
+  "end": 8.95,
+  "text": "Choisis le style",
+  "style": "step"
+ },
+ {
+  "start": 8.95,
+  "end": 11.65,
+  "text": "Choisis le format\net le nombre de photos",
+  "style": "step",
+  "top": 300
+ },
+ {
+  "start": 11.65,
+  "end": 14.12,
+  "text": "Écris un prompt simple",
+  "style": "step"
+ },
+ {
+  "start": 14.12,
+  "end": 15.34,
+  "text": "Appuie sur Générer",
+  "style": "step",
+  "top": 1380
+ },
+ {
+  "start": 15.34,
+  "end": 18.83,
+  "text": "BOOM !\nRésultat en quelques secondes 🤯",
+  "style": "punch"
+ },
+ {
+  "start": 18.83,
+  "end": 22.64,
+  "text": "Regarde les détails\ndes images 👀",
+  "style": "punch"
+ },
+ {
+  "start": 22.64,
+  "end": 26.37,
+  "text": "Ultra-réaliste,\ntout est naturel 🤯",
+  "style": "punch"
+ },
+ {
+  "start": 15.34,
+  "end": 26.37,
+  "text": "Commente \"SITE\" et je t'envoie le lien 📩",
+  "style": "cta"
+ }
+]

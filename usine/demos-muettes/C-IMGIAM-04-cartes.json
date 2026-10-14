@@ -1,0 +1,83 @@
+[
+ {
+  "start": 0,
+  "end": 3.88,
+  "text": "Va sur AvatarAds.fr",
+  "style": "step"
+ },
+ {
+  "start": 3.88,
+  "end": 5.8,
+  "text": "Clique sur « Commencer »",
+  "style": "step",
+  "top": 1350
+ },
+ {
+  "start": 5.8,
+  "end": 7.28,
+  "text": "Va dans l'onglet Images IA",
+  "style": "step"
+ },
+ {
+  "start": 7.28,
+  "end": 8.78,
+  "text": "Choisis le style",
+  "style": "step"
+ },
+ {
+  "start": 8.78,
+  "end": 11.67,
+  "text": "Choisis le format\net le nombre de photos",
+  "style": "step",
+  "top": 300
+ },
+ {
+  "start": 11.67,
+  "end": 14.12,
+  "text": "Écris un prompt simple",
+  "style": "step"
+ },
+ {
+  "start": 14.12,
+  "end": 15.34,
+  "text": "Appuie sur Générer",
+  "style": "step",
+  "top": 1380
+ },
+ {
+  "start": 15.34,
+  "end": 18.74,
+  "text": "BOOM !\nRésultat hyper réaliste 🤯",
+  "style": "punch"
+ },
+ {
+  "start": 18.74,
+  "end": 23.43,
+  "text": "Améliore l'image en 4K",
+  "style": "step"
+ },
+ {
+  "start": 23.43,
+  "end": 28.49,
+  "text": "Avant / après 4K :\nregarde la différence 😳",
+  "style": "punch"
+ },
+ {
+  "start": 28.49,
+  "end": 32.8,
+  "text": "La peau, la bouche,\nmême le duvet 👀",
+  "style": "punch"
+ },
+ {
+  "start": 32.8,
+  "end": 37.0,
+  "text": "Personne ne voit\nque c'est de l'IA 🤯",
+  "style": "punch"
+ },
+ {
+  "start": 15.34,
+  "end": 37.0,
+  "text": "Commente \"SITE\" et je t'envoie le lien 📩",
+  "style": "cta"
+ }
+]

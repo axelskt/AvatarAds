@@ -1,0 +1,78 @@
+[
+ {
+  "start": 0,
+  "end": 3.88,
+  "text": "Va sur AvatarAds.fr",
+  "style": "step"
+ },
+ {
+  "start": 3.88,
+  "end": 5.71,
+  "text": "Clique sur « Commencer »",
+  "style": "step",
+  "top": 1350
+ },
+ {
+  "start": 5.71,
+  "end": 7.45,
+  "text": "Va dans l'onglet Images IA",
+  "style": "step"
+ },
+ {
+  "start": 7.45,
+  "end": 9.5,
+  "text": "Sélectionne « Pub Produit »",
+  "style": "step"
+ },
+ {
+  "start": 9.5,
+  "end": 12.35,
+  "text": "Choisis le format\net le nombre de visuels",
+  "style": "step",
+  "top": 300
+ },
+ {
+  "start": 12.35,
+  "end": 14.64,
+  "text": "Écris un prompt simple",
+  "style": "step"
+ },
+ {
+  "start": 14.64,
+  "end": 16.16,
+  "text": "Ajoute la photo\nde ton produit",
+  "style": "step",
+  "top": 300
+ },
+ {
+  "start": 16.16,
+  "end": 17.58,
+  "text": "Appuie sur Générer",
+  "style": "step",
+  "top": 1380
+ },
+ {
+  "start": 17.58,
+  "end": 21.02,
+  "text": "BOOM !\nTes pubs en quelques secondes 🤯",
+  "style": "punch"
+ },
+ {
+  "start": 21.02,
+  "end": 23.62,
+  "text": "Plusieurs angles\nmarketing 🎯",
+  "style": "punch"
+ },
+ {
+  "start": 23.62,
+  "end": 28.37,
+  "text": "Des visuels pro\nsans 10 h sur Canva 🔥",
+  "style": "punch"
+ },
+ {
+  "start": 17.58,
+  "end": 28.37,
+  "text": "Commente \"SITE\" et je t'envoie le lien 📩",
+  "style": "cta"
+ }
+]
