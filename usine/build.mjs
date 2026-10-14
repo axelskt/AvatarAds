@@ -122,6 +122,7 @@ let chocForced = null;
 if (FMT.hasChoc(format) && OPT.choc && OPT.choc !== 'auto') {
   chocForced = FMT.textChoc(OPT.choc);
   if (!chocForced) { console.error('✗ texte choc « ' + OPT.choc + ' » absent de la banque validée (TH01–TH34)'); process.exit(2); }
+  if (chocForced.retired) { console.error('✗ texte choc ' + OPT.choc + ' supprimé par Axel le ' + chocForced.retired); process.exit(2); }
   const why = FMT.chocWhy(chocForced, demoRef, tx);
   if (why) console.warn('⚠ ' + why + ' → la vidéo partira en revue QC');
 }

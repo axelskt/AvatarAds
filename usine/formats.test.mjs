@@ -143,7 +143,7 @@ test('pickChoc : phrases compatibles avec la démo, la moins utilisée d’abord
   assert.ok(![...ids].some(id => ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH32'].includes(id)), [...ids].join(','));
   assert.equal(ids.size, 22);   // phrases génériques (TH28 ajoutée le 12/10, TH33-34 le 14/10) (TH10-14 et TH24 = autres modules)
   const idsTx = new Set(); for (let i = 0; i < 60; i++) idsTx.add(F.pickChoc({ demo: DEMO.omni, tx: ['TX-O02a', 'TX-O01'], rand: () => i / 60 }).id);
-  assert.ok(idsTx.has('TH13'));
+  assert.ok(!idsTx.has('TH13'));   // TH13 supprimée par Axel le 14/10 : plus jamais tirée
   const done = F.TEXTES_CHOC.filter(p => p.module === 'generique' && p.id !== 'TH18').map(p => ({ hook: 'H74', texte_choc: p.id }));
   assert.equal(F.pickChoc({ demo: DEMO.omni, done, hook: 'H74', rand: () => 0 }).id, 'TH18');
   assert.equal(F.pickChoc({ demo: DEMO.claude, rand: () => 0, fits: p => p.id === 'TH11' }).id, 'TH11');

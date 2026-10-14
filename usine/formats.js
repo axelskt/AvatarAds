@@ -69,7 +69,7 @@
     { id: 'TH10', text: 'C\'est une dinguerie ce que Claude peut faire maintenant', emoji: '🤯', module: 'mcp-claude' },
     { id: 'TH11', text: 'Claude peut maintenant faire des vidéos et personne n\'en parle', emoji: '🤯', module: 'mcp-claude' },
     { id: 'TH12', text: 'J\'ai demandé à Claude de me faire une pub… regarde le résultat', emoji: '😳', module: 'mcp-claude' },
-    { id: 'TH13', text: 'J\'ai transformé ma Clio en Porsche en une phrase', emoji: '🚗🤯', module: 'omni', tx: 'TX-O02a' },
+    { id: 'TH13', text: 'J\'ai transformé ma Clio en Porsche en une phrase', emoji: '🚗🤯', module: 'omni', tx: 'TX-O02a', retired: '2026-10-14' },   // SUPPRIMÉE par Axel 14/10 : plus jamais tirée ni acceptée
     { id: 'TH14', text: 'J\'ai monté cette vidéo en 2 clics. Sans monteur', emoji: '🤯', module: 'montage-ia' },
     { id: 'TH15', text: 'Non mais c\'est quoi ce truc ??', emoji: '😱', module: 'generique' },
     { id: 'TH16', text: 'Attends… on peut faire quoi maintenant ????', emoji: '😳', module: 'generique' },
@@ -175,7 +175,7 @@
   function pickChoc(opts) {
     opts = opts || {};
     var ex = opts.exclude || [];
-    var ok = TEXTES_CHOC.filter(function (p) { return ex.indexOf(p.id) < 0 && !chocWhy(p, opts.demo, opts.tx || null); });
+    var ok = TEXTES_CHOC.filter(function (p) { return !p.retired && ex.indexOf(p.id) < 0 && !chocWhy(p, opts.demo, opts.tx || null); });
     if (typeof opts.fits === 'function') { var fit = ok.filter(function (p) { return opts.fits(p); }); if (fit.length) ok = fit; }
     return pickBalanced(ok, 'texte_choc', opts.done, opts.hook || null, opts.rand);
   }

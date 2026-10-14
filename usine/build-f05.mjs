@@ -44,6 +44,7 @@ const work = mkdtempSync(join(tmpdir(), 'f05-'));
 // texte choc : banque validée + règle de cohérence avec la démo (chocWhy)
 const p = FMT.textChoc(OPT.choc);
 if (!p) { console.error('✗ texte choc inconnu : ' + OPT.choc); process.exit(2); }
+if (p.retired) { console.error('✗ texte choc ' + OPT.choc + ' supprimé par Axel le ' + p.retired); process.exit(2); }
 // 5 démos au plus par réaction (Axel 07/10) — recettes refusées en QC ignorées
 if (OPT.reaction && OPT.demo) {
   let rows = null;
