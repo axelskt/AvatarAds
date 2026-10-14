@@ -29,7 +29,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut'];
+const VAL_FLAGS = ['--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut', '--hook-subs'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -534,6 +534,14 @@ function groupLast(ws, tag) {
   ws.slice(k).forEach(w => { w.g = tag; });
 }
 groupLast(hookW, 'g1'); groupLast(demoW, 'g2');
+// Axel 14/10 (test) : --hook-subs groupes3 → TOUT le hook en groupes de 3 mots max (coupure aussi sur la ponctuation ou un
+// silence > 0,35 s) ; chaque mot monte du bas quand il est dit (animation des groupes de captions.mjs)
+if (OPT['hook-subs'] === 'groupes3' && hookW.length) {
+  let n = 0, k = 0;
+  hookW.forEach((w, i) => { const p = hookW[i - 1];
+    if (i && (k >= 3 || /[.,!?…;:]$/.test(p.text) || w.start - p.end > 0.35)) { n++; k = 0; }
+    w.g = 'h' + n; k++; });
+}
 // Whisper entend « commande » pour « commente » et « cite » pour « SITE » dans les CTA : corrigés (le mot à l'écran doit
 // être celui qu'on demande d'écrire)
 const KW = /^(site|go|avatar|guide|plan|ugc|montage|aide|ia)$/;
