@@ -1420,9 +1420,22 @@ revealScan();
   // le met en tampon dès le 1er paint (double rAF, après le rendu du hero), au même rang que la 1ʳᵉ démo
   // (Générateur). load() sur genVid seulement si elle est hors-champ et non lue (readyState<2) → aucun
   // figement. Les 2 autres démos (Images IA, Express) sont déjà preload=auto et se bufferisent aussi.
-  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+  // Audit 15/10 : le HERO démarre d'abord. Cache vide (TTL 10 min de GitHub Pages + nouvel ETag à chaque déploiement),
+  // ces 7 vidéos 1080p (~20 Mo) partaient au 1er paint EN MÊME TEMPS que le hero (3,4 Mo) et lui volaient la bande au
+  // moment critique → hero calé sur l'affiche. Le préchargement part donc au 1er 'playing' du hero, au plus tard 2 s après
+  // le 1er paint (borne) : toujours bien avant l'idle. Un clic précoce sur « Choisis un modèle » précharge immédiatement
+  // (openModelPicker → preloadModelPicker) : rien ne change pour le menu. genVid : load() seulement HORS CHAMP et non lue.
+  var _bgDone=false;
+  function _bgPreload(){
+    if(_bgDone) return; _bgDone=true;
     try{ window.preloadModelPicker(); }catch(e){}
-    try{ var g=document.getElementById('genVid'); if(g && g.paused && g.readyState<2){ g.preload='auto'; g.load(); } }catch(e){}
+    try{ var g=document.getElementById('genVid'); if(g && g.paused && g.readyState<2){ var r=g.getBoundingClientRect(); if(r.top>=innerHeight || r.bottom<=0){ g.preload='auto'; g.load(); } } }catch(e){}
+  }
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    var h=document.getElementById('v2heroVid');
+    if(!h || (!h.paused && h.readyState>2)){ _bgPreload(); return; }
+    try{ h.addEventListener('playing', _bgPreload); }catch(e){}
+    setTimeout(_bgPreload, 2000);
   }); });
   // Verrou de scroll robuste (position:fixed sur body) : sur iOS Safari, body{overflow:hidden}
   // ne bloque PAS le scroll du document → le fond glissait derrière le menu. On fige le body à
@@ -1444,7 +1457,7 @@ revealScan();
     // iOS libère ses décodeurs matériels avec un délai après la pause des 6 vidéos du menu → on ré-assère
     // la lecture des démos (+ la vidéo d'onglet active) sur PLUSIEURS frames, pas un seul rAF : sinon une
     // démo restée co-visible peut se figer juste après (play() rejeté avant libération, jamais réessayé).
-    function _revive(){ try{ window._ensureDemoVids&&window._ensureDemoVids(); }catch(e){} try{ window._playActiveFeatVid&&window._playActiveFeatVid(); }catch(e){} }
+    function _revive(){ try{ window._ensureDemoVids&&window._ensureDemoVids(); }catch(e){} try{ window._playActiveFeatVid&&window._playActiveFeatVid(); }catch(e){} try{ window._ensureHeroVid&&window._ensureHeroVid(); }catch(e){} }
     requestAnimationFrame(_revive); setTimeout(_revive,260); setTimeout(_revive,650);
   };
   document.addEventListener('keydown',function(e){ if(e.key==='Escape' && mp.style.display!=='none') window.closeModelPicker(); });
@@ -1455,19 +1468,91 @@ revealScan();
 (function(){function n(){try{document.body.classList.toggle('aa-nav-float',(window.scrollY||document.documentElement.scrollTop||0)>40);}catch(e){}}n();window.addEventListener('scroll',n,{passive:true});window.addEventListener('resize',n);})();</script>
 
 <script>
-/* Hero V2 animé : autoplay robuste (iOS Safari) — muted+playsinline+autoplay, relance au 1er geste + IO + retour d'onglet. */
+/* Hero V2 animé : lecture FORCÉE + chien de garde (audit 15/10 — « 1 fois sur 5 la vidéo du header reste sur l'affiche »).
+   L'ancienne garde `if(!v.paused) return` était un CUL-DE-SAC : WebKit passe paused à false DÈS l'appel à play(), même si
+   l'image ne bouge jamais (téléchargement calé ou pendu pendant que 7 vidéos 1080p se mettent en tampon au 1er paint, erreur
+   réseau/média, retour bfcache). Toutes les relances (IO, canplay, visibilitychange, pageshow, gestes)
+   repartaient alors à vide, et la relance périodique abandonnait après 8 s. On juge maintenant sur la PROGRESSION RÉELLE
+   (currentTime qui avance), avec un chien de garde BORNÉ (25 s par épisode, 6 déblocages max, il s'arrête seul après ~2 s
+   de vraie lecture) réarmé par les vrais déclencheurs (geste, retour d'onglet, bfcache, ré-entrée à l'écran, fermeture
+   du menu). Règle LP conservée : JAMAIS v.load() sur la vidéo visible. Déblocage = play(), pause()+play(), micro-seek
+   tant qu'aucune image n'est décodée ; et seulement si l'élément est MORT (erreur média, aucune source, chargement pendu), un clone neuf
+   est posé SOUS l'affiche et ne la remplace qu'à son 1er 'playing' (aucun flash). Pas de lecture forcée hors champ, ni
+   onglet caché, ni menu « Choisis un modèle » ouvert (iOS : on ne dispute pas les décodeurs à ses 6 vidéos).
+   Vérif 15/10 : (1) chargement mort SANS erreur (connexion pendue, décodeur iOS saturé : toujours aucune image après
+   3 déblocages et plus un octet) → même remplacement par un clone ; (2) les événements média seuls (pause, waiting,
+   suspend…) ne relancent que 3 épisodes d'affilée sans vraie lecture (anti-boucle pause/play si le système repause) ;
+   (3) retour du réseau ('online') = nouveau budget de remplacement. */
 (function(){
   var v=document.getElementById('v2heroVid'); if(!v) return;
-  v.muted=true; try{ v.setAttribute('muted',''); v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline',''); }catch(_){}
-  function play(){ if(!v.paused) return; try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){} }
-  play();
-  /* iOS Safari fige souvent la vidéo : gestes (persistants) + scroll + loadeddata/canplay + relance périodique. */
-  ['touchstart','touchend','click','pointerdown','scroll'].forEach(function(ev){ window.addEventListener(ev, play, {passive:true}); });
-  try{ new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting) play(); }); },{threshold:0.05}).observe(v); }catch(_){}
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden) play(); });
-  window.addEventListener('pageshow', play);
-  v.addEventListener('loadeddata', play); v.addEventListener('canplay', play);
-  var t=0, iv=setInterval(function(){ play(); if(++t>16){ clearInterval(iv); } }, 500);   /* relance ~8 s */
+  var box=v.parentNode, SRC=v.getAttribute('src')||'', mp=document.getElementById('modelPicker');
+  var inView=true, lastCT=-1, lastProg=0, lastNet=0, lastTry=0, t0=0, until=0, iv=0, fixes=0, okTicks=0, swaps=0, autoEp=0;
+  function prep(el){ el.muted=true; el.defaultMuted=true; el.playsInline=true; try{ el.setAttribute('muted',''); el.setAttribute('playsinline',''); el.setAttribute('webkit-playsinline',''); }catch(_){} }
+  function pickerOpen(){ return !!(mp && mp.style.display && mp.style.display!=='none'); }
+  function canRun(){ return !document.hidden && inView && !pickerOpen(); }
+  function healthy(){ return !v.paused && v.readyState>2 && (Date.now()-lastProg)<1500; }   // l'image bouge VRAIMENT
+  function tryPlay(force){   // play() rejeté (décodeurs pris, économie d'énergie) = repris par le chien de garde
+    var now=Date.now(); if(!force && now-lastTry<600) return; lastTry=now;
+    v.muted=true; try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){}
+  }
+  function stop(){ if(iv){ clearInterval(iv); iv=0; } }
+  function bind(el){
+    function on(ev,fn){ el.addEventListener(ev,function(){ if(el===v) fn(); }); }
+    on('timeupdate',function(){ if(el.currentTime!==lastCT){ lastCT=el.currentTime; lastProg=Date.now(); } });
+    on('progress',function(){ lastNet=Date.now(); });
+    ['loadedmetadata','loadeddata','canplay','pause','waiting','stalled','suspend','emptied','error'].forEach(function(ev){ on(ev,function(){ arm(false); }); });
+  }
+  function swap(){   // dernier recours, élément MORT seulement (erreur, aucune source, chargement pendu) : clone neuf SOUS l'ancien (même boîte absolue), aucun load()
+    if(swaps>=2){ stop(); return; }
+    swaps++;
+    var old=v, n=old.cloneNode(false);
+    n.removeAttribute('id');
+    n.setAttribute('src', SRC+(SRC.indexOf('?')<0?'?':'&')+'r='+Date.now());   // contourne une entrée de cache corrompue
+    prep(n); bind(n);
+    n.addEventListener('playing',function(){
+      if(n!==v || !n.parentNode) return;   // clone déjà remplacé/retiré : ne touche à rien
+      [].slice.call(box.querySelectorAll('video')).forEach(function(x){ if(x!==n && x.parentNode) x.parentNode.removeChild(x); });
+      n.id='v2heroVid';
+    });
+    box.insertBefore(n, old);   // ordre DOM : l'ancien (affiche) reste DEVANT tant que le clone ne joue pas
+    if(old.id!=='v2heroVid' && old.parentNode) old.parentNode.removeChild(old);   // un clone mort (sous l'original, invisible) ne s'empile pas
+    v=n; lastCT=-1; lastProg=0; fixes=0; t0=Date.now(); until=Math.max(until,t0+25000); tryPlay(true);   // le clone a son propre budget
+  }
+  function tick(){
+    var now=Date.now();
+    if(now>until){ stop(); return; }
+    if(!canRun()){ okTicks=0; return; }
+    if(healthy()){ if(++okTicks>=3){ autoEp=0; stop(); } return; }   // ~2 s de vraie lecture → on se retire (batterie)
+    okTicks=0;
+    if(v.error || v.networkState===3){ swap(); return; }
+    if(v.paused){ tryPlay(false); return; }
+    // paused=false mais l'image ne bouge pas : on laisse 2,5 s de grâce, et plus tant que des octets arrivent encore
+    if(now-Math.max(lastProg,t0)<2500) return;
+    if(v.readyState<3 && now-Math.max(lastNet,t0)<2500) return;
+    if(v.readyState<2 && fixes>=3){ swap(); return; }   // toujours AUCUNE image (= l'affiche) après 3 déblocages, plus un octet : chargement mort sans erreur
+    if(fixes>=6) return;
+    fixes++; t0=now;
+    if(v.readyState<2){ try{ v.currentTime=(v.currentTime||0)+0.001; }catch(_){} }   // aucune image décodée → micro-seek qui relance le chargement
+    try{ v.pause(); }catch(_){}
+    tryPlay(true);
+  }
+  function arm(reset){   // reset = vrai déclencheur (geste, onglet, bfcache, IO, menu fermé) ; sinon événement média
+    if(!canRun()) return;
+    if(reset) autoEp=0;
+    else if(!iv){ if(autoEp>=3) return; autoEp++; }   // événement média seul : 3 épisodes d'affilée max sans vraie lecture (anti-boucle)
+    if(v.paused) tryPlay(reset);   // synchrone : dans un geste, c'est CE play() qui lève le blocage « économie d'énergie » iOS
+    if(!iv){ t0=Date.now(); until=t0+25000; fixes=0; okTicks=0; iv=setInterval(tick,700); }   // si ça joue déjà : 3 tours (~2 s) et arrêt
+    else if(reset){ until=Date.now()+25000; if(fixes>=6) fixes=3; }   // prolonge sans remettre la grâce à zéro (les gestes de scroll iOS ne repoussent pas le déblocage)
+  }
+  prep(v); bind(v);
+  window._ensureHeroVid=function(){ arm(true); };   // appelé à la fermeture du menu « Choisis un modèle »
+  ['touchstart','touchend','pointerdown','click','keydown'].forEach(function(ev){ window.addEventListener(ev,function(){ arm(true); },{passive:true,capture:true}); });
+  window.addEventListener('scroll',function(){ if(v.paused) arm(false); },{passive:true});
+  try{ new IntersectionObserver(function(es){ inView=es[es.length-1].isIntersecting; if(inView) arm(true); },{threshold:0.01}).observe(box); }catch(_){}
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) arm(true); });
+  window.addEventListener('pageshow',function(){ arm(true); });   // retour arrière Safari (bfcache) : la vidéo revient souvent figée
+  window.addEventListener('online',function(){ swaps=0; arm(true); });   // réseau revenu (coupure, tunnel 4G) : nouveau budget de remplacement
+  arm(true);
 })();
 /* Page V2 autonome (accès manuel via /v2). PAS de redirection. On tague juste les sessions V2 dans Clarity pour pouvoir comparer. */
 /* Audit 04/10 (SITE-03) : Clarity est chargé par /app/consent.js après le rendu (load + idle), et jamais si le visiteur l'a

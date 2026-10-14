@@ -38,6 +38,10 @@ try{
      code) ; 2.117.2 = la version que servait @2 au 03/10/2026. Le loader Whop (non versionné, mis à jour par Whop) et
      Clarity restent sans SRI : une empreinte figée casserait le paiement au premier déploiement de Whop. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
+<!-- 15/10 (barre du haut vide sans message) : si jsdelivr ne répond pas (réseau, bloqueur), supabase-js manque, « const sb =
+     supabase.createClient » lève une erreur et TOUT le script de l'app s'arrête avant initAuth(). Secours : le même fichier,
+     même empreinte SRI (vérifiée identique le 15/10), depuis unpkg — déjà autorisé par la CSP. -->
+<script>if(!window.supabase){ document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"><\/script>'); }</script>
 <script src="static-ads-bank.js"></script><!-- #static-ads-bank : 59 formats de pub (généré depuis shared/static-ads-bank.json) -->
 <script src="omnihuman-prompts.js"></script><!-- prompt OmniHuman 1.5 (≤ 300 car., anglais) : généré depuis shared/omnihuman-prompts.json -->
 <script src="hedra-prompts.js"></script><!-- prompt lipsync Hedra Character-3 validé sur l'usine (27/09) : généré depuis shared/hedra-prompts.json -->
@@ -5037,6 +5041,24 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     else { location.replace('/connexion.html'); }
   }catch(e){}
 })();
+/* 15/10 (Axel : « je me connecte et la barre n'est pas chargée ») : filet INDÉPENDANT du gros script de l'app. Si celui-ci
+   ne démarre pas (supabase-js absent, erreur au chargement) ou si l'ouverture du compte traîne, la barre du haut restait
+   vide SANS aucun message (le login est masqué juste au-dessus). Au bout de 20 s sans compte affiché : « Recharger ».
+   Même id que _aaBootEchec : une seule bannière, et enterApp la retire si le compte finit par s'ouvrir. */
+setTimeout(function(){
+  try{
+    if(document.getElementById('aaBootEchec')) return;
+    var mb=document.getElementById('memberBar'); if(mb && mb.style.display==='flex') return;
+    var ov=document.getElementById('loginOverlay'); if(ov && ov.style.display!=='none') return;
+    if((location.hash||'').indexOf('#capture=')===0) return;
+    var d=document.createElement('div'); d.id='aaBootEchec'; d.setAttribute('role','alert');
+    d.style.cssText='position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:10050;display:flex;align-items:center;gap:12px;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;padding:12px 14px 12px 16px;border-radius:14px;background:var(--surface,#16161a);border:1px solid var(--border-2,#333);box-shadow:0 12px 40px rgba(0,0,0,.28);color:var(--text,#fff);font:600 14px var(--font,system-ui)';
+    var t=document.createElement('span'); t.style.cssText='flex:1 1 auto;min-width:0;line-height:1.3'; t.textContent='Ton compte ne s’est pas chargé.';
+    var b=document.createElement('button'); b.type='button'; b.className='btn btn-sm'; b.style.cssText='flex:0 0 auto;background:var(--accent,#FF6B35);color:#fff;border:0;font-weight:700'; b.textContent='Recharger';
+    b.onclick=function(){ location.reload(); };
+    d.appendChild(t); d.appendChild(b); document.body.appendChild(d);
+  }catch(e){}
+}, 20000);
 </script>
 
 <!-- SETUP MODAL -->
@@ -5916,7 +5938,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-13-1715'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-15-0100'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -5930,7 +5952,11 @@ function _aaFetch(input, init){
   const court = !opt.signal && typeof AbortController !== 'undefined'
     && ((/^\/rest\/v1\//.test(path) && (method === 'GET' || method === 'HEAD')) || /^\/auth\/v1\/(user|token)/.test(path));
   if(!court) return fetch(input, opt);
-  const waits = [5000, 8000, 0];   // 0 = dernier essai sans limite : la relance ne crée jamais d'échec de plus
+  // 0 = dernier essai sans limite : la relance ne crée jamais d'échec de plus. SAUF l'authentification (15/10) : supabase-js
+  // ne fait qu'UN renouvellement de session à la fois (refreshingDeferred) et toutes les requêtes de la page l'attendent ;
+  // un dernier essai figé (connexion morte, serveur muet) gelait donc la page entière pour toujours. 20 s au plus : l'erreur
+  // est « réessayable » pour supabase-js (session gardée) et la relecture suivante repart sur une requête neuve.
+  const waits = /^\/auth\/v1\//.test(path) ? [5000, 8000, 20000] : [5000, 8000, 0];
   const essai = function(i){
     const ac = new AbortController(), t = waits[i] ? setTimeout(function(){ ac.abort(); }, waits[i]) : null;
     return fetch(input, Object.assign({}, opt, { signal: ac.signal })).then(function(r){ clearTimeout(t); return r; }, function(e){
@@ -7240,7 +7266,7 @@ function _aaBootEchec(){
   const d=document.createElement('div'); d.id='aaBootEchec'; d.setAttribute('role','alert');
   d.style.cssText='position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:10050;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;padding:12px 14px 12px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border-2);box-shadow:0 12px 40px rgba(0,0,0,.28);color:var(--text);font:600 14px var(--font)';
   d.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:0 0 auto"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>'
-    +'<span style="flex:1 1 auto;min-width:0;line-height:1.3">Ton compte n’a pas pu se charger.</span>'
+    +'<span style="flex:1 1 auto;min-width:0;line-height:1.3">Ton compte n’a pas pu se charger — nouvel essai automatique en cours.</span>'
     +'<button type="button" class="btn btn-sm" style="flex:0 0 auto;background:var(--accent);color:#fff;border:0;font-weight:700" onclick="location.reload()">Recharger</button>';
   document.body.appendChild(d);
 }
@@ -7263,7 +7289,7 @@ async function _aaLoadProfile(user){
     if(data){ profile = data; break; }
     if(!error){ if(++absent >= 5) break; await _aaAttente(600); continue; }   // aucune ligne : compte neuf, le trigger crée le profil
     console.warn('[compte] lecture du profil :', error.code || '', error.message || error);
-    if(i === 2) _aaBootEchec();   // 3e échec : « Recharger » visible tout de suite, les essais continuent derrière
+    if(i === 0) _aaBootEchec();   // 15/10 : dès le 1er échec (avant : au 3e, ~80 s d'écran vide) — « Recharger » visible, les essais continuent
     if(/jwt|token|401|403/i.test(String(error.message || '') + ' ' + String(error.code || ''))){ try{ await _aaBorne(sb.auth.refreshSession(), 8000); }catch(_){} }
     await _aaAttente(Math.min(4000, 600 * (i + 1)));
   }
@@ -7276,9 +7302,40 @@ async function _aaLoadProfile(user){
       profile = data;
     }catch(_){}
   }
-  if(profile) enterApp(profile);
-  else _aaBootEchec();
+  if(profile){
+    try{ enterApp(profile); }catch(e){ console.error('[compte] ouverture de l’app :', e); }   // 15/10 : jamais de promesse rejetée qui fige la suite
+  }
+  else { _aaBootEchec(); _aaBootPlanifie(); }   // 15/10 : on ne s'arrête plus là — relecture automatique
 }
+// ── 15/10 : RELANCES DE L'OUVERTURE DU COMPTE ─────────────────────────────────────────────────────────────────────────
+// Avant : une fois les 8 lectures ratées (ou la session illisible), plus RIEN ne relisait le profil — ni minuterie, ni retour
+// sur l'onglet, ni retour du réseau, ni page restaurée par Safari (bfcache) — et le rappel de session n'était pas branché :
+// la barre du haut restait vide jusqu'à un rechargement à la main, même une fois Supabase revenu. Maintenant le profil est
+// relu tout seul (10 s, 16 s, 26 s… 60 s au plus) tant qu'une session est enregistrée et que le compte n'est pas ouvert.
+let _aaBootRetryT = null, _aaBootRetryN = 0, _aaBootRelanceBusy = false;
+function _aaBootPlanifie(){
+  if(currentMember || _aaBootRetryT) return;
+  const d = Math.min(60000, Math.round(10000 * Math.pow(1.6, _aaBootRetryN++)));
+  _aaBootRetryT = setTimeout(function(){ _aaBootRetryT = null; if(document.visibilityState === 'hidden') return; _aaBootRelance('minuterie'); }, d + Math.round(Math.random() * 5000));   // onglet caché : pause (visibilitychange relance au retour) ; décalage aléatoire
+}
+async function _aaBootRelance(raison){
+  if(currentMember || _aaProfileRun || _aaBootRelanceBusy) return;   // une lecture tourne déjà : elle replanifiera si elle échoue
+  if(window._aaSortie14j) return;   // déconnexion « 14 jours » en cours : surtout ne pas rouvrir la session qu'on ferme
+  if(!_aaSessionUid()) return;   // plus de session enregistrée : rien à relire
+  _aaBootRelanceBusy = true;
+  if(_aaBootRetryT){ clearTimeout(_aaBootRetryT); _aaBootRetryT = null; }
+  console.warn('[compte] nouvelle lecture du profil :', raison);
+  try{
+    const r = await _aaBorne(sb.auth.getSession(), 26000);
+    const s = r && r.data && r.data.session;
+    if(s && s.user && !currentMember) await loadProfile(s.user);
+  }catch(e){ console.warn('[compte] relance :', e && e.message); _aaBootEchec(); }
+  finally{ _aaBootRelanceBusy = false; }
+  if(!currentMember) _aaBootPlanifie();
+}
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'visible' && !currentMember) _aaBootRelance('onglet revenu au premier plan'); });
+window.addEventListener('online', function(){ if(!currentMember) _aaBootRelance('réseau revenu'); });
+window.addEventListener('pageshow', function(e){ if(e && e.persisted && !currentMember) _aaBootRelance('page restaurée par le navigateur'); });
 
 // ── PARRAINAGE (25/09) ─────────────────────────────────────────────────────
 // Le lien avatarads.fr/?ref=CODE (LP, app ou connexion.html) garde le code dans aa_ref. Avant le 25/09, seul le login
@@ -7374,7 +7431,8 @@ function enterApp(profile){
   // Crédits images bonus (stockés dans Supabase)
   window._imgBonusCreditsCache = typeof profile.img_bonus_credits === 'number' ? profile.img_bonus_credits : 0;
   // Quota vidéos — reset mensuel + affichage
-  _checkAndResetQuota().then(() => { _updateQuotaDisplay(); _updateBypassUI(); });
+  try{ _updateQuotaDisplay(); }catch(_){}   // 15/10 : solde du profil affiché TOUT DE SUITE — l'appel ci-dessous (POST, non borné) pouvait laisser « — » si le serveur rame
+  _checkAndResetQuota().then(() => { _updateQuotaDisplay(); _updateBypassUI(); }).catch(function(e){ console.warn('[compte] quota :', e && e.message); });
   // Bloquer la durée selon le plan
   _updateDurationLock(profile.plan);
   const badge = document.getElementById('memberPlanBadge');
@@ -7711,25 +7769,81 @@ function _applyStartTool(){
 }
 
 // ── INIT AUTH (check session au démarrage) ──
+// 15/10 (Axel : « je me connecte et la barre n'est pas chargée ») : la barre du haut ne reste plus JAMAIS vide en silence.
+// Nuit du 14 au 15/10 : l'instance Supabase ne répondait plus (522 au bout de 90 s sur /rest et /auth) ; la bannière
+// n'arrivait qu'au 3e échec (~80 s), plus rien ne relisait le profil ensuite, et le rappel de session n'était branché
+// qu'après un démarrage RÉUSSI. Maintenant : rappel branché avant la lecture de la session, « Recharger » à 12 s,
+// relectures automatiques (_aaBootRelance), aucune écriture locale ni déconnexion qui puisse figer ou casser le démarrage.
+// NB : supabase-js 2.117.2 n'a plus de verrou entre onglets (this.lock vaut null par défaut). Ce qui fait attendre getSession,
+// c'est le renouvellement du jeton AU DÉMARRAGE (jeton de plus d'une heure : 1re ouverture de la journée, retour de veille)
+// quand /auth/v1/token est lent ou muet — d'où un bug « une fois sur N ».
+let _aaAuthEcoute = false;
+function _aaEcouteSession(){
+  if(_aaAuthEcoute) return;
+  _aaAuthEcoute = true;
+  // Axel 13/10 (« ça bug souvent… ton compte n'a pas pu se charger ») : supabase-js ATTEND ce rappel avant de finir un
+  // renouvellement de session (TOKEN_REFRESHED, onglet qui revient de veille). Y lire le profil (requête → jeton → même
+  // renouvellement) bloquait les deux : la lecture n'arrivait jamais au serveur. On ne fait donc RIEN de supabase dans le
+  // rappel lui-même : on diffère (même règle que Factory V2).
+  sb.auth.onAuthStateChange((_event, session) => {
+    if(!(session && session.user) || currentMember || window._aaSortie14j) return;
+    setTimeout(async function(){
+      if(currentMember || window._aaSortie14j) return;
+      try{ if(!localStorage.getItem('aa_login_at')) localStorage.setItem('aa_login_at', String(Date.now())); }catch(_){}   // stockage plein : jamais bloquant
+      await loadProfile(session.user);
+      if(currentMember) _applyStartTool();  // retour OAuth Google → modèle choisi sur la LP (15/10 : jamais consommé par un essai raté)
+    }, 0);
+  });
+}
+// Dernière VRAIE connexion (mot de passe, code, Google) lue dans la session enregistrée : user.last_sign_in_at ne bouge pas
+// aux renouvellements de jeton. Une connexion faite sur connexion.html APRÈS le début du compteur « 14 jours » le remet à
+// zéro (avant : compteur périmé → la session toute neuve était déconnectée et l'app renvoyait à la page de connexion).
+function _aaDerniereConnexion(){
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && /^sb-.*-auth-token$/.test(k)){ const v = JSON.parse(localStorage.getItem(k) || 'null'); const t = Date.parse((v && v.user && v.user.last_sign_in_at) || ''); if(t) return t; }
+    }
+  }catch(_){}
+  return 0;
+}
 async function initAuth(){
   // « Rester connecté 14 jours » : au-delà, reconnexion obligatoire
-  const born = parseInt(localStorage.getItem('aa_login_at') || '0', 10);
+  let born = 0;
+  try{ born = parseInt(localStorage.getItem('aa_login_at') || '0', 10) || 0; }catch(_){}
+  const signIn = _aaDerniereConnexion();
+  if(born && signIn > born){ born = signIn; try{ localStorage.setItem('aa_login_at', String(signIn)); }catch(_){} }
   if(born && Date.now() - born > 14 * 86400000){
-    localStorage.removeItem('aa_login_at');
-    await sb.auth.signOut();
+    window._aaSortie14j = true;   // 15/10 : ni rappel de session ni relance ne doivent relire le profil de la session qu'on ferme
+    try{ localStorage.removeItem('aa_login_at'); }catch(_){}
+    // 15/10 : borné — signOut attend le serveur ; serveur muet = démarrage figé pour toujours, sans bannière
+    try{ await _aaBorne(sb.auth.signOut(), 8000); }catch(_){ try{ _aaPurgeAccountStorage(false); }catch(__){} }
+    window._aaSortie14j = false;
   }
-  // session lue en 10 s au plus : plusieurs onglets ouverts peuvent bloquer le verrou de session de supabase-js
+  // 15/10 : rappel de session branché APRÈS la déconnexion des 14 jours (branché avant, son INITIAL_SESSION relisait le profil
+  // de la session en cours de fermeture : l'app s'ouvrait sur une session supprimée et aa_login_at repartait à zéro), mais AVANT
+  // la lecture de la session : un SIGNED_IN / TOKEN_REFRESHED tardif (réseau revenu, retour sur l'onglet) relit le profil.
+  _aaEcouteSession();
+  setTimeout(function(){ if(!currentMember && _aaSessionUid()){ _aaBootEchec(); _aaBootPlanifie(); } }, 12000);   // 15/10 : rien d'ouvert à 12 s → « Recharger » visible, les essais continuent
+  // session lue en 26 s au plus (serveur lent, renouvellement de jeton en cours)
   let session = null, sessionBloquee = false;
-  try{ session = (await _aaBorne(sb.auth.getSession(), 26000)).data.session; }catch(e){ sessionBloquee = true; console.warn('[compte] session :', e && e.message); }
-  if(sessionBloquee){ _aaBootEchec(); return; }
+  try{
+    const lu = await _aaBorne(sb.auth.getSession(), 26000);
+    session = lu.data.session;
+    // 15/10 : jeton expiré + renouvellement impossible (serveur injoignable) : supabase-js GARDE la session enregistrée mais
+    // répond « pas de session ». Ce n'est pas une déconnexion → « Recharger » + relectures, jamais la page de connexion
+    // (où, serveur muet, le bouton « Se connecter » restait bloqué).
+    if(!session && lu.error && _aaSessionUid()){ sessionBloquee = true; console.warn('[compte] session :', lu.error.message || lu.error); }
+  }catch(e){ sessionBloquee = true; console.warn('[compte] session :', e && e.message); }
+  if(sessionBloquee){ _aaBootEchec(); _aaBootPlanifie(); return; }
   if(session && session.user){
-    if(!born) localStorage.setItem('aa_login_at', String(Date.now())); // sessions d'avant l'OTP : on démarre le compteur maintenant
+    try{ if(!born) localStorage.setItem('aa_login_at', String(Date.now())); }catch(_){}   // 15/10 : stockage plein (vignettes d'images) → l'exception arrêtait le démarrage SANS bannière
     await loadProfile(session.user);
-    _applyStartTool();  // modèle choisi depuis la LP → ouvre le bon module
+    if(currentMember) _applyStartTool();  // modèle choisi depuis la LP → ouvre le bon module (15/10 : un essai raté ne le consomme plus — enterApp l'applique à la réussite)
   }
   // Filet de sécurité : si aucune session valide n'a ouvert l'app (session absente/expirée, ou profil non chargé),
   // on ré-affiche le login (au cas où on l'aurait masqué optimistiquement au boot pour éviter le flash).
-  if(!currentMember && session && session.user){ _aaBootEchec(); return; }   // session valide mais compte illisible : « Recharger », pas la page de connexion
+  if(!currentMember && session && session.user){ _aaBootEchec(); _aaBootPlanifie(); return; }   // session valide mais compte illisible : « Recharger » + relectures automatiques, pas la page de connexion
   if(!currentMember){
     // Login unifié : pas de session valide → connexion dédiée (connexion.html). Exception : un retour
     // OAuth en cours (jeton dans l'URL) — on NE redirige pas (sinon jeton perdu), onAuthStateChange finit
@@ -7744,20 +7858,7 @@ async function initAuth(){
       return;
     }
   }
-  // Écouter les changements de session (retour OAuth Google inclus)
-  // Axel 13/10 (« ça bug souvent… ton compte n'a pas pu se charger ») : supabase-js ATTEND ce rappel avant de finir un
-  // renouvellement de session (TOKEN_REFRESHED, onglet qui revient de veille). Y lire le profil (requête → jeton → même
-  // renouvellement) bloquait les deux : la lecture n'arrivait jamais au serveur. On ne fait donc RIEN de supabase dans le
-  // rappel lui-même : on diffère (même règle que Factory V2).
-  sb.auth.onAuthStateChange((_event, session) => {
-    if(!(session && session.user) || currentMember) return;
-    setTimeout(async function(){
-      if(currentMember) return;
-      if(!localStorage.getItem('aa_login_at')) localStorage.setItem('aa_login_at', String(Date.now()));
-      await loadProfile(session.user);
-      _applyStartTool();  // retour OAuth Google → ouvre le modèle choisi depuis la LP
-    }, 0);
-  });
+  // Écouter les changements de session (retour OAuth Google inclus) : branché au début d'initAuth (_aaEcouteSession, 15/10)
 }
 
 function checkSetupNeeded(){
@@ -31797,7 +31898,8 @@ async function uploadToYoutube(){
 document.getElementById('setupOverlay').style.display = 'none';
 
 // 2. Vérifier session Supabase existante
-initAuth();
+// 15/10 : une exception dans initAuth (ex. stockage plein) devenait une promesse rejetée ignorée → barre vide, aucun message
+initAuth().catch(function(e){ console.error('[compte] démarrage :', e); try{ _aaBootEchec(); _aaBootPlanifie(); }catch(_){} });
 
 // 3. Load API keys (hardcodées — pas de localStorage)
 refreshDots();
