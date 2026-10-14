@@ -340,6 +340,10 @@ export function horsBornes(mesure, bornes) {
 // seul compte en file : ordre chronologique inchangé. File vide : deux lectures, comme avant. `sb` = client Supabase (injecté :
 // le module reste sans accès réseau à l'import). Rend { id, user_id } ou null (erreur de lecture = null, comme avant).
 export async function prochainJob(sb, dernierCompte, prioritaires) {
+  // 15/10 (panne de la base, 23h54) : 6 moteurs × 2 requêtes toutes les 2 s même file vide = ~6 requêtes/s en continu.
+  // Sonde légère d'abord : file vide → UNE requête (index status), et la logique de file équitable seulement s'il y a du travail.
+  const { data: sonde } = await sb.from('render_jobs').select('id').eq('status', 'queued').limit(1)
+  if (!Array.isArray(sonde) || !sonde.length) return null
   const plusAncien = async (prio, autreQue) => {
     let q = sb.from('render_jobs').select('id, user_id').eq('status', 'queued')
     if (prio) q = q.in('plan->>__compose', prioritaires)

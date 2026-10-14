@@ -3503,6 +3503,7 @@ async function pollLoop() {
   // plus ancien d'un AUTRE compte passe devant (prochainJob, securite.mjs). Un seul compte en file : ordre inchangé. Seuls id et
   // compte sont lus pour choisir (les plans pèsent jusqu'à 512 Ko), puis le job retenu est relu en entier.
   let dernierCompte = null
+  let fileVide = 0   // nombre de sondes à vide d'affilée (attente progressive)
 
   for (;;) {
     try {
@@ -3511,8 +3512,13 @@ async function pollLoop() {
       const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix'])   // motion-voix : simple mux (copie du flux vidéo), quelques secondes
       if (!cand) {
         if (Date.now() - dernierBalayage > 5 * 60_000) await reprendreOrphelins()
-        await new Promise((r) => setTimeout(r, 2000)); continue   // #vitesse (02/09) : 5 s → 2 s de latence de prise
+        // 15/10 : attente qui S'ALLONGE quand la file reste vide (2 s → 12 s, + un peu de hasard pour que les 6 moteurs ne
+        // sondent pas en même temps), et revient à 2 s dès qu'un job est pris. Avec 6 moteurs, un job attend ~2 s en moyenne.
+        fileVide = Math.min(fileVide + 1, 8)
+        const attente = Math.min(2000 * Math.pow(1.35, fileVide), 12_000) + Math.random() * 800
+        await new Promise((r) => setTimeout(r, attente)); continue   // #vitesse (02/09) : 2 s dès qu'il y a du travail
       }
+      fileVide = 0
       const { data: job } = await sb.from('render_jobs').select('*').eq('id', cand.id).eq('status', 'queued').maybeSingle()
       if (!job) { await new Promise((r) => setTimeout(r, 500)); continue }   // pris par un autre moteur entre-temps (ou hoquet DB)
 
