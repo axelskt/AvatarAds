@@ -606,7 +606,7 @@ const SFX_POOL = {
   entree: ['woosh.mp3', 'whoosh.mp3', 'mo-whoosh-1.mp3', 'mo-swipe-1.mp3'],
   photo:  ['snap.mp3', 'mo-pop-2.mp3', 'pop.mp3'],   // Axel 14/10 : ni camera-shutter ni camera-click ; click = snap (même fichier)
   debut:  ['woosh.mp3', 'whoosh.mp3', 'cinematic-impact.mp3', 'metallic-riser.mp3', 'reverse-crash.mp3', 'hit.mp3',
-           'tk-taco-bell.mp3', 'tk-vine-boom.mp3', 'tk-kaching.mp3', 'tk-tindeck.mp3', 'mo-pop-1.mp3'],   // Axel 14/10 : dès la 1re image (tk- = découpés de la vidéo TikTok)
+           'tk-taco-bell.mp3', 'tk-vine-boom.mp3', 'tk-kaching.mp3', 'tk-tindeck.mp3'],   // mo-pop-1 retiré (pas assez fort)   // Axel 14/10 : dès la 1re image (tk- = découpés de la vidéo TikTok)
   sortie: ['mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
 };
 const sfxPick = (() => { let h = 2166136261; for (const c of basename(out || '') + '|' + (hookId || '') + '|' + (OPT.demo || '')) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
@@ -628,7 +628,8 @@ if (!sansVoix) {
   try {
     let st = { counts: {}, last: null }; try { st = { counts: {}, last: null, ...JSON.parse(readFileSync(RF, 'utf8')) }; } catch { /* premier rendu */ }
     const li = pool.indexOf(st.last), order = pool.map((f, i) => [f, (i - li - 1 + pool.length) % pool.length]);
-    const pick = order.sort((a, b) => (st.counts[a[0]] || 0) - (st.counts[b[0]] || 0) || a[1] - b[1])[0][0];
+    const forced = OPT['sfx-debut'] ? OPT['sfx-debut'].replace(/(\.mp3)?$/, '.mp3') : null;   // --sfx-debut tk-vine-boom : imposé (test)
+    const pick = forced || order.sort((a, b) => (st.counts[a[0]] || 0) - (st.counts[b[0]] || 0) || a[1] - b[1])[0][0];
     st.counts[pick] = (st.counts[pick] || 0) + 1; st.last = pick; sfxPick.debut = pick;
     writeFileSync(RF + '.tmp', JSON.stringify(st)); renameSync(RF + '.tmp', RF);
     console.log('  1re image (chacun son tour) : ' + pick + ' · joué ' + st.counts[pick] + ' fois');
