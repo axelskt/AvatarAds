@@ -606,7 +606,7 @@ const SFX_POOL = {
   entree: ['woosh.mp3', 'whoosh.mp3', 'mo-whoosh-1.mp3', 'mo-swipe-1.mp3'],
   photo:  ['snap.mp3', 'mo-pop-2.mp3', 'pop.mp3'],   // Axel 14/10 : ni camera-shutter ni camera-click ; click = snap (même fichier)
   debut:  ['woosh.mp3', 'whoosh.mp3', 'cinematic-impact.mp3', 'metallic-riser.mp3', 'reverse-crash.mp3', 'hit.mp3',
-           'tk-taco-bell.mp3', 'tk-vine-boom.mp3', 'tk-kaching.mp3', 'tk-tindeck.mp3'],   // mo-pop-1 retiré (pas assez fort)   // Axel 14/10 : dès la 1re image (tk- = découpés de la vidéo TikTok)
+           'tk-taco-bell.mp3', 'tk-vine-boom.mp3', 'tk-tindeck.mp3'],   // mo-pop-1 retiré (pas assez fort) ; kaching → « BOUM » de la démo   // Axel 14/10 : dès la 1re image (tk- = découpés de la vidéo TikTok)
   sortie: ['mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
 };
 const sfxPick = (() => { let h = 2166136261; for (const c of basename(out || '') + '|' + (hookId || '') + '|' + (OPT.demo || '')) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
@@ -642,6 +642,8 @@ if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', '
 { let q = 0; const sx = f => join(SFX, f);
   addSfx(sx(sfxPick.debut), 0, '-8dB', 'x' + q++);                                                          // Axel 14/10 : un bruitage dès la première image
   // 14/10 (Axel) : plus de pop à l'apparition du texte choc (« ça sert à rien ») ; mo-pop-1 passe dans « dès la 1re image »
+  // Axel 14/10 : Kaching à chaque « BOUM » dit dans la démo (« t'appuies sur Générer et boum ») — calé sur le mot
+  demoW.filter(w => /^bo+u?m$/.test(bare(w.text))).forEach(w => addSfx(sx('tk-kaching.mp3'), Math.max(0, w.start - 0.02), '-6dB', 'x' + q++));
   // Axel 14/10 : dans le CTA, le MOT-CLÉ dit (SITE, CLAUDE…) → frappe clavier (mac-typing, enregistré bas d'où le gain)
   //   mot-clé = le mot de la liste qui suit (à 2 mots près) le verbe « commente / marque / écris / tape »
   ctaW.forEach((w, i) => { if (!/^(site|claude|go|avatar|guide|plan|ugc|montage|aide|ia)$/.test(bare(w.text))) return;
