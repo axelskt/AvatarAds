@@ -604,8 +604,9 @@ const SFX_POOL = {
   pop:    ['mo-pop-1.mp3', 'mo-pop-2.mp3', 'mo-pop-3.mp3', 'ed-pop-1.mp3', 'pop.mp3'],
   group:  ['ed-swish-1.mp3', 'mo-swipe-2.mp3', 'mo-tick-1.mp3', 'mo-tap-1.mp3', 'ed-click-1.mp3'],
   entree: ['woosh.mp3', 'whoosh.mp3', 'mo-whoosh-1.mp3', 'mo-swipe-1.mp3'],
-  photo:  ['camera-click.mp3', 'snap.mp3', 'click.mp3'],   // Axel 14/10 : camera-shutter retiré, click ajouté
-  debut:  ['woosh.mp3', 'whoosh.mp3', 'cinematic-impact.mp3', 'metallic-riser.mp3', 'reverse-crash.mp3', 'hit.mp3'],   // Axel 14/10 : dès la 1re image
+  photo:  ['snap.mp3', 'mo-pop-2.mp3', 'pop.mp3'],   // Axel 14/10 : ni camera-shutter ni camera-click ; click = snap (même fichier)
+  debut:  ['woosh.mp3', 'whoosh.mp3', 'cinematic-impact.mp3', 'metallic-riser.mp3', 'reverse-crash.mp3', 'hit.mp3',
+           'tk-taco-bell.mp3', 'tk-vine-boom.mp3', 'tk-kaching.mp3', 'tk-tindeck.mp3'],   // Axel 14/10 : dès la 1re image (tk- = découpés de la vidéo TikTok)
   sortie: ['mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
 };
 const sfxPick = (() => { let h = 2166136261; for (const c of basename(out || '') + '|' + (hookId || '') + '|' + (OPT.demo || '')) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
