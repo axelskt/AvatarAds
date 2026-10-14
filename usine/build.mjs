@@ -604,7 +604,8 @@ const SFX_POOL = {
   pop:    ['mo-pop-1.mp3', 'mo-pop-2.mp3', 'mo-pop-3.mp3', 'ed-pop-1.mp3', 'pop.mp3'],
   group:  ['ed-swish-1.mp3', 'mo-swipe-2.mp3', 'mo-tick-1.mp3', 'mo-tap-1.mp3', 'ed-click-1.mp3'],
   entree: ['woosh.mp3', 'whoosh.mp3', 'mo-whoosh-1.mp3', 'mo-swipe-1.mp3'],
-  photo:  ['camera-shutter.mp3', 'camera-click.mp3', 'snap.mp3'],
+  photo:  ['camera-click.mp3', 'snap.mp3', 'click.mp3'],   // Axel 14/10 : camera-shutter retiré, click ajouté
+  debut:  ['woosh.mp3', 'whoosh.mp3', 'cinematic-impact.mp3', 'metallic-riser.mp3', 'reverse-crash.mp3', 'hit.mp3'],   // Axel 14/10 : dès la 1re image
   sortie: ['mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
 };
 const sfxPick = (() => { let h = 2166136261; for (const c of basename(out || '') + '|' + (hookId || '') + '|' + (OPT.demo || '')) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
@@ -618,7 +619,13 @@ addSfx(wh, B1 - 0.20, '-4dB', 'w1'); addSfx(imp, B1 + 0.06, '-7dB', 'i1');
 if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', 'i2'); }
 // ── BRUITAGES LIÉS À L'ACTION (Axel 29/09) : jamais un son sans quelque chose à l'écran ──
 { let q = 0; const sx = f => join(SFX, f);
+  addSfx(sx(sfxPick.debut), 0, '-8dB', 'x' + q++);                                                          // Axel 14/10 : un bruitage dès la première image
   if (sidecar.texte_choc) addSfx(sx(sfxPick.pop), 0.02, '-12dB', 'x' + q++);                              // texte du hook qui apparaît
+  // Axel 14/10 : dans le CTA, le MOT-CLÉ dit (SITE, CLAUDE…) → frappe clavier (mac-typing, enregistré bas d'où le gain)
+  //   mot-clé = le mot de la liste qui suit (à 2 mots près) le verbe « commente / marque / écris / tape »
+  ctaW.forEach((w, i) => { if (!/^(site|claude|go|avatar|guide|plan|ugc|montage|aide|ia)$/.test(bare(w.text))) return;
+    if (!ctaW.slice(Math.max(0, i - 2), i).some(v => /^(comment|marque|ecri|tape)/.test(bare(v.text)) && !/^commentaire/.test(bare(v.text)))) return;
+    addSfx(sx('mac-typing.mp3'), Math.max(0, w.start - 0.03), '+3dB', 'x' + q++); });
   const gs = {}; allWords.forEach(w => { if (w.g && !(w.g in gs)) gs[w.g] = w.start; });
   Object.values(gs).forEach(t => addSfx(sx(sfxPick.group), Math.max(0, t - 0.1), '-14dB', 'x' + q++));       // groupe de sous-titres
   brollEvents.forEach(e => { addSfx(sx(sfxPick.entree), Math.max(0, e.at - 0.15), '-9dB', 'x' + q++);            // image qui entre
