@@ -606,9 +606,9 @@ const SFX_POOL = {
   group:  ['ed-swish-1.mp3', 'mo-swipe-2.mp3', 'mo-tick-1.mp3', 'mo-tap-1.mp3', 'ed-click-1.mp3'],
   entree: ['woosh.mp3', 'whoosh.mp3', 'mo-whoosh-1.mp3', 'mo-swipe-1.mp3'],
   photo:  ['snap.mp3', 'mo-pop-2.mp3', 'pop.mp3'],   // Axel 14/10 : ni camera-shutter ni camera-click ; click = snap (même fichier)
-  // 14/10 (Axel : « on n'entend pas le bruitage du début ») : versions debut-* = coupées au début de leur coup (les montées
-  // cinematic-impact / metallic-riser / reverse-crash n'étaient audibles qu'après 0,7-1,7 s, sous la voix) et mises au même
-  // niveau (pic −6 dB), jouées à 0 dB
+  // 14/10 (Axel : « on n'entend pas le bruitage du début ») : versions debut-* au niveau maximal (pic 0 dB), jouées à 0 dB.
+  // Les MONTÉES (cinematic-impact, metallic-riser, reverse-crash) restent ENTIÈRES : coupées au début de leur coup, elles
+  // sonnaient « cassées » (VF-0417, VF-0444) ; les coups secs (woosh, hit, Taco bell…) démarrent sur leur attaque.
   debut:  ['debut-woosh.mp3', 'debut-whoosh.mp3', 'debut-cinematic-impact.mp3', 'debut-metallic-riser.mp3', 'debut-reverse-crash.mp3', 'debut-hit.mp3',
            'debut-tk-taco-bell.mp3', 'debut-tk-vine-boom.mp3', 'debut-tk-tindeck.mp3'],   // mo-pop-1 retiré (pas assez fort) ; kaching → « BOUM » de la démo   // Axel 14/10 : dès la 1re image (tk- = découpés de la vidéo TikTok)
   sortie: ['mo-swipe-1.mp3', 'mo-swipe-2.mp3', 'ed-swish-1.mp3'],
