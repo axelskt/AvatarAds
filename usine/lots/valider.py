@@ -91,3 +91,5 @@ for r in rows:
     b = os.path.basename(r['u'])[:-4]; rm += ['ss:///factory-media/qc/' + b + '.mp4', 'ss:///factory-media/qc/' + b + '-poster.jpg']
 sh(['supabase', 'storage', 'rm', *rm, '--experimental', '--linked', '--yes'])
 for a, s_, x in sorted(out): print(a, s_.astimezone(PAR).strftime('%d/%m %Hh%M'), x)
+# 4) Axel 14/10 : « mixer un max, jamais un seul format » → rééquilibrage de tout le kit à partir de J+4 (mêmes créneaux)
+r = sh(['python3', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'equilibrer.py')]); print(r.stdout.strip().splitlines()[0] if r.stdout.strip() else r.stderr[-300:])
