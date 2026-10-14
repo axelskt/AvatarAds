@@ -70,14 +70,23 @@
    "produit-creme-fille.mp4"
   ],
   "omni": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "garcon": [
    "avatar-ia-garcon-4k.jpg",
@@ -166,44 +175,80 @@
    "avatar-ia-fille-4k-e.jpg"
   ],
   "C-OMNI-01": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "C-OMNI-02": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "C-OMNI-03": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "C-OMNI-04": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "C-IMGIA-01": [
    "avatar-ia-fille-4k.jpg",
@@ -230,52 +275,74 @@
   "C-MCP-09": [],
   "C-MCP-12": [],
   "C-MCP-10": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "C-MCP-13": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "C-MCP-15": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "C-MCP-11": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0c.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4"
   ],
   "C-MCP-14": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0c.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4"
   ],
   "C-MCP-16": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0c.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4"
   ],
   "C-OMNI-05": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4"
   ],
   "C-OMNI-06": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ],
   "C-OMNI-07": [
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4",
-   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-A.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02c-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4"
   ]
  },
  "bricks": {
@@ -506,7 +573,10 @@
   "static-ads": "produit",
   "omni": "omni"
  },
- "notes": {
-  "omni": "13/10 (Axel) : en CARTE pendant le hook, l'avant/après = DEUX cartes séparées d'un petit espace (« avant::après », assemblages/v3/pair) — l'avant entre par la gauche, l'après par la droite ; le médaillon reste pour les hooks avant/après en plein écran (factory_recipes HK-…)."
- }
+ "notes": [
+  {
+   "omni": "13/10 (Axel) : en CARTE pendant le hook, l'avant/après = DEUX cartes séparées d'un petit espace (« avant::après », assemblages/v3/pair) — l'avant entre par la gauche, l'après par la droite ; le médaillon reste pour les hooks avant/après en plein écran (factory_recipes HK-…)."
+  },
+  "14/10 (Axel) : dans le hook, UNIQUEMENT des résultats (vidéo X.1, X.2…), jamais l'original (Clio, 207, bracelet) — clips très courts : on montre le résultat. Paires mélangées (12 avec 2, 3 avec 1…), jamais le résultat déjà montré par la démo. Les assemblages HK avant/après (médaillon) ne sont plus tirés pour les démos."
+ ]
 }
