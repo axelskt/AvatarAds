@@ -687,11 +687,11 @@ if (music) {
   // sur 60 s : les pistes vont de −8,7 à −17,9) puis +2 dB → −7 dB au lieu de −9
   const mLufs = (() => { try { const o = spawnSync('ffmpeg', ['-hide_banner', '-t', '60', '-i', music, '-af', 'ebur128', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
     const m = o.match(/I:\s+(-?[\d.]+) LUFS/g); return m ? parseFloat(m[m.length - 1].replace(/[^\d.-]/g, '')) : -11.5; } catch { return -11.5; } })();
-  const mGain = Math.max(-8, Math.min(8, -11.5 - mLufs)) - 7;
+  const mGain = Math.max(-8, Math.min(8, -11.5 - mLufs)) - 5;   // 14/10 soir (Axel, VF-0417 / 0427 : « pas assez forte ») : −7 → −5 dB
   console.log(`  musique ${mLufs.toFixed(1)} LUFS → ${mGain.toFixed(1)} dB`);
   const filt =
     `[1:a]${AFMT},volume=${mGain.toFixed(1)}dB,afade=t=in:st=0:d=0.6,afade=t=out:st=${(total-0.9).toFixed(3)}:d=0.9[m];`+
-    `[m][0:a]sidechaincompress=threshold=0.03:ratio=8:attack=5:release=260[mduck];`+
+    `[m][0:a]sidechaincompress=threshold=0.03:ratio=4:attack=5:release=260[mduck];`+   // 14/10 : baisse sous la voix moins forte (ratio 8 → 4)
     sf.join(';')+`;`+
     `[0:a][mduck]${sfxLabels.join('')}amix=inputs=${2+sfxLabels.length}:duration=first:normalize=0,alimiter=limit=0.95[a]`;
   ff([...in2, '-filter_complex', filt, '-map','0:v','-map','[a]','-c:v','copy','-c:a','aac','-b:a','192k','-shortest', out]);

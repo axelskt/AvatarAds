@@ -390,7 +390,7 @@
     var cols = [{ zone: 'haut', align: 'center', left: 90, right: 990, top: true },
       { zone: 'haut', align: 'center', left: 150, right: 930, top: true },   // texte haut qui descendrait sur les icônes : plus étroit, toujours axé à 540
       { zone: 'haut-gauche', align: 'left', left: 70, right: Math.min(CANVAS.w - 70, leftEdge - 24), top: true },
-      { zone: 'milieu', align: 'center', left: 150, right: 930, top: false }].filter(function (c) { return (!o.center || c.align === 'center') && (c.zone !== 'haut-gauche' || faceTop); });   // o.center (F05, Axel 07/10) : toujours centré
+      { zone: 'milieu', align: 'center', left: 150, right: 930, top: false }].filter(function (c) { return (!o.center || c.align === 'center') && c.zone !== 'haut-gauche'; });   // Axel 14/10 : TOUJOURS centré, même avec un visage (on évite le visage en hauteur, jamais en le décalant à gauche)   // o.center (F05, Axel 07/10) : toujours centré
     function box(col, size) {
       var colW = col.right - col.left;
       if (colW < 360) return null;
