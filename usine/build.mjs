@@ -619,6 +619,21 @@ const sfxIn=[], sfxFilt=[], sfxLabels=[];
 // CTA parlé) ne reçoit aucun bruitage, seulement la musique (même règle que build-f05.mjs).
 const sansVoix = OPT.voice === 'muet' || (!hookVoice && demoMuette && !cta);
 if (sansVoix) console.log('  format sans voix : aucun bruitage');
+// Axel 14/10 : le son de la 1re image passe CHACUN SON TOUR (pas au hasard) pour qu'aucun ne soit oublié : compteur partagé
+// dans le cache (verrou : 3 rendus tournent en parallèle) ; on prend le moins joué, à égalité le suivant du dernier joué —
+// un son ajouté au pool part à 0 et passe donc en premier.
+if (!sansVoix) {
+  const RF = join(CACHE, 'sfx-debut.json'), LK = RF + '.lock', pool = SFX_POOL.debut;
+  let held = false; for (let i = 0; i < 200 && !held; i++) { try { mkdirSync(LK); held = true; } catch { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25); } }
+  try {
+    let st = { counts: {}, last: null }; try { st = { counts: {}, last: null, ...JSON.parse(readFileSync(RF, 'utf8')) }; } catch { /* premier rendu */ }
+    const li = pool.indexOf(st.last), order = pool.map((f, i) => [f, (i - li - 1 + pool.length) % pool.length]);
+    const pick = order.sort((a, b) => (st.counts[a[0]] || 0) - (st.counts[b[0]] || 0) || a[1] - b[1])[0][0];
+    st.counts[pick] = (st.counts[pick] || 0) + 1; st.last = pick; sfxPick.debut = pick;
+    writeFileSync(RF + '.tmp', JSON.stringify(st)); renameSync(RF + '.tmp', RF);
+    console.log('  1re image (chacun son tour) : ' + pick + ' · joué ' + st.counts[pick] + ' fois');
+  } finally { if (held) rmSync(LK, { recursive: true, force: true }); }
+}
 const addSfx = (file, at, vol, tag) => { if (sansVoix) return; sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
 addSfx(wh, B1 - 0.20, '-4dB', 'w1'); addSfx(imp, B1 + 0.06, '-7dB', 'i1');
 if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', 'i2'); }
