@@ -635,7 +635,8 @@ if (!sansVoix) {
     console.log('  1re image (chacun son tour) : ' + pick + ' · joué ' + st.counts[pick] + ' fois');
   } finally { if (held) rmSync(LK, { recursive: true, force: true }); }
 }
-const addSfx = (file, at, vol, tag) => { if (sansVoix) return; sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
+// Axel 14/10 : les woosh / whoosh à 0 dB, où qu'ils jouent (transition, illustration, 1re image)
+const addSfx = (file, at, vol, tag) => { if (sansVoix) return; if (/(^|\/)(mo-)?w+h?oosh(-\d+)?\.mp3$/.test(file)) vol = '0dB'; sfxIn.push('-i', file); sfxFilt.push(`[SFXIDX]adelay=${dly(at)},volume=${vol}[${tag}]`); sfxLabels.push(`[${tag}]`); };
 addSfx(wh, B1 - 0.20, '-4dB', 'w1'); addSfx(imp, B1 + 0.06, '-7dB', 'i1');
 if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', 'i2'); }
 // ── BRUITAGES LIÉS À L'ACTION (Axel 29/09) : jamais un son sans quelque chose à l'écran ──
@@ -643,7 +644,7 @@ if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', '
   addSfx(sx(sfxPick.debut), 0, '-8dB', 'x' + q++);                                                          // Axel 14/10 : un bruitage dès la première image
   // 14/10 (Axel) : plus de pop à l'apparition du texte choc (« ça sert à rien ») ; mo-pop-1 passe dans « dès la 1re image »
   // Axel 14/10 : Kaching à chaque « BOUM » dit dans la démo (« t'appuies sur Générer et boum ») — calé sur le mot
-  demoW.filter(w => /^bo+u?m$/.test(bare(w.text))).forEach(w => addSfx(sx('tk-kaching.mp3'), Math.max(0, w.start - 0.02), '-6dB', 'x' + q++));
+  demoW.filter(w => /^bo+u?m$/.test(bare(w.text))).forEach(w => addSfx(sx('tk-kaching.mp3'), Math.max(0, w.start - 0.02), '-5dB', 'x' + q++));
   // Axel 14/10 : dans le CTA, le MOT-CLÉ dit (SITE, CLAUDE…) → frappe clavier (mac-typing, enregistré bas d'où le gain)
   //   mot-clé = le mot de la liste qui suit (à 2 mots près) le verbe « commente / marque / écris / tape »
   ctaW.forEach((w, i) => { if (!/^(site|claude|go|avatar|guide|plan|ugc|montage|aide|ia)$/.test(bare(w.text))) return;
