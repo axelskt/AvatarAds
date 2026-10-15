@@ -5466,11 +5466,8 @@ setTimeout(function(){
       <button onclick="closeCreditsMenu();openCreditsModal(null,true)" style="width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer">+ Recharger des crédits</button>
       <button onclick="closeCreditsMenu();showPlansSheet()" style="width:100%;padding:11px;background:var(--bg4);border:1px solid var(--border);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Voir les plans →</button>
     </div>
-    <!-- Historique des crédits (Axel 15/10) : tout ce qui a bougé sur le solde, rempli par _cmLoadHist() -->
-    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:8px">
-      <button onclick="_cmToggleHist()" style="width:100%;background:none;border:none;color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:650;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;padding:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Historique de mes crédits <span id="cmHistArrow">▾</span></button>
-      <div id="cmHist" style="display:none;margin-top:6px"></div>
-    </div>
+    <!-- Historique des crédits (Axel 15/10) : grande fenêtre dédiée (openCreditsHist) -->
+    <button onclick="closeCreditsMenu();openCreditsHist()" style="width:100%;margin-top:8px;padding:11px;background:var(--bg4);border:1px solid var(--border);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Historique de mes crédits →</button>
     <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:8px">
       <button onclick="const d=document.getElementById('cmBareme');const on=d.style.display==='none';d.style.display=on?'block':'none';document.getElementById('cmBaremeArrow').textContent=on?'▴':'▾'" style="width:100%;background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:10.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px">Comment sont calculés les crédits ? <span id="cmBaremeArrow">▾</span></button>
       <div id="cmBareme" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:2.1;margin-top:8px">
@@ -5943,7 +5940,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-15-1200'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-15-1240'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -6814,42 +6811,10 @@ function openCreditsMenu(){
   if(el('cmPlan')) el('cmPlan').textContent = labels[plan] || plan;
   const inf = plan==='developer' || currentMember?.is_owner;
   if(el('cmVideos')) el('cmVideos').textContent = inf ? '∞' : (creditsBalance() + ' crédit' + (creditsBalance()>1?'s':''));
-  _cmHistReset();
   document.getElementById('creditsMenuModal').style.display = 'flex';
 }
 function closeCreditsMenu(){ document.getElementById('creditsMenuModal').style.display = 'none'; }
 
-// ── HISTORIQUE DES CRÉDITS (Axel 15/10) : dépenses (app + via Claude) avec leurs remboursements, et mouvements du solde hors
-//    dépenses (abonnement, renouvellement, pack, cadeau, fin d'abonnement) journalisés par la base depuis le 15/10.
-//    RPC get_credit_history (lecture de SES lignes seulement), par pages de 30, du plus récent au plus ancien.
-//    Libellés : jamais de nom de fournisseur ni de modèle (règle UI) — les raisons techniques sont traduites ici.
-let _cmHist = { rows: [], done: false, busy: false, err: false, since: null };
-function _cmHistReset(){
-  _cmHist = { rows: [], done: false, busy: false, err: false, since: null };
-  const d = document.getElementById('cmHist'); if(d){ d.style.display = 'none'; d.innerHTML = ''; }
-  const a = document.getElementById('cmHistArrow'); if(a) a.textContent = '▾';
-}
-function _cmToggleHist(){
-  const d = document.getElementById('cmHist'); if(!d) return;
-  const on = d.style.display === 'none';
-  d.style.display = on ? 'block' : 'none';
-  document.getElementById('cmHistArrow').textContent = on ? '▴' : '▾';
-  if(on){ if(!_cmHist.rows.length && !_cmHist.done) _cmLoadHist(); else _cmRenderHist(); }
-}
-async function _cmLoadHist(){
-  if(_cmHist.busy || _cmHist.done || !currentMember) return;
-  _cmHist.busy = true; _cmHist.err = false; _cmRenderHist();
-  const last = _cmHist.rows[_cmHist.rows.length - 1];
-  try{
-    const { data, error } = await sb.rpc('get_credit_history', { p_before: last ? last.at : null, p_limit: 30 });
-    if(error) throw error;
-    const rows = (data && data.rows) || [];
-    _cmHist.rows = _cmHist.rows.concat(rows);
-    _cmHist.since = (data && data.events_since) || _cmHist.since;
-    if(rows.length < 30) _cmHist.done = true;
-  }catch(e){ _cmHist.err = true; console.warn('[historique crédits]', e && e.message || e); }
-  _cmHist.busy = false; _cmRenderHist();
-}
 const _CM_HIST_LABELS = [
   [/^avatar \+ 1080p \((\d+) s\)$/i, m => 'Avatar lipsync en 1080p (' + m[1] + ' s)'],
   [/^1080p \((\d+) s\)$/i, m => 'Avatar · passage en 1080p (' + m[1] + ' s)'],
@@ -6901,43 +6866,195 @@ function _cmHistDay(d){
   if(same(d, y)) return 'Hier';
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: d.getFullYear() === t.getFullYear() ? undefined : 'numeric' });
 }
-function _cmRenderHist(){
-  const box = document.getElementById('cmHist'); if(!box || box.style.display === 'none') return;
-  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+// ── HISTORIQUE DES CRÉDITS (Axel 15/10) : grande fenêtre dédiée, ouverte depuis « Mes crédits ».
+//    Dépenses (app + via Claude) avec leurs remboursements, et mouvements du solde hors dépenses (abonnement, renouvellement,
+//    pack, cadeau, fin d'abonnement) journalisés par la base depuis le 15/10 — RPC get_credit_history, pages de 30.
+//    Chaque dépense montre la PREMIÈRE IMAGE de ce qu'elle a produit (Axel : « juste la première frame en assez bonne
+//    qualité ») : l'élément de SA Bibliothèque rangé juste après la dépense, de la même famille (Omni, Express, Motion…),
+//    chacun attribué une seule fois, dans l'ordre. Vidéo → l'affiche 1080p de la Bibliothèque (_libVThumbFor : cache,
+//    puis JPEG du compte, sinon capture une fois) ; image → sa vignette. Chargées seulement quand la ligne est visible.
+let _cmh = null;
+const _CMH_WIN = { image: 10, avatar: 30, omni: 45, express: 45, motion: 45, video: 45, montage: 75 };   // minutes après la dépense
+function _cmhNew(){ return { rows: [], done: false, busy: false, err: false, since: null, filter: 'all', used: new Set(), seq: 0, io: null }; }
+function _cmhCat(r){
+  const s = String(r.label || '').toLowerCase();
+  if(!(Number(r.delta) < 0)) return null;
+  if(r.via === 'claude') return s === 'avatar' ? 'avatar' : (s === 'image' ? 'image' : 'video');
+  if(r.via !== 'app') return null;
+  if(/^omni/.test(s)) return 'omni';
+  if(/^express/.test(s)) return 'express';
+  if(/^motion/.test(s)) return 'motion';
+  if(/montage|habillage|rendu final/.test(s)) return 'montage';
+  if(/^(image|4k|am[ée]liorer|upscale|avatar ia|faceswap|d[ée]tail)/.test(s)) return 'image';
+  if(/^(avatar|1080p|voix sur gameplay|reuse|voix native)/.test(s)) return 'avatar';
+  return null;
+}
+function _cmhFits(cat, it){
+  if(cat === 'image') return it.kind === 'image';
+  if(it.kind !== 'video-simple') return false;
+  const tags = Array.isArray(it.tags) ? it.tags.map(String) : [];
+  if(cat === 'video') return true;
+  const T = { omni: 'Omni', express: 'Express', motion: 'Motion Control', montage: 'Montage IA', avatar: 'Générateur' }[cat];
+  return tags.includes(T) || (cat === 'avatar' && !tags.length);
+}
+// Rattache à chaque dépense de la page l'élément de Bibliothèque qu'elle a produit (le plus tôt après elle, non encore pris).
+async function _cmhMatch(rows){
+  const ops = rows.filter(r => r._cat && !(r.refunded && (Number(r.refunded_amount) || 0) >= Math.abs(Number(r.delta) || 0)));
+  if(!ops.length || !currentMember) return;
+  const t0 = Math.min(...ops.map(r => +new Date(r.at))), t1 = Math.max(...ops.map(r => +new Date(r.at))) + 75 * 60000;
+  try{
+    const { data, error } = await sb.from('library_items').select('id, kind, tags, name, storage_path, created_at')
+      .eq('user_id', currentMember.id).gte('created_at', new Date(t0).toISOString()).lte('created_at', new Date(t1).toISOString())
+      .in('kind', ['image', 'video-simple']).order('created_at', { ascending: true }).limit(500);
+    if(error || !data) return;
+    let grp = null;   // un Montage IA = plusieurs dépenses à la suite (montage, réaction, habillage) → UNE vidéo
+    ops.slice().sort((a, b) => +new Date(a.at) - +new Date(b.at)).forEach(r => {
+      const at = +new Date(r.at), lim = at + (_CMH_WIN[r._cat] || 45) * 60000;
+      if(r._cat === 'montage' && grp && at - grp.at <= 5 * 60000){ grp.at = at; if(grp.item) r._item = grp.item; return; }
+      const it = data.find(x => !_cmh.used.has(x.id) && +new Date(x.created_at) >= at - 5000 && +new Date(x.created_at) <= lim && _cmhFits(r._cat, x));
+      if(it){ _cmh.used.add(it.id); r._item = it; }
+      grp = r._cat === 'montage' ? { at, item: it || null } : null;
+    });
+  }catch(_){}
+}
+function openCreditsHist(){
+  let m = document.getElementById('creditsHistModal');
+  if(!m){
+    m = document.createElement('div'); m.id = 'creditsHistModal';
+    m.setAttribute('style', 'display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:905;align-items:center;justify-content:center;padding:20px');
+    m.onclick = ev => { if(ev.target === m) closeCreditsHist(); };
+    m.innerHTML = '<style>'
+      + '#cmhCard{background:var(--bg2);border:1px solid var(--border);border-radius:18px;width:100%;max-width:720px;height:min(86vh,880px);display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden;position:relative}'
+      + '#cmhList{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 22px 22px}'
+      + '.cmh-chip{padding:7px 13px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--text3);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer}'
+      + '.cmh-chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2)}'
+      + '.cmh-row{display:flex;align-items:center;gap:13px;padding:10px 2px;border-bottom:1px solid var(--border)}'
+      + '.cmh-th{width:54px;height:72px;flex:0 0 auto;border-radius:9px;background:var(--bg3);border:1px solid var(--border);display:grid;place-items:center;overflow:hidden;padding:0;cursor:default}'
+      + '.cmh-th img{width:100%;height:100%;object-fit:cover;display:block}'
+      + '.cmh-th.has{cursor:zoom-in}'
+      + '#cmhBox{position:absolute;inset:0;background:rgba(4,5,8,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;cursor:zoom-out;z-index:2}'
+      + '#cmhBox img{max-width:100%;max-height:calc(100% - 60px);border-radius:12px;object-fit:contain;background:#000}'
+      + '@media (max-width:600px){#creditsHistModal{padding:0!important}#cmhCard{max-width:none;height:100%;height:100dvh;border-radius:0;border:0}#cmhList{padding:0 16px 22px}}'
+      + '</style>'
+      + '<div id="cmhCard">'
+      +   '<div style="padding:20px 22px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">'
+      +     '<div><div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase">Mes crédits</div>'
+      +     '<div style="font-size:21px;font-weight:800;margin-top:4px">Historique</div>'
+      +     '<div id="cmhBal" class="mono" style="font-size:12.5px;color:var(--text3);margin-top:3px"></div></div>'
+      +     '<button onclick="closeCreditsHist()" aria-label="Fermer" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);padding:7px 11px;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
+      +   '</div>'
+      +   '<div id="cmhChips" style="display:flex;gap:8px;flex-wrap:wrap;padding:0 22px 12px;border-bottom:1px solid var(--border)">'
+      +     '<button class="cmh-chip" data-f="all" onclick="_cmhFilter(\'all\')">Tout</button>'
+      +     '<button class="cmh-chip" data-f="out" onclick="_cmhFilter(\'out\')">Dépenses</button>'
+      +     '<button class="cmh-chip" data-f="in" onclick="_cmhFilter(\'in\')">Ajouts</button>'
+      +     '<button class="cmh-chip" data-f="back" onclick="_cmhFilter(\'back\')">Remboursés</button>'
+      +   '</div>'
+      +   '<div id="cmhList"></div>'
+      +   '<div id="cmhBox" onclick="this.style.display=\'none\'"><img alt=""><div id="cmhBoxCap" style="font-size:13px;color:#e6e6e6;text-align:center"></div></div>'
+      + '</div>';
+    document.body.appendChild(m);
+  }
+  if(_cmh && _cmh.io){ try{ _cmh.io.disconnect(); }catch(_){} }
+  _cmh = _cmhNew();
+  const inf = (currentMember?.plan || '').toLowerCase() === 'developer' || currentMember?.is_owner;
+  document.getElementById('cmhBal').textContent = 'Solde actuel : ' + (inf ? '∞' : (creditsBalance().toLocaleString('fr-FR') + ' crédit' + (creditsBalance() > 1 ? 's' : '')));
+  document.getElementById('cmhBox').style.display = 'none';
+  m.style.display = 'flex';
+  _cmhRender(); _cmhLoad();
+}
+function closeCreditsHist(){
+  const m = document.getElementById('creditsHistModal'); if(m) m.style.display = 'none';
+  if(_cmh && _cmh.io){ try{ _cmh.io.disconnect(); }catch(_){} _cmh.io = null; }
+}
+function _cmhFilter(f){ if(!_cmh) return; _cmh.filter = f; _cmhRender(); }
+async function _cmhLoad(){
+  const st = _cmh;
+  if(!st || st.busy || st.done || !currentMember) return;
+  st.busy = true; st.err = false; _cmhRender();
+  const last = st.rows[st.rows.length - 1];
+  try{
+    const { data, error } = await sb.rpc('get_credit_history', { p_before: last ? last.at : null, p_limit: 30 });
+    if(error) throw error;
+    const rows = ((data && data.rows) || []).map(r => Object.assign(r, { _k: ++st.seq, _cat: _cmhCat(r) }));
+    await _cmhMatch(rows);
+    if(_cmh !== st) return;   // fenêtre rouverte entre-temps
+    st.rows = st.rows.concat(rows);
+    st.since = (data && data.events_since) || st.since;
+    if(rows.length < 30) st.done = true;
+  }catch(e){ st.err = true; console.warn('[historique crédits]', e && e.message || e); }
+  st.busy = false; if(_cmh === st) _cmhRender();
+}
+// Image d'un élément de Bibliothèque : vidéo → affiche 1080p ; image → sa vignette (lue à la demande, une par une).
+const _cmhImgCache = new Map();
+async function _cmhThumb(it){
+  if(_cmhImgCache.has(it.id)) return _cmhImgCache.get(it.id);
+  let src = '';
+  try{
+    if(it.kind === 'video-simple'){ const t = await _libVThumbFor({ srvPath: it.storage_path }, () => { const m = document.getElementById('creditsHistModal'); return !!m && m.style.display !== 'none'; }); src = (t && t.src) || ''; }
+    else {
+      const { data } = await sb.from('library_items').select('thumb').eq('id', it.id).maybeSingle();
+      src = (data && data.thumb) || '';
+      if(!src && it.storage_path){ const sg = await sb.storage.from('render-media').createSignedUrl(it.storage_path, 3600); src = (sg.data && sg.data.signedUrl) || ''; }
+    }
+  }catch(_){}
+  if(src) _cmhImgCache.set(it.id, src);
+  return src;
+}
+function _cmhZoom(k){
+  const r = _cmh && _cmh.rows.find(x => x._k === k); if(!r || !r._item) return;
+  const src = _cmhImgCache.get(r._item.id); if(!src) return;
+  const box = document.getElementById('cmhBox'); box.querySelector('img').src = src;
+  document.getElementById('cmhBoxCap').textContent = _cmHistLabel(r) + ' · ' + new Date(r.at).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  box.style.display = 'flex';
+}
+function _cmhRender(){
+  const list = document.getElementById('cmhList'); if(!list || !_cmh) return;
+  const st = _cmh, esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
   const nf = n => Math.abs(n).toLocaleString('fr-FR');
-  const IC = {
-    minus: '<path d="M5 12h14"/>',
-    plus: '<path d="M12 5v14M5 12h14"/>',
-    back: '<path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/>'
-  };
+  document.querySelectorAll('#cmhChips .cmh-chip').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-f') === st.filter)));
+  const IC = { minus: '<path d="M5 12h14"/>', plus: '<path d="M12 5v14M5 12h14"/>', back: '<path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/>' };
+  const keep = r => { const d = Number(r.delta) || 0;
+    return st.filter === 'all' || (st.filter === 'in' && d > 0) || (st.filter === 'out' && d < 0) || (st.filter === 'back' && d < 0 && r.refunded); };
   let html = '', day = '';
-  _cmHist.rows.forEach(r => {
+  st.rows.filter(keep).forEach(r => {
     const d = new Date(r.at), k = d.toDateString();
-    if(k !== day){ day = k; html += '<div style="font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin:12px 2px 6px">' + esc(_cmHistDay(d)) + '</div>'; }
+    if(k !== day){ day = k; html += '<div style="font-family:var(--mono);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin:16px 2px 4px">' + esc(_cmHistDay(d)) + '</div>'; }
     const delta = Number(r.delta) || 0, gain = delta > 0, refunded = !!r.refunded && !gain;
     const back = refunded ? Math.min(Math.abs(delta), Number(r.refunded_amount) || Math.abs(delta)) : 0, full = refunded && back >= Math.abs(delta);
     const tint = gain ? 'var(--green)' : (full ? 'var(--text3)' : 'var(--text2)');
-    const icon = full ? IC.back : (gain ? IC.plus : IC.minus);
     const sub = [d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })];
     if(r.via === 'claude') sub.push('via Claude');
     if(r.balance_after != null) sub.push('solde ' + nf(r.balance_after));
-    const amount = (gain ? '+' : '−') + nf(delta);
-    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border)">'
-      + '<span style="width:26px;height:26px;flex:0 0 auto;border-radius:8px;display:grid;place-items:center;background:var(--bg3);border:1px solid var(--border);color:' + tint + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg></span>'
-      + '<span style="flex:1;min-width:0;line-height:1.3"><span style="display:block;font-size:12.5px;font-weight:600;color:var(--text);overflow-wrap:anywhere">' + esc(_cmHistLabel(r)) + '</span>'
-      + '<span style="display:block;font-size:10.5px;color:var(--text3)">' + esc(sub.join(' · ')) + '</span></span>'
-      + '<span style="text-align:right;line-height:1.3;flex:0 0 auto"><b class="mono" style="display:block;font-size:13px;color:' + tint + (full ? ';text-decoration:line-through' : '') + '">' + amount + '</b>'
-      + (refunded ? '<span style="display:block;font-size:10px;color:var(--green)">' + (full ? 'Remboursé' : nf(back) + ' remboursé' + (back > 1 ? 's' : '')) + '</span>' : '')
+    const icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + tint + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (full ? IC.back : (gain ? IC.plus : IC.minus)) + '</svg>';
+    const th = r._item
+      ? '<button class="cmh-th has" data-th="' + r._k + '" onclick="_cmhZoom(' + r._k + ')" aria-label="Voir l’image">' + icon + '</button>'
+      : '<span class="cmh-th">' + icon + '</span>';
+    html += '<div class="cmh-row">' + th
+      + '<span style="flex:1;min-width:0;line-height:1.35"><span style="display:block;font-size:14px;font-weight:600;color:var(--text);overflow-wrap:anywhere">' + esc(_cmHistLabel(r)) + '</span>'
+      + '<span style="display:block;font-size:12px;color:var(--text3)">' + esc(sub.join(' · ')) + '</span></span>'
+      + '<span style="text-align:right;line-height:1.35;flex:0 0 auto"><b class="mono" style="display:block;font-size:15px;color:' + tint + (full ? ';text-decoration:line-through' : '') + '">' + (gain ? '+' : '−') + nf(delta) + '</b>'
+      + (refunded ? '<span style="display:block;font-size:11px;color:var(--green)">' + (full ? 'Remboursé' : nf(back) + ' remboursé' + (back > 1 ? 's' : '')) + '</span>' : '')
       + '</span></div>';
   });
-  if(!_cmHist.rows.length && !_cmHist.busy && !_cmHist.err) html += '<div style="text-align:center;font-size:12px;color:var(--text3);padding:14px 4px">Aucun mouvement pour l’instant.</div>';
-  if(_cmHist.err) html += '<div style="text-align:center;font-size:12px;color:var(--text3);padding:12px 4px">Historique indisponible pour le moment. <button onclick="_cmLoadHist()" style="background:none;border:none;color:var(--accent-2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;padding:0">Réessayer</button></div>';
-  if(_cmHist.busy) html += '<div style="text-align:center;font-size:12px;color:var(--text3);padding:12px 4px">Chargement…</div>';
-  else if(!_cmHist.done && !_cmHist.err && _cmHist.rows.length) html += '<button onclick="_cmLoadHist()" style="width:100%;margin-top:8px;padding:9px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">Voir plus</button>';
-  if(_cmHist.since && (_cmHist.done || _cmHist.rows.length)) html += '<div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-top:10px;text-align:center">Abonnements, renouvellements, packs et cadeaux affichés depuis le ' + esc(new Date(_cmHist.since + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })) + '.</div>';
-  const prev = box.firstElementChild, top = prev ? prev.scrollTop : 0;   // « Voir plus » garde la position de lecture
-  box.innerHTML = '<div style="max-height:min(52vh,420px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:2px">' + html + '</div>';
-  if(top) box.firstElementChild.scrollTop = top;
+  const shown = st.rows.filter(keep).length;
+  if(!shown && !st.busy && !st.err) html += '<div style="text-align:center;font-size:13px;color:var(--text3);padding:28px 4px">' + (st.rows.length ? 'Rien dans ce filtre pour l’instant.' : 'Aucun mouvement pour l’instant.') + '</div>';
+  if(st.err) html += '<div style="text-align:center;font-size:13px;color:var(--text3);padding:16px 4px">Historique indisponible pour le moment. <button onclick="_cmhLoad()" style="background:none;border:none;color:var(--accent-2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;padding:0">Réessayer</button></div>';
+  if(st.busy) html += '<div style="text-align:center;font-size:13px;color:var(--text3);padding:16px 4px">Chargement…</div>';
+  else if(!st.done && !st.err && st.rows.length) html += '<button onclick="_cmhLoad()" style="width:100%;margin-top:12px;padding:11px;background:var(--bg4);border:1px solid var(--border);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Voir plus</button>';
+  if(st.since && (st.done || st.rows.length)) html += '<div style="font-size:11.5px;color:var(--text3);line-height:1.5;margin-top:14px;text-align:center">Abonnements, renouvellements, packs et cadeaux affichés depuis le ' + esc(new Date(st.since + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })) + '.</div>';
+  const top = list.scrollTop; list.innerHTML = html; list.scrollTop = top;
+  // images : seulement quand la ligne entre à l'écran
+  if(st.io){ try{ st.io.disconnect(); }catch(_){} }
+  st.io = new IntersectionObserver(ents => ents.forEach(en => {
+    if(!en.isIntersecting) return; st.io.unobserve(en.target);
+    const r = st.rows.find(x => x._k === +en.target.getAttribute('data-th')); if(!r || !r._item) return;
+    _cmhThumb(r._item).then(src => { if(src && en.target.isConnected) en.target.innerHTML = '<img alt="" src="' + esc(src) + '">'; });
+  }), { root: list, rootMargin: '200px' });
+  list.querySelectorAll('[data-th]').forEach(el => {
+    const r = st.rows.find(x => x._k === +el.getAttribute('data-th'));
+    const src = r && r._item && _cmhImgCache.get(r._item.id);
+    if(src) el.innerHTML = '<img alt="" src="' + esc(src) + '">'; else st.io.observe(el);
+  });
 }
 
 // ── AUTH TAB SWITCH ──
