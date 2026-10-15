@@ -60,7 +60,7 @@ jobs:
                 --include='/*.html' --include='/CNAME' --include='/.nojekyll' \
                 --include='/robots.txt' --include='/sitemap.xml' --include='/llms.txt' \
                 --include='/favicon.*' --include='/apple-touch-icon.png' --include='/og-image.*' \
-                --include='/tiktok*.txt' \
+                --include='/tiktok*.txt' --include='/5d8b40c34d4e9c7964421c785bfedb1a.txt' \
                 --exclude='*' \
                 ./ _site/
           # Garde-fou 1 : un fichier vital absent = on s'arrête AVANT d'écraser le site en ligne
