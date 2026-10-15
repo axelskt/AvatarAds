@@ -99,7 +99,10 @@
     { id: 'TH31', text: "7 mois que j'utilise Claude et je trouve ça que maintenant ?!!", emoji: '😳', module: 'mcp-claude' },   // Axel 13/10
     { id: 'TH32', text: 'Claude me rend riche et ça me fait peur', emoji: '😳', module: 'mcp-claude' },   // Axel 14/10
     { id: 'TH33', text: '8 ans de galère au SMIC et je vois ça MTN', emoji: '😭', module: 'generique' },   // Axel 14/10
-    { id: 'TH34', text: "8 ANS QUE J'ATTEND CE JOUR", emoji: '😭😭😭', module: 'generique' }   // Axel 14/10 (orthographe d'Axel)
+    { id: 'TH34', text: "8 ANS QUE J'ATTEND CE JOUR", emoji: '😭😭😭', module: 'generique' },   // Axel 14/10 (orthographe d'Axel)
+    // Axel 15/10 : format « scotch » (fille au bureau qui se scotche la bouche, réf. emzzztech) — titre + sous-ligne plus petite
+    // (sub), orthographe d'Axel ; hors tirage aléatoire des TH (pick_th s'arrête à TH34), réservé au format scotch.
+    { id: 'TH35', text: 'pov : ta pas de taff mais tu veux le dernier iphone', sub: "comment je fait de l'argent en ligne", module: 'scotch' }
   ];
   // Format Insomnie (Axel 12/10) : « Tu essaies de dormir mais tu repenses à… » — banque À PART (factory_bricks TI…,
   // meta.format 'insomnie'), jamais tirée avec les TH ; demos = démos muettes autorisées (sinon générique)
