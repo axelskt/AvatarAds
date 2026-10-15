@@ -5273,6 +5273,20 @@ setTimeout(function(){
       <svg class="faint" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
+    <!-- Historique des crédits (Axel 15/10) : 2e accès, en plus de « Mes crédits » -->
+    <button onclick="openCreditsHist()" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:26px;text-align:left;cursor:pointer">
+      <span class="row gap12" style="align-items:center;min-width:0">
+        <span style="width:38px;height:38px;flex:0 0 auto;border-radius:11px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);display:grid;place-items:center">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>
+        </span>
+        <span class="col" style="line-height:1.3;min-width:0">
+          <span style="font-weight:700;font-size:14.5px">Historique de mes crédits</span>
+          <span class="faint" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Dépenses, remboursements et ajouts</span>
+        </span>
+      </span>
+      <svg class="faint" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+
     <!-- 💶 Parrainage (déplacé de la sidebar le 30/08) — ouvre la vue dédiée depuis Mon compte -->
     <button onclick="openAffiliation()" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:26px;text-align:left;cursor:pointer">
       <span class="row gap12" style="align-items:center;min-width:0">
@@ -5484,7 +5498,6 @@ setTimeout(function(){
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg> Export depuis l'éditeur — <b style="color:var(--text2)">2 crédits</b>
       </div>
     </div>
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:10px">Crédits du plan renouvelés chaque mois · les crédits de packs n'expirent pas</div>
   </div>
 </div>
 
@@ -5940,7 +5953,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-15-1240'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-15-1300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -30878,7 +30891,9 @@ function _libVThumbDrop(k){
 async function _libVThumbGet(k){
   if(!k) return null;
   if(_libVThumbs.has(k)) return _libVThumbs.get(k);
-  try{ const r = await _idbLoad('vposter_'+k); if(r && r.blob && r.blob.size){ if(_libVThumbs.has(k)) return _libVThumbs.get(k); const t = { src:URL.createObjectURL(r.blob), dur:r.dur||0, blob:r.blob }; _libVThumbs.set(k, t); return t; } }catch(_){}
+  try{ const r = await _idbLoad('vposter_'+k); if(r && r.blob && r.blob.size){
+    if(await _libBlobIsBlack(r.blob)){ try{ await _idbDelete('vposter_'+k); }catch(_){} return null; }   // affiche noire d'avant le 15/10
+    if(_libVThumbs.has(k)) return _libVThumbs.get(k); const t = { src:URL.createObjectURL(r.blob), dur:r.dur||0, blob:r.blob }; _libVThumbs.set(k, t); return t; } }catch(_){}
   return null;
 }
 // URL signées des affiches, par LOTS : les cartes qui entrent à l'écran ensemble partent en une seule requête.
@@ -30901,11 +30916,27 @@ function _libPosterSigned(path){
     _libPosterQ.get(path).push(resolve);
   });
 }
+// Image (quasi) noire : plus aucun canal au-dessus de 14 sur une réduction 16×16.
+function _libLooksBlack(src){
+  try{
+    const s = document.createElement('canvas'); s.width = s.height = 16;
+    const x = s.getContext('2d'); x.drawImage(src, 0, 0, 16, 16);
+    const d = x.getImageData(0, 0, 16, 16).data; let m = 0;
+    for(let i = 0; i < d.length; i += 4){ m = Math.max(m, d[i], d[i+1], d[i+2]); if(m > 14) return false; }
+    return true;
+  }catch(_){ return false; }
+}
+// Affiche JPEG noire (déposée avant le correctif du 15/10 : ~34 Ko en 1080×1920) → traitée comme absente.
+async function _libBlobIsBlack(blob){
+  if(!blob || blob.size > 150000 || typeof createImageBitmap !== 'function') return false;
+  try{ const bm = await createImageBitmap(blob); const k = _libLooksBlack(bm); try{ bm.close(); }catch(_){} return k; }catch(_){ return false; }
+}
 async function _libPosterFetch(pp){
   try{
     const url = await _libPosterSigned(pp); if(!url) return null;
     const r = await fetch(url); if(!r.ok) return null;
     const blob = await r.blob(); if(!blob || blob.size < 200) return null;
+    if(await _libBlobIsBlack(blob)) return null;   // recapturée puis re-déposée par l'appelant
     return { blob: blob.type === 'image/jpeg' ? blob : new Blob([blob], { type:'image/jpeg' }), dur: await _libPosterDur(blob) };
   }catch(_){ return null; }
 }
@@ -30920,7 +30951,7 @@ function _libPosterUpload(pp, blob){
 // qui force Safari à décoder une image ; capture sur seeked OU loadeddata OU le 1er timeupdate.
 function _libGrabFrame(url, isBlob){
   return new Promise(resolve => {
-    const vid = document.createElement('video'); let fini = false, prise = false, kick = null;
+    const vid = document.createElement('video'); let fini = false, prise = false, kick = null, essais = 0;
     const end = (blob, dur) => {
       if(fini) return; fini = true; clearTimeout(to); clearTimeout(kick);
       vid.onloadedmetadata = vid.onloadeddata = vid.onseeked = vid.ontimeupdate = vid.onerror = null;
@@ -30938,6 +30969,16 @@ function _libGrabFrame(url, isBlob){
         c = document.createElement('canvas'); c.width = Math.max(2, Math.round(vw*k)); c.height = Math.max(2, Math.round(vh*k));
         const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(vid, 0, 0, c.width, c.height);
       }catch(_){ end(null); return; }
+      // Axel 15/10 (historique des crédits) : des affiches NOIRES alors que la vidéo ne l'est pas — Safari rend parfois
+      // l'image avant d'avoir décodé la frame. Image noire → on retente plus loin (0,6 s puis 1,5 s), sinon pas d'affiche.
+      if(_libLooksBlack(c)){
+        try{ c.width = c.height = 0; }catch(_){}
+        if(++essais >= 3){ end(null); return; }
+        prise = false;
+        try{ vid.currentTime = Math.min([0.6, 1.5][essais - 1], Math.max(0, (dur || 2) - 0.1)); }catch(_){}
+        try{ const p = vid.play(); if(p && p.then) p.then(() => { try{ vid.pause(); }catch(_){} }).catch(() => {}); }catch(_){}
+        return;
+      }
       try{ vid.pause(); }catch(_){}
       _libPosterBlob(c, dur).then(b => { try{ c.width = c.height = 0; }catch(_){} end(b, dur); }, () => end(null));
     };
