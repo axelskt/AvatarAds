@@ -49,7 +49,7 @@ def pick_th(demo, prev):
     ok = [t for t in ths if t != prev and (t not in TH_MCP or demo.startswith('C-MCPM'))]
     return random.choice(ok)
 # musiques énergiques (Axel 07/10 + 11/10) assez longues pour un F05
-MUSIC_LEN = {'M08': 186.2, 'M14': 60.0, 'M20': 40.6, 'M21': 28.0, 'M22': 60.0, 'M23': 60.0, 'M24': 488.2}
+MUSIC_LEN = {'M08': 186.2, 'M14': 60.0, 'M20': 40.6, 'M21': 28.0, 'M22': 60.0, 'M23': 60.0, 'M24': 488.2, 'M25': 113.6}
 _last_music = [None]
 def f05_music(total):
     ok = [m for m, l in MUSIC_LEN.items() if l >= total + 0.5 and m != _last_music[0]] or ['M08']
