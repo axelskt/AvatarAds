@@ -48,7 +48,7 @@ let demo = demoSrc;
 // à chaque fois ») : musique « auto » = une piste VALIDÉE (jamais M04, trop sombre), --subs-style auto = contour ou boîte ;
 // jamais le même choix que la vidéo précédente (fichier <cache>/dernier.json).
 const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_DOUCES = ['M01', 'M02', 'M03', 'M05', 'M06', 'M07', 'M15', 'M16', 'M18', 'M19'],   // Axel 07/10 : « les musiques douces je ne suis pas fan » (même liste que build-f05.mjs)
-  MUSIC_OK = Array.from({ length: 24 }, (_, i) => 'M' + String(i + 1).padStart(2, '0')).filter(m => m !== 'M04' && !MUSIC_DOUCES.includes(m));
+  MUSIC_OK = Array.from({ length: 25 }, (_, i) => 'M' + String(i + 1).padStart(2, '0')).filter(m => m !== 'M04' && !MUSIC_DOUCES.includes(m));
 // 06/10 : S14 (serif italique) retiré du tirage, Axel « pas fan » (VF-0059)
 const SUBS_OUT = ['S14'];
 const SUBS_ALL = Array.from({ length: 19 }, (_, i) => 'S' + String(i + 1).padStart(2, '0')).concat('S21').filter(s => !SUBS_OUT.includes(s));   // la banque + boîte blanche, sans les retirés
