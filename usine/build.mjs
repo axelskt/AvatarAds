@@ -408,10 +408,11 @@ if (OPT['hook-broll']) {
 const illusLog = [];
 if (OPT.illus) {
   const BANK = readJson(join(HERE, 'illustrations.json'), 'illustrations.json');
-  // Axel 15/10 (VF-0489 / VF-0503) : un hook illustré par un avant / après Omni (type « omni ») exige une démo Omni.
-  if (OPT.illus === 'auto' && hookId && (BANK.bricks[hookId] || []).some(e => e.type === 'omni') && demoBrick
-    && !/OMNI/.test(demoBrick.id) && !/\bOmni\b/.test(demoBrick.label || '')) {
-    console.error('✗ ' + hookId + ' montre un avant / après Omni mais la démo ' + demoBrick.id + " n'est pas une démo Omni"); process.exit(4); }
+  // Axel 15/10 (VF-0489 / VF-0503) : l'illustration du hook doit montrer ce que la démo montre (Omni, static ads, Images IA…)
+  if (OPT.illus === 'auto' && hookId && demoBrick && !avantApres) {
+    const { illusMismatch } = await import(join(HERE, 'illus-demo.js'));
+    const why = illusMismatch(BANK.bricks[hookId], demoBrick);
+    if (why) { console.error('✗ ' + hookId + ' + ' + demoBrick.id + ' : ' + why); process.exit(4); } }
   const BR = process.env.CF_BROLL || join(CACHE, 'broll');
   const toksOf = t => String(t || '').split(/\s+/).map(bare).filter(Boolean);
   const findW = (toks, from, to) => { for (let i = from; i < to; i++) if (toks.length && toks.every((t, k) => i + k < to && bare(hookW0[i + k].text) === t)) return i; return -1; };

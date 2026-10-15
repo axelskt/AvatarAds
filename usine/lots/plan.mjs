@@ -19,11 +19,12 @@ const B = JSON.parse(fs.readFileSync(join(W, 'bricks.json'), 'utf8')), by = Obje
 const X = JSON.parse(fs.readFileSync(join(W, 'inventaire.json'), 'utf8'))
 let seed = +seedArg || 1410; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
 const EXCLUS = new Set(['C-OMNI-03', 'C-OMNIM-03', 'C-IMGIA-05', 'C-IMGIAM-01'])
-// Axel 15/10 (VF-0489 / VF-0503) : ce que l'ILLUSTRATION du hook montre doit être ce que la démo montre. Un hook dont
-// l'illustration est un avant / après Omni (type « omni », ex. H78) ne part qu'avec une démo Omni.
+// Axel 15/10 (VF-0489 / VF-0503) : ce que l'ILLUSTRATION du hook montre doit être ce que la démo montre, pour TOUS les
+// modules : avant / après Omni → démo Omni ; pubs → démo static ads ; influenceuse / avatar IA → démo Images IA.
+// (règle partagée avec build.mjs : usine/illus-demo.js)
 const ILLUS = JSON.parse(fs.readFileSync(join(USINE, 'illustrations.json'), 'utf8')).bricks || {}
-const isOmniDemo = d => /OMNI/.test(d.id) || /\bOmni\b/.test(d.label || '')
-const illusOk = (h, d) => !(ILLUS[h] || []).some(e => e.type === 'omni') || isOmniDemo(d)
+const { illusMismatch } = await import(join(USINE, 'illus-demo.js'))
+const illusOk = (h, d) => !illusMismatch(ILLUS[h], d)
 const usedOmni = new Set(), usedF05 = new Set(), demoUse = {}, hookUse = {}, reactUse = {}
 for (const q of X.qc) { const c = q.c || {}
   if (c.voice === 'omni') { usedOmni.add([c.photo, c.hook, c.contenu].join('|')); hookUse[c.photo + '|' + c.hook] = (hookUse[c.photo + '|' + c.hook] || 0) + 1 }
