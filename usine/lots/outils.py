@@ -48,6 +48,12 @@ def pick_th(demo, prev):
     ths = ['TH%02d' % i for i in range(1, 35) if i not in (13, 14)]
     ok = [t for t in ths if t != prev and (t not in TH_MCP or demo.startswith('C-MCPM'))]
     return random.choice(ok)
+# Format Insomnie (R-I-*) : un TI, jamais un TH. TI01 supprimé ; TI02 = démos Express seulement ; TI03 = démos MCP seulement.
+TI02_DEMOS = ('C-MCPM-01', 'C-MCPM-03', 'C-MCPM-04', 'C-MCPM-05', 'C-MCPM-06')
+def pick_ti(demo, prev):
+    ok = [t for t in ['TI%02d' % i for i in range(2, 10)] if t != prev
+          and (t != 'TI02' or demo in TI02_DEMOS) and (t != 'TI03' or demo.startswith('C-MCPM'))]
+    return random.choice(ok)
 # musiques énergiques (Axel 07/10 + 11/10) assez longues pour un F05
 MUSIC_LEN = {'M08': 186.2, 'M14': 60.0, 'M20': 40.6, 'M21': 28.0, 'M22': 60.0, 'M23': 60.0, 'M24': 488.2, 'M25': 113.6}
 _last_music = [None]

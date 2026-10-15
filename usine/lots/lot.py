@@ -67,7 +67,7 @@ def prep(it, tag):
     react, demo = it['react'], it['demo']
     rm = bricks[react]['meta']; H = float(rm.get('duration_s') or 3)
     r = get(rm['media'], os.path.basename(rm['media'])); d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
-    m = f05_music(H + dur(d)); th = pick_th(demo, prev_th[0]); prev_th[0] = th; cs = random.choice(CS)
+    m = f05_music(H + dur(d)); th = (pick_ti if react.startswith('R-I-') else pick_th)(demo, prev_th[0]); prev_th[0] = th; cs = random.choice(CS)
     out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag))
     cmd = ['node', 'usine/build-f05.mjs', r, d, out, m, '--choc', th, '--choc-style', cs, '--hook-s', '%g' % H, '--reaction', react, '--demo', demo, '--done', DONE]
     return dict(kind='m', react=react, demo=demo, music=m, th=th, cs=cs, out=out, cmd=cmd, it=it)

@@ -5,8 +5,9 @@
 //  · démos « image → vidéo » d'abord (Omni, motion control, static ads), puis Claude, Images IA seules ≤ 1 par lot (~1/10) ;
 //  · jamais la démo intérieure (C-OMNI-03 / C-OMNIM-03), ni C-IMGIA-05 / C-IMGIAM-01 (supprimées) ;
 //  · hook × démo compatibles (coherence.js, pairLevel ok) ; pour chaque photo, le hook le MOINS utilisé ;
-//  · Texte + musique : une réaction part avec 5 démos muettes au plus (anti-shadowban) ; réactions « Insomnie » (R-I-*)
-//    exclues (format à part) ; réactions les moins utilisées d'abord.
+//  · Texte + musique : une réaction part avec 5 démos muettes au plus (anti-shadowban) ; réactions les moins utilisées d'abord ;
+//    réactions « Insomnie » (R-I-*) INCLUSES depuis le 15/10 (Axel : mélanger tous les formats) — lot.py leur donne un TI, jamais un TH,
+//    et jamais une démo Images IA seule.
 // usage : node plan.mjs <dossier de travail> <nb Omni> <nb Texte+musique> [graine]   → JSON { O:[…], M:[…] } sur stdout
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -51,12 +52,12 @@ while (O.length < +nO && guard++ < 80) for (const p of photos) {
   }
 }
 // ── Texte + musique : réactions qui ont encore de la place (< 5 démos), les moins utilisées d'abord ──
-const reacts = B.filter(b => b.kind === 'reaction' && ready(b) && !/^R-I-/.test(b.id) && b.meta?.media).map(b => b.id)
+const reacts = B.filter(b => b.kind === 'reaction' && ready(b) && b.meta?.media).map(b => b.id)
 let g2 = 0
 while (M.length < +nM && g2++ < 200) {
   const r = reacts.filter(x => (reactUse[x] || 0) < 5).sort((a, b) => (reactUse[a] || 0) - (reactUse[b] || 0) + (rnd() - 0.5) * 0.8)[0]
   if (!r) break
-  const free = mdemos.filter(d => !usedF05.has(r + '|' + d))
+  const free = mdemos.filter(d => !usedF05.has(r + '|' + d) && !(/^R-I-/.test(r) && /IMGIAM/.test(d)))
   if (!free.length) { reactUse[r] = 5; continue }
   const d = pick(free, 1)[0]; usedF05.add(r + '|' + d); reactUse[r] = (reactUse[r] || 0) + 1; M.push({ k: 'm', react: r, demo: d })
 }
