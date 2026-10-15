@@ -19,6 +19,11 @@ const B = JSON.parse(fs.readFileSync(join(W, 'bricks.json'), 'utf8')), by = Obje
 const X = JSON.parse(fs.readFileSync(join(W, 'inventaire.json'), 'utf8'))
 let seed = +seedArg || 1410; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
 const EXCLUS = new Set(['C-OMNI-03', 'C-OMNIM-03', 'C-IMGIA-05', 'C-IMGIAM-01'])
+// Axel 15/10 (VF-0489 / VF-0503) : ce que l'ILLUSTRATION du hook montre doit être ce que la démo montre. Un hook dont
+// l'illustration est un avant / après Omni (type « omni », ex. H78) ne part qu'avec une démo Omni.
+const ILLUS = JSON.parse(fs.readFileSync(join(USINE, 'illustrations.json'), 'utf8')).bricks || {}
+const isOmniDemo = d => /OMNI/.test(d.id) || /\bOmni\b/.test(d.label || '')
+const illusOk = (h, d) => !(ILLUS[h] || []).some(e => e.type === 'omni') || isOmniDemo(d)
 const usedOmni = new Set(), usedF05 = new Set(), demoUse = {}, hookUse = {}, reactUse = {}
 for (const q of X.qc) { const c = q.c || {}
   if (c.voice === 'omni') { usedOmni.add([c.photo, c.hook, c.contenu].join('|')); hookUse[c.photo + '|' + c.hook] = (hookUse[c.photo + '|' + c.hook] || 0) + 1 }
@@ -43,7 +48,7 @@ while (O.length < +nO && guard++ < 80) for (const p of photos) {
   if (O.length >= +nO) break
   const hs = [...new Set(vars.filter(v => v.a === p).map(v => v.b))].sort((a, b) => (hookUse[p + '|' + a] || 0) - (hookUse[p + '|' + b] || 0) + (rnd() - 0.5) * 0.5)
   for (const h of hs) {
-    const free = demos.filter(d => COH.pairLevel(by[h], d) === 'ok' && !usedOmni.has([p, h, d.id].join('|'))).map(d => d.id)
+    const free = demos.filter(d => COH.pairLevel(by[h], d) === 'ok' && illusOk(h, d) && !usedOmni.has([p, h, d.id].join('|'))).map(d => d.id)
     const imgia = O.filter(o => /IMGIA/.test(o.demo)).length
     const cand = imgia >= 1 ? free.filter(d => !/IMGIA/.test(d)) : free
     if (!cand.length) continue
