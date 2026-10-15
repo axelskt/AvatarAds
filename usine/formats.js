@@ -105,7 +105,8 @@
   // meta.format 'insomnie'), jamais tirée avec les TH ; demos = démos muettes autorisées (sinon générique)
   var TI_PRE = 'Tu essaies de dormir mais tu repenses à ';
   var TEXTES_INSOMNIE = [
-    { id: 'TI02', text: TI_PRE + 'l\'argent que tu as claqué en UGC alors qu\'une IA le fait en 2 min', module: 'generique' },
+    { id: 'TI02', text: TI_PRE + 'l\'argent que tu as claqué en UGC alors qu\'une IA le fait en 2 min', module: 'generique',
+      demos: ['C-MCPM-01', 'C-MCPM-03', 'C-MCPM-04', 'C-MCPM-05', 'C-MCPM-06'] },   // Axel 15/10 : parle d'UGC → démos Express seulement (VF-0327 sur une démo Omni refusée)
     { id: 'TI03', text: TI_PRE + 'ce que Claude fait en 30 secondes', module: 'mcp-claude' },
     { id: 'TI04', text: TI_PRE + 'la façon la plus débile de faire 1.000€ par jour', module: 'generique' },
     { id: 'TI05', text: TI_PRE + 'comment quitter ce 9-5', module: 'generique' },

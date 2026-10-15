@@ -2,7 +2,7 @@
 # Creative Factory — REFAIRE EN PLACE des vidéos déjà dans le kit (à programmer), avec les règles du jour. La vidéo du post
 # est remplacée, le créneau ne bouge pas, l'ancien fichier n'est supprimé qu'APRÈS la mise à jour vérifiée de la base.
 #   · Texte + musique (F05) : même réaction, même démo (sa version actuelle), même musique, même style, même texte choc sauf
-#     s'il est supprimé.
+#     s'il est supprimé ou réservé à d'autres démos (meta.demos).
 #   · parlée (F03, 15/10) : même photo, même hook et même CTA dans leur variante ACTUELLE (ex. hook accéléré A3-2 H18 x1,10),
 #     même démo, même musique, mêmes sous-titres, même texte choc et même style.
 # usage : python3 usine/lots/refaire.py VF-0316 VF-0322 …
@@ -26,7 +26,11 @@ for r in rows:
     if not r['pid']: log('✗', vf, 'plus dans le kit à programmer (déjà programmée ou publiée) : on n’y touche pas'); continue
     if c.get('format') == 'F05':
         react, demo, m, cs = c['reaction'], c['contenu'], c['musique'], c['style_choc']
-        th = c['texte_choc'] if c['texte_choc'] not in RETIRES else pick_th(demo, c['texte_choc'])
+        th = c['texte_choc']; dl = ((bricks.get(th) or {}).get('meta') or {}).get('demos')
+        if th in RETIRES: th = pick_th(demo, th)
+        elif dl and demo not in dl:   # texte réservé à d'autres démos (15/10 : TI02 parle d'UGC → démos Express seulement)
+            th = random.choice([b for b, x in bricks.items() if b[:2] == th[:2] and b != th and x.get('status') == 'ready'
+                                and demo in (((x.get('meta') or {}).get('demos')) or [demo])])
         rm = bricks[react]['meta']; H = float(rm.get('duration_s') or 3)
         rf = get(rm['media'], os.path.basename(rm['media'])); dm = bricks[demo]['meta']['media']; df = get(dm, os.path.basename(dm))
         name = '%s_F05_%s_%s_%s_%s_%s-r%s' % (vf, react, demo, m, th, cs, stamp); out = os.path.join(OUT, name + '.mp4')

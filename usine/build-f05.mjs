@@ -45,6 +45,8 @@ const work = mkdtempSync(join(tmpdir(), 'f05-'));
 const p = FMT.textChoc(OPT.choc);
 if (!p) { console.error('✗ texte choc inconnu : ' + OPT.choc); process.exit(2); }
 if (p.retired) { console.error('✗ texte choc ' + OPT.choc + ' supprimé par Axel le ' + p.retired); process.exit(2); }
+// démos autorisées du texte (Axel 15/10 : TI02 parle d'UGC → jamais sur une démo Omni)
+if (p.demos && OPT.demo && p.demos.indexOf(OPT.demo) < 0) { console.error('✗ ' + OPT.choc + ' ne va qu’avec les démos ' + p.demos.join(', ') + ' (démo : ' + OPT.demo + ')'); process.exit(2); }
 // 5 démos au plus par réaction (Axel 07/10) — recettes refusées en QC ignorées
 if (OPT.reaction && OPT.demo) {
   let rows = null;
