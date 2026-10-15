@@ -5938,7 +5938,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-15-0100'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-15-1115'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -32794,7 +32794,7 @@ function _mcRenderAdv(){
     </div>
     <span class="label" style="display:block;margin-bottom:8px">Modèle</span>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:${tier==='pro'?'16px':'14px'}">
-      ${tierCard('standard','Motion 2.6','Rapide et fiable')}
+      ${tierCard('standard','Motion 2.6','Rapide et fiable · 2 cr/s')}
       ${tierCard('pro','Motion 3.0','1080p natif · '+CREDIT_COSTS.motion30PerSec+' cr/s',_mcPaid?'':'<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap">PRO & ÉLITE</span>')}
     </div>
     ${tier==='pro'?``:`
