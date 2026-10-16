@@ -11,18 +11,24 @@ from outils import q
 PAR = ZoneInfo('Europe/Paris')
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 DEB = args[0] if args else (dt.datetime.now(PAR) + dt.timedelta(days=4)).date().isoformat()
-P = q("select id::text, account, scheduled_at::text t, (scheduled_at at time zone 'Europe/Paris')::date::text d, combo from factory_posts "
+P = q("select id::text, account, scheduled_at::text t, (scheduled_at at time zone 'Europe/Paris')::date::text d, combo, coalesce(note,'') note from factory_posts "
       "where status='todo' and platform='instagram' and (scheduled_at at time zone 'Europe/Paris')::date >= '%s' and scheduled_at < '2090-01-01' order by scheduled_at, account;" % DEB)
 if not P: raise SystemExit('rien à équilibrer après le ' + DEB)
 kind = lambda c: 'm' if (c or {}).get('format') == 'F05' else 'o'
 unit = lambda c: (c or {}).get('reaction') if kind(c) == 'm' else (c or {}).get('photo')
 slots = [(x['t'], x['account'], x['d']) for x in P]                 # créneaux gardés tels quels
-Q = {'o': [x for x in P if kind(x['combo']) == 'o'], 'm': [x for x in P if kind(x['combo']) == 'm']}
+# 16/10 : les posts posés à la main par etaler.py (note « étalé … », ex. le lot gagnant @leoadsia à 1 par jour) ne bougent
+# JAMAIS (ni créneau ni compte) ; ils comptent seulement comme voisins pour l'alternance et l'anti-répétition
+FIXE = {(x['t'], x['account']): x for x in P if x['note'].startswith('étalé')}
+Q = {'o': [x for x in P if kind(x['combo']) == 'o' and (x['t'], x['account']) not in FIXE], 'm': [x for x in P if kind(x['combo']) == 'm' and (x['t'], x['account']) not in FIXE]}
 ratio = len(Q['o']) / len(P)
 last, day, out, cnt = {}, {}, [], {}
 for t, a, d in slots:                                               # créneaux dans l'ordre du temps, tous comptes
     k_prev = last.get(a, (None, None))[0]
     st = day.setdefault((a, d), {'o': 0, 'm': 0})
+    if (t, a) in FIXE:                                              # post étalé : reste à sa place
+        f_ = FIXE[(t, a)]; st[kind(f_['combo'])] += 1; cnt.setdefault(a, {'o': 0, 'm': 0})[kind(f_['combo'])] += 1
+        last[a] = (kind(f_['combo']), unit(f_['combo'])); continue
     n = st['o'] + st['m'] + 1
     # type voulu : alterner avec le post précédent du compte, en suivant la proportion globale sur la journée
     rest = len(Q['o']) / max(1, len(Q['o']) + len(Q['m']))       # proportion de ce qui RESTE : aucun format épuisé avant la fin

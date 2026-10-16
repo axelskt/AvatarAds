@@ -20,11 +20,11 @@ json.dump({'qc': [{'t': x['t'], 's': x['s'], 'c': x['c']} for x in QC], 'variant
 VAR = {}
 for v in VARS: VAR[(v['a'], v['b'], v['f'])] = os.path.basename(v['u'])[:-4]   # trié par date : la plus récente gagne
 if not S:
-    n = NS * NV; nM = n // 2
+    n = NS * NV; nM = 0 if os.environ.get('OMNI_SEUL') else n // 2   # OMNI_SEUL=1 : lot ciblé sans Texte + musique (16/10)
     # on demande tout ce qui existe des deux côtés, puis moitié / moitié ; le côté qui manque est complété par l'autre (Axel 15/10)
     P = json.loads(subprocess.run(['node', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'plan.mjs'), WORK, str(n), str(n), str(sum(map(ord, NOM)))],
                                   capture_output=True, text=True, check=True).stdout)
-    P['M'] = P['M'][:min(len(P['M']), max(nM, n - len(P['O'])))]; P['O'] = P['O'][:n - len(P['M'])]
+    P['M'] = [] if os.environ.get('OMNI_SEUL') else P['M'][:min(len(P['M']), max(nM, n - len(P['O'])))]; P['O'] = P['O'][:n - len(P['M'])]
     def spread(items, key):   # jamais deux fois la même photo / réaction de suite
         g = {}
         for x in items: g.setdefault(key(x), []).append(x)

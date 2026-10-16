@@ -31,7 +31,9 @@ for (const q of X.qc) { const c = q.c || {}
   if (c.format === 'F05') { usedF05.add(c.reaction + '|' + c.contenu); if (q.s !== 'refused') reactUse[c.reaction] = (reactUse[c.reaction] || 0) + 1 }
   if (c.contenu) demoUse[c.contenu] = (demoUse[c.contenu] || 0) + 1 }
 const ready = b => b && b.status === 'ready'
-const demos = B.filter(b => b.kind === 'contenu' && ready(b) && !/^C-[A-Z]+M-/.test(b.id) && b.meta?.voice !== false && b.meta?.muette !== true && !EXCLUS.has(b.id))
+// Lot ciblé (Axel 16/10, « recettes gagnantes ») : HOOKS=H72,H24 et DEMOS=C-MCP- restreignent le choix, toutes les autres règles restent
+const HOOKS = (process.env.HOOKS || '').split(',').map(s => s.trim()).filter(Boolean), DEMO_PREF = process.env.DEMOS || ''
+const demos = B.filter(b => b.kind === 'contenu' && ready(b) && !/^C-[A-Z]+M-/.test(b.id) && b.meta?.voice !== false && b.meta?.muette !== true && !EXCLUS.has(b.id) && (!DEMO_PREF || b.id.startsWith(DEMO_PREF)))
 const mdemos = B.filter(b => b.kind === 'contenu' && ready(b) && /^C-[A-Z]+M-/.test(b.id) && !EXCLUS.has(b.id)).map(b => b.id)
 const PRI = d => /OMNI|-MC-|MCM|SADS/.test(d) ? 0 : /MCP/.test(d) ? 1 : 2
 const lotUse = {}
@@ -42,7 +44,7 @@ const pick = (list, n) => { const out = [], l = [...list]
   return out }
 const O = [], M = []
 // ── Omni : une photo après l'autre (A4 / A3 alternés), le hook le moins utilisé qui a encore une démo libre ──
-const vars = X.variants.filter(v => v.f === 'omni' && /^H\d+$/.test(v.b) && /^A[34]-/.test(v.a) && ready(by[v.b]))
+const vars = X.variants.filter(v => v.f === 'omni' && /^H\d+$/.test(v.b) && /^A[34]-/.test(v.a) && ready(by[v.b]) && (!HOOKS.length || HOOKS.includes(v.b)))
 const photos = [...new Set(vars.map(v => v.a))].sort((a, b) => (a.slice(3) - b.slice(3)) || a.localeCompare(b))
 let guard = 0
 while (O.length < +nO && guard++ < 80) for (const p of photos) {
