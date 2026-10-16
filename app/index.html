@@ -9880,7 +9880,7 @@ function _imgIco(name, size, color){
 
 const _IMG_STYLES = [
   // Axel 16/10 : plus de selfie en UGC Réel — une vraie pose naturelle, photo prise par quelqu'un d'autre
-  { id:'ugc',     ic:'mic',     label:'UGC Réel',     sub:'authentique',      api:'natural', suffix:', jolie avec de jolies lèvres pulpeuses, vraie photo UGC prise à l\'iPhone par un ami, PAS un selfie : je la veux vraiment avec une pose naturelle (la personne ne tient pas le téléphone, aucun bras tendu vers l\'objectif, corps détendu et spontané), casual et spontané, lumière non contrôlée d\'intérieur (ambiante, exposition automatique du téléphone), cadrage imparfait légèrement décentré, non retouché, non professionnel, comme une photo qu\'un ami prendrait sur le moment, au moins une main naturellement visible dans le cadre (posée sur la joue, dans les cheveux, ou tenant un objet), cinq doigts bien formés' },
+  { id:'ugc',     ic:'mic',     label:'UGC Réel',     sub:'authentique',      api:'natural', suffix:', jolie avec de jolies lèvres pulpeuses, vraie photo UGC prise à l\'iPhone par un ami, PAS un selfie : je la veux vraiment avec une pose naturelle (la personne ne tient pas le téléphone, aucun bras tendu vers l\'objectif, corps détendu et spontané), casual et spontané, lumière non contrôlée d\'intérieur (ambiante, exposition automatique du téléphone), photo prise à hauteur des yeux par l\'ami à environ deux mètres (plan de la mi-cuisse ou de la taille jusqu\'en haut, le décor bien visible autour, jamais un gros plan de selfie), cadrage imparfait légèrement décentré, non retouché, non professionnel, comme une photo qu\'un ami prendrait sur le moment, au moins une main naturellement visible dans le cadre (le long du corps, posée sur la joue, dans les cheveux, ou tenant un objet), cinq doigts bien formés' },
   { id:'staticad', ic:'ad',     label:'Pub Produit',  sub:'static ad', api:'vivid', suffix:', publicité statique professionnelle de produit (static ad) : le produit en héros au centre, packshot studio parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, quelques éléments ou ingrédients flottants qui dynamisent la composition, mise en page publicitaire premium équilibrée et aérée type marque DTC, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe' },
   { id:'studio',  ic:'fruit',   label:'Fruit',        sub:'perso fruit', api:'vivid', suffix:', personnage fruit ou légume humanisé en 3D RÉALISTE très détaillé (style FruitDrama), tête de fruit avec peau réaliste, textures et micro-détails crédibles, corps humanoïde avec vêtements réels, visage expressif, intégré naturellement dans un décor réel cohérent (chambre, rue, intérieur), éclairage réaliste cohérent avec l\'environnement, rendu cinématique haute qualité, PAS de flou d\'arrière-plan artificiel, character design crédible et attachant, pas effrayant' },
   { id:'photo',   ic:'camera',  label:'Photo Réel',  sub:'réaliste',      api:'natural', suffix:', photographie réaliste haute qualité et très détaillée, peau naturelle avec vraie texture (pores, grain de peau, micro-imperfections), traits nets et détaillés, yeux détaillés et regard naturel, cheveux détaillés, lumière réaliste, décor et arrière-plan détaillés et nets, rendu photo réel non lissé et non plastique' },
@@ -9968,9 +9968,15 @@ const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a ph
 // n'est pas utilisé (bloc réalisme seul) : on ajoute donc la pose ici aussi.
 const _IMG_UGC_POSE = ' Not a selfie: the photo is taken by a friend standing a few steps away; the person has a genuinely natural, relaxed pose, is not holding the phone and has no arm stretched toward the camera.';
 const _IMG_NO_ART = ' No paintings, framed pictures, posters or artwork on the walls of the room.';
+// Axel 16/10 (réf. A4-4 + planche « /eyelevel ») : UGC Réel = plan « eye level » naturel, l'ami à ~2 m à hauteur des yeux,
+// de la mi-cuisse / taille jusqu'en haut — plus le cadrage serré type selfie que poussait le bloc réalisme (« chest-up or
+// closer »), remplacé pour ce style. Un gros plan ou un autre angle demandé dans le prompt reste respecté.
+const _IMG_UGC_FRAMING = ' EYE-LEVEL SHOT, like a photo a friend takes standing about two metres away: the camera is at the person\'s eye height, held level and straight (no high angle, no low angle, no tilt, no wide-angle distortion, natural 35-50 mm perspective). Medium framing from about mid-thigh or the waist up, with some space around the person and the setting clearly visible behind them; the face stays sharp and detailed but this is NOT a close-up and NOT a selfie distance (never just head and shoulders, never a face filling the frame) — unless the request explicitly asks for a close-up or another angle.';
+const _IMG_REALISM_SUFFIX_UGC = _IMG_REALISM_SUFFIX.replace(/ Frame the person fairly close[^.]*\./, _IMG_UGC_FRAMING);
 function _imgUgcExtras(prompt, withPose){
   const art = /(tableau|peinture|toile|cadre|poster|affiche|œuvre|oeuvre|painting|artwork|framed|frame|canvas)/i.test(prompt||'');
-  return (withPose ? _IMG_UGC_POSE : '') + (art ? '' : _IMG_NO_ART);
+  // sans réf, le cadrage est déjà dans _IMG_REALISM_SUFFIX_UGC ; avec réf, il s'ajoute ici
+  return (withPose ? _IMG_UGC_POSE : '') + (withPose ? '' : _IMG_UGC_FRAMING) + (art ? '' : _IMG_NO_ART);
 }
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
@@ -12071,7 +12077,7 @@ async function generateImage(){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
       // Styles réalistes sans réf : bloc réalisme ChatGPT.
-      enhancedPrompt = prompt + _imgGenderHint(prompt) + _IMG_REALISM_SUFFIX + (_sid==='ugc' ? _imgUgcExtras(prompt, true) : '');
+      enhancedPrompt = prompt + _imgGenderHint(prompt) + (_sid==='ugc' ? _IMG_REALISM_SUFFIX_UGC : _IMG_REALISM_SUFFIX) + (_sid==='ugc' ? _imgUgcExtras(prompt, true) : '');
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
