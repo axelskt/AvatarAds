@@ -9963,6 +9963,15 @@ function _imgVariationHint(){
   return ' For THIS image use ' + scene + ' so it is CLEARLY different from the other generations; vary the composition on every generation.';
 }
 const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like "sexy", "hot" or "belle".';
+// Axel 16/10 : UGC Réel = vraie pose naturelle (pas de selfie) et pas de tableau dans la pièce,
+// sauf si l'utilisateur en demande un dans son prompt. Sans image de référence, le suffixe du style
+// n'est pas utilisé (bloc réalisme seul) : on ajoute donc la pose ici aussi.
+const _IMG_UGC_POSE = ' Not a selfie: the photo is taken by a friend standing a few steps away; the person has a genuinely natural, relaxed pose, is not holding the phone and has no arm stretched toward the camera.';
+const _IMG_NO_ART = ' No paintings, framed pictures, posters or artwork on the walls of the room.';
+function _imgUgcExtras(prompt, withPose){
+  const art = /(tableau|peinture|toile|cadre|poster|affiche|œuvre|oeuvre|painting|artwork|framed|frame|canvas)/i.test(prompt||'');
+  return (withPose ? _IMG_UGC_POSE : '') + (art ? '' : _IMG_NO_ART);
+}
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
@@ -12062,12 +12071,12 @@ async function generateImage(){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
       // Styles réalistes sans réf : bloc réalisme ChatGPT.
-      enhancedPrompt = prompt + _imgGenderHint(prompt) + _IMG_REALISM_SUFFIX;
+      enhancedPrompt = prompt + _imgGenderHint(prompt) + _IMG_REALISM_SUFFIX + (_sid==='ugc' ? _imgUgcExtras(prompt, true) : '');
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
                      : ', extrêmement détaillé, netteté maximale, haute résolution, qualité professionnelle, sans flou, sans artefacts');
-      enhancedPrompt = prompt + _imgGenderHint(prompt) + suffix + _qSuffix;
+      enhancedPrompt = prompt + _imgGenderHint(prompt) + suffix + _qSuffix + (_sid==='ugc' ? _imgUgcExtras(prompt, false) : '');
     }
     // #static-ads-bank : Pub Produit (dev/owner) → le gabarit du format choisi (ou tiré au sort) devient LE prompt ;
     // le texte de l'utilisateur décrit le produit ({PRODUCT}). Le même prompt sert avec ou sans image de référence.
