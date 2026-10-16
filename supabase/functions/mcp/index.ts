@@ -274,11 +274,37 @@ function bg(task: Promise<unknown>) {
 // Anti-SSRF : refuse les hôtes internes / link-local / metadata pour une URL fournie par l'utilisateur.
 function isBlockedHost(hostname: string): boolean { return guardBlockedHost(hostname) }   // audit #3 : source unique durcie (guard.ts)
 
+// Chemin d'un nouveau média mcp-media (<uid>/<horodatage>-<suffixe>.<ext>) et son adresse CANONIQUE (signée au moment de servir)
+const nouveauCheminMedia = (userId: string, ext: string) => `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+const urlMediaCanonique = (path: string) => `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}`
 async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, contentType: string): Promise<string> {
-  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const path = nouveauCheminMedia(userId, ext)
   const { error } = await svc.storage.from('mcp-media').upload(path, bytes, { contentType })
   if (error) throw new Error('upload: ' + error.message)
-  return `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}`
+  return urlMediaCanonique(path)
+}
+// ── LIVRAISON D'UN FICHIER DÉJÀ DANS render-media, SANS LE CHARGER (16/10) ─────────────────────────────────────────────
+// Panne du 16/10 (job 973c1002, Express 10 s, 50 cr) : la sortie de la retouche (~75 Mo — grain voulu, ~60 Mbit/s) était
+// téléchargée EN ENTIER dans l'isolate (Blob + ArrayBuffer), renvoyée à mcp-media, puis une 3e fois à la Bibliothèque →
+// « Memory limit exceeded » (256 Mo) juste après le claim : job « done » sans média, payé, jamais livré ni remboursé.
+// Désormais : COPIE CÔTÉ SERVEUR du stockage (copy + destinationBucket — storage-js 2.110.3 du cache local et 2.118.0 servi
+// par esm.sh pour « supabase-js@2 », vérifiés) : aucun octet ne passe par l'isolate. Repli si la copie est refusée : envoi
+// EN FLUX (lien signé render-media → upload d'un ReadableStream, duplex « half » géré par storage-js), jamais un tampon
+// entier. Renvoie le chemin mcp-media créé ; lève une erreur sinon (l'appelant remet le job en « running »).
+async function copierVersMedia(userId: string, chemin: string, ext = 'mp4', contentType = 'video/mp4'): Promise<string> {
+  const dest = nouveauCheminMedia(userId, ext)
+  let errCopie: unknown = null
+  try { const { error } = await svc.storage.from('render-media').copy(chemin, dest, { destinationBucket: 'mcp-media' }); errCopie = error } catch (e) { errCopie = e }
+  if (!errCopie) return dest
+  console.warn('[mcp] livraison : copie serveur refusée, envoi en flux', chemin, String((errCopie as Error)?.message || errCopie).slice(0, 200))
+  const lien = await signRender(chemin, 600)
+  if (!lien) throw new Error('livraison : lien source indisponible')
+  const r = await fetch(lien)
+  if (!r.ok || !r.body) throw new Error('livraison : source illisible (' + r.status + ')')
+  // upsert : une copie serveur partie malgré une réponse en erreur ne bloque pas l'envoi (chemin neuf, choisi ici)
+  const { error } = await svc.storage.from('mcp-media').upload(dest, r.body, { contentType, upsert: true })
+  if (error) throw new Error('livraison en flux : ' + error.message)
+  return dest
 }
 // ── mcp-media est PRIVÉ (audit 28/09 #28/#36 : visages, voix et vidéos des clients) ─────────────────────────────────
 // La base garde l'adresse CANONIQUE « …/object/public/mcp-media/<chemin> » (anciennes lignes comprises) : elle ne s'ouvre
@@ -308,11 +334,22 @@ async function signMedia(url: string | null | undefined, ttlS = 7 * 86400): Prom
 // Bibliothèque (bucket render-media/<uid>/lib + ligne library_items, EXACTEMENT le format de
 // l'app) → il retrouve TOUJOURS sa vidéo/image dans son compte, indépendamment de claude.ai.
 // Best-effort absolu : jamais un throw ici ne doit empêcher la livraison.
-async function saveToLibrary(userId: string, bytes: Uint8Array, ext: string, mime: string, kind: string, name: string, thumb?: string, meta?: { tags?: string[]; style?: string; emo?: string }): Promise<void> {
+// 16/10 : la source peut être un fichier DÉJÀ stocké (vidéo livrée) → COPIE côté serveur, jamais les octets renvoyés une
+// 2e fois depuis l'isolate. Renvoie false si le fichier n'a pas pu être déposé (l'appelant peut retenter autrement).
+type SourceStockee = { bucket: 'render-media' | 'mcp-media'; path: string }
+async function saveToLibrary(userId: string, bytes: Uint8Array | SourceStockee, ext: string, mime: string, kind: string, name: string, thumb?: string, meta?: { tags?: string[]; style?: string; emo?: string }): Promise<boolean> {
+  let depose = false
   try {
     const path = `${userId}/lib/mcp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-    const { error } = await svc.storage.from('render-media').upload(path, bytes, { contentType: mime, upsert: true })
-    if (error) return
+    if (bytes instanceof Uint8Array) {
+      const { error } = await svc.storage.from('render-media').upload(path, bytes, { contentType: mime, upsert: true })
+      if (error) return false
+    } else {
+      const src = svc.storage.from(bytes.bucket)
+      const { error } = bytes.bucket === 'render-media' ? await src.copy(bytes.path, path) : await src.copy(bytes.path, path, { destinationBucket: 'render-media' })
+      if (error) { console.warn('[mcp] Bibliothèque : copie serveur refusée', bytes.bucket, error.message); return false }
+    }
+    depose = true
     // mcp-media est privé (audit 28/09) : une vignette mcp-media devient une image INTÉGRÉE (data URL), jamais un lien qui expire
     let th = thumb
     const tp = th ? mediaPath(th) : null
@@ -321,7 +358,8 @@ async function saveToLibrary(userId: string, bytes: Uint8Array, ext: string, mim
       try { const d = await svc.storage.from('mcp-media').download(tp); if (!d.error && d.data && d.data.size <= 600_000) th = `data:${d.data.type || 'image/jpeg'};base64,` + b64DepuisOctets(new Uint8Array(await d.data.arrayBuffer())) } catch { /* sans vignette */ }
     }
     await svc.from('library_items').insert({ user_id: userId, kind, name, tags: meta?.tags || [], storage_path: path, ...(meta?.style ? { style: meta.style } : {}), ...(meta?.emo ? { emo: meta.emo } : {}), ...(th ? { thumb: th } : {}) })
-  } catch (_) { /* la Bibliothèque est un filet, jamais un bloquant */ }
+    return true
+  } catch (_) { return depose /* la Bibliothèque est un filet, jamais un bloquant */ }
 }
 
 // ── L'IMAGE DOIT S'AFFICHER DANS CLAUDE, PAS ÊTRE UN LIEN ───────────────────
@@ -1794,8 +1832,12 @@ async function failAndRefund(_userId: string, job: Record<string, any>, reason: 
 
 // Livraison d'une vidéo terminée : claim atomique running→done pour éviter un double upload
 // si deux check_video concurrents aboutissent en même temps. Retourne l'URL finale.
+// 16/10 : la source est soit des OCTETS en mémoire (vidéo rapatriée d'un fournisseur), soit un fichier DÉJÀ dans
+// render-media ({ renderMedia: chemin } : sortie de la retouche, montage) — copié côté serveur, jamais chargé dans l'isolate
+// (panne mémoire du 16/10, voir copierVersMedia). Le chemin est validé par l'appelant (WRK-1 : cheminSur / clePrepMcp).
+type SourceVideo = Uint8Array | { renderMedia: string }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uint8Array): Promise<string | null> {
+async function deliverVideo(userId: string, job: Record<string, any>, src: SourceVideo): Promise<string | null> {
   const { data: claimed } = await svc.from('mcp_jobs')
     .update({ status: 'done', updated_at: new Date().toISOString() })
     .eq('id', job.id).eq('status', 'running').select('id')
@@ -1804,30 +1846,52 @@ async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uin
     const { data: fresh } = await svc.from('mcp_jobs').select('result_url').eq('id', job.id).maybeSingle()
     return fresh?.result_url ?? null
   }
-  // lipsync_video (26/09) : l'audio envoyé portait un silence de fin → vidéo recoupée au dernier son + 0,06 s (27/09, règle de l’usine)
-  // (liste d'éditions, sans ré-encodage). Structure inattendue → livrée entière, comme avant.
-  { const cut = coupeDeOp(job.op_name); if (cut) { const t = couperMp4(bytes, cut); if (t) bytes = t } }
   // Copie ratée APRÈS le claim (25/09) : on repasse le job en « running » au lieu de le laisser « done » sans média
   // (payé, jamais livré, plus remboursable). Le prochain suivi retente la livraison ; le filet 20 min rembourse sinon.
-  let url: string
-  try { url = await uploadMedia(userId, bytes, 'mp4', 'video/mp4') }
-  catch (e) {
-    console.warn('[mcp] livraison vidéo : copie impossible', job.id, (e as Error)?.message)
-    await svc.from('mcp_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'done').is('result_url', null)
+  const rendre = async (msg: string) => {
+    console.warn('[mcp] livraison vidéo : copie impossible', job.id, msg)
+    // revue 16/10 : échecs de livraison COMPTÉS (params.livraison_echecs) → les filets bornent les reprises (reglerExpressBloque)
+    const { data: cur } = await svc.from('mcp_jobs').select('params').eq('id', job.id).maybeSingle()
+    const p = { ...((cur?.params || {}) as Record<string, unknown>) }; p.livraison_echecs = (Number(p.livraison_echecs) || 0) + 1
+    if (!p.livraison_premier_echec_at) p.livraison_premier_echec_at = new Date().toISOString()
+    await svc.from('mcp_jobs').update({ status: 'running', params: p, updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'done').is('result_url', null)
     return null
   }
+  let bytes: Uint8Array | null = src instanceof Uint8Array ? src : null
+  const chemin = src instanceof Uint8Array ? '' : src.renderMedia
+  // lipsync_video (26/09) : l'audio envoyé portait un silence de fin → vidéo recoupée au dernier son + 0,06 s (27/09, règle de l’usine)
+  // (liste d'éditions, sans ré-encodage). Structure inattendue → livrée entière, comme avant.
+  // 16/10 : le recoupage travaille sur les OCTETS → un job recoupé livré depuis le stockage (lipsync : fichier léger) est
+  // relu en mémoire comme avant ; sans recoupe, aucune lecture.
+  const cut = coupeDeOp(job.op_name)
+  if (cut && !bytes) {
+    try { const dl = await svc.storage.from('render-media').download(chemin); if (!dl.error && dl.data) bytes = new Uint8Array(await dl.data.arrayBuffer()) } catch (_) { /* repris ci-dessous */ }
+    if (!bytes) return await rendre('source illisible pour la recoupe')
+  }
+  if (cut && bytes) { const t = couperMp4(bytes, cut); if (t) bytes = t }
+  let url: string, cheminMedia: string
+  try {
+    if (bytes) { url = await uploadMedia(userId, bytes, 'mp4', 'video/mp4'); cheminMedia = mediaPath(url) || '' }
+    else { cheminMedia = await copierVersMedia(userId, chemin); url = urlMediaCanonique(cheminMedia) }
+  } catch (e) { return await rendre(String((e as Error)?.message || e)) }
   // Audit 28/09 #24 : écriture CONDITIONNELLE. Si le filet a repris le job pendant une copie trop longue (livraison
   // interrompue, voir reconcileAllStale), cette livraison tardive n'écrit rien et ne range rien : jamais remboursé ET livré.
   const { data: fin } = await svc.from('mcp_jobs').update({ result_url: url, updated_at: new Date().toISOString() })
     .eq('id', job.id).eq('status', 'done').is('result_url', null).select('id')
   if (!fin || !fin.length) return null
   // filet Bibliothèque — rangée comme dans l'app (Omni jj/mm · Motion Control, mêmes étiquettes et badge) (audit 02/10)
+  // 16/10 : COPIE côté serveur du fichier livré (octets : la copie mcp-media, recoupe comprise ; stockage : la source
+  // render-media) — plus de 2e envoi des octets. Copie refusée et octets en mémoire → envoi comme avant (filet du filet).
   const outilL = String(((job.params || {}) as Record<string, unknown>).tool || '')
   const jjmm = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Paris' }).format(new Date())
-  if (outilL === 'omni_edit') await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Omni ' + jjmm, undefined, { tags: ['Omni', 'Vidéo'], style: 'OMNI', emo: '🎬' })
-  else if (outilL === 'motion') await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Motion Control', undefined, { tags: ['Motion Control', 'Vidéo'], style: 'MOTION', emo: '🎬' })
-  else if (String(job.kind || '') === 'montage') await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Montage IA', undefined, { tags: ['Montage IA', '9:16'], style: 'MONTAGE', emo: '🎬' })   // comme l'app (audit 10/10)
-  else await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Vidéo AvatarAds')
+  const rangement: [string, { tags: string[]; style: string; emo: string } | undefined] =
+    outilL === 'omni_edit' ? ['Omni ' + jjmm, { tags: ['Omni', 'Vidéo'], style: 'OMNI', emo: '🎬' }]
+    : outilL === 'motion' ? ['Motion Control', { tags: ['Motion Control', 'Vidéo'], style: 'MOTION', emo: '🎬' }]
+    : String(job.kind || '') === 'montage' ? ['Montage IA', { tags: ['Montage IA', '9:16'], style: 'MONTAGE', emo: '🎬' }]   // comme l'app (audit 10/10)
+    : ['Vidéo AvatarAds', undefined]
+  const sourceLib: SourceStockee | null = bytes ? (cheminMedia ? { bucket: 'mcp-media', path: cheminMedia } : null) : { bucket: 'render-media', path: chemin }
+  const range = sourceLib ? await saveToLibrary(userId, sourceLib, 'mp4', 'video/mp4', 'video-simple', rangement[0], undefined, rangement[1]) : false
+  if (!range && bytes) await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', rangement[0], undefined, rangement[1])
   return url
 }
 
@@ -1854,9 +1918,20 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     }
     // ── OmniHuman chez kie (Axel 25/09) : livré / échec → réglé ; en cours → on patiente jusqu'à KIE_OMNI_STALE_MIN ──
     if (job.kind === 'avatar' && estOmniKie(job.op_name)) {
-      const a = await avancerOmniKie(taskDeOp(job.op_name))
-      if (a.etat === 'pret') { await deliverVideo(userId, job, a.bytes); continue }
-      if (a.etat === 'echec') { await failAndRefund(userId, job, a.raison); continue }
+      // 16/10 : retouche déjà lancée (vidéo Express) → on livre SA sortie (ou la vidéo brute déposée) par copie serveur,
+      // comme advanceAvatarJob ; avant, ce filet relisait la vidéo du fournisseur en mémoire et contournait la retouche.
+      const pjr = (job.params || {}) as Record<string, unknown>
+      if (pjr.retouche_job) {
+        const vieux = Date.now() - new Date(String(job.created_at)).getTime() >= KIE_OMNI_STALE_MIN * 60_000
+        const r = await suivreRetouche(userId, job, pjr, vieux)
+        if (r === 'livre' || !vieux) continue
+        try { await reglerExpressBloque(userId, job, r) } catch (e) { console.warn('[mcp] reglerExpressBloque', job.id, (e as Error)?.message) }
+        continue   // jamais le remboursement « timeout » aveugle ci-dessous
+      } else {
+        const a = await avancerOmniKie(taskDeOp(job.op_name))
+        if (a.etat === 'pret') { await deliverVideo(userId, job, a.bytes); continue }
+        if (a.etat === 'echec') { await failAndRefund(userId, job, a.raison); continue }
+      }
       if (Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
       await failAndRefund(userId, job, 'timeout'); continue
     }
@@ -1911,6 +1986,42 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
   }
 }
 
+// ── FILET « LIVRÉ SANS MÉDIA » (16/10) ───────────────────────────────────────────────────────────────────────────────
+// deliverVideo réclame le job « done » AVANT de copier le MP4. Si l'isolate meurt entre les deux (mémoire, CPU, arrêt),
+// le job reste « done » sans result_url : payé, jamais livré, et invisible des filets de remboursement (ils ne lisent que
+// « running »). Jusqu'au 16/10, l'étape 0 le remettait en « running » au bout de 10 min SANS COMPTER : la reprise
+// relisait le même fichier trop lourd, l'isolate remourait (« Memory limit exceeded » à 16:18 puis 16:29 pour le job
+// 973c1002) et le job repassait « done » avant l'étape 3 — boucle sans fin, jamais livré ni remboursé.
+// Désormais : « done » sans média depuis LIVRAISON_MORTE_MIN (une copie serveur dure quelques secondes) → remis en
+// « running » par une écriture CONDITIONNELLE (toujours done, sans média, non remboursé, pas réclamé de nouveau depuis), avec
+// un compteur params.livraison_reprises. Le suivi normal relivre (étape 1 / 5, /status, check_*). La panne qui suit la
+// LIVRAISON_REPRISES_MAX-ième reprise est remboursée : failAndRefund (RPC sous verrou : seulement si « running », non
+// remboursé, à la MÊME étape op_name) → une seule fois, et jamais sur un job livré entre-temps (claim done → RPC no-op ;
+// et après le remboursement, status « failed » → plus aucun claim ni écriture de result_url possible).
+const LIVRAISON_MORTE_MIN = 4
+const LIVRAISON_REPRISES_MAX = 2
+async function reprendreLivraisons(): Promise<void> {
+  const limite = new Date(Date.now() - LIVRAISON_MORTE_MIN * 60_000).toISOString()
+  const { data: morts } = await svc.from('mcp_jobs').select('id, user_id, kind, op_name, params, credits_cost')
+    .eq('status', 'done').is('result_url', null).in('kind', ['video', 'avatar', 'montage']).eq('refunded', false)   // + montages (audit 02/10)
+    .lt('updated_at', limite).gt('updated_at', new Date(Date.now() - 24 * 3600_000).toISOString()).limit(20)
+  for (const j of morts || []) {
+    try {
+      const pj = (j.params || {}) as Record<string, unknown>
+      const n = Number(pj.livraison_reprises) || 0
+      const params = { ...pj, livraison_reprises: n + 1 }
+      // un job « done » n'a plus d'autre écrivain de params (vtPasser / vtEchec exigent « running ») : rien d'écrasé
+      const { data: rep } = await svc.from('mcp_jobs').update({ status: 'running', params, updated_at: new Date().toISOString() })
+        .eq('id', j.id).eq('status', 'done').is('result_url', null).eq('refunded', false).lt('updated_at', limite).select('id')
+      if (!rep || !rep.length) continue   // livré, ou réclamé de nouveau entre-temps
+      if (n < LIVRAISON_REPRISES_MAX) { console.warn('[mcp] livraison interrompue → reprise', j.id, n + 1); continue }
+      console.warn('[mcp] livraison interrompue trop de fois → remboursement', j.id, n + 1)
+      const rendu = await failAndRefund(String(j.user_id), { ...j, params }, 'Livraison impossible — crédits rendus.', j.op_name ? String(j.op_name) : undefined)
+      if (rendu >= 0 && estOutilVideo(j.op_name)) await vtNettoyer(params)
+    } catch (e) { console.warn('[mcp] reprise de livraison', j.id, (e as Error)?.message) }
+  }
+}
+
 // RÉCONCILIATION GLOBALE (tous les users) — lancée par le KEEP-WARM (GET /mcp du worker Railway
 // toutes les 4 min), donc INDÉPENDANTE du proxy connecteur ET du widget. Corrige les 2 pannes du
 // 17/08 : (1) vidéos générées mais JAMAIS livrées car le widget n'a pas pu sonder /status (réponse
@@ -1920,13 +2031,10 @@ async function reconcileAllStale(): Promise<void> {
     // UN passage toutes les ~2 min pour TOUTES les instances (avant : 2 min par instance → plusieurs passages par minute,
     // chacun sondant Hedra pour chaque job en cours : cause principale des 429 signalés par Hedra le 28/09).
     if (!(await rateHit('mcp:reconcile-all', 110, 1))) return
-    // 0) LIVRAISON INTERROMPUE (audit 28/09 #24) : deliverVideo réclame le job « done » AVANT de copier le MP4 ; si l'isolate
-    //    meurt pendant la copie, le job restait « done » sans média, payé, jamais livré ni remboursé. Après 10 min on le
-    //    remet en « running » (conditionnel : done + sans média + récent) → l'étape 1 retente la livraison, l'étape 3
-    //    rembourse si le fournisseur n'a plus le fichier.
-    await svc.from('mcp_jobs').update({ status: 'running', updated_at: new Date().toISOString() })
-      .eq('status', 'done').is('result_url', null).in('kind', ['video', 'avatar', 'montage']).eq('refunded', false)   // + montages (audit 02/10)
-      .lt('updated_at', new Date(Date.now() - 10 * 60_000).toISOString()).gt('updated_at', new Date(Date.now() - 24 * 3600_000).toISOString())
+    // 0) LIVRAISON INTERROMPUE (audit 28/09 #24 ; reprises COMPTÉES depuis le 16/10, voir reprendreLivraisons) : job « done »
+    //    sans média depuis LIVRAISON_MORTE_MIN → remis en « running » → l'étape 1 (ou 5 pour un montage) retente la livraison ;
+    //    au-delà de LIVRAISON_REPRISES_MAX reprises → remboursé. Jamais de boucle sans fin.
+    await reprendreLivraisons()
     // 1) LIVRAISON : tout job vidéo/avatar avec op_name → advance (livre si le fournisseur a fini,
     //    laisse « running » sinon, ne rembourse QUE sur erreur fournisseur). Sûr à répéter.
     const { data: live } = await svc.from('mcp_jobs').select('*')
@@ -1947,6 +2055,15 @@ async function reconcileAllStale(): Promise<void> {
       // OmniHuman chez kie : plus lent → abandonné à KIE_OMNI_STALE_MIN seulement (l'étape 1 l'a déjà avancé / livré)
       if (estOmniKie(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
       if (estOutilVideo(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < VT_STALE_MIN * 60_000) continue   // Motion Control : jusqu'à ~25 min (Kling + repli + Topaz)
+      // 16/10 : vidéo Express dont la retouche est lancée → sa sortie, ou à défaut la vidéo d'origine déjà déposée, est livrée
+      // (copie serveur) avant de rembourser. Livrée → le remboursement ci-dessous ne fait rien (le job n'est plus « running »).
+      const pjs = (job.params || {}) as Record<string, unknown>
+      if (estOmniKie(job.op_name) && pjs.retouche_job) {
+        let r: 'livre' | 'attente' | 'erreur' | 'absent' = 'erreur'
+        try { r = await suivreRetouche(String(job.user_id), job, pjs, true) } catch { r = 'erreur' }
+        if (r !== 'livre') { try { await reglerExpressBloque(String(job.user_id), job, r) } catch (e) { console.warn('[mcp] reglerExpressBloque', job.id, (e as Error)?.message) } }
+        continue   // jamais le remboursement « timeout » aveugle ci-dessous pour une vidéo Express déjà générée
+      }
       const rendu = await failAndRefund(String(job.user_id), job, 'timeout')
       if (rendu >= 0 && estOutilVideo(job.op_name)) await vtNettoyer((job.params || {}) as Record<string, unknown>)   // audit 02/10 : mcp-prep/ n'est purgé par rien d'autre
     }
@@ -1975,12 +2092,44 @@ async function reconcileAllStale(): Promise<void> {
           continue
         }
         if (!job.op_name) { await failAndRefund(uid, job, 'préparation du plan bloquée'); continue }
-        const { data: rj } = await svc.from('render_jobs').select('status, output_url, created_at').eq('id', String(job.op_name)).maybeSingle()
+        const { data: rj } = await svc.from('render_jobs').select('status, output_url, created_at, updated_at').eq('id', String(job.op_name)).maybeSingle()
         if (!rj) { await failAndRefund(uid, job, 'job de rendu disparu'); continue }
         if (rj.status === 'failed') { await failAndRefund(uid, job, 'échec du rendu'); continue }
         if (rj.status === 'done' && rj.output_url) {
-          const dl = await svc.storage.from('render-media').download(String(rj.output_url))
-          if (!dl.error && dl.data) await deliverVideo(uid, job, new Uint8Array(await dl.data.arrayBuffer()))
+          // 16/10 : rendu dans le dossier du compte (WRK-1) → copie côté serveur, sans le charger ; sinon relu comme avant
+          const sortie = String(rj.output_url)
+          let livre: string | null = null, absent = false
+          if (cheminSur(uid, sortie) === sortie) {
+            const info = await fichierInfo('render-media', sortie)
+            if (info === undefined) continue   // Storage muet : on repassera, jamais une clôture sur une erreur passagère
+            if (mp4Livrable(info)) livre = await deliverVideo(uid, job, { renderMedia: sortie }); else absent = true
+          }
+          else {
+            const info = await fichierInfo('render-media', sortie)   // revue 16/10 : même règle que dans <uid>/ (sinon jamais clos)
+            if (info === undefined) continue
+            if (!info) absent = true
+            else {
+              const dl = await svc.storage.from('render-media').download(sortie)
+              if (!dl.error && dl.data) livre = await deliverVideo(uid, job, new Uint8Array(await dl.data.arrayBuffer()))
+            }
+          }
+          // 16/10 : rendu fini depuis plus d'1 h et toujours pas livrable → job CLOS SANS REMBOURSEMENT (revue 16/10 : le
+          // fichier est dans <uid>/, que le client peut lire ET supprimer — rembourser sur son absence permettait de
+          // télécharger le montage, l'effacer et récupérer les crédits). Clos pour libérer une des 5 places de cette étape ;
+          // trace dans les logs pour un remboursement manuel si c'est bien un incident chez nous.
+          // revue 16/10 : clos seulement après 2 passages ratés (fichier absent / non livrable, ou copie refusée), pas au 1er
+          if (!livre && absent) {
+            const { data: cur } = await svc.from('mcp_jobs').select('params').eq('id', job.id).maybeSingle()
+            const p = { ...((cur?.params || {}) as Record<string, unknown>) }; p.livraison_echecs = (Number(p.livraison_echecs) || 0) + 1
+            await svc.from('mcp_jobs').update({ params: p }).eq('id', job.id).eq('status', 'running')
+            job.params = p
+          }
+          const echecsM = Number(((job.params || {}) as Record<string, unknown>).livraison_echecs) || 0
+          if (!livre && echecsM >= 2 && Date.now() - new Date(String(rj.updated_at || rj.created_at)).getTime() > 3600_000) {
+            const { data: clos } = await svc.from('mcp_jobs').update({ status: 'failed', error: 'Livraison impossible — contacte le support si tu n\'as pas reçu ta vidéo.', updated_at: new Date().toISOString() })
+              .eq('id', job.id).eq('status', 'running').is('result_url', null).select('id')
+            if (clos && clos.length) console.warn('[mcp] montage non livrable après 1 h, clos SANS remboursement (à vérifier à la main)', job.id, 'rendu', job.op_name, 'compte', uid)
+          }
           continue
         }
         const rAge = Date.now() - new Date(String(rj.created_at)).getTime()
@@ -2447,6 +2596,9 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 // Échec d'une vidéo Express dont la photo de départ a été livrée : elle reste payée ET accessible (relecture 02/10)
 // deno-lint-ignore no-explicit-any
 function finEchecVideo(j: any): string {
+  // revue 16/10 : job clos SANS remboursement (vidéo générée mais non livrable, fichiers effacés côté compte) → on ne
+  // prétend pas « remboursés »
+  if (j?.refunded === false) return 'crédits non remboursés automatiquement — contacte le support, on vérifie ta vidéo'
   return ((j?.params || {}) as Record<string, unknown>).start_full
     ? `crédits de la vidéo remboursés ; ta photo de départ est gardée : https://mcp.avatarads.fr/i/${j.id}?photo=1&download=photo-depart.png`
     : 'crédits remboursés'
@@ -2500,7 +2652,9 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   if (((job.params as Record<string, unknown> | null) || {}).tool) return await carteOutilVideo(job)   // Omni / Motion Control
   if (job.status === 'pending') return toolText(`📷 Rien n'est en cours : la carte attend la PHOTO de départ. Rien n'a été débité.
 RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose ta photo dans la carte, la vidéo se lance toute seule. » N'appelle PLUS check_video ni aucun autre outil pour cette vidéo.`, { waiting: true, kind: 'video' })
-  if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
+  // 16/10 : « done » SANS média = livraison en cours (ou interrompue, reprise par reprendreLivraisons) → jamais « prête »
+  // avec un lien /i/ qui répond 404 : on retombe sur le suivi « en cours » ci-dessous (carte qui sonde /status).
+  if (job.status === 'done' && job.result_url) { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${erreurClient(job.error)} (${finEchecVideo(job)}).`)
   if (isFlash) return {   // Omni Flash : le widget de la carte suit /status (qui avance le job) et affiche la vidéo
     content: [{ type: 'text', text: `⏳ Ta vidéo se génère — elle s'affiche dans la carte ci-dessous (compte 1 à 3 min). N'appelle plus check_video. Lien dès qu'elle est prête : https://mcp.avatarads.fr/i/${job.id}` }],
@@ -2513,7 +2667,7 @@ RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose ta photo dans l
   // Google pour un repli) puis, si prête, livraison (deliverVideo, claim atomique anti-double-upload), BORNÉ à ~6,5 s
   // (la copie du MP4 continue en tâche de fond au-delà) — puis on relit le job. Le suivi continu est assuré par le
   // widget de la carte, qui sonde /status (→ advanceVideoJob).
-  await advanceVideoBounded(job)
+  if (job.status !== 'done') await advanceVideoBounded(job)   // 16/10 : « done » sans média → rien à resonder (le filet reprend la livraison)
   const { data: j2 } = await svc.from('mcp_jobs').select('*')
     .eq('id', job.id).eq('user_id', userId).maybeSingle()
   const cur = (j2 || job) as Record<string, unknown>
@@ -2803,11 +2957,17 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
     .eq('id', jobId).eq('user_id', userId).maybeSingle()
   if (job && ((job.params as Record<string, unknown> | null) || {}).tool) return await carteOutilVideo(job)   // Omni / Motion Control : jamais la boucle Hedra
   if (!job) return toolErr('Job introuvable sur ce compte.')
-  if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
-  if (job.status === 'failed') return toolErr(`Génération échouée : ${erreurClient(job.error)} (crédits remboursés).`)
+  if (job.status === 'done' && job.result_url) { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
+  // revue 16/10 : Express / Veo (kind 'video' ou params.video) → la CARTE de check_video, AVANT le texte « livraison en cours »
+  if (job.status !== 'failed' && (job.kind === 'video' || ((job.params as Record<string, unknown> | null) || {}).video)) return await runCheckVideo(profile, { job_id: job.id })
+  // 16/10 : « done » SANS média = copie en cours, ou livraison interrompue que le filet reprend (reprendreLivraisons)
+  if (job.status === 'done') return toolText('⏳ Vidéo terminée, livraison en cours — rappelle check_avatar_video dans ~1 minute.')
+  if (job.status === 'failed') return toolErr(`Génération échouée : ${erreurClient(job.error)} (${finEchecVideo(job)}).`)
   // Avatar Veo natif (kind 'video', op_name = opération Veo) → MÊME vérif que l'Express.
   // (les branches fal/Hedra ci-dessous ne concernent plus que d'éventuels jobs 'avatar' hérités.)
-  if (job.kind === 'video') return await runCheckVideo(profile, { job_id: job.id })
+  // 16/10 : vidéo Express Omni Flash (kind 'avatar' + params.video) → aussi par check_video (carte qui sonde /status, retouche
+  // suivie, copie serveur). Avant, la branche « oh1: » ci-dessous relisait la vidéo BRUTE chez kie et la livrait sans retouche.
+  if (job.kind === 'video' || ((job.params as Record<string, unknown> | null) || {}).video) return await runCheckVideo(profile, { job_id: job.id })
 
   // ── OmniHuman chez kie (Axel 25/09) : op_name « oh1:<tâche>[#cut=…] » → un cran de suivi, rapatriement, livraison ──
   if (estOmniKie(job.op_name)) {
@@ -3054,9 +3214,63 @@ async function lancerRetouche(userId: string, job: Record<string, unknown>, pj: 
     return true
   } catch (_) { return false }
 }
-async function suivreRetouche(userId: string, job: Record<string, unknown>, pj: Record<string, unknown>): Promise<void> {
+// Vidéo Express bloquée au-delà de KIE_OMNI_STALE_MIN (revue 16/10). Elle a été GÉNÉRÉE et payée ; ses deux fichiers
+// (sortie retouchée <uid>/<rj>.mp4 et vidéo d'origine <uid>/mcp-retouche/…) sont dans un dossier que le client peut lire ET
+// supprimer : on ne rembourse JAMAIS sur leur absence (sinon : télécharger, effacer, se faire rembourser).
+//   'absent'  → la copie du fournisseur (hors de portée du client) est livrée si elle existe encore ; sinon job clos SANS
+//               remboursement, tracé pour une vérification à la main ;
+//   'erreur'  → Storage muet ou copie refusée : on repasse ; au-delà de 6 échecs comptés ou de 3 h, remboursé SEULEMENT si un
+//               fichier livrable est toujours là (la panne est de notre côté), sinon clos sans remboursement ;
+//   'attente' → retouche jamais finie : vidéo d'origine déjà tentée par suivreRetouche(forcer) → traité comme 'absent'.
+async function reglerExpressBloque(userId: string, job: Record<string, unknown>, r: 'livre' | 'attente' | 'erreur' | 'absent'): Promise<void> {
+  if (r === 'livre') return
+  const { data: cur } = await svc.from('mcp_jobs').select('params, status').eq('id', String(job.id)).maybeSingle()
+  if (!cur || cur.status !== 'running') return
+  const pj = (cur.params || {}) as Record<string, unknown>
+  // revue 16/10 : délai compté depuis le 1er échec de livraison (ou la fin de la génération), pas depuis la création — un job
+  // ancien repris ne doit pas être réglé au premier raté
+  const t0 = Date.parse(String(pj.livraison_premier_echec_at || pj.retouche_at || job.created_at)) || Date.now()
+  const longtemps = Date.now() - t0 > 3 * 3600_000
+  const echecs = Number(pj.livraison_echecs) || 0
+  const brut = cheminSur(userId, pj.retouche_brut) || ''
+  const clore = async (pourquoi: string) => {
+    const { data: c } = await svc.from('mcp_jobs').update({ status: 'failed', error: 'Livraison impossible — contacte le support si tu n\'as pas reçu ta vidéo.', updated_at: new Date().toISOString() })
+      .eq('id', String(job.id)).eq('status', 'running').is('result_url', null).select('id')
+    if (c && c.length) console.warn('[mcp] Express bloquée, close SANS remboursement (à vérifier à la main)', job.id, pourquoi, 'compte', userId)
+  }
+  if (r === 'erreur' && echecs < 6 && !longtemps) return   // Storage muet / copie refusée : on retentera au prochain passage
+  // 1) la vidéo d'origine déposée chez nous, si la sortie retouchée est celle qui coince
+  if (r === 'erreur' && brut) {
+    const ib = await fichierInfo('render-media', brut)
+    if (ib === undefined) return
+    if (mp4Livrable(ib) && (await deliverVideo(userId, job, { renderMedia: brut }))) return
+  }
+  // 2) la copie du fournisseur (hors de portée du client), au plus une tentative toutes les 10 min (~20 Mo à relire)
+  const dernier = Date.parse(String(pj.fournisseur_tente_at || '')) || 0
+  if (Date.now() - dernier < 10 * 60_000 && !longtemps) return
+  await svc.from('mcp_jobs').update({ params: { ...pj, fournisseur_tente_at: new Date().toISOString() } }).eq('id', String(job.id)).eq('status', 'running')
+  let recu = false
+  try {
+    const a = await avancerOmniKie(taskDeOp(job.op_name))
+    if (a.etat === 'pret') { recu = true; if (await deliverVideo(userId, job, a.bytes)) return }
+  } catch (_) { /* fournisseur injoignable : on retentera */ }
+  if (!longtemps) return
+  // 3) au-delà de 3 h : remboursé SEULEMENT si la vidéo du fournisseur a bien été relue mais que NOTRE dépôt échoue (rien que
+  //    le client contrôle) ; sinon clos sans remboursement. Après un remboursement, les fichiers du compte sont retirés.
+  if (recu) {
+    if ((await failAndRefund(userId, job, 'livraison impossible')) >= 0) {
+      const sortie = String(pj.retouche_job || '') ? `${userId}/${pj.retouche_job}.mp4` : ''
+      await svc.storage.from('render-media').remove([brut, sortie].filter(Boolean))
+    }
+    return
+  }
+  await clore(r === 'erreur' ? 'copies refusées et vidéo du fournisseur indisponible' : 'fichiers absents de render-media et vidéo du fournisseur indisponible')
+}
+// `forcer` (16/10) : appel d'un filet sur le point de rembourser le job → retouche pas encore finie = la vidéo d'origine
+// est livrée tout de suite (au lieu d'un remboursement qui jetterait une vidéo payée et déjà générée).
+async function suivreRetouche(userId: string, job: Record<string, unknown>, pj: Record<string, unknown>, forcer = false): Promise<'livre' | 'attente' | 'erreur' | 'absent'> {
   const { data: rj } = await svc.from('render_jobs').select('status, output_url').eq('id', String(pj.retouche_job)).maybeSingle()
-  const trop = Date.now() - new Date(String(pj.retouche_at || job.updated_at)).getTime() > 4 * 60_000
+  const trop = forcer || Date.now() - new Date(String(pj.retouche_at || job.updated_at)).getTime() > 4 * 60_000
   let chemin = ''
   // audit 02/10 (WRK-1) : seule une sortie dans le dossier du compte (ou la clé mcp-prep/ du job) est relue ; sinon → la
   // vidéo d'origine, elle aussi relue seulement si son chemin est sûr
@@ -3064,10 +3278,25 @@ async function suivreRetouche(userId: string, job: Record<string, unknown>, pj: 
   const brut = cheminSur(userId, pj.retouche_brut) || ''
   if (rj && rj.status === 'done' && rj.output_url && sortieOk(rj.output_url)) chemin = String(rj.output_url)
   else if (!rj || rj.status === 'failed' || trop || (rj.status === 'done' && rj.output_url)) { chemin = brut; console.warn('[mcp] retouche ignorée', job.id, rj?.status || 'introuvable') }
-  if (!chemin) return   // encore en file / en cours
-  const { data: f, error } = await svc.storage.from('render-media').download(chemin)
-  if (error || !f) return
-  await deliverVideo(userId, job, new Uint8Array(await f.arrayBuffer()))
+  if (!chemin) return 'attente'   // encore en file / en cours
+  // 16/10 : plus de téléchargement ici. La sortie de la retouche garde un grain voulu (~60 Mbit/s → ~75 Mo pour 10 s) :
+  // relue en entier, elle faisait dépasser la mémoire de l'isolate APRÈS le claim (job 973c1002). deliverVideo la COPIE côté
+  // serveur vers mcp-media et la Bibliothèque. On vérifie seulement qu'elle existe (métadonnées, sans la lire) — sinon on
+  // n'ouvre pas de claim pour rien (comme l'ancien « téléchargement raté → on retente ») ; sortie retouchée absente → la
+  // vidéo d'origine, jamais une vidéo payée perdue.
+  // revue 16/10 : sortie trop lourde pour mcp-media (> 100 Mo) ou pas un MP4 → la vidéo d'origine, plus légère, au lieu de
+  // boucler sur une copie refusée puis rembourser une vidéo livrable
+  const info = await fichierInfo('render-media', chemin)
+  if (info === undefined) return 'erreur'
+  if (!mp4Livrable(info)) {
+    if (chemin === brut || !brut) return 'absent'
+    const ib = await fichierInfo('render-media', brut)
+    if (ib === undefined) return 'erreur'
+    if (!mp4Livrable(ib)) return 'absent'
+    console.warn('[mcp] retouche : sortie absente / non livrable, vidéo d\'origine livrée', job.id, info ? info.size : 'absente')
+    chemin = brut
+  }
+  return (await deliverVideo(userId, job, { renderMedia: chemin })) ? 'livre' : 'erreur'
 }
 
 // ═══ OMNI (édition vidéo par prompt) + MOTION CONTROL depuis Claude (Axel 02/10) ══════════════════════════════════════
@@ -3149,12 +3378,18 @@ async function signRender(path: string, ttl = 3 * 3600): Promise<string | null> 
 }
 // Fichier présent ? + taille et type RÉELS (métadonnées du stockage, sans télécharger) — le lien d'envoi signé ne borne ni
 // l'un ni l'autre (audit 02/10) : /start revérifie ici.
-async function fichierInfo(bucket: string, path: string): Promise<{ size: number; mime: string } | null> {
+// 16/10 (revue) : null = fichier ABSENT ; undefined = Storage n'a pas répondu (list en erreur) — un filet sur le point de
+// rembourser ne conclut jamais « absent » sur une simple erreur passagère.
+async function fichierInfo(bucket: string, path: string): Promise<{ size: number; mime: string } | null | undefined> {
   const i = path.lastIndexOf('/'), dir = path.slice(0, i), name = path.slice(i + 1)
-  const { data } = await svc.storage.from(bucket).list(dir, { search: name, limit: 5 })
-  const o = (data || []).find((x: { name: string }) => x.name === name) as { metadata?: { size?: number; mimetype?: string } } | undefined
+  const { data, error } = await svc.storage.from(bucket).list(dir, { search: name, limit: 5 })
+  if (error || !data) return undefined
+  const o = data.find((x: { name: string }) => x.name === name) as { metadata?: { size?: number; mimetype?: string } } | undefined
   return o ? { size: Number(o.metadata?.size) || 0, mime: String(o.metadata?.mimetype || '').toLowerCase() } : null
 }
+// vidéo livrable dans mcp-media : un vrai MP4 (le client peut écrire dans <uid>/ de render-media) sous la limite du bucket
+const MEDIA_MAX = 104857600
+const mp4Livrable = (i: { size: number; mime: string } | null | undefined) => !!i && i.mime === 'video/mp4' && i.size > 0 && i.size <= MEDIA_MAX
 // ── ÉTAPES RÉSERVÉES (audit 02/10) ─────────────────────────────────────────────────────────────────────────────────────
 // advanceVideoTool tourne depuis /status, check_video et les filets, sans verrou commun : chaque action qui coûte (débit,
 // soumission au moteur, remboursement partiel, livraison) est donc précédée d'une RÉSERVATION par compare-and-swap sur
@@ -4227,11 +4462,13 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
   // suivante est « et si je change cette animation ? ». Le lien ouvre l'écran
   // « Détails du montage » directement sur ce job — c'est plus juste que de lui
   // décrire le plan.
+  // 16/10 : « done » SANS média = copie en cours, ou livraison interrompue que le filet reprend (reprendreLivraisons)
+  if (job.status === 'done' && !job.result_url) return toolText('⏳ Montage rendu, livraison en cours — rappelle check_montage dans ~1 minute.')
   if (job.status === 'done') {
     const lien = job.op_name ? `\nPour ajuster une scène, une transition ou un bruitage : ${lienDetails(String(job.op_name))}` : ''
     { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nLien : ${dl}${lien}`, String(job.preview_url || '') || undefined) }
   }
-  if (job.status === 'failed') return toolErr(`Rendu échoué : ${erreurClient(job.error)} (crédits remboursés).`)
+  if (job.status === 'failed') return toolErr(`Rendu échoué : ${erreurClient(job.error)}${job.refunded ? ' (crédits remboursés).' : ''}`)
 
   // phase 1 (op_name vide) : le chef d'orchestre prépare encore le plan en tâche de fond
   if (!job.op_name) {
@@ -4273,10 +4510,18 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
   }
   if (rj.status === 'done' && rj.output_url) {
     // ré-héberge le MP4 en public (render-media est privé) — claim atomique anti-doublon
-    const dl = await svc.storage.from('render-media').download(String(rj.output_url))
-    if (dl.error || !dl.data) return toolText('⏳ Presque prêt — rappelle check_montage dans quelques secondes.')
-    const bytes = new Uint8Array(await dl.data.arrayBuffer())
-    const url = await deliverVideo(userId, job, bytes)
+    // 16/10 : rendu dans le dossier du compte (WRK-1) → copie côté serveur, sans le charger dans l'isolate ; sinon relu comme avant
+    const sortie = String(rj.output_url)
+    let src: SourceVideo
+    if (cheminSur(userId, sortie) === sortie) {
+      if (!mp4Livrable(await fichierInfo('render-media', sortie))) return toolText('⏳ Presque prêt — rappelle check_montage dans quelques secondes.')
+      src = { renderMedia: sortie }
+    } else {
+      const dl = await svc.storage.from('render-media').download(sortie)
+      if (dl.error || !dl.data) return toolText('⏳ Presque prêt — rappelle check_montage dans quelques secondes.')
+      src = new Uint8Array(await dl.data.arrayBuffer())
+    }
+    const url = await deliverVideo(userId, job, src)
     // Le POSTER fabriqué par le worker (convention : `<clé>.poster.jpg`, cf.
     // worker.mjs). Ré-hébergé en public et mémorisé dans preview_url : le
     // premier check l'affiche, les relectures le retrouvent. Best-effort —
@@ -5114,13 +5359,17 @@ serve(async (req) => {
     const elapsed = Date.now() - new Date(String(j.created_at)).getTime()
     const outilV = String(((j.params as Record<string, unknown> | null) || {}).tool || '')
     const attendu = j.kind === 'image' ? 50000 : outilV === 'motion' ? 480000 : outilV === 'omni_edit' ? 150000 : j.kind === 'avatar' ? 200000 : 130000
+    // 16/10 : « done » SANS média = copie en cours, ou livraison interrompue que le filet va reprendre (reprendreLivraisons) →
+    // annoncée « running » à 97 % : la carte garde sa barre et continue de sonder au lieu d'afficher un 100 % vide.
+    if (j.status === 'done' && !j.result_url && j.kind !== 'image') j = { ...j, status: 'running', _livraison: true }
     const done = j.status === 'done' || j.status === 'failed'
-    const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
+    const progress = done ? 100 : j._livraison ? 97 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
     const urlSigne = j.status === 'done' && j.result_url ? await signMedia(String(j.result_url)) : null   // mcp-media privé (audit 28/09)
     const prevRaw = (((j.params as Record<string, unknown> | null) || {}).preview as string | undefined) || null
     const preview = prevRaw && (j.status !== 'failed' || ((j.params as Record<string, unknown> | null) || {}).start_full) ? await signMedia(prevRaw) : null   // photo de départ générée (vidéo Express) — gardée après la vidéo, ET après un échec vidéo (elle reste payée)
     // message lisible SEULEMENT pour les outils vidéo (texte écrit par nous, jamais l'erreur brute d'un fournisseur)
-    const msgV = j.status === 'failed' && outilV ? String(((j.params as Record<string, unknown> | null) || {}).user_msg || '') : ''
+    const msgV = j.status === 'failed' && outilV ? String(((j.params as Record<string, unknown> | null) || {}).user_msg || '')
+      : (j.status === 'failed' && j.refunded === false ? erreurClient(j.error) : '')   // revue 16/10 : clos sans remboursement → la carte ne dit pas « crédits rendus »
     return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: urlSigne, progress, preview, error: j.status === 'failed' ? 'failed' : null, ...(msgV ? { msg: msgV } : {}) }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
   }
