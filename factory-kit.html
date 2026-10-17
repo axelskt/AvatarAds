@@ -259,10 +259,11 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   // arrière-plan ; « Annuler » pendant 6 s ; si la base refuse, retour à l'état d'avant + message.
   var marking = false;
   function nextBatch() { return todo().slice(0, 15); }
-  function markNext() {
-    var list = nextBatch();
-    if (!list.length || marking) return;
-    marking = true;
+  // 18/10 (Axel) : « C'est programmé » de retour sur chaque carte — même mécanique que le paquet de 15, pour une vidéo.
+  function markNext(one) {
+    var list = one ? [one] : nextBatch();
+    if (!list.length || (marking && !one)) return;
+    if (!one) marking = true;
     var cards = list.map(function (p) { return document.querySelector('.post[data-pid="' + p.id + '"]'); }).filter(Boolean);
     list.forEach(function (p) { p.status = 'scheduled'; p.done_at = now(); });
     var n = todo()[0]; S.cur = n ? n.id : null;
@@ -270,10 +271,10 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     void document.body.offsetHeight;
     cards.forEach(function (c) { c.classList.add('leaving'); });
     setTimeout(render, cards.length ? 420 : 0);
-    var label = list.length + ' vidéo' + (list.length > 1 ? 's' : '') + ' programmée' + (list.length > 1 ? 's' : '');
+    var label = one ? 'N°' + num(one) + ' programmée' : list.length + ' vidéo' + (list.length > 1 ? 's' : '') + ' programmée' + (list.length > 1 ? 's' : '');
     toast(label, function () { setStatus(list, 'todo').then(function (ok) { if (ok) { S.cur = list[0].id; render(); } }); });
     setStatus(list, 'scheduled').then(function (ok) {   // setStatus remet l'ancien état et redessine si la base refuse
-      marking = false;
+      if (!one) marking = false;
       if (ok) releaseLater(list);
     });
   }
@@ -306,6 +307,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
       + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div>'
       + '<div class="id">ID ' + esc(id) + '<button type="button" data-act="copyid" data-id="' + esc(p.id) + '" title="Copier l’ID">' + IC.copy + '</button></div></div>'
       + '<div class="act">' + oneBtn(p) + '<button type="button" class="btn ghost" data-act="copy" data-id="' + esc(p.id) + '">' + IC.copy + 'Copier la légende</button>'
+      + (done ? '' : '<button type="button" class="btn ok" data-act="done" data-id="' + esc(p.id) + '">' + IC.check + 'C’est programmé</button>')   // 18/10 : de retour sur chaque vidéo
       + '</div>'
       + '</div>';
   }
@@ -341,6 +343,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     if (act === 'acct') { S.acct = el.getAttribute('data-a'); try { localStorage.setItem('kit_acct', S.acct); } catch (x) { /* */ } var f = todo()[0]; S.cur = f ? f.id : null; render(); }
     else if (act === 'view') { S.view = el.getAttribute('data-v'); render(); }
     else if (act === 'next15') markNext();
+    else if (act === 'done' && p && p.status === 'todo') markNext(p);
     else if (act === 'one' && p) { var O = S.one[p.id]; S.cur = p.id; if (O && O.state === 'ready') saveOne(p); else if (!O || O.state !== 'loading') prepareOne(p); }
     else if (act === 'copy' && p) { S.cur = p.id; copyText(p.caption, 'Légende n°' + num(p) + ' copiée'); render(); }
     else if (act === 'copyid' && p) copyText(vidId(p), 'ID copié');
