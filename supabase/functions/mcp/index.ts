@@ -291,11 +291,23 @@ async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, conte
 // par esm.sh pour « supabase-js@2 », vérifiés) : aucun octet ne passe par l'isolate. Repli si la copie est refusée : envoi
 // EN FLUX (lien signé render-media → upload d'un ReadableStream, duplex « half » géré par storage-js), jamais un tampon
 // entier. Renvoie le chemin mcp-media créé ; lève une erreur sinon (l'appelant remet le job en « running »).
+// 17/10 (audit MCP-DLV-1) : la copie serveur garde le type du fichier SOURCE et ne passe ni par la liste des types ni par la
+// limite de taille de mcp-media. Or la source est dans render-media/<uid>/, que le client peut remplacer entre le contrôle
+// (fichierInfo + mp4Livrable de l'appelant) et la copie : une image SVG ou un fichier de 500 Mo pouvait ainsi être livré
+// derrière mcp.avatarads.fr/i/<job>. Le fichier COPIÉ est donc revérifié ici, dans mcp-media (où le client n'écrit pas :
+// aucune course possible) : vrai MP4 sous la limite du bucket, sinon supprimé et erreur → le job repasse en « running »
+// (rendre), et les filets bornent les reprises. Même contrôle après l'envoi en flux.
+async function verifierCopieMedia(dest: string): Promise<void> {
+  const d = await fichierInfo('mcp-media', dest)
+  if (mp4Livrable(d)) return
+  try { await svc.storage.from('mcp-media').remove([dest]) } catch (_) { /* best effort : chemin neuf, jamais référencé */ }
+  throw new Error('livraison : copie non livrable (' + (d === undefined ? 'stockage muet' : d ? (d.mime || '?') + ', ' + d.size + ' o' : 'absente') + ')')
+}
 async function copierVersMedia(userId: string, chemin: string, ext = 'mp4', contentType = 'video/mp4'): Promise<string> {
   const dest = nouveauCheminMedia(userId, ext)
   let errCopie: unknown = null
   try { const { error } = await svc.storage.from('render-media').copy(chemin, dest, { destinationBucket: 'mcp-media' }); errCopie = error } catch (e) { errCopie = e }
-  if (!errCopie) return dest
+  if (!errCopie) { await verifierCopieMedia(dest); return dest }
   console.warn('[mcp] livraison : copie serveur refusée, envoi en flux', chemin, String((errCopie as Error)?.message || errCopie).slice(0, 200))
   const lien = await signRender(chemin, 600)
   if (!lien) throw new Error('livraison : lien source indisponible')
@@ -304,6 +316,7 @@ async function copierVersMedia(userId: string, chemin: string, ext = 'mp4', cont
   // upsert : une copie serveur partie malgré une réponse en erreur ne bloque pas l'envoi (chemin neuf, choisi ici)
   const { error } = await svc.storage.from('mcp-media').upload(dest, r.body, { contentType, upsert: true })
   if (error) throw new Error('livraison en flux : ' + error.message)
+  await verifierCopieMedia(dest)
   return dest
 }
 // ── mcp-media est PRIVÉ (audit 28/09 #28/#36 : visages, voix et vidéos des clients) ─────────────────────────────────
@@ -1880,8 +1893,10 @@ async function deliverVideo(userId: string, job: Record<string, any>, src: Sourc
     .eq('id', job.id).eq('status', 'done').is('result_url', null).select('id')
   if (!fin || !fin.length) return null
   // filet Bibliothèque — rangée comme dans l'app (Omni jj/mm · Motion Control, mêmes étiquettes et badge) (audit 02/10)
-  // 16/10 : COPIE côté serveur du fichier livré (octets : la copie mcp-media, recoupe comprise ; stockage : la source
-  // render-media) — plus de 2e envoi des octets. Copie refusée et octets en mémoire → envoi comme avant (filet du filet).
+  // 16/10 : COPIE côté serveur du fichier livré — plus de 2e envoi des octets. Copie refusée et octets en mémoire → envoi
+  // comme avant (filet du filet).
+  // 17/10 (audit MCP-DLV-1) : toujours depuis la copie mcp-media LIVRÉE et revérifiée (recoupe comprise), jamais une 2e fois
+  // depuis la source render-media/<uid>/, que le client peut remplacer entre-temps.
   const outilL = String(((job.params || {}) as Record<string, unknown>).tool || '')
   const jjmm = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Paris' }).format(new Date())
   const rangement: [string, { tags: string[]; style: string; emo: string } | undefined] =
@@ -1889,7 +1904,7 @@ async function deliverVideo(userId: string, job: Record<string, any>, src: Sourc
     : outilL === 'motion' ? ['Motion Control', { tags: ['Motion Control', 'Vidéo'], style: 'MOTION', emo: '🎬' }]
     : String(job.kind || '') === 'montage' ? ['Montage IA', { tags: ['Montage IA', '9:16'], style: 'MONTAGE', emo: '🎬' }]   // comme l'app (audit 10/10)
     : ['Vidéo AvatarAds', undefined]
-  const sourceLib: SourceStockee | null = bytes ? (cheminMedia ? { bucket: 'mcp-media', path: cheminMedia } : null) : { bucket: 'render-media', path: chemin }
+  const sourceLib: SourceStockee | null = cheminMedia ? { bucket: 'mcp-media', path: cheminMedia } : null
   const range = sourceLib ? await saveToLibrary(userId, sourceLib, 'mp4', 'video/mp4', 'video-simple', rangement[0], undefined, rangement[1]) : false
   if (!range && bytes) await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', rangement[0], undefined, rangement[1])
   return url
@@ -1998,8 +2013,15 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
 // LIVRAISON_REPRISES_MAX-ième reprise est remboursée : failAndRefund (RPC sous verrou : seulement si « running », non
 // remboursé, à la MÊME étape op_name) → une seule fois, et jamais sur un job livré entre-temps (claim done → RPC no-op ;
 // et après le remboursement, status « failed » → plus aucun claim ni écriture de result_url possible).
+// 17/10 (audit MCP-DLV-2) : JAMAIS de remboursement automatique quand le livrable a déjà séjourné dans un dossier que le
+// client peut lire : vidéo Express retouchée (<uid>/<rj>.mp4, params.retouche_job) ou vidéo d'origine déposée pour la
+// retouche (<uid>/mcp-retouche/…-brut.mp4, params.retouche_brut), et tout montage (<uid>/<rj>.mp4). Il peut les télécharger
+// dès qu'elles sont écrites, avant toute livraison : rembourser = garder la vidéo ET les crédits (« supprimer puis
+// rembourser » ne ferme rien, la copie est déjà chez lui). Ces jobs sont CLOS SANS REMBOURSEMENT, tracés pour une
+// vérification à la main — comme l'étape 5 (montages) et clore() de reglerExpressBloque.
 const LIVRAISON_MORTE_MIN = 4
 const LIVRAISON_REPRISES_MAX = 2
+const livrableLuParClient = (kind: unknown, pj: Record<string, unknown>) => !!pj.retouche_job || !!pj.retouche_brut || String(kind || '') === 'montage'
 async function reprendreLivraisons(): Promise<void> {
   const limite = new Date(Date.now() - LIVRAISON_MORTE_MIN * 60_000).toISOString()
   const { data: morts } = await svc.from('mcp_jobs').select('id, user_id, kind, op_name, params, credits_cost')
@@ -2015,6 +2037,12 @@ async function reprendreLivraisons(): Promise<void> {
         .eq('id', j.id).eq('status', 'done').is('result_url', null).eq('refunded', false).lt('updated_at', limite).select('id')
       if (!rep || !rep.length) continue   // livré, ou réclamé de nouveau entre-temps
       if (n < LIVRAISON_REPRISES_MAX) { console.warn('[mcp] livraison interrompue → reprise', j.id, n + 1); continue }
+      if (livrableLuParClient(j.kind, pj)) {
+        const { data: clos } = await svc.from('mcp_jobs').update({ status: 'failed', error: 'Livraison impossible — contacte le support si tu n\'as pas reçu ta vidéo.', updated_at: new Date().toISOString() })
+          .eq('id', j.id).eq('status', 'running').is('result_url', null).eq('refunded', false).select('id')
+        if (clos && clos.length) console.warn('[mcp] livraison interrompue trop de fois, close SANS remboursement (fichier lisible par le client, à vérifier à la main)', j.id, n + 1, 'compte', j.user_id)
+        continue
+      }
       console.warn('[mcp] livraison interrompue trop de fois → remboursement', j.id, n + 1)
       const rendu = await failAndRefund(String(j.user_id), { ...j, params }, 'Livraison impossible — crédits rendus.', j.op_name ? String(j.op_name) : undefined)
       if (rendu >= 0 && estOutilVideo(j.op_name)) await vtNettoyer(params)
@@ -3390,6 +3418,27 @@ async function fichierInfo(bucket: string, path: string): Promise<{ size: number
 // vidéo livrable dans mcp-media : un vrai MP4 (le client peut écrire dans <uid>/ de render-media) sous la limite du bucket
 const MEDIA_MAX = 104857600
 const mp4Livrable = (i: { size: number; mime: string } | null | undefined) => !!i && i.mime === 'video/mp4' && i.size > 0 && i.size <= MEDIA_MAX
+// 17/10 (audit MCP-DLV-2) : lecture BORNÉE d'un petit fichier que le client peut remplacer (poster d'un montage) : en flux,
+// abandonnée dès que la taille dépasse max (annoncée ou réelle) → null. Jamais un tampon sans limite dans l'isolate.
+const POSTER_MAX = 2 * 1024 * 1024
+async function lireBorne(lien: string, max: number): Promise<Uint8Array | null> {
+  const r = await fetch(lien)
+  if (!r.ok || !r.body) { try { await r.body?.cancel() } catch (_) { /* rien */ } return null }
+  if (Number(r.headers.get('content-length') || 0) > max) { try { await r.body.cancel() } catch (_) { /* rien */ } return null }
+  const rd = r.body.getReader(), parts: Uint8Array[] = []
+  let tot = 0
+  for (;;) {
+    const { done, value } = await rd.read()
+    if (done) break
+    tot += value.length
+    if (tot > max) { try { await rd.cancel() } catch (_) { /* rien */ } return null }
+    parts.push(value)
+  }
+  const out = new Uint8Array(tot)
+  let o = 0
+  for (const x of parts) { out.set(x, o); o += x.length }
+  return out
+}
 // ── ÉTAPES RÉSERVÉES (audit 02/10) ─────────────────────────────────────────────────────────────────────────────────────
 // advanceVideoTool tourne depuis /status, check_video et les filets, sans verrou commun : chaque action qui coûte (débit,
 // soumission au moteur, remboursement partiel, livraison) est donc précédée d'une RÉSERVATION par compare-and-swap sur
@@ -4527,12 +4576,16 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
     // premier check l'affiche, les relectures le retrouvent. Best-effort —
     // pas de poster (vieux rendu, worker pas encore à jour) = pas de vignette,
     // jamais un échec.
+    // 17/10 (audit MCP-DLV-2) : le poster est dans le dossier du client, qui peut le remplacer à tout moment par un fichier
+    // énorme : il est lu EN FLUX et abandonné au-delà de 2 Mo (sans vignette), jamais chargé en entier (de quoi tuer l'isolate
+    // pendant une livraison). Lien signé court, lecture bornée : aucune course entre un contrôle et la lecture.
     let apercu: string | undefined
     if (url) {
       try {
-        const dp = await svc.storage.from('render-media').download(String(rj.output_url) + '.poster.jpg')
-        if (!dp.error && dp.data) {
-          apercu = await uploadMedia(userId, new Uint8Array(await dp.data.arrayBuffer()), 'jpg', 'image/jpeg')
+        const lien = await signRender(String(rj.output_url) + '.poster.jpg', 120)
+        const jpg = lien ? await lireBorne(lien, POSTER_MAX) : null
+        if (jpg && jpg.length) {
+          apercu = await uploadMedia(userId, jpg, 'jpg', 'image/jpeg')
           await svc.from('mcp_jobs').update({ preview_url: apercu }).eq('id', job.id)
         }
       } catch { /* vignette best-effort */ }

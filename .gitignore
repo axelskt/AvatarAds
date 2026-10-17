@@ -11,3 +11,19 @@ mcp-proxy/.netlify/
 tools/emails/images/
 tools/emails/apercu*.html
 tools/emails/__pycache__/
+
+# 17/10 (audit de sécurité du 16/10, SEC-L5) : le dépôt est PUBLIC — notes internes (plans de tests de sécurité, revue
+# Meta, plans produit) et gros dossiers locaux jamais publiés par un « git add -A ». Pas « /.claude/*.json » : il cacherait
+# .claude/launch.json (suivi). .DS_Store : les 4 déjà suivis restent à retirer à la main (git rm --cached).
+/TESTS-AUDIT.md
+/APP-REVIEW-INSTAGRAM.md
+/PLAN-*.md
+/.claude/*.jpg
+/.claude/montage-ia-reste-*.json
+/.claude/settings.local.json
+node_modules/
+/stories/
+/clips/
+/Musique/
+__pycache__/
+.DS_Store
