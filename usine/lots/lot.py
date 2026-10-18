@@ -45,16 +45,20 @@ if not S:
     json.dump(S, open(ST, 'w'), indent=1)
 def save(): json.dump(S, open(ST, 'w'), indent=1)
 log('%s : %d séries, %d vidéos, à partir de VF-%04d' % (NOM, len(S['series']), sum(map(len, S['series'])), S['next']))
-# ── CTA : démo Claude → CTA-CLAUDE ; sinon le CTA « site » (ou « café ») de la photo, à défaut d'une photo du même avatar ──
+# ── CTA : démo Claude → CTA-CLAUDE ; sinon on ALTERNE tous les autres CTA prêts qui ont une version Omni de l'avatar (AIDE,
+#    MONTAGE, PLAN, SITE, café… — Axel 18/10 : diversifier les CTA), celui de la photo d'abord, à défaut celui d'une autre photo
+#    du même avatar (Axel 18/10 : « peu importe si le hook et le CTA ne sont pas la même photo »). Rotation sur tout le lot. ──
 rot = {}
 def cta_for(photo, demo):
     av = photo.split('-')[0]; claude = demo.startswith('C-MCP')
-    kinds = ['CTA-CLAUDE'] if claude else ['CTA-SITE-tuto', 'CTA-cafe']
-    own = [(k, VAR[(photo, k, 'omni')]) for k in kinds if (photo, k, 'omni') in VAR]
-    pool = own or [(k, f) for (a, k, fm), f in VAR.items() if fm == 'omni' and k in kinds and a.split('-')[0] == av]
-    if not pool: raise RuntimeError('aucun CTA pour ' + photo)
-    i = rot.get((photo, claude), 0); rot[(photo, claude)] = i + 1
-    return pool[i % len(pool)]
+    omni = [(a, k, f) for (a, k, fm), f in VAR.items() if fm == 'omni' and k.startswith('CTA-') and a.split('-')[0] == av
+            and (bricks.get(k) or {}).get('status') == 'ready' and (k == 'CTA-CLAUDE') == claude]
+    kinds = sorted({k for a, k, f in omni})
+    if not kinds: raise RuntimeError('aucun CTA pour ' + photo)
+    i = rot.get(claude, 0); rot[claude] = i + 1
+    k = kinds[i % len(kinds)]
+    pool = [(k, f) for a, kk, f in omni if kk == k and a == photo] or [(k, f) for a, kk, f in omni if kk == k]
+    return pool[(i // len(kinds)) % len(pool)]
 prev_th = [None]
 def prep(it, tag):
     if it['k'] == 'o':
