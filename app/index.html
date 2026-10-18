@@ -9966,12 +9966,15 @@ const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a ph
 // Axel 16/10 : UGC Réel = vraie pose naturelle (pas de selfie) et pas de tableau dans la pièce,
 // sauf si l'utilisateur en demande un dans son prompt. Sans image de référence, le suffixe du style
 // n'est pas utilisé (bloc réalisme seul) : on ajoute donc la pose ici aussi.
-const _IMG_UGC_POSE = ' Not a selfie: the photo is taken by a friend standing a few steps away; the person has a genuinely natural, relaxed pose, is not holding the phone and has no arm stretched toward the camera.';
+const _IMG_UGC_POSE = ' Not a selfie: the phone is propped up in front of the person (nobody holds it); the person has a genuinely natural, relaxed pose, is not holding the phone and has no arm stretched toward the camera.';   // 18/10 : téléphone posé (cadrage créateur)
 const _IMG_NO_ART = ' No paintings, framed pictures, posters or artwork on the walls of the room.';
 // Axel 16/10 (réf. A4-4 + planche « /eyelevel ») : UGC Réel = plan « eye level » naturel, l'ami à ~2 m à hauteur des yeux,
 // de la mi-cuisse / taille jusqu'en haut — plus le cadrage serré type selfie que poussait le bloc réalisme (« chest-up or
 // closer »), remplacé pour ce style. Un gros plan ou un autre angle demandé dans le prompt reste respecté.
-const _IMG_UGC_FRAMING = ' EYE-LEVEL SHOT, like a photo a friend takes standing about two metres away: the camera is at the person\'s eye height, held level and straight (no high angle, no low angle, no tilt, no wide-angle distortion, natural 35-50 mm perspective). Medium framing from about mid-thigh or the waist up, with some space around the person and the setting clearly visible behind them; the face stays sharp and detailed but this is NOT a close-up and NOT a selfie distance (never just head and shoulders, never a face filling the frame) — unless the request explicitly asks for a close-up or another angle.';
+// Axel 18/10 (tests A3, réf. TikTok « Séraphin ») : remplacé par le cadrage « créateur face à son téléphone posé » — caméra
+// un peu plus basse que le visage, gros plan moyen, yeux au milieu de l'image, mur libre au-dessus des cheveux pour le
+// texte choc (zone sûre TikTok). MÊME texte que IMG_CREATOR_FRAMING (supabase/functions/_shared/express-prompts.ts, MCP).
+const _IMG_UGC_FRAMING = ' CAMERA AND FRAMING (talking-to-camera creator video look): the phone is propped on a low table in front of the person, BELOW their face, pointing slightly UP at them — a slight low-angle shot, we look up at them a little (slightly under the chin), like a creator talking to their propped phone; they face the lens squarely, body straight, nobody holds the phone, no arm toward the camera. Medium close-up: their face is about 40% of the image width, their eyes sit at the vertical CENTER of the image, there is plain background above their hair (about the top quarter of the photo) with nothing in front of it, and the bottom edge cuts across the chest a little below the collar (if they hold a product, keep the product fully visible in the frame). Use another framing or angle only if the request explicitly asks for one.';
 const _IMG_REALISM_SUFFIX_UGC = _IMG_REALISM_SUFFIX.replace(/ Frame the person fairly close[^.]*\./, _IMG_UGC_FRAMING);
 function _imgUgcExtras(prompt, withPose){
   const art = /(tableau|peinture|toile|cadre|poster|affiche|œuvre|oeuvre|painting|artwork|framed|frame|canvas)/i.test(prompt||'');

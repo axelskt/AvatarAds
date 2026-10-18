@@ -6,7 +6,7 @@ import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsO
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync, dureeAudioAutres } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture) ; audit 04/10 (MCP-4) : FLAC / Opus / AAC mesurés
 import { dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Audit 02/10 : durée MESURÉE des M4A / MP4 (clean_audio, montage_ia)
-import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL, omniEditPrompt, motionControlPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
+import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX_CREATOR, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL, omniEditPrompt, motionControlPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 import { cheminSur, clePrepMcp, controlerTaillePlan, nettoyerSonUtilisateur } from '../_shared/storage-path.ts'   // audit 02/10 : chemins render-media et plans de rendu
@@ -196,7 +196,8 @@ function augmenterPortrait(prompt: string, garderIdentite = false): string {
       : ''
   // 11/10 : photo de référence d'une PERSONNE (« le même homme que sur la photo ») → jamais de casting aléatoire, il
   // imposait « clearly DIFFERENT… chestnut hair » et l'avatar A3 perdait sa coupe au bol
-  const suffix = genreTxt + (garderIdentite ? '' : castingAleatoire()) + IMG_REALISM_SUFFIX
+  // 18/10 (Axel) : cadrage « créateur face à son téléphone posé » (IMG_CREATOR_FRAMING) à la place de « chest-up or closer »
+  const suffix = genreTxt + (garderIdentite ? '' : castingAleatoire()) + IMG_REALISM_SUFFIX_CREATOR
   return prompt.slice(0, 3990 - suffix.length) + suffix
 }
 // Accès Starter/Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h.
