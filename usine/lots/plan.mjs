@@ -33,6 +33,9 @@ for (const q of X.qc) { const c = q.c || {}
 const ready = b => b && b.status === 'ready'
 // Lot ciblé (Axel 16/10, « recettes gagnantes ») : HOOKS=H72,H24 et DEMOS=C-MCP- restreignent le choix, toutes les autres règles restent
 const HOOKS = (process.env.HOOKS || '').split(',').map(s => s.trim()).filter(Boolean), DEMO_PREF = process.env.DEMOS || ''
+// PHOTOS=A3-7,A3-8,… (Axel 19/10) : parlées seulement sur ces photos — les photos retirées le 18/10 (ancien cadrage, avatar trop près)
+// gardent leurs variantes en base, mais un lot n'a pas à les reprendre
+const PHOTOS = (process.env.PHOTOS || '').split(',').map(s => s.trim()).filter(Boolean)
 const demos = B.filter(b => b.kind === 'contenu' && ready(b) && !/^C-[A-Z]+M-/.test(b.id) && b.meta?.voice !== false && b.meta?.muette !== true && !EXCLUS.has(b.id) && (!DEMO_PREF || b.id.startsWith(DEMO_PREF)))
 const mdemos = B.filter(b => b.kind === 'contenu' && ready(b) && /^C-[A-Z]+M-/.test(b.id) && !EXCLUS.has(b.id)).map(b => b.id)
 const PRI = d => /OMNI|-MC-|MCM|SADS/.test(d) ? 0 : /MCP/.test(d) ? 1 : 2
@@ -44,7 +47,7 @@ const pick = (list, n) => { const out = [], l = [...list]
   return out }
 const O = [], M = []
 // ── Omni : une photo après l'autre (A4 / A3 alternés), le hook le moins utilisé qui a encore une démo libre ──
-const vars = X.variants.filter(v => v.f === 'omni' && /^H\d+$/.test(v.b) && /^A[34]-/.test(v.a) && ready(by[v.b]) && (!HOOKS.length || HOOKS.includes(v.b)))
+const vars = X.variants.filter(v => v.f === 'omni' && /^H\d+$/.test(v.b) && /^A[34]-/.test(v.a) && ready(by[v.b]) && (!HOOKS.length || HOOKS.includes(v.b)) && (!PHOTOS.length || PHOTOS.includes(v.a)))
 const photos = [...new Set(vars.map(v => v.a))].sort((a, b) => (a.slice(3) - b.slice(3)) || a.localeCompare(b))
 let guard = 0
 while (O.length < +nO && guard++ < 80) for (const p of photos) {
