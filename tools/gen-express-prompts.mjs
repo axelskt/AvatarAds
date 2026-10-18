@@ -66,6 +66,12 @@ export const IMG_TEXT_FIDELITY = ${JSON.stringify(cst('_IMG_TEXT_FIDELITY'))}
 export const NB_MODEL = ${JSON.stringify(cst('_NB_MODEL'))}
 // Images de PERSONNE réalistes : bloc réalisme de l'app (photo amateur + tenue correcte SFW), mot pour mot.
 export const IMG_REALISM_SUFFIX = ${JSON.stringify(cst('_IMG_REALISM_SUFFIX'))}
+// Axel 18/10 (tests A3, réf. TikTok « Séraphin ») : cadrage d'une photo de PERSONNE = créateur qui parle à son téléphone
+// posé — caméra un peu plus basse que le visage, gros plan moyen, yeux au milieu de l'image, mur libre au-dessus des
+// cheveux pour le texte choc (zone sûre TikTok). Remplace « chest-up or closer » du bloc réalisme ; un autre cadrage
+// demandé explicitement reste respecté. Texte = _IMG_UGC_FRAMING de l'app, mot pour mot.
+export const IMG_CREATOR_FRAMING = ${JSON.stringify(cst('_IMG_UGC_FRAMING'))}
+export const IMG_REALISM_SUFFIX_CREATOR = IMG_REALISM_SUFFIX.replace(/ Frame the person fairly close[^.]*\\./, IMG_CREATOR_FRAMING)
 // OMNI — édition vidéo par prompt (module Omni de l'app) : _omniBuildPrompt mot pour mot, kill-switch logo compris.
 ${omniLogo}
 export ${omniFn.replace(/^function _omniBuildPrompt\(p\)/, 'function omniEditPrompt(p: string): string')}
