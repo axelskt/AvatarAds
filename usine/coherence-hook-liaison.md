@@ -77,8 +77,11 @@ Chaque vidéo = 2 formats : `hook+contenu+CTA` (court) et `hook+liaison+contenu+
 | **H84** · J'ai trouvé un outil 10 fois moins cher qu'Higgsfield avec une meilleure qualité, je te montre ça. | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **H85** · Tout le monde parle d'IA, d'automatisation partout, mais personne ne l'utilise dans ce qui compte vraiment : attirer des clients sur ton site. | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **H86** · Ok, t'as créé ton produit, t'as créé ton site, tes réseaux, mais maintenant tu sais pas comment attirer du trafic sur ton site. Je te montre comment tu peux faire. | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **H87** · Normalement je devais pas en parler mais je pense que je vais vous choquer, j'ai trouvé littéralement la planque de cet hiver. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **H88** · Claude et AvatarAds ont complètement tué les agences marketing. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| **H89** · Je ne sais pas comment c'est légal mais je fais plus de 100 réels Instagram par heure comme ça. | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 
-**✅ par liaison** — L12 12 · L15 46 · L16 48 · L19 52 · L28 22 · L30 30 · L32 37 · L33/L35 27 · L34 30 · L48 42 · L58 23 · L70 37 (sur 53 hooks)
+**✅ par liaison** — L12 13 · L15 49 · L16 51 · L19 54 · L28 23 · L30 30 · L32 39 · L33/L35 27 · L34 33 · L48 45 · L58 26 · L70 39 (sur 56 hooks)
 
 > **Analyse cohérence : 12 liaisons validées** (L33=L35 ; L69 & L72 abandonnées).
 > **Étape suivante** : ranger chaque hook dans une ou plusieurs FAMILLES (multi-famille possible) + analyse « pourquoi telle famille et pas telle autre » (générique ≠ 100% des hooks).

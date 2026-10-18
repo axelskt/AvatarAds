@@ -40,7 +40,8 @@ const OLD_HK = { 'HK-M01-02': ['TX-M01', 'TX-M02'], 'HK-M01-04': ['TX-M01', 'TX-
 // Jeu de test FIGÉ sur les hooks du 26/09 (les attentes de capacité en dépendent) : les hooks ajoutés le 28/09 (H59,
 // H78-H86) sont dans la matrice mais pas dans cette bibliothèque de test.
 const NEW_2809 = new Set(['H59', 'H78', 'H79', 'H80', 'H81', 'H82', 'H83', 'H84', 'H85', 'H86']);
-const HOOKS_2609 = Object.keys(MX).filter(h => h !== 'H74v2' && !NEW_2809.has(h));
+const NEW_1810 = new Set(['H87', 'H88', 'H89']);   // ajoutés à la matrice le 18/10 (Axel), hors bibliothèque de test aussi
+const HOOKS_2609 = Object.keys(MX).filter(h => h !== 'H74v2' && !NEW_2809.has(h) && !NEW_1810.has(h));
 function library(o) {
   o = o || {};
   const rows = [
@@ -65,18 +66,19 @@ const seq = (...xs) => { let i = 0; return () => xs[Math.min(i++, xs.length - 1)
 // ── matrice ──
 C.setPhotosPerAvatar(1);   // tests historiques : 1 photo par avatar (le test « photos par avatar » passe à 3)
 
-test('matrice : 53 hooks (H74v2 tel quel ; + H59, H78-H86 le 28/09), « L33/L35 » = L33, 406 paires (validées par Axel le 28/09)', () => {
-  assert.equal(Object.keys(MX).length, 53);
+test('matrice : 56 hooks (H74v2 tel quel ; + H59, H78-H86 le 28/09 ; + H87-H89 le 18/10), « L33/L35 » = L33, 429 paires (validées par Axel)', () => {
+  assert.equal(Object.keys(MX).length, 56);
   assert.ok(Array.isArray(MX.H74v2));
   assert.deepEqual([...MX.H32], ['L16', 'L32', 'L34']);
   assert.ok(MX.H14.includes('L33') && !Object.values(MX).some(ls => ls.includes('L33/L35')));
-  assert.equal(Object.values(MX).reduce((a, ls) => a + ls.length, 0), 406);
+  assert.equal(Object.values(MX).reduce((a, ls) => a + ls.length, 0), 429);
+  assert.deepEqual([...MX.H88], ['L15', 'L16', 'L19', 'L32', 'L34', 'L48', 'L58']);   // Axel 18/10
   assert.equal(HOOKS_2609.reduce((a, h) => a + MX[h].length, 0) + MX.H74v2.length, 332);   // matrice du 26/09 inchangée
   assert.ok(Object.isFrozen(MX) && Object.isFrozen(MX.H12));
 });
-test('matrice : génériques ❌ appliqués (L15 absent après H25, L19 absent après H32 seulement)', () => {
+test('matrice : génériques ❌ appliqués (L15 absent après H25, L19 absent après H32 et H89 seulement — H89 : choix d’Axel 18/10)', () => {
   assert.ok(!MX.H25.includes('L15') && MX.H14.includes('L15'));
-  assert.ok(!MX.H32.includes('L19') && Object.keys(MX).filter(h => h !== 'H32').every(h => MX[h].includes('L19')));
+  assert.ok(!MX.H32.includes('L19') && !MX.H89.includes('L19') && Object.keys(MX).filter(h => h !== 'H32' && h !== 'H89').every(h => MX[h].includes('L19')));
 });
 
 // ── capacité ──

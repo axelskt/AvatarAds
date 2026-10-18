@@ -54,6 +54,9 @@ export const hooks = [
  ['84',"J'ai trouvé un outil 10 fois moins cher qu'Higgsfield avec une meilleure qualité, je te montre ça."],
  ['85',"Tout le monde parle d'IA, d'automatisation partout, mais personne ne l'utilise dans ce qui compte vraiment : attirer des clients sur ton site."],
  ['86',"Ok, t'as créé ton produit, t'as créé ton site, tes réseaux, mais maintenant tu sais pas comment attirer du trafic sur ton site. Je te montre comment tu peux faire."],
+ ['87',"Normalement je devais pas en parler mais je pense que je vais vous choquer, j'ai trouvé littéralement la planque de cet hiver."],
+ ['88',"Claude et AvatarAds ont complètement tué les agences marketing."],
+ ['89',"Je ne sais pas comment c'est légal mais je fais plus de 100 réels Instagram par heure comme ça."],
 ];
 // Génériques : liste des ❌ (tout le reste = ✅). Spécifiques : liste des ✅.
 const L12_ok = new Set(['12','13','14','21','60','73','59']);        // SPÉCIFIQUE influenceur/avatar
@@ -70,7 +73,7 @@ const L58_ok = new Set(['16','17','18','20','24','40','48','58','60','68','69','
 const L70_ok = new Set(['12','13','14','15','16','19','20','21','23','24','25','30','36','40','48','58','60','63','64','68','69','70','72','73','75','76','77','59','78','79','83','84','85','86']); // GÉNÉRIQUE sans montrer ton visage
 // L69 ABANDONNÉE (trop niche) · L72 ABANDONNÉE
 // Validations EXPLICITES d'Axel (28/09) : pour ces hooks, la liste fait foi (L33 = colonne « L33/L35 »), elle remplace les ensembles ci-dessus.
-const VALIDATED = {'59':['L19','L48','L70','L58'],'78':['L12','L15','L16','L19','L48','L58','L70'],'84':['L12','L15','L16','L19','L48','L58','L70'],'79':['L12','L15','L16','L19','L28','L30','L32','L34','L48','L58','L70'],'80':['L15','L16','L19','L48','L70'],'81':['L15','L16','L19','L48','L70'],'82':['L15','L16','L19','L48','L70'],'83':['L12','L16','L19','L48','L58','L70'],'85':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],'86':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70']};
+const VALIDATED = {'59':['L19','L48','L70','L58'],'78':['L12','L15','L16','L19','L48','L58','L70'],'84':['L12','L15','L16','L19','L48','L58','L70'],'79':['L12','L15','L16','L19','L28','L30','L32','L34','L48','L58','L70'],'80':['L15','L16','L19','L48','L70'],'81':['L15','L16','L19','L48','L70'],'82':['L15','L16','L19','L48','L70'],'83':['L12','L16','L19','L48','L58','L70'],'85':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],'86':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],'87':['L15','L16','L19','L28','L32','L34','L48','L58','L70'],'88':['L15','L16','L19','L32','L34','L48','L58'],'89':['L12','L15','L16','L34','L48','L58','L70']};   // 87-89 : Axel 18/10
 const vOk = (hid, col) => VALIDATED[hid] ? VALIDATED[hid].includes(col === 'L33/L35' ? 'L33' : col) : null;
 export const LIAISONS = [
   { id:'L12', ok:L12_ok }, { id:'L15', no:L15_no }, { id:'L16', no:L16_no }, { id:'L19', no:L19_no },
