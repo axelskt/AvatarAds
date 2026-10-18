@@ -5955,7 +5955,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-15-1320'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-19-0100'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -7536,11 +7536,40 @@ function loadProfile(user){
   _aaProfileRun = _aaLoadProfile(user).finally(function(){ _aaProfileRun = null; });
   return _aaProfileRun;
 }
+// 19/10 (Axel : « je suis connecté mais le compte n'est pas détecté ») : journaux Supabase de 00:46 à 00:50 → AUCUNE requête
+// de son Safari n'est arrivée pendant ~4 min (pas même un OPTIONS), puis la lecture du profil a répondu en 0,19 s. supabase-js
+// attend sa session avant d'envoyer la moindre requête : c'est cette attente qui bloquait, pas le serveur. On lance donc AUSSI
+// une lecture DIRECTE avec le jeton d'accès encore valide de la session enregistrée — jamais de renouvellement ici (le jeton de
+// renouvellement est à usage unique et appartient à supabase-js : s'en servir déconnecterait). Sans jeton valide : rejet.
+function _aaLectureDirecteProfil(uid){
+  let tok = null;
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && /^sb-.*-auth-token$/.test(k)){ const v = JSON.parse(localStorage.getItem(k) || 'null'); if(v && v.access_token && (v.expires_at || 0) * 1000 > Date.now() + 30000) tok = v.access_token; }
+    }
+  }catch(_){}
+  if(!tok) return Promise.reject(new Error('pas de jeton valide'));
+  return _aaFetch(SUPABASE_URL + '/rest/v1/profiles?select=*&id=eq.' + encodeURIComponent(uid), { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + tok, Accept: 'application/json' } })
+    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    // ne fait foi QUE si elle trouve le profil : « aucune ligne » (compte neuf → création) reste décidé par la lecture supabase-js
+    .then(function(rows){ if(!(Array.isArray(rows) && rows[0])) throw new Error('aucune ligne (lecture directe)'); return { data: rows[0], error: null }; });
+}
+// Première lecture qui ABOUTIT (profil trouvé, ou absence certaine de ligne) ; erreur seulement si les deux échouent.
+function _aaPremiereLecture(ps){
+  return new Promise(function(ok){
+    let reste = ps.length, dernier = null;
+    const rate = function(e){ dernier = dernier || { data:null, error:{ message:(e && e.message) || 'erreur', code:'TIMEOUT' } }; if(--reste === 0) ok(dernier); };
+    ps.forEach(function(p){ p.then(function(r){ if(r && (r.data || !r.error)) ok(r); else { dernier = r; if(--reste === 0) ok(dernier); } }, rate); });
+  });
+}
 async function _aaLoadProfile(user){
   if(!user){ return; }
-  const lire = async function(){
-    try{ return await _aaBorne(sb.from('profiles').select('*').eq('id', user.id).maybeSingle(), 26000); }
-    catch(e){ return { data:null, error:{ message:(e && e.message) || 'erreur', code:'TIMEOUT' } }; }
+  const lire = function(){
+    return _aaPremiereLecture([
+      _aaBorne(sb.from('profiles').select('*').eq('id', user.id).maybeSingle(), 26000),
+      _aaBorne(_aaLectureDirecteProfil(user.id), 26000)
+    ]);
   };
   let profile = null, absent = 0;
   for(let i = 0; i < 8 && !profile; i++){
