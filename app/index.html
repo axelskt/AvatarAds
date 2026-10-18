@@ -12121,7 +12121,9 @@ async function generateImage(){
       const _isRealistic = (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc');
       // En correction → prompt brut ; en génération réaliste avec réf → prompt + bloc réalisme détaillé
       const editPrompt = (_imgMode === 'correct') ? prompt
-                       : (_isRealistic ? (prompt + _imgGenderHint(prompt) + _IMG_REALISM_SUFFIX) : enhancedPrompt);
+                       // 18/10 (Axel : « il fait les mêmes images qu'avant ») : avec une image de référence, UGC Réel prenait le bloc
+                       // réalisme GÉNÉRIQUE (« chest-up or closer ») → jamais le cadrage UGC. Il prend maintenant le même que sans réf.
+                       : (_isRealistic ? (prompt + _imgGenderHint(prompt) + (_imgSelectedStyleId==='ugc' ? _IMG_REALISM_SUFFIX_UGC + _imgUgcExtras(prompt, true) : _IMG_REALISM_SUFFIX)) : enhancedPrompt);
       // #nombre-fix (03/09 — Axel : « la fonction Nombre ne marche pas ») : avec une image de référence, ce chemin
       // ne produisait QU'UNE image alors que le nombre choisi était débité. En génération (pas en correction) et
       // pour 2-3 images : une boucle /edits par image, un format de pub différent à chaque fois quand la banque est active.
