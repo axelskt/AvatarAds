@@ -44123,8 +44123,8 @@ window.mPreviewClose=function(){
 })();
 </script>
 <!-- 18/10 (Axel) : idées de prompt animées (comme Creatify) dans Images IA, Express, Omni et Montage IA : le texte d'exemple
-     du champ s'écrit, reste affiché, s'efface, puis le suivant, avec une barre collée au texte. Rien d'autre ne change dans le
-     design. Seulement quand le champ est vide et visible ; mouvement réduit = exemples qui changent sans effet d'écriture. -->
+     du champ s'écrit, reste affiché, s'efface, puis le suivant, avec une barre collée au texte (exemples de correction en mode
+     Correction d'Images IA). Le texte d'exemple d'origine n'apparaît plus. Rien d'autre ne change dans le design. Seulement quand le champ est vide et visible ; mouvement réduit = exemples qui changent sans effet d'écriture. -->
 <script>
 (function () {
   var IMG = [
@@ -44158,6 +44158,13 @@ window.mPreviewClose=function(){
     "Arrête de tourner tes vidéos toi-même : voici ce que font les marques aujourd'hui.",
     "Le secret des créateurs qui postent tous les jours sans y passer leurs soirées."
   ];
+  var CORR = [
+    "Remplace le fond par un studio lumineux",
+    "Enlève le texte en haut de l'image",
+    "Rends la lumière plus chaude, ambiance fin de journée",
+    "Change la couleur du t-shirt en noir",
+    "Ajoute des gouttes d'eau sur la bouteille"
+  ];
   var HINTS = { imgPrompt: IMG, expPrompt: EXP, mExpPrompt: EXP, omniPrompt: OMNI, mtBrief: MONTAGE };
   var REDUCE = (function () { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
   var BAR = '|';
@@ -44165,16 +44172,26 @@ window.mPreviewClose=function(){
   function attach(el, list) {
     if (!el || el._aaHints) return;
     el._aaHints = true;
-    var order = list.map(function (_, i) { return i; }).sort(function () { return Math.random() - 0.5; });
-    var k = 0, cur = '', shown = '', phase = 'next', blinks = 0, timer = null;
-    function show(s, bar) { shown = s; el.setAttribute('placeholder', s + (bar ? BAR : '') || ' '); }
+    // Le texte d'exemple d'origine ne s'affiche plus jamais (Axel 18/10) : on le garde seulement pour savoir dans quel mode
+    // est le champ (Images IA : Génération ou Correction), et le champ reste vide tant que l'animation n'a pas démarré.
+    var appPh = el.getAttribute('placeholder') || '', ours = ' ';
+    var lists = {}, k = 0, cur = '', shown = '', phase = 'next', blinks = 0, timer = null;
+    function listNow() {
+      var l = (el.id === 'imgPrompt' && /correction/i.test(appPh)) ? CORR : list;
+      if (!lists[l === CORR ? 'c' : 'g']) lists[l === CORR ? 'c' : 'g'] = l.map(function (_, i) { return i; }).sort(function () { return Math.random() - 0.5; });
+      return { l: l, order: lists[l === CORR ? 'c' : 'g'] };
+    }
+    function setPh(v) { ours = v; el.setAttribute('placeholder', v); }
+    function show(s, bar) { shown = s; setPh(s + (bar ? BAR : '') || ' '); }
+    function reset() { phase = 'next'; shown = ''; if (el.getAttribute('placeholder') !== ' ') setPh(' '); }
+    setPh(' ');
     function step() {
       clearTimeout(timer);
       if (!el.isConnected) return;
-      if (el.value || el.offsetParent === null) { timer = setTimeout(step, 700); return; }
+      if (el.value || !el.getClientRects().length) { reset(); timer = setTimeout(step, 150); return; }   // caché : rien d'ancien au retour
       if (phase === 'next') {
-        cur = list[order[k++ % order.length]];
-        if (REDUCE) { show(cur, false); phase = 'next'; timer = setTimeout(step, 3000); return; }
+        var L = listNow(); cur = L.l[L.order[k++ % L.order.length]];
+        if (REDUCE) { show(cur, false); timer = setTimeout(step, 3000); return; }
         phase = 'type'; show('', true);
       }
       if (phase === 'type') {
@@ -44190,7 +44207,15 @@ window.mPreviewClose=function(){
         phase = 'next'; timer = setTimeout(step, 320); return;
       }
     }
-    el.addEventListener('input', function () { if (!el.value) { phase = 'next'; step(); } });
+    // L'app change le texte d'exemple (Images IA : Génération ↔ Correction) : on retient le mode et on repart de zéro.
+    try {
+      new MutationObserver(function () {
+        var v = el.getAttribute('placeholder');
+        if (v === ours) return;
+        appPh = v || ''; reset(); step();
+      }).observe(el, { attributes: true, attributeFilter: ['placeholder'] });
+    } catch (e) {}
+    el.addEventListener('input', function () { if (!el.value) { reset(); step(); } });
     step();
   }
   function init() {
