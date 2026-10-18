@@ -5955,7 +5955,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-19-0100'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-19-0115'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -5985,6 +5985,14 @@ function _aaFetch(input, init){
   return essai(0);
 }
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: _aaFetch } });
+// 19/10 (Axel : « il y a un slider pour aller à droite ou à gauche ») : rien ne débordait — Safari était ZOOMÉ au pincement du
+// trackpad (tout ~3 % plus grand que sur un autre onglet, même fenêtre) : la page devient déplaçable de gauche à droite avec
+// une barre. L'app est une interface à taille fixe (viewport maximum-scale=1) : sur ordinateur, le pincement Safari est bloqué.
+(function(){
+  if(!('ongesturestart' in window)) return;   // gesture* = Safari seulement
+  const stop = function(e){ if(window.innerWidth > 768) e.preventDefault(); };
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function(t){ document.addEventListener(t, stop, { passive:false }); });
+})();
 // Proxies Supabase — les clés API restent côté serveur (secrets Supabase)
 const OPENAI_PROXY   = SUPABASE_URL + '/functions/v1/openai-proxy';
 const EL_PROXY       = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';

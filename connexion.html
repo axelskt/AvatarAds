@@ -352,11 +352,15 @@ function Login({ go }) {
       // 12/10 (Axel : « Se connecter bloqué ») : connexion SANS passer par supabase-js (son initialisation / son verrou pouvaient
       // rester bloqués dans Safari → aucun appel ne partait). Appel direct du serveur d'authentification ; 15/10 : 12 s au plus,
       // corps compris, dans TOUS les navigateurs (fetchJson), et chaque issue rend le bouton (finally) sauf l'ouverture de l'app.
+      // 19/10 (Axel : « le bouton reste sur Connexion… », un 2e clic marchait) : journaux Supabase → la 1re requête n'était JAMAIS
+      // arrivée (Safari l'avait mise sur une connexion morte). Coupée à 6 s puis relancée seule une fois (connexion neuve), 10 s.
       let x;
-      try {
-        x = await fetchJson(SUPABASE_URL + "/auth/v1/token?grant_type=password", { method: "POST",
-          headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: e, password: pwV }) }, 12000);
-      } catch (_) {setErr("Le serveur ne répond pas. Vérifie ta connexion internet et réessaie.");return;}
+      for (let essai = 0; essai < 2 && !x; essai++) {
+        try {
+          x = await fetchJson(SUPABASE_URL + "/auth/v1/token?grant_type=password", { method: "POST",
+            headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: e, password: pwV }) }, essai ? 10000 : 6000);
+        } catch (_) {if (essai) {setErr("Le serveur ne répond pas. Vérifie ta connexion internet et réessaie.");return;}}
+      }
       const j = x.j, code = String(j.error_code || j.error || "");
       if (!x.ok || !j.access_token || !j.refresh_token) {
         setErr(x.status === 429 || /rate_limit/.test(code) ? "Trop d'essais : attends une minute puis réessaie." :
