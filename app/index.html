@@ -44122,5 +44122,85 @@ window.mPreviewClose=function(){
   }, 400);
 })();
 </script>
+<!-- 18/10 (Axel) : idées de prompt animées (comme Creatify) dans Images IA, Express, Omni et Montage IA : le texte d'exemple
+     du champ s'écrit, reste affiché, s'efface, puis le suivant, avec une barre collée au texte. Rien d'autre ne change dans le
+     design. Seulement quand le champ est vide et visible ; mouvement réduit = exemples qui changent sans effet d'écriture. -->
+<script>
+(function () {
+  var IMG = [
+    "Une femme de 30 ans tient un sérum dans une salle de bain lumineuse, photo iPhone naturelle",
+    "Packshot d'une bouteille de parfum sur un rocher au bord de la mer, lumière dorée du soir",
+    "Un homme en t-shirt blanc boit un café devant son ordinateur, style UGC, plan taille",
+    "Flat lay de produits de soin sur fond beige, ombres douces, vue de dessus",
+    "Une basket blanche en lévitation devant un mur de béton, lumière de studio",
+    "Une coach sportive sourit dans une salle de sport, plan américain, lumière naturelle",
+    "Un pot de crème posé sur une serviette de bain, gouttes d'eau, ambiance spa"
+  ];
+  var EXP = [
+    "Une jeune femme dans sa cuisine montre un shaker et dit : « Ça fait 3 semaines que je le prends, et franchement je ne m'attendais pas à ça. »",
+    "Un coach face caméra dans sa voiture dit : « Si tu veux perdre du ventre, arrête de faire ça le matin. »",
+    "Une étudiante assise sur son lit tient son téléphone et dit : « Cette appli me fait gagner 2 heures par jour. »",
+    "Un homme dans son salon tient une crème et dit : « J'avais la peau sèche depuis des années, regarde maintenant. »",
+    "Une maman dans sa voiture dit en souriant : « Le seul produit qui a calmé mon fils au coucher. »"
+  ];
+  var OMNI = [
+    "Remplace la voiture par une Lamborghini Urus noire",
+    "Transforme la pièce en appartement de luxe à Dubaï",
+    "Change sa tenue en costume bleu marine bien coupé",
+    "Passe la scène de nuit, avec les lumières de la ville",
+    "Remplace le gobelet par une canette de notre boisson",
+    "Ajoute de la neige qui tombe sur toute la scène"
+  ];
+  var MONTAGE = [
+    "J'ai testé une IA qui crée des pubs vidéo en 2 minutes. Voici ce que ça donne…",
+    "3 erreurs qui tuent tes pubs Facebook, et comment les éviter.",
+    "Comment j'ai trouvé mes 100 premiers clients sans payer de pub.",
+    "Arrête de tourner tes vidéos toi-même : voici ce que font les marques aujourd'hui.",
+    "Le secret des créateurs qui postent tous les jours sans y passer leurs soirées."
+  ];
+  var HINTS = { imgPrompt: IMG, expPrompt: EXP, mExpPrompt: EXP, omniPrompt: OMNI, mtBrief: MONTAGE };
+  var REDUCE = (function () { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+  var BAR = '|';
+
+  function attach(el, list) {
+    if (!el || el._aaHints) return;
+    el._aaHints = true;
+    var order = list.map(function (_, i) { return i; }).sort(function () { return Math.random() - 0.5; });
+    var k = 0, cur = '', shown = '', phase = 'next', blinks = 0, timer = null;
+    function show(s, bar) { shown = s; el.setAttribute('placeholder', s + (bar ? BAR : '') || ' '); }
+    function step() {
+      clearTimeout(timer);
+      if (!el.isConnected) return;
+      if (el.value || el.offsetParent === null) { timer = setTimeout(step, 700); return; }
+      if (phase === 'next') {
+        cur = list[order[k++ % order.length]];
+        if (REDUCE) { show(cur, false); phase = 'next'; timer = setTimeout(step, 3000); return; }
+        phase = 'type'; show('', true);
+      }
+      if (phase === 'type') {
+        if (shown.length < cur.length) { show(cur.slice(0, shown.length + 1), true); timer = setTimeout(step, 22 + Math.random() * 26); return; }
+        phase = 'hold'; blinks = 0;
+      }
+      if (phase === 'hold') {   // la barre clignote pendant que l'exemple reste affiché
+        if (blinks < 8) { show(cur, blinks % 2 === 0); blinks++; timer = setTimeout(step, 300); return; }
+        phase = 'del';
+      }
+      if (phase === 'del') {
+        if (shown.length) { show(shown.slice(0, Math.max(0, shown.length - 3)), true); timer = setTimeout(step, 14); return; }
+        phase = 'next'; timer = setTimeout(step, 320); return;
+      }
+    }
+    el.addEventListener('input', function () { if (!el.value) { phase = 'next'; step(); } });
+    step();
+  }
+  function init() {
+    var missing = 0;
+    Object.keys(HINTS).forEach(function (id) { var el = document.getElementById(id); if (el) attach(el, HINTS[id]); else missing++; });
+    return missing;
+  }
+  var tries = 0;
+  (function boot() { if (init() && ++tries < 30) setTimeout(boot, 2000); })();
+})();
+</script>
 </body>
 </html>
