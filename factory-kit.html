@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <!-- Audit 02/10 : CSP (scripts : cette page + jsDelivr (supabase-js, SRI) ; appels réseau et vidéos : notre Supabase,
-     factory-media/final/). frame-ancestors est ignoré dans une balise meta → filet JS anti-iframe juste dessous. -->
+     factory-media/final/ et stock/, edge functions factory-release + kit-recharge du même projet). frame-ancestors est
+     ignoré dans une balise meta → filet JS anti-iframe juste dessous. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co https://guvwgiejzkiodghywpwj.storage.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script src="/assets/aa-media-host.js?v=1"></script>
 <script>/* Audit 02/10 — anti-clickjacking : le kit de publication owner ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
@@ -89,6 +90,15 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:12px;padding:11px 14px;font-size:14px;display:flex;gap:14px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
 .toast span{white-space:nowrap}
 .toast button{background:none;border:0;color:var(--acc);font-weight:700;padding:0}
+.kitline{display:flex;align-items:center;gap:8px;margin:-4px 0 12px;font-size:13px;color:var(--dim)}
+.kitline svg{flex:none;width:16px;height:16px}
+.kitline span{min-width:0}
+.kitline.ok{color:var(--ok)}
+.kitline.err{color:#b42318}
+.kitline.warn{color:#b54708}
+.kitline.busy svg{animation:kspin 1s linear infinite}
+@keyframes kspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.kitline.busy svg{animation:none}}
 .login{display:flex;flex-direction:column;gap:10px;max-width:420px;margin:0 auto}
 .login input{font:inherit;padding:13px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 [hidden]{display:none!important}
@@ -97,6 +107,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 <body>
 <div class="wrap">
   <div class="top"><h1>Kit de publication</h1><a href="factory-v2.html">Tableau de bord</a></div>
+  <div id="kitline" class="kitline" role="status" aria-live="polite" hidden></div>
   <div id="app"><div class="empty">Chargement…</div></div>
 </div>
 <div id="toast" class="toast" hidden></div>
@@ -115,7 +126,9 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     send: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg>',
     dl: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
     copy: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
-    check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>'
+    check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>',
+    sync: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13a8.5 8.5 0 0 1-15 4.6M3.5 11a8.5 8.5 0 0 1 15-4.6"/><path d="M19 2.5v4h-4M5 21.5v-4h4"/></svg>',
+    alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>'
   };
 
   var sb = null;
@@ -140,7 +153,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 
   var VIEWS = [['todo', 'À programmer'], ['sched', 'Programmées'], ['old', 'Anciennes']];
   var now = function () { return new Date().toISOString(); };
-  function mine(a) { return S.posts.filter(function (p) { return p.account === (a || S.acct); }); }
+  // Posts « skipped » (sortis du kit : stock commun BloxAI, 16/10) jamais comptés : ni « programmées », ni dans les numéros.
+  function mine(a) { return S.posts.filter(function (p) { return p.account === (a || S.acct) && p.status !== 'skipped'; }); }
   function todo(a) { return mine(a).filter(function (p) { return p.status === 'todo'; }); }
   // Programmées = validées et encore à venir ; Anciennes = validées dont l'heure est passée (déjà en ligne).
   function inView(p, v) {
@@ -252,7 +266,54 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
           var o = document.querySelector('[data-act="one"][data-id="' + id + '"]'); if (o) o.remove(); });
         if (b.released) toast(b.released + ' vidéo' + (b.released > 1 ? 's' : '') + ' retirée' + (b.released > 1 ? 's' : '') + ' du stockage');
       } catch (e) { /* on réessaiera au prochain clic */ }
+      rechargeSoon();
     }, 6500);
+  }
+  // 16/10 (Axel : « un seul stock pour tout le monde ») : le kit garde 7 jours d'avance et se recharge depuis le stock
+  // commun BloxAI (edge function kit-recharge, aussi lancée chaque nuit par pg_cron). Ici : une recharge après
+  // « N vidéos programmées », une fois le délai d'annulation passé (une seule recharge à la fois ; le serveur a aussi son
+  // verrou), puis la liste est relue si des vidéos ont été ajoutées. Résultat en une ligne sous le titre.
+  var KIT = { timer: 0, busy: false, tries: 0, hide: 0 };
+  function kitLine(kind, msg) {
+    var el = $('kitline'); if (!el) return;
+    clearTimeout(KIT.hide);
+    el.className = 'kitline ' + kind;
+    el.innerHTML = (kind === 'busy' ? IC.sync : kind === 'err' || kind === 'warn' ? IC.alert : IC.check) + '<span>' + esc(msg) + '</span>';
+    el.hidden = false;
+    if (kind === 'ok') KIT.hide = setTimeout(function () { el.hidden = true; }, 20000);
+  }
+  function rechargeSoon(delay) {
+    if (S.example) return;
+    clearTimeout(KIT.timer);
+    KIT.timer = setTimeout(recharge, delay == null ? 1500 : delay);
+  }
+  async function recharge() {
+    if (KIT.busy) return;   // une recharge en cours couvre déjà tout le kit
+    KIT.busy = true;
+    kitLine('busy', 'Recharge du kit depuis le stock…');
+    try {
+      var ses = (await sb.auth.getSession()).data.session;
+      if (!ses) { KIT.busy = false; return kitLine('err', 'Recharge du kit impossible : session expirée, recharge la page'); }
+      var r = await fetch(SUPABASE_URL + '/functions/v1/kit-recharge', { method: 'POST', headers: { Authorization: 'Bearer ' + ses.access_token, apikey: SUPABASE_KEY, 'Content-Type': 'application/json' }, body: '{}' });
+      var b = await r.json().catch(function () { return {}; });
+      if (r.status === 409 && b.busy && KIT.tries < 3) {   // une autre recharge tourne (cron, autre appareil) : on réessaie
+        KIT.tries++; KIT.busy = false;
+        kitLine('busy', 'Une recharge est déjà en cours, nouvel essai dans 15 s…');
+        return rechargeSoon(15000);
+      }
+      KIT.tries = 0;
+      // vidéos dont le retrait du stock BloxAI est resté incertain : revérifiées par la recharge suivante (journal serveur)
+      var chk = Array.isArray(b.to_check) ? b.to_check.length : 0;
+      var later = chk ? ' · ' + chk + ' vidéo' + (chk > 1 ? 's' : '') + ' à revérifier, reprise' + (chk > 1 ? 's' : '') + ' à la prochaine recharge' : '';
+      if (!r.ok || b.error) kitLine('err', 'Recharge du kit impossible : ' + (b.error || 'erreur ' + r.status) + later);
+      else { kitLine(chk ? 'warn' : 'ok', b.message || 'Kit rechargé.'); if (b.added) refreshSoon(); }   // à revérifier : la ligne reste
+    } catch (e) { KIT.tries = 0; kitLine('err', 'Recharge du kit impossible : connexion coupée'); }
+    KIT.busy = false;
+  }
+  // Relit la liste sans écraser une série en cours d'enregistrement ni sa fenêtre « Annuler ».
+  function refreshSoon() {
+    if (marking || Date.now() < (S.undoUntil || 0)) return setTimeout(refreshSoon, 1500);
+    load();
   }
   // 15/10 (Axel : « je les fais de 15 en 15, c'est le max pour Instagram ») : un seul bouton marque les 15 prochaines
   // vidéos du compte comme programmées. Réaction immédiate (les cartes glissent hors de la liste), enregistrement en
@@ -263,7 +324,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   function markNext(one) {
     var list = one ? [one] : nextBatch();
     if (!list.length || (marking && !one)) return;
-    if (!one) marking = true;
+    if (!one) marking = true; S.undoUntil = Date.now() + 6500;
     var cards = list.map(function (p) { return document.querySelector('.post[data-pid="' + p.id + '"]'); }).filter(Boolean);
     list.forEach(function (p) { p.status = 'scheduled'; p.done_at = now(); });
     var n = todo()[0]; S.cur = n ? n.id : null;

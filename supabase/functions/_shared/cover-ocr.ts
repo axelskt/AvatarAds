@@ -87,10 +87,12 @@ export async function refineByText(svc: Svc, text: string, created: string | nul
   if (a.s <= 60 && b.s >= a.s * 1.25) return { vf: a.vf, state: 'auto', candidates: cands, why: 'texte choc + image' }
   // 13/10 : même texte choc, une seule de ces vidéos a la légende TikTok dans le kit
   if (title) { const cap = await pickByCaption(svc, title, vfs); if (cap.length === 1) return { vf: cap[0], state: 'auto', candidates: cands, why: 'texte choc + légende du kit' } }
-  // heure : une seule de ces vidéos programmée à ± 40 min de la publication TikTok
+  // heure : une seule de ces vidéos programmée à ± 40 min de la publication TikTok. 17/10 (stock commun) : jamais les lignes
+  // « skipped » (vidéo partie dans le stock commun BloxAI, jamais publiée par le kit) : elles gardent leur créneau, que
+  // kit-recharge redonne à une autre vidéo, et feraient passer un rattachement sûr en « à vérifier »
   if (created) {
     const t = Date.parse(created), lo = new Date(t - 40 * 60000).toISOString(), hi = new Date(t + 40 * 60000).toISOString()
-    const { data: posts } = await svc.from('factory_posts').select('combo').gte('scheduled_at', lo).lte('scheduled_at', hi).limit(50)
+    const { data: posts } = await svc.from('factory_posts').select('combo').neq('status', 'skipped').gte('scheduled_at', lo).lte('scheduled_at', hi).limit(50)
     const near: string[] = [...new Set<string>((posts || []).map((p: any) => String(p.combo?.vf || '')).filter((v: string) => vfs.includes(v)))]
     if (near.length === 1) return { vf: near[0], state: 'auto', candidates: cands, why: 'texte choc + heure du kit' }
   }

@@ -71,3 +71,8 @@ verify_jwt = false
 
 [functions.ig-token-refresh]
 verify_jwt = false
+
+# kit-recharge (16/10, stock commun BloxAI) : recharge du kit jusqu'à J+7 — appelée par pg_cron (kit_recharge_now(),
+# x-cron-key) et par le kit (session propriétaire vérifiée DANS la fonction), donc pas de JWT à la passerelle
+[functions.kit-recharge]
+verify_jwt = false

@@ -413,13 +413,14 @@ async function applyRecipes(list: any[], username: unknown) {
       if (!p) {
         const t = Date.parse(m.timestamp || ''), cap = norm(m.caption)
         if (!cap || !isFinite(t)) continue
-        const c = free.filter((x: any) => !x._used && norm(x.caption).slice(0, 80) === cap.slice(0, 80) && Math.abs(Date.parse(x.scheduled_at) - t) < 48 * 3600e3)
+        const c: any = free.filter((x: any) => !x._used && norm(x.caption).slice(0, 80) === cap.slice(0, 80) && Math.abs(Date.parse(x.scheduled_at) - t) < 48 * 3600e3)
           .sort((a: any, b: any) => Math.abs(Date.parse(a.scheduled_at) - t) - Math.abs(Date.parse(b.scheduled_at) - t))[0]
         if (!c) continue
         c._used = true; p = c
         await svc.from('factory_posts').update({ media_id: String(m.id), status: 'published', done_at: c.done_at || new Date().toISOString() }).eq('id', c.id).is('media_id', null)
       }
-      const file = String(p.video_url || '').split('/final/')[1] || ''
+      // 16/10 : les posts rechargés depuis le stock commun BloxAI pointent vers factory-media/stock/ (avant : final/)
+      const file = String(p.video_url || '').split(/\/(?:final|stock)\//)[1] || ''
       m.recipe = { ...(p.combo && typeof p.combo === 'object' ? p.combo : {}), id_complet: file.replace(/\.mp4$/, '') || null }
     }
   } catch (e) { logIg('recettes', safeErr(e)) }
@@ -923,6 +924,8 @@ async function queueByCover(rows: Record<string, unknown>[], thumbs: Map<string,
 }
 async function withRecipe(r: Record<string, unknown>, vfFull: string) {
   r.vf = vfFull
-  const { data: q } = await svc.from('factory_qc').select('brick_combo').eq('video_url', `${SB_URL}/storage/v1/object/public/factory-media/final/${vfFull}.mp4`).limit(1)
+  // fiche de la vidéo finale : dossier final/ ou, depuis le 16/10 (stock commun BloxAI), stock/
+  const urls = ['final', 'stock'].map((d) => `${SB_URL}/storage/v1/object/public/factory-media/${d}/${vfFull}.mp4`)
+  const { data: q } = await svc.from('factory_qc').select('brick_combo').in('video_url', urls).limit(1)
   if (q?.[0]?.brick_combo) r.combo = { ...q[0].brick_combo, id_complet: vfFull }
 }

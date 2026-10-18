@@ -399,7 +399,8 @@ Deno.serve(async (req) => {
             const { data: fr } = await svc.from('factory_fp').select('vf, video_url').in('vf', vfs)
             for (const r3 of fr || []) {
               const u = String(r3.video_url)
-              files.set(String(r3.vf), { file: u.split('/final/')[1]?.replace(/\.mp4$/, '') || '', poster: u.replace(/\.mp4$/, '-poster.jpg') })
+              // dossier final/ ou, depuis le 16/10 (stock commun BloxAI), stock/
+              files.set(String(r3.vf), { file: u.split(/\/(?:final|stock)\//)[1]?.replace(/\.mp4$/, '') || '', poster: u.replace(/\.mp4$/, '-poster.jpg') })
             }
           }
           for (const v of vids) {

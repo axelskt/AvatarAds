@@ -1416,3 +1416,116 @@ video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; wi
 .cf-net-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .cf-net-top > b { font-size: 14px; font-variant-numeric: tabular-nums; flex: none; }
 .cf-net-id { font-family: var(--cf-mono, ui-monospace, Menlo, monospace); font-size: 11px; color: var(--cf-ink-3); overflow-wrap: anywhere; min-width: 0; }   /* ID entier, jamais coupé (Axel) */
+
+/* 16/10 : onglet BloxAI (ex-TrackAds) — stock commun, missions, à vérifier, diffuseurs, pièces d'identité, versements ;
+   bloc « Diffusion » de la fiche d'une vidéo finale. Mobile d'abord (375 px) : listes en une colonne, actions sous le texte. */
+.cf-bx-title { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; }
+.cf-bx-title > div { min-width: 0; }
+.cf-bx-go { align-self: flex-start; }
+.cf-bx .cf-stiles { grid-template-columns: repeat(auto-fit, minmax(min(100%, 128px), 1fr)); }   /* 2 colonnes dès 375 px */
+.cf-pay-k b.is-v { color: var(--cf-ink); }
+.cf-bx-payks { justify-content: flex-start; }
+.cf-bx-payks .cf-pay-k { align-items: flex-start; }
+.cf-bx-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cf-bx-flow li { display: flex; flex-direction: column; gap: 3px; background: var(--cf-tile); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.cf-bx-flow b { font-size: 13.5px; font-weight: 650; }
+.cf-bx-flow li > span:last-child { font-size: 12px; color: var(--cf-ink-3); overflow-wrap: anywhere; }
+.cf-bx-list { display: flex; flex-direction: column; gap: 8px; }
+/* 17/10 (round 5) : versements reportés (coordonnées modifiées récemment) sous la liste des versements à faire */
+.cf-bx-sub { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--cf-line); }
+.cf-bx-row.is-defer { grid-template-columns: minmax(0, 1fr); }
+.cf-bx-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; border: 1px solid var(--cf-line-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.cf-bx-row.is-id, .cf-bx-row.is-pay { grid-template-columns: minmax(0, 1fr) auto; }
+.cf-bx-ic { width: 32px; height: 32px; border-radius: 9px; background: var(--cf-track); color: var(--cf-ink-3); display: flex; align-items: center; justify-content: center; }
+.cf-bx-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cf-bx-main > b { font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
+.cf-bx-l1 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.cf-bx-l1 > b { font-size: 13.5px; font-weight: 650; overflow-wrap: anywhere; }
+.cf-bx-l1 > .cf-qchip, .cf-bx-main > .cf-qchip { align-self: center; }
+.cf-bx-main > .cf-qchip { align-self: flex-start; }
+.cf-bx-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.cf-bx-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.cf-bx-acts a.cf-btn { text-decoration: none; color: var(--cf-ink); }
+.cf-bx-why { font-size: 12px; color: var(--cf-err-fg); overflow-wrap: anywhere; }
+.cf-bx-why.is-warn { color: var(--cf-warn-fg); font-weight: 600; }
+.cf-bx-why .cf-link { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; }
+/* signaux du relevé des vues sur un lien à vérifier (vidéo introuvable, doublon, publiée avant la mission, chaîne YouTube) */
+.cf-qchip.is-flag { align-items: center; gap: 4px; font-weight: 600; }
+.cf-qchip.is-flag svg { flex: none; }
+/* 18/10 (round 6) : puce d'alerte orange aussi sur l'Accueil (carte Versements : titulaire partiel, 1er versement…) */
+.cf-qchip.is-flag.is-warn { background: var(--cf-warn-bg); color: var(--cf-warn-fg); }
+.cf-bx .cf-qchip.is-warn { background: var(--cf-warn-bg); color: var(--cf-warn-fg); }
+.cf-bx-how { font-family: var(--cf-mono); font-size: 11.5px; color: var(--cf-ink-2); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
+.cf-bx-rk { display: grid; grid-template-columns: 26px minmax(0, 1.7fr) repeat(4, minmax(0, 1fr)); align-items: center; gap: 8px 12px; border: 1px solid var(--cf-line-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.cf-bx-rk-n { font-family: var(--cf-mono); font-size: 12px; font-weight: 600; color: var(--cf-accent); text-align: center; }
+.cf-bx-rk-m { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cf-bx-rk-m b { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cf-bx-rk-m b.is-na { color: var(--cf-mute-3); }
+.cf-bx-rk-m span { font-family: var(--cf-mono); font-size: 10px; color: var(--cf-mute); overflow-wrap: anywhere; }
+.cf-bx-charts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 900px) { .cf-bx-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cf-bx-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--cf-ink-3); }
+.cf-bx-leg span { display: inline-flex; align-items: center; gap: 6px; }
+.cf-bx-leg i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.cf-bx-leg b { color: var(--cf-ink); font-variant-numeric: tabular-nums; }
+.cf-bx-ymax { position: absolute; left: 0; top: -2px; transform: translateY(-100%); font-family: var(--cf-mono); font-size: 9.5px; color: #a9a197; pointer-events: none; }
+.cf-bxplot { margin-top: 12px; touch-action: pan-y; }
+.cf-bx-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px; pointer-events: none; }
+.cf-bx-bars i { flex: 1 1 0; min-width: 0; background: var(--cf-accent); border-radius: 3px 3px 0 0; }
+.cf-bx-bars i.is-na { background: transparent; }
+.cf-bxhover { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.cf-vf-diff, .cf-bx-diff { display: flex; flex-direction: column; gap: 8px; }
+.cf-vf-diff:empty { display: none; }
+.cf-bx-drow { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; align-items: start; border: 1px solid var(--cf-line-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.cf-bx-dn { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--cf-ink-2); }
+.cf-bx-dn svg { color: var(--cf-mute); flex: none; }
+.cf-bx-db { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 12.5px; color: var(--cf-ink-3); }
+.cf-bx-dv b { color: var(--cf-ink); font-size: 14px; font-variant-numeric: tabular-nums; }
+.cf-bx-dl { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.cf-bx-dlist { display: flex; flex-direction: column; gap: 4px; }
+.cf-bx-dli { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; overflow-wrap: anywhere; }
+.cf-bx-db .cf-btn { margin-left: auto; }
+@media (max-width: 899px) {
+  .cf-bx-rk { grid-template-columns: 26px repeat(4, minmax(0, 1fr)); }
+  .cf-bx-rk > .cf-bx-main { grid-column: 2 / -1; }
+  .cf-bx-rk > .cf-bx-rk-m:nth-of-type(n) { grid-row: 2; }
+  .cf-bx-rk > .cf-bx-rk-m[data-m="fiab"] { grid-column: 2; }
+}
+@media (max-width: 639px) {
+  .cf-bx-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cf-bx-row { grid-template-columns: 32px minmax(0, 1fr); }
+  .cf-bx-row > .cf-bx-acts { grid-column: 1 / -1; justify-content: flex-start; }
+  .cf-bx-row.is-id, .cf-bx-row.is-pay { grid-template-columns: minmax(0, 1fr); }
+  .cf-bx-row.is-id > .cf-bx-acts, .cf-bx-row.is-pay > .cf-bx-acts { grid-column: 1; }
+  .cf-bx-rk { grid-template-columns: 22px repeat(2, minmax(0, 1fr)); }
+  .cf-bx-rk > .cf-bx-main { grid-column: 2 / -1; }
+  .cf-bx-rk > .cf-bx-rk-m:nth-of-type(n) { grid-row: auto; }
+  .cf-bx-rk > .cf-bx-rk-m[data-m="fiab"], .cf-bx-rk > .cf-bx-rk-m[data-m="vpp"] { grid-column: 2; }
+  .cf-bx-rk > .cf-bx-rk-m[data-m="vues"], .cf-bx-rk > .cf-bx-rk-m[data-m="rapid"] { grid-column: 3; }
+  .cf-bx-drow { grid-template-columns: minmax(0, 1fr); }
+  .cf-bx-title > .cf-btn { width: auto; }
+  .cf-bx .cf-stile { padding: 12px; }
+  .cf-bx .cf-stile b { font-size: 24px; }
+  .cf-bx .cf-mkpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* 18/10 (round 7, R7-16) : Accueil — « Pièces d'identité à vérifier » en tête : aperçu de l'image (URL signée de 300 s),
+   diffuseur, date, noms déclarés, Valider / Refuser ; décisions récentes (image détruite ou non). 375 px : aperçu au-dessus. */
+.cf-idh .cf-card-h { margin-bottom: 10px; }
+.cf-idh-list { display: flex; flex-direction: column; gap: 10px; }
+.cf-idh-row { display: grid; grid-template-columns: minmax(150px, 230px) minmax(0, 1fr); gap: 10px 14px; align-items: start; border: 1px solid var(--cf-line-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.cf-idh-prev { min-width: 0; }
+.cf-idh-img { display: block; width: 100%; max-height: 260px; object-fit: contain; border-radius: 10px; background: var(--cf-track); }
+.cf-idh-ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 110px; padding: 10px; border-radius: 10px; background: var(--cf-track); color: var(--cf-ink-3); font-size: 12px; text-align: center; overflow-wrap: anywhere; }
+.cf-idh-ph.is-err { background: var(--cf-err-bg); color: var(--cf-err-fg); }
+.cf-idh-ph .cf-link-btn { align-self: center; }
+.cf-idh-acts { justify-content: flex-start; margin-top: 6px; }
+.cf-idh-done { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.cf-idh-done-r { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; padding: 8px 10px; border-radius: 10px; overflow-wrap: anywhere; min-width: 0; }
+.cf-idh-done-r.is-ok { background: var(--cf-ok-bg); color: var(--cf-ok-fg); }
+.cf-idh-done-r.is-warn { background: var(--cf-warn-bg); color: var(--cf-warn-fg); font-weight: 600; }
+.cf-idh-done-r svg { flex: none; margin-top: 2px; }
+.cf-idh .cf-acct-msg { margin-bottom: 10px; }
+@media (max-width: 639px) { .cf-idh-row { grid-template-columns: minmax(0, 1fr); } }
+/* 18/10 (round 7, R7-6) : détail d'une alerte de l'Accueil (alertes e-mail de BloxAI non envoyées) */
+.cf-alert-list { margin: 4px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cf-alert-list li { font-size: 12px; color: var(--cf-ink-3); overflow-wrap: anywhere; }

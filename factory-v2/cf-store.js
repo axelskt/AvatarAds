@@ -39,10 +39,13 @@
  *              reason, replacedAt }] }, error } ; état du jeton calculé ici (tkState) ; relue au plus toutes les 15 min,
  *              et tout de suite après une connexion (message 'tk-oauth' de tiktok-callback.html ou popup refermée)
  *   CF.tkOauth résultat renvoyé par tiktok-callback.html : { ok, openId, error, at }
+ *   CF.bx      onglet BloxAI (16/10, ex-TrackAds ; Axel : « un seul stock pour tout le monde ») : edge bloxai?action=stats
+ *              (proxy owner vers la fonction factory du projet BloxAI, payload bx_factory_stats) → { state, loading, at, data,
+ *              error, kind } ; relu au plus toutes les 5 min (cache serveur 60 s), tout de suite après une action
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
  *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { dmRange } période Auto-DM ;
  *                     { home: { ig, dm } } tout ce que lit l'Accueil ; { prod } l'onglet Production ; { force } ignore les 15 min
- *                     { tk } comptes TikTok (aussi lus avec home)
+ *                     { tk } comptes TikTok (aussi lus avec home) ; { bx } BloxAI
  *   CF.net     journal des appels réseau faits par le store (pour vérifier « 3 appels max, puis 0 »)
  *
  * Contrôle d'accès : 1er appel = RPC factory_access(). {error:'forbidden'} ⇒ « Accès réservé ».
@@ -54,6 +57,22 @@
  * classified_at SEULEMENT (qcGuard), une ligne à la fois ; chaque écriture vérifie l'erreur ET qu'une ligne a bien changé.
  * Audit 02/10 : « Connecter un compte TikTok » / « Reconnecter » (tkConnect) passe par le vrai OAuth TikTok ; la page
  * n'écrit rien elle-même : tiktok_accounts est écrite par l'edge tiktok-auth (exchange, appelé par tiktok-callback.html).
+ * 16/10 (BloxAI) : décisions d'administration du propriétaire (bxAdmin : refuser / valider / remettre une publication, marquer
+ * un versement payé, valider / refuser une pièce d'identité, retirer / remettre une mission) = POST vers l'edge bloxai, qui
+ * revérifie l'owner, n'accepte qu'une liste blanche d'actions champ par champ et les transmet à BloxAI ; jamais une écriture
+ * dans la base AvatarAds. Chaque action est un clic explicite (confirmation ou motif), puis les chiffres sont relus.
+ * Une décision sur un lien renvoie { ok, pub } : pub = la ligne que BloxAI vient d'écrire (bxPubRow), d'où vient le message.
+ * 17/10 (round 5) : « Valider avec les vues figées » (décision validate_frozen, après la fin du suivi seulement, sans aucun
+ * chiffre envoyé) ; validation d'une pièce = date de naissance ET nom lu sur la pièce (name, 120 caractères au plus).
+ * 18/10 (round 6) : lus en plus (lecture seule, rien n'est envoyé) — versements : dernier versement payé et sa destination,
+ * changement depuis, nom légal déclaré ; pièces : nom légal déclaré ; liens à vérifier : j'aime, commentaires, partages,
+ * plus forte hausse de vues sur un jour.
+ * 18/10 (round 7) : chaque POST vers l'edge bloxai porte dash_version (= numéro ?v= du cf-ui.js chargé par la page, lu dans
+ * la balise <script>) : l'edge refuse (409 « Recharge le tableau de bord ») les actions d'argent et d'identité d'une page
+ * d'avant la version 89 ; nouvelles actions admin_payout_cancel { id, reason } (annuler un versement ouvert) et
+ * admin_freeze { user, on, reason } (geler / dégeler les versements d'un diffuseur) ; lus en plus : gel des versements
+ * (frozen, frozen_reason), échecs d'envoi des alertes e-mail (notif_failures), vues du 1er jour et abonnés du compte
+ * (first_day_views, followers), dernière lecture et vues retirées par le réseau (last_views, views_dropped).
  */
 (function () {
   'use strict';
@@ -80,6 +99,7 @@
   var TK_PROD_SINCE = Date.parse('2026-10-03T15:30:00+02:00');
   // Nos comptes TikTok par nom affiché (même liste que TK_OWN_NAMES de factory.html) : un autre nom est signalé.
   var TK_OWN_NAMES = ['Tom|Contenu IA', 'Louis|SaaS IA', 'Axel|SaaS IA'];
+  var BX_TTL_MS = 5 * 60 * 1000;           // BloxAI : 1 appel → 1 RPC côté BloxAI ; cache 60 s dans l'edge, pas de relecture en boucle
 
   window.CF_READONLY = true;
 
@@ -107,6 +127,7 @@
     tk: newSlot(),
     boot: { t0: Date.now(), step: 'démarrage', stepAt: Date.now(), net: null },   // 07/10 : étape du démarrage (écran d'accès)
     tts: newSlot(),   // 07/10 : stats TikTok (tiktok-auth?action=stats) — @, abonnés, likes, vues de chaque vidéo
+    bx: newSlot(),    // 16/10 : BloxAI (stock commun, missions, diffuseurs, versements) — edge bloxai?action=stats
     oauth: null,
     tkOauth: null,
     ttsOauth: null,   // 07/10 : résultat de la dernière connexion « stats » (app Sandbox) : { ok, error, at }
@@ -133,6 +154,11 @@
     loadYt: loadYt,
     loadTk: loadTk,
     loadTts: loadTts,
+    loadBx: loadBx,
+    bxAdmin: bxAdmin,
+    bxIdentityUrl: bxIdentityUrl,
+    dashVersion: dashVersion,   // 18/10 (round 7, R7-7) : numéro ?v= de cf-ui.js envoyé dans chaque POST bloxai
+    BX_TTL_MS: BX_TTL_MS,
     relogin: relogin,
     ttLink: ttLink,
     tkConnect: tkConnect,
@@ -180,7 +206,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
-  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.tts = newSlot(); CF.oauth = null; CF.tkOauth = null; CF.ttsOauth = null; }
+  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.tts = newSlot(); CF.bx = newSlot(); CF.oauth = null; CF.tkOauth = null; CF.ttsOauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -256,17 +282,20 @@
   }
 
   // ── appel d'une edge function avec le jeton de session (comme igAuthHeaders de factory.html) ──
-  async function callFn(path, timeoutMs) {
+  // post (16/10, BloxAI) : objet envoyé en POST JSON ; sans lui, GET comme avant. Jamais rejoué (une action ne part qu'une fois).
+  async function callFn(path, timeoutMs, post) {
     var r = await sb.auth.getSession();
     var tok = r && r.data && r.data.session && r.data.session.access_token;
     if (!tok) throw { kind: 'auth', message: 'session absente' };
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
     var tms = timeoutMs || TIMEOUT_MS;
     var tm = ctl ? setTimeout(function () { ctl.abort(); }, tms) : null;
-    logNet(path);
+    logNet(path + (post && post.op ? ' (POST ' + post.op + ')' : ''));
     var resp;
     try {
-      resp = await fetch(FN + path, { headers: { Authorization: 'Bearer ' + tok }, signal: ctl ? ctl.signal : undefined, cache: 'no-store' });
+      resp = await fetch(FN + path, post
+        ? { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify(post), signal: ctl ? ctl.signal : undefined, cache: 'no-store' }
+        : { headers: { Authorization: 'Bearer ' + tok }, signal: ctl ? ctl.signal : undefined, cache: 'no-store' });
     } catch (e) {
       throw { kind: 'network', message: e && e.name === 'AbortError' ? 'délai dépassé (' + Math.round(tms / 1000) + ' s)' : 'réseau indisponible' };
     } finally {
@@ -617,13 +646,14 @@
   var TT_IMG = /^https:\/\/[\w.-]+\.(tiktokcdn(-eu|-us)?\.com|ibyteimg\.com|byteimg\.com)\//;
   var TT_VID = /^https:\/\/(www\.|vm\.|m\.)?tiktok\.com\//;
   // Recette d'une vidéo TikTok (07/10) : vidéo de l'usine reconnue par sa couverture (auto), choisie à la main (manual),
-  // à vérifier parmi 2-3 propositions (unsure), ou pas une vidéo de l'usine (none). Posters seulement depuis factory-media/final/.
+  // à vérifier parmi 2-3 propositions (unsure), ou pas une vidéo de l'usine (none). Posters seulement depuis factory-media/final/
+  // ou, depuis le 16/10 (stock commun BloxAI), factory-media/stock/.
   function ttRecipe(r) {
     if (!r || typeof r !== 'object' || ['auto', 'manual', 'unsure', 'none'].indexOf(r.state) < 0) return null;
-    var finPre = SUPABASE_URL + '/storage/v1/object/public/factory-media/final/';
+    var finPre = SUPABASE_URL + '/storage/v1/object/public/factory-media/final/', stkPre = SUPABASE_URL + '/storage/v1/object/public/factory-media/stock/';
     var vfOk = function (x) { return typeof x === 'string' && /^VF-\d{4}$/.test(x) ? x : null; };
     var fileOk = function (x) { return typeof x === 'string' && /^[A-Za-z0-9._-]{1,160}$/.test(x) ? x : null; };
-    var posterOk = function (x) { return typeof x === 'string' && x.indexOf(finPre) === 0 && !/[\s"'<>]/.test(x) ? x : null; };
+    var posterOk = function (x) { return typeof x === 'string' && (x.indexOf(finPre) === 0 || x.indexOf(stkPre) === 0) && !/[\s"'<>]/.test(x) ? x : null; };
     return { vf: vfOk(r.vf), state: r.state, score: num(r.score), file: fileOk(r.file), poster: posterOk(r.poster),
       candidates: (Array.isArray(r.candidates) ? r.candidates : []).slice(0, 5).map(function (c) {
         return c && typeof c === 'object' ? { vf: vfOk(c.vf), score: num(c.score), file: fileOk(c.file), poster: posterOk(c.poster) } : null;
@@ -688,6 +718,312 @@
     inflight.tts = p;
     emit('tts');
     return p;
+  }
+
+  // ── BloxAI (16/10, ex-TrackAds) : edge bloxai?action=stats → payload bx_factory_stats() de BloxAI ──
+  // Liste blanche de TOUT ce qui entre dans le store : compteurs entiers ≥ 0 (sinon null → « — », jamais un faux 0), statuts
+  // connus seulement, VF-xxxx, liens Instagram / TikTok / YouTube au format de la table publications, e-mails et IBAN au
+  // format attendu (versements à faire : le propriétaire en a besoin pour payer), prénoms coupés à 60 caractères.
+  var BX_MISSION_ST = ['open', 'assigned', 'done', 'kit', 'retired'];
+  var BX_ASG_ST = ['active', 'submitted', 'abandoned', 'expired'];
+  var BX_PUB_ST = ['verif', 'valid', 'refus'];
+  var BX_NETS = ['instagram', 'tiktok', 'youtube'];
+  // mêmes formes que la contrainte publications_url_form de BloxAI (16/10 : YouTube watch?v=ID aussi, forme que
+  // bx_submit_links garde pour un lien collé en watch?v= ; sans elle le lien arrivait ici sans adresse)
+  var BX_URL = {
+    instagram: /^https:\/\/([a-z0-9-]+\.)*instagram\.com\/(reel|reels|p|tv)\/./i,
+    tiktok: /^https:\/\/([a-z0-9-]+\.)*tiktok\.com\/./i,
+    youtube: /^https:\/\/(([a-z0-9-]+\.)*youtube\.com\/(shorts\/|watch\?v=)|youtu\.be\/)./i
+  };
+  // 17/10 (audit BRIDGE-3) : lien signé d'une pièce d'identité seulement sur le projet BloxAI lui-même
+  var BX_SIGNED = /^https:\/\/rlkcyrldkwutyjymjcxi\.supabase\.co\/storage\/v1\/object\/sign\/identity\//;
+  function bxObj(x) { return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; }
+  function bxArr(x, n) { return Array.isArray(x) ? x.slice(0, n) : []; }
+  function bxId(x) { return typeof x === 'number' && isFinite(x) && x > 0 && x % 1 === 0 ? String(x) : typeof x === 'string' && /^[1-9]\d{0,15}$/.test(x) ? x : null; }
+  function bxUid(x) { return typeof x === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x) ? x.toLowerCase() : null; }
+  function bxVf(x) { return typeof x === 'string' && /^VF-\d{4}$/.test(x) ? x : null; }
+  function bxIn(x, list) { return list.indexOf(x) >= 0 ? x : null; }
+  function bxDay(x) { return typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) ? x : null; }
+  function bxNum(x) { return typeof x === 'number' && isFinite(x) && x >= 0 ? x : null; }   // décimal ≥ 0 (heures, taux)
+  function bxRate(x) { return typeof x === 'number' && isFinite(x) && x >= 0 && x <= 1 ? x : null; }
+  function bxMail(x) { return typeof x === 'string' && x.length <= 254 && /^[^\s@<>"'\\]+@[^\s@<>"'\\]+\.[^\s@<>"'\\]{2,}$/.test(x) ? x : null; }
+  function bxHandle(x) { var h = typeof x === 'string' ? x.trim().replace(/^@/, '') : ''; return /^[A-Za-z0-9._-]{2,30}$/.test(h) ? h : null; }
+  function bxLink(net, u) { return typeof u === 'string' && u.length <= 500 && !/[\s"'<>\\]/.test(u) && BX_URL[net] && BX_URL[net].test(u) ? u : null; }
+  function bxCount(x) { return cnt(x); }
+  // Signaux du relevé (reseaux de BloxAI, 17/10) sur un lien à vérifier : objet « flags » de to_check, clé par clé. Un
+  // signal est « posé » comme pour bx_metric_flag de BloxAI (présent, ni null, ni false, ni vide) : c'est lui qui fait
+  // refuser le lien à la fin du suivi. Le détail (date, n° du lien, chaîne) n'est gardé que s'il a le bon format ; aucun
+  // texte brut de BloxAI n'en sort.
+  // 16/10 : same_account (posé par reseaux quand la base refuse un 2e lien de la même mission sur un même compte, index
+  // publications_one_per_connection) = id de l'autre lien de la mission déjà rattaché à ce compte ; vues non créditées,
+  // refus à la fin du suivi comme les autres. Ordre des motifs (= bx_close_refusal) : missing_since > dup_of > too_old >
+  // same_account > yt_unverified.
+  // 17/10 (contrat 3) : ces signaux sont une INFORMATION pour Axel, plus jamais un refus automatique ; held_since = lien
+  // « En attente de vérification » (suivi fini sans « Valider » d'Axel, ou vues pas relues dans les 48 h avant la fin) :
+  // aucun gain tant qu'Axel n'a pas décidé.
+  function bxSet(v) { return v != null && v !== false && v !== ''; }
+  function bxFlags(f) {
+    f = bxObj(f);
+    var ch = typeof f.yt_channel === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(f.yt_channel) ? f.yt_channel : null;
+    return { missing: bxSet(f.missing_since), missingSince: ms(f.missing_since), dup: bxSet(f.dup_of), dupOf: bxId(f.dup_of),
+      tooOld: bxSet(f.too_old), sameAccount: bxSet(f.same_account), sameAccountOf: bxId(f.same_account),
+      ytUnverified: bxSet(f.yt_unverified), ytChannel: ch, seenViews: bxCount(f.seen_views), publishedAt: ms(f.published_at),
+      held: bxSet(f.held_since), heldSince: ms(f.held_since) };
+  }
+  // repères d'une ligne to_check : flags, plus held_since s'il est rangé à côté (selon la version de bx_factory_stats)
+  function bxFlagsOf(x) {
+    var f = bxObj(x.flags);
+    if (x.held_since != null && f.held_since == null) f = Object.assign({}, f, { held_since: x.held_since });
+    return bxFlags(f);
+  }
+  // Ligne publications renvoyée par bx_admin_publication (relayée par l'edge bloxai, champ par champ, 16/10) : l'état RÉEL
+  // après la décision (ex. « Valider » sur un lien au suivi fini que le relevé vient de signaler → refusé), pour le message.
+  // 17/10 (round 5, contrat 6) : checked_views = vues au moment du « conforme » d'Axel (comparées aux vues figées)
+  function bxPubRow(x) {
+    x = bxObj(x);
+    var id = bxId(x.id), st = bxIn(x.status, BX_PUB_ST);
+    return id && st ? { id: id, status: st, views: bxCount(x.views), validViews: bxCount(x.valid_views), viewsAtClose: bxCount(x.views_at_close), checkedViews: bxCount(x.checked_views), reason: txt(x.refusal_reason, 300),
+      created: ms(x.created_at), checked: ms(x.checked_at), validated: ms(x.validated_at), lastRead: ms(x.last_read_at), flags: bxFlags(x.flags) } : null;
+  }
+  // 18/10 (round 7, R7-6) : notif_failures = { count_7d, last: [{ created_at, type, reason, status, user_name }] }
+  function bxNotif(n) {
+    if (!n || typeof n !== 'object' || Array.isArray(n)) return null;
+    return { count7: bxCount(n.count_7d), last: bxArr(n.last, 10).map(function (x) {
+      x = bxObj(x);
+      var st = typeof x.status === 'number' && x.status % 1 === 0 && x.status >= 100 && x.status <= 599 ? x.status : null;
+      return { at: ms(x.created_at), type: typeof x.type === 'string' && /^[a-z_]{1,40}$/.test(x.type) ? x.type : null, reason: txt(x.reason, 200), status: st, name: txt(x.user_name, 60) };
+    }) };
+  }
+  function normBx(b, at) {
+    var S = bxObj(b.settings), K = bxObj(b.stock), A = bxObj(b.assignments), A24 = bxObj(A.last_24h), P = bxObj(b.publications);
+    var U = bxObj(b.users), M = bxObj(b.money), BV = bxObj(b.by_vf), byVf = Object.create(null), nVf = 0;
+    Object.keys(BV).forEach(function (k) {
+      if (!bxVf(k) || nVf >= 5000) return;
+      var v = bxObj(BV[k]);
+      nVf += 1;
+      byVf[k] = {
+        missionId: bxId(v.mission_id), status: bxIn(v.status, BX_MISSION_ST), created: ms(v.created_at),
+        assignments: bxArr(v.assignments, 60).map(function (a) {
+          a = bxObj(a);
+          var st = bxIn(a.status, BX_ASG_ST);
+          return st ? { status: st, userId: bxUid(a.user_id), name: txt(a.name, 60), assigned: ms(a.assigned_at), deadline: ms(a.deadline_at),
+            submitted: ms(a.submitted_at), ended: ms(a.ended_at) } : null;
+        }).filter(Boolean),
+        publications: bxArr(v.publications, 60).map(function (p) {
+          p = bxObj(p);
+          var net = bxIn(p.network, BX_NETS), id = bxId(p.id);
+          return net && id ? { id: id, network: net, url: bxLink(net, p.url), status: bxIn(p.status, BX_PUB_ST), views: bxCount(p.views), validViews: bxCount(p.valid_views) } : null;
+        }).filter(Boolean)
+      };
+    });
+    var asc = function (a, b2) { return a.day < b2.day ? -1 : a.day > b2.day ? 1 : 0; };   // courbes : du plus ancien au plus récent
+    return {
+      fetchedAt: at, generatedAt: ms(b.generated_at), proxyAt: ms(b.proxy_at), cached: b.cached === true,
+      settings: { kitBuffer: bxCount(S.kit_buffer), deadlineH: bxNum(S.deadline_hours), cooldownMin: bxNum(S.cooldown_minutes),
+        pauseFailures: bxCount(S.pause_failures), pauseWindowDays: bxCount(S.pause_window_days), pauseHours: bxNum(S.pause_hours),
+        trackingDays: bxCount(S.tracking_days), payoutMinCents: bxCount(S.payout_min_cents), rateCentsPer1000: bxNum(S.rate_cents_per_1000),
+        payoutCooldownH: bxNum(S.payout_cooldown_hours) },   // 17/10 (round 5) : délai de sécurité après un changement (72 h)
+      stock: { open: bxCount(K.open), assigned: bxCount(K.assigned), done: bxCount(K.done), kit: bxCount(K.kit), retired: bxCount(K.retired),
+        available: bxCount(K.available_for_diffusers) },
+      asg: { active: bxCount(A.active), submitted: bxCount(A.submitted), abandoned: bxCount(A.abandoned), expired: bxCount(A.expired),
+        downloadedActive: bxCount(A.downloaded_active),
+        d24: { claimed: bxCount(A24.claimed), submitted: bxCount(A24.submitted), expired: bxCount(A24.expired), abandoned: bxCount(A24.abandoned) } },
+      pub: { verif: bxCount(P.verif), unchecked: bxCount(P.unchecked), held: bxCount(P.held), valid: bxCount(P.valid), refus: bxCount(P.refus), views: bxCount(P.views), validViews: bxCount(P.valid_views),
+        likes: bxCount(P.likes), comments: bxCount(P.comments), shares: bxCount(P.shares), saves: bxCount(P.saves) },
+      users: { total: bxCount(U.total), onboarded: bxCount(U.onboarded), active7: bxCount(U.active_7d), ig: bxCount(U.ig_connected),
+        tt: bxCount(U.tt_connected), paused: bxCount(U.paused),
+        signups: Array.isArray(U.signups_30d) ? bxArr(U.signups_30d, 400).map(function (d) { d = bxObj(d); return bxDay(d.day) ? { day: d.day, n: bxCount(d.n) } : null; }).filter(Boolean).sort(asc) : null },
+      money: { validated: bxCount(M.validated_cents), paid: bxCount(M.paid_cents), unpaid: bxCount(M.unpaid_cents),
+        // 17/10 (contrat 5) : destination FIGÉE à la création du versement (dest_method, dest_paypal_email, dest_iban,
+        // dest_holder) — c'est elle qu'on paie, jamais le profil modifié depuis ; details_changed = le diffuseur a changé
+        // ses coordonnées après la demande. BloxAI sans ces champs : coordonnées actuelles du profil, signalées « non figées ».
+        // 17/10 (round 5, contrat 1) : BloxAI renvoie les DEUX formes — dest_method / dest_paypal_email / dest_iban /
+        // dest_holder ET les anciennes clés paypal_email / iban / iban_holder (déjà la destination figée). Destination figée
+        // = dest_method connu ; chaque champ est lu clé par clé : dest_* s'il est présent (même null), sinon l'ancienne clé
+        // (le 17/10 au matin, BloxAI n'envoyait que dest_method + les anciennes clés : le tableau de bord affichait « non
+        // renseigné »). verified_name = nom lu par Axel sur la pièce vérifiée (comparé au titulaire avant de payer) ;
+        // payout_updated_at / password_changed_at = coordonnées ou mot de passe changés (72 h : « modifiées récemment ») ;
+        // cooldown_until = fin du délai de sécurité calculée par BloxAI (null = aucun délai ; absente = ancien BloxAI).
+        payouts: Array.isArray(M.payouts_open) ? bxArr(M.payouts_open, 500).map(function (p) {
+          p = bxObj(p);
+          var dm = bxIn(p.dest_method, ['paypal', 'iban']), fr = dm != null;
+          var pick = function (k, old) { return fr && Object.prototype.hasOwnProperty.call(p, k) ? p[k] : p[old]; };
+          var ib = pick('dest_iban', 'iban'), id = bxId(p.id), amt = bxCount(p.amount_cents), iban = typeof ib === 'string' && /^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(ib) ? ib : null;
+          return id && amt != null ? { id: id, userId: bxUid(p.user_id), name: txt(p.name, 60), email: bxMail(p.email), amount: amt,
+            kind: bxIn(p.kind, ['monthly', 'mid_month', 'request']), period: bxDay(p.period), method: fr ? dm : bxIn(p.method, ['paypal', 'iban']),
+            paypal: bxMail(pick('dest_paypal_email', 'paypal_email')), iban: iban, ibanHolder: txt(pick('dest_holder', 'iban_holder'), 120), status: bxIn(p.status, ['requested', 'pending', 'paid', 'cancelled']),
+            created: ms(p.created_at), frozen: fr, detailsChanged: p.details_changed === true,
+            verifiedName: txt(p.verified_name, 120), payoutUpdated: ms(p.payout_updated_at), passwordChanged: ms(p.password_changed_at),
+            cooldownUntil: ms(p.cooldown_until), cooldownKnown: Object.prototype.hasOwnProperty.call(p, 'cooldown_until'),
+            // 18/10 (round 6, R1a) : dernier versement PAYÉ à ce diffuseur (last_paid_at ; null = premier versement) et sa
+            // destination (last_paid_dest_*), date du dernier changement de coordonnées ou de mot de passe (changed_at) et
+            // changed_since_last_paid = changé depuis ce versement payé. paidKnown = BloxAI envoie ces clés (sinon : ancien
+            // BloxAI, jamais « premier versement » affiché à tort). Valeurs brutes (texte borné) pour la comparaison
+            // normalisée de la destination : IBAN sans espaces en majuscules, PayPal en minuscules (cf-ui bxDestKey).
+            paidKnown: Object.prototype.hasOwnProperty.call(p, 'last_paid_at'), lastPaidAt: ms(p.last_paid_at),
+            lastPaid: { method: bxIn(p.last_paid_dest_method, ['paypal', 'iban']), paypal: txt(p.last_paid_dest_paypal_email, 254),
+              iban: txt(p.last_paid_dest_iban, 64), holder: txt(p.last_paid_dest_holder, 120) },
+            destRaw: { method: fr ? dm : bxIn(p.method, ['paypal', 'iban']), paypal: txt(pick('dest_paypal_email', 'paypal_email'), 254),
+              iban: txt(ib, 64), holder: txt(pick('dest_holder', 'iban_holder'), 120) },
+            changedAt: ms(p.changed_at), changedSincePaid: p.changed_since_last_paid === true,
+            // 18/10 (round 6, R2) : nom légal déclaré à la 1re acceptation des conditions (non modifiable) et nom déclaré actuel
+            declaredFirst: txt(p.declared_name_first, 120), declaredCurrent: txt(p.declared_name_current, 120),
+            declaredKnown: Object.prototype.hasOwnProperty.call(p, 'declared_name_first'),
+            // 18/10 (round 7, R7-5) : versements du diffuseur GELÉS par Axel (profiles.payouts_frozen) et motif ;
+            // freezeKnown = BloxAI envoie la clé (sinon : BloxAI d'avant le round 7, ni « Geler » ni « Annuler » proposés)
+            payFrozen: p.frozen === true, payFrozenReason: txt(p.frozen_reason, 300), freezeKnown: Object.prototype.hasOwnProperty.call(p, 'frozen'),
+            emailChanged: ms(p.email_changed_at) } : null;   // 18/10 (round 7, R7-4) : adresse e-mail changée (72 h aussi)
+        }).filter(Boolean) : null,
+        // 17/10 (round 5, contrat 2) : diffuseurs avec un solde mais AUCUN versement créé avant la fin du délai de sécurité
+        // (coordonnées de versement ou mot de passe changés : BX_COOLDOWN) — payouts_deferred de BloxAI ; null = pas renvoyé
+        deferred: Array.isArray(M.payouts_deferred) ? bxArr(M.payouts_deferred, 200).map(function (d) {
+          d = bxObj(d);
+          var uid = bxUid(d.user_id);
+          return uid ? { userId: uid, name: txt(d.name, 60), email: bxMail(d.email), balance: bxCount(d.balance_cents), reason: txt(d.reason, 40),
+            cooldownUntil: ms(d.cooldown_until), cooldownKnown: Object.prototype.hasOwnProperty.call(d, 'cooldown_until'),
+            payoutUpdated: ms(d.payout_updated_at), passwordChanged: ms(d.password_changed_at), verifiedName: txt(d.verified_name, 120),
+            // 18/10 (round 7, R7-5) : gel des versements (BX_FROZEN : aucun versement créé tant qu'Axel ne dégèle pas)
+            payFrozen: d.frozen === true, payFrozenReason: txt(d.frozen_reason, 300), freezeKnown: Object.prototype.hasOwnProperty.call(d, 'frozen'),
+            emailChanged: ms(d.email_changed_at) } : null;   // 18/10 (round 7, R7-4)
+        }).filter(Boolean) : null },
+      // 17/10 (contrat 6) : fichiers de pièces d'identité qui devraient déjà être supprimés — 17/10 (round 5, contrat 1) :
+      // clé identity_files_left de BloxAI (identity_files_undeleted acceptée aussi)
+      identityUndeleted: bxCount(b.identity_files_left != null ? b.identity_files_left : b.identity_files_undeleted),
+      // 18/10 (round 7, R7-6) : alertes e-mail aux diffuseurs (notif de BloxAI) pas parties sur 7 jours — count_7d et les 10
+      // dernières (date, type, raison, code HTTP, nom du diffuseur) ; null = BloxAI ne l'envoie pas
+      notif: bxNotif(b.notif_failures),
+      identity: Array.isArray(b.identity_pending) ? bxArr(b.identity_pending, 300).map(function (x) {
+        x = bxObj(x);
+        var id = bxId(x.id);
+        // 18/10 (round 6, R2) : nom légal déclaré à la 1re acceptation des conditions (declared_name_first, non modifiable)
+        // et nom déclaré actuel (declared_name_current) : Axel les compare à la pièce avant « Valider »
+        return id ? { id: id, userId: bxUid(x.user_id), name: txt(x.name, 60), email: bxMail(x.email), created: ms(x.created_at),
+          declaredFirst: txt(x.declared_name_first, 120), declaredCurrent: txt(x.declared_name_current, 120),
+          declaredKnown: Object.prototype.hasOwnProperty.call(x, 'declared_name_first') } : null;
+      }).filter(Boolean) : null,
+      toCheck: Array.isArray(b.to_check) ? bxArr(b.to_check, 300).map(function (x) {
+        x = bxObj(x);
+        var id = bxId(x.publication_id), net = bxIn(x.network, BX_NETS);
+        // 17/10 : les liens en suivi pas encore regardés, du plus ancien (closes_at = fin du suivi) au plus récent, puis les
+        // derniers refus ; checked_at = Axel l'a déjà marqué conforme (« Valider ») ; close_refusal = motif du refus
+        // automatique à closes_at (null = sera validé avec ses vues)
+        // 17/10 (contrat 3) : close_refusal (s'il est encore renvoyé) n'est plus qu'un MOTIF PROPOSÉ pour un refus d'Axel ;
+        // views_at_close = vues figées à la fin du suivi, last_read_at = dernière lecture réussie par le relevé
+        // 17/10 (round 5, contrats 5 et 6) : hold_reason = pourquoi BloxAI ne validera pas (ou n'a pas validé) le lien à la
+        // fin du suivi (texte français de la base, 200 caractères au plus ; null = il sera validé) ; checked_views = vues au
+        // « conforme » d'Axel (comparées aux vues figées : hausse anormale = vues achetées ?)
+        return id && net ? { id: id, vf: bxVf(x.vf), network: net, url: bxLink(net, x.url), status: bxIn(x.status, BX_PUB_ST), views: bxCount(x.views),
+          validViews: bxCount(x.valid_views), viewsAtClose: bxCount(x.views_at_close), checkedViews: bxCount(x.checked_views), lastRead: ms(x.last_read_at),
+          readAtClose: ms(x.read_at_close),   // 17/10 (round 5, contrat 3) : dernière lecture faite AU PLUS TARD à la fin du suivi (figée)
+          holdReason: txt(x.hold_reason, 200),
+          // 18/10 (round 6, R3) : engagement relevé sur la vidéo (j'aime, commentaires, partages) et plus forte hausse de
+          // vues sur un seul jour (publication_stats) : vues achetées ? (montrés dans « Valider » / « … vues figées »)
+          likes: bxCount(x.likes), comments: bxCount(x.comments), shares: bxCount(x.shares), maxDayGain: bxCount(x.max_day_gain),
+          engKnown: Object.prototype.hasOwnProperty.call(x, 'likes'),   // false = BloxAI d'avant le round 6 : rien d'affiché
+          // 18/10 (round 7, R7-1) : vues du 1er relevé quotidien et abonnés du compte connecté de ce lien (null = inconnus) ;
+          // R7-3 : dernière lecture réelle des vues (peut baisser : views reste le maximum) et vues retirées par le réseau
+          // (2 lectures de suite sous 80 % du maximum ; jamais remis à false) — true SEULEMENT si BloxAI dit true
+          firstDayViews: bxCount(x.first_day_views), followers: bxCount(x.followers), lastViews: bxCount(x.last_views), viewsDropped: x.views_dropped === true,
+          // R7-2 : j'aime / commentaires / partages figés à la fin du suivi (engagement_at_close : objet, sinon null)
+          engFrozen: !!(x.engagement_at_close && typeof x.engagement_at_close === 'object' && !Array.isArray(x.engagement_at_close)),
+          r7Known: Object.prototype.hasOwnProperty.call(x, 'views_dropped') || Object.prototype.hasOwnProperty.call(x, 'first_day_views'),
+          created: ms(x.created_at), closes: ms(x.closes_at), checked: ms(x.checked_at), flags: bxFlagsOf(x),
+          closeRefusal: txt(x.close_refusal, 200), closeKnown: Object.prototype.hasOwnProperty.call(x, 'close_refusal'),
+          userId: bxUid(x.user_id), name: txt(x.name, 60), reason: txt(x.refusal_reason, 300) } : null;
+      }).filter(Boolean) : null,
+      ranking: Array.isArray(b.ranking) ? bxArr(b.ranking, 500).map(function (x) {
+        x = bxObj(x);
+        var uid = bxUid(x.user_id);
+        return uid ? { userId: uid, name: txt(x.name, 60), ig: bxHandle(x.handle_ig), tt: bxHandle(x.handle_tt), claimed: bxCount(x.claimed),
+          submitted: bxCount(x.submitted), expired: bxCount(x.expired), abandoned: bxCount(x.abandoned), reliability: bxRate(x.reliability),
+          views: bxCount(x.views), validViews: bxCount(x.valid_views), vpp: bxNum(x.views_per_pub), medianH: bxNum(x.median_submit_hours),
+          pausedUntil: ms(x.paused_until) } : null;
+      }).filter(Boolean) : null,
+      byVf: byVf,
+      series: Array.isArray(b.series_30d) ? bxArr(b.series_30d, 400).map(function (d) {
+        d = bxObj(d);
+        return bxDay(d.day) ? { day: d.day, claimed: bxCount(d.claimed), submitted: bxCount(d.submitted), expired: bxCount(d.expired),
+          abandoned: bxCount(d.abandoned), views: bxCount(d.views) } : null;
+      }).filter(Boolean).sort(asc) : null
+    };
+  }
+  function loadBx(opts) {
+    var force = !!(opts && opts.force), fresh = !!(opts && opts.fresh), S = CF.bx;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    // relecture forcée (après une action) pendant une lecture en vol : on attend celle-ci puis on relit
+    if (inflight.bx) return force ? inflight.bx.then(function () { return loadBx(opts); }) : inflight.bx;
+    if (!force && isFresh(S, BX_TTL_MS)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      await null;
+      var patch;
+      try {
+        var res = await callFn('bloxai?action=stats' + (fresh ? '&fresh=1' : ''), 30000);
+        var b = res.body || {};
+        if (res.status === 404 && !b.error) throw { kind: 'missing', message: 'fonction bloxai pas encore déployée sur AvatarAds' };
+        // « BloxAI : … » de l'edge : l'interface dit déjà « BloxAI », on garde le message seul
+        if (!res.ok || b.error) throw { kind: res.status === 401 ? 'auth' : 'http', message: b.error ? String(b.error).replace(/^BloxAI\s*:\s*/, '').slice(0, 300) : 'HTTP ' + res.status };
+        if (!b.stock || typeof b.stock !== 'object') throw { kind: 'http', message: 'statistiques illisibles (contrat bx_factory_stats)' };
+        patch = { state: 'ready', kind: null, error: null, data: normBx(b, Date.now()) };
+      } catch (e) {
+        patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
+        if (e.kind === 'auth' || e.kind === 'missing') patch.data = null;   // réseau ou erreur BloxAI : chiffres précédents gardés, datés
+      }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.bx === p) delete inflight.bx;
+      emit('bx');
+      return S;
+    })();
+    inflight.bx = p;
+    emit('bx');
+    return p;
+  }
+  // Actions d'administration (owner) : POST { op, … } vers l'edge bloxai (liste blanche revérifiée côté serveur).
+  // 18/10 (round 7, R7-5) : + annuler un versement, geler / dégeler les versements d'un diffuseur
+  var BX_OPS = { admin_publication: 1, admin_payout_paid: 1, admin_identity: 1, identity_url: 1, admin_mission: 1, admin_payout_cancel: 1, admin_freeze: 1 };
+  // 18/10 (round 7, R7-7) : version du tableau de bord = numéro ?v= du cf-ui.js que la page a chargé (une page restée
+  // ouverte garde l'ancien numéro → l'edge refuse ses actions d'argent et d'identité : « Recharge le tableau de bord »).
+  // Illisible → 0 (refusé aussi : jamais une version supposée).
+  function dashVersion() {
+    try {
+      var s = document.querySelector('script[src*="factory-v2/cf-ui.js"]'), m = s && /[?&]v=(\d{1,6})(?:&|#|$)/.exec(s.getAttribute('src') || '');
+      return m ? Number(m[1]) : 0;
+    } catch (e) { return 0; }
+  }
+  async function bxPost(payload) {
+    if (!sb || CF.status !== 'ready') return { ok: false, error: 'tableau de bord pas prêt' };
+    if (!payload || !BX_OPS[payload.op]) return { ok: false, error: 'action refusée' };
+    try {
+      var res = await callFn('bloxai', 30000, Object.assign({}, payload, { dash_version: dashVersion() }));
+      var b = res.body || {};
+      if (res.status === 404 && !b.error) return { ok: false, error: 'fonction bloxai pas encore déployée sur AvatarAds' };
+      if (!res.ok || !b.ok) return { ok: false, error: b.error ? String(b.error).replace(/^BloxAI\s*:\s*/, '').slice(0, 300) : 'HTTP ' + res.status };
+      return { ok: true, body: b };
+    } catch (e) { return { ok: false, error: errText(e) }; }
+  }
+  // Décision enregistrée côté BloxAI → chiffres relus tout de suite (fresh : sans le cache de l'edge). admin_publication :
+  // { ok, pub } = la ligne telle que BloxAI l'a écrite (null si l'edge ne la renvoie pas : ancienne version)
+  // 17/10 (contrat 6) : admin_identity → fileDeleted = true (copie supprimée), false (pas supprimée : nouvel essai côté
+  // BloxAI), null (non confirmé) — le tableau de bord n'annonce jamais une suppression qui n'a pas eu lieu
+  function bxAdmin(payload) {
+    if (!payload || payload.op === 'identity_url') return Promise.resolve({ ok: false, error: 'action refusée' });
+    return bxPost(payload).then(function (r) {
+      if (!r.ok) return r;
+      var pub = payload.op === 'admin_publication' && r.body ? bxPubRow(r.body.pub) : null;
+      if (pub && pub.id !== String(payload.id)) pub = null;   // ligne d'un autre lien : ignorée (message d'avant le clic)
+      var fd = r.body ? r.body.file_deleted : null;
+      return loadBx({ force: true, fresh: true }).then(function () { return { ok: true, pub: pub, fileDeleted: fd === true ? true : fd === false ? false : null }; });
+    });
+  }
+  // URL signée (300 s) d'une pièce d'identité : lien de lecture du stockage privé BloxAI, rien d'autre.
+  function bxIdentityUrl(id) {
+    return bxPost({ op: 'identity_url', id: String(id || '') }).then(function (r) {
+      if (!r.ok) return r;
+      var u = r.body && typeof r.body.url === 'string' ? r.body.url : '';
+      return BX_SIGNED.test(u) && u.length <= 2000 && !/[\s"'<>\\]/.test(u) ? { ok: true, url: u } : { ok: false, error: 'URL signée absente ou refusée' };
+    });
   }
 
   // ── publications (hors fenêtre : ig-insights?part=media) ──
@@ -1085,13 +1421,46 @@
     });
     return set;
   }
+  // 16/10 (BloxAI) : vidéos du kit encore à programmer (factory_posts « todo ») ; avec les missions « open » de BloxAI, elles
+  // forment le stock de la Production. Lecture en échec → null (« — » + raison, jamais un faux 0).
+  // 17/10 (revue) : posts « garés » en 2099 par un script coupé jamais comptés ; far = au-delà de J+7 (Paris), le kit n'en
+  // garde normalement plus après stock.py --migrer. Lecture triée du plus récent au plus ancien : les « todo » (à venir)
+  // sont toujours lus en entier, même si la lecture est tronquée.
+  var KIT_PARKED = Date.parse('2090-01-01T00:00:00Z');
+  var PARIS_YMD = (function () { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }); } catch (e) { return null; } })();
+  function parisYmd(t) { return PARIS_YMD ? PARIS_YMD.format(new Date(t)) : new Date(t).toISOString().slice(0, 10); }
+  function kitTodoOf(res) {
+    if (!res || res.error || !Array.isArray(res.data)) return null;
+    var p0 = parisYmd(Date.now()).split('-').map(Number), lim = new Date(Date.UTC(p0[0], p0[1] - 1, p0[2] + 7)).toISOString().slice(0, 10);
+    var out = { todo: 0, far: 0 };
+    res.data.forEach(function (p) {
+      var t = p ? Date.parse(p.scheduled_at) : NaN;
+      if (!p || p.status !== 'todo' || !isFinite(t) || t >= KIT_PARKED) return;
+      out.todo += 1;
+      if (parisYmd(t) > lim) out.far += 1;
+    });
+    return out;
+  }
+  // Vidéos que le kit « tient » (à programmer / programmées / publiées) : comparées aux statuts BloxAI pour l'alerte
+  // « kit ↔ stock commun » de l'Accueil. complete = lecture entière ; sinon oldest = date du plus ancien post lu (une mission
+  // créée après cette date a forcément son post du kit dans la lecture : les créneaux sont toujours après le retrait).
+  function kitVfsOf(res) {
+    if (!res || res.error || !Array.isArray(res.data)) return null;
+    var vfs = Object.create(null), oldest = null;
+    res.data.forEach(function (p) {
+      var t = p ? Date.parse(p.scheduled_at) : NaN;
+      if (isFinite(t) && (oldest == null || t < oldest)) oldest = t;
+      if (p && (p.status === 'todo' || p.status === 'scheduled' || p.status === 'published') && typeof p.vf === 'string' && /^VF-[0-9]{4}$/.test(p.vf)) vfs[p.vf] = 1;
+    });
+    return { vfs: vfs, complete: typeof res.count === 'number' ? res.data.length >= res.count : res.data.length < PROD_MAX, oldest: oldest };
+  }
   // rythme Instagram (rpc factory_ig_rhythm, 13/10) : { perDay, n, from, to } ; null si illisible ou refusé (repli sur l'objectif)
   function igRhythm(res) {
     var d = res && !res.error ? res.data : null;
     if (!d || d.error || typeof d.posts !== 'number') return null;
     return { perDay: d.posts / 7, n: d.posts, from: txt(d.from, 12), to: txt(d.to, 12) };
   }
-  function normProd(rb, rr, rq, stats, at, classifyMissing, posted) {
+  function normProd(rb, rr, rq, stats, at, classifyMissing, posted, kitTodo, kitVfs) {
     var B = { total: rb.length, ready: 0, flagged: 0, retired: 0, other: 0, byKind: {}, lastAt: null, lastKind: null, list: rb.map(normBrick).filter(Boolean) };
     rb.forEach(function (b) {
       var k = b && BRICK_KINDS.indexOf(b.kind) >= 0 ? b.kind : 'autre', st = b && b.status, t = ms(b && b.created_at);
@@ -1131,6 +1500,9 @@
     // en stock = approuvées pas encore programmées / postées (template = identifiant VF de la vidéo finale)
     Q.posted = posted ? rq.filter(function (q) { return q && q.status === 'approved' && typeof q.template === 'string' && posted[q.template] === 1; }).length : 0;
     Q.stock = Q.approved - Q.posted;
+    Q.kitTodo = kitTodo == null ? null : kitTodo.todo;   // kit : posts à programmer (le stock commun BloxAI vient de CF.bx)
+    Q.kitFar = kitTodo == null ? null : kitTodo.far;     // dont au-delà de J+7 (avant stock.py --migrer)
+    Q.kitVfs = kitVfs || null;
     return { fetchedAt: at, bricks: B, recipes: R, qc: Q, stats: stats };
   }
   function qcQuery(withClassified) {
@@ -1158,7 +1530,10 @@
           sb.from('factory_recipes').select(REC_SEL, { count: 'exact' }).limit(PROD_MAX),
           qcQuery(true),
           Promise.resolve().then(function () { return sb.rpc('factory_prod_stats'); }).catch(function (e) { return { error: { message: errText(e) } }; }),
-          Promise.resolve().then(function () { return sb.from('factory_posts').select('status,vf:combo->>vf').limit(PROD_MAX); }).catch(function (e) { return { error: { message: errText(e) } }; }),
+          Promise.resolve().then(function () {
+            return sb.from('factory_posts').select('status,scheduled_at,vf:combo->>vf', { count: 'exact' }).neq('status', 'skipped')
+              .order('scheduled_at', { ascending: false }).limit(PROD_MAX);
+          }).catch(function (e) { return { error: { message: errText(e) } }; }),
           // 13/10 (Axel) : rythme RÉEL = reels publiés sur Instagram, moyenne des 7 derniers jours complets (rpc factory_ig_rhythm)
           Promise.resolve().then(function () { return sb.rpc('factory_ig_rhythm'); }).catch(function (e) { return { error: { message: errText(e) } }; })
         ]);
@@ -1169,7 +1544,7 @@
           rq = await qcQuery(false);
         }
         patch = { state: 'ready', kind: null, error: null,
-          data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(rq, 'factory_qc'), normStats(r[3]), Date.now(), missing, postedVfs(r[4])) };
+          data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(rq, 'factory_qc'), normStats(r[3]), Date.now(), missing, postedVfs(r[4]), kitTodoOf(r[4]), kitVfsOf(r[4])) };
         patch.data.qc.ig7 = igRhythm(r[5]);
       } catch (e) {
         patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
@@ -1293,7 +1668,7 @@
   function pumpPrefetch() {
     if (!pre.on || pre.ep !== epoch || CF.status !== 'ready' || retryWaits > 0) return;
     for (var q = 0; q < IG_RANGES.length; q++) { if (CF.acct.ig[IG_RANGES[q]].kind === 'disconnected') { pre.queue = []; return; } }
-    for (var k in inflight) { if (inflight[k] && k !== 'accounts' && k !== 'prod' && k !== 'prov' && k !== 'tk' && k.indexOf('dm:') !== 0) return; }   // une seule requête Instagram à la fois (Auto-DM, Production, soldes et comptes TikTok ne sont pas Instagram)
+    for (var k in inflight) { if (inflight[k] && k !== 'accounts' && k !== 'prod' && k !== 'prov' && k !== 'tk' && k !== 'bx' && k.indexOf('dm:') !== 0) return; }   // une seule requête Instagram à la fois (Auto-DM, Production, soldes, comptes TikTok et BloxAI ne sont pas Instagram)
     while (pre.queue.length) {
       var r = pre.queue.shift(), S = CF.acct.ig[r];
       if (S.kind === 'disconnected') { pre.queue = []; return; }
@@ -1343,6 +1718,7 @@
     // (téléphone : la connexion TikTok s'ouvre dans un autre onglet)
     // 07/10 (Axel) : plus de section « Comptes TikTok » sur l'Accueil (brouillons abandonnés) → relue seulement sur demande
     if (opts.tk) tasks.push(loadTk({ force: !!opts.force || (tkStarted > 0 && Date.now() - tkStarted < TK_WATCH_MS) }));
+    if (opts.bx) tasks.push(loadBx({ force: !!opts.force }));   // 16/10 : BloxAI (onglet, Accueil, Production)
     return Promise.all(tasks);
   }
 

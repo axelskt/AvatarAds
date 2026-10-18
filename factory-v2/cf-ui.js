@@ -3,7 +3,9 @@
  * Rendu seulement : lit window.CF (cf-store.js), se redessine sur « cf-data ». Aucun chiffre calculé ailleurs.
  * Règles d'affichage : « 0 » = mesuré et nul · « — » + raison courte = pas de source · jamais additionner
  * reach ni comptes engagés · tout texte venu d'Instagram passe par esc() · aucun emoji (icônes SVG).
- * Seule clé localStorage : « cf-dashboard-tab » (onglet actif).
+ * Clés localStorage : « cf-dashboard-tab » (onglet actif), « cf_net ».
+ * 16/10 : onglet BloxAI (ex-TrackAds, clé interne 'trackads' gardée pour l'onglet mémorisé) = stock commun, missions,
+ * diffuseurs, vérifications, pièces d'identité et versements, lus dans CF.bx ; tout texte venu de BloxAI passe par esc().
  */
 (function () {
   'use strict';
@@ -21,6 +23,15 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
+  }
+  // 18/10 (round 7, R7-10) : nom (diffuseur, compte, titulaire…) écrit dans une fenêtre window.prompt / window.confirm —
+  // tout espace ou caractère de contrôle (C0, C1, U+00A0, U+2028, U+2029, et les marques d'écriture bidirectionnelle ou
+  // invisibles) → une espace, espaces multiples réduits, bords coupés, 40 caractères au plus (le Nom choisi : même
+  // nettoyage que bx_user_name de BloxAI ; max = 120 pour un nom légal ou un titulaire, jamais tronqué en dessous) :
+  // un nom ne peut ni écrire de fausses lignes (« ATTENTION … ») ni retourner le texte d'une fenêtre de décision
+  function dlgName(s, max) {
+    return String(s == null ? '' : s).replace(/[\s\u0000-\u001f\u007f-\u009f\u00a0\u2028\u2029\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]+/g, ' ')
+      .replace(/^ +| +$/g, '').slice(0, max || 40).replace(/ +$/, '');
   }
   function safeUrl(u, hostRe) {
     if (typeof u !== 'string' || !u) return '';
@@ -216,8 +227,8 @@
   // Accueil : UNE période pour tous ses chiffres, la période par défaut des onglets Insight et Auto-DM (30 j).
   var HOME_RANGE = '30j', HOME_DM = '30j';
   var SOON = {
-    trackads: { h: 'TrackAds', step: 5,
-      what: 'TrackAds n’est pas encore lancé (Phase 3). L’onglet affichera « — » tant qu’il n’y a pas de missions, jamais de chiffre inventé.' }
+    trackads: { h: 'BloxAI', step: 5,
+      what: 'L’onglet BloxAI n’a pas pu être affiché. Il affiche « — » tant que BloxAI ne répond pas, jamais de chiffre inventé.' }
   };
   function readTab() {
     try { var t = localStorage.getItem(TAB_STORE); return TAB_KEYS.indexOf(t) >= 0 ? t : 'home'; } catch (e) { return 'home'; }
@@ -232,8 +243,11 @@
     prodList: null, perfKind: 'hook', perfKindLow: 'hook', freshKind: 'hook', brTab: 'lib', libKind: null, libQuery: '', recFilter: 'all', recAll: false, qcBusy: {}, qcMsg: null,
     // Pipeline (Fabrication) : étape ouverte ('gen' | 'ready'), tuile / avatar / module choisis, période de la courbe des montages
     pipeStage: null, pipeVar: null, pipeAv: null, pipeMod: null, pipePer: '7j',
-    // TrackAds (étape 5) : période, vue du graphique, croissance, tri du classement
-    ta: { range: '28j', view: 'comb', grow: 'all', sort: 'fiab' } };
+    // BloxAI (16/10, ex-TrackAds) : tri du classement, listes dépliées, actions en cours (clé → 1), dernier message
+    bx: { sort: 'fiab', allRank: false, allCheck: false, busy: {}, msg: null,
+      // 18/10 (round 7, R7-16) : aperçus des pièces de l'Accueil (id → { state, url, kind, at, error }) et dernières décisions
+      // (image détruite ou non, selon la réponse réelle de BloxAI)
+      idPrev: {}, idDone: [] } };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -318,6 +332,7 @@
       else if (ui.tab === 'dm') ensureDm();
       else if (ui.tab === 'home') ensureHome();
       else if (ui.tab === 'prod') ensureProd();
+      else if (ui.tab === 'trackads') ensureBx();
     } else if (ui.modal) {
       closeModal();
     }
@@ -349,7 +364,7 @@
     panel.setAttribute('aria-labelledby', 'cfTab-' + ui.tab);
     // Recherche des leads : le panneau est redessiné à chaque frappe, on rend le focus et le curseur au champ.
     var a = document.activeElement, keep = a && (a.id === 'cfDmQ' || a.id === 'cfLibQ') ? { id: a.id, s: a.selectionStart, e: a.selectionEnd } : null;
-    setHTML(panel, ui.tab === 'compte' ? compteHTML() : ui.tab === 'dm' ? dmHTML() : ui.tab === 'home' ? homeHTML() : ui.tab === 'prod' ? prodHTML() : ui.tab === 'trackads' && window.CF_TRACKADS ? window.CF_TRACKADS(ui.ta) : soonHTML(ui.tab));
+    setHTML(panel, ui.tab === 'compte' ? compteHTML() : ui.tab === 'dm' ? dmHTML() : ui.tab === 'home' ? homeHTML() : ui.tab === 'prod' ? prodHTML() : ui.tab === 'trackads' ? bxHTML() : soonHTML(ui.tab));
     var q = keep && $(keep.id);
     if (q && q !== document.activeElement) { q.focus(); try { q.setSelectionRange(keep.s, keep.e); } catch (e) { /* type search */ } }
   }
@@ -375,7 +390,7 @@
   // ══ Accueil (étape 3, Axel 25/09) : « Qu'est-ce qui demande mon attention aujourd'hui ? Qui dois-je payer ? » ══
   // Aucun chiffre n'est recalculé ici : chaque valeur vient du modèle de son onglet (model + goalValue pour Insight,
   // dmModel pour l'Auto-DM, prodModel pour la Production) sur la période par défaut des onglets (30 j), et des MÊMES
-  // cases du store (un appel par source, partagé avec les onglets). TrackAds et paiements : « — », Phase 3 pas construite.
+  // cases du store (un appel par source, partagé avec les onglets). BloxAI (16/10) : carte, versements et alertes depuis CF.bx.
   function ensureHome() {
     if (CF.status !== 'ready') return;
     CF.loadAccounts();
@@ -386,6 +401,8 @@
     CF.loadProviders();
     CF.loadYt();
     CF.loadTts();   // 07/10 : statistiques TikTok (section et carte Réseaux)
+    CF.loadBx();    // 16/10 : BloxAI (carte, versements à faire, alertes)
+    bxIdPrevLoad(); // 18/10 (round 7, R7-16) : aperçus des pièces d'identité à vérifier (URL signées de 300 s)
     if (ui.netRange && ui.netRange !== HOME_RANGE) CF.loadInsights(ui.netRange);
   }
 
@@ -413,10 +430,10 @@
   }
 
   // Alertes RÉELLES seulement, calculées depuis les cases du store. danger puis warn (maquette §14) ; aucune alerte
-  // d'exemple, aucune alerte TrackAds (pas encore branché : dit dans la ligne des sources).
+  // d'exemple. BloxAI (16/10) : missions échouées en 24 h, publications à vérifier, pièces d'identité, versements, stock bas.
   var BILLING = { hedra: 'https://www.hedra.com/app/settings/billing', fal: 'https://fal.ai/dashboard/billing', elevenlabs: 'https://elevenlabs.io/app/subscription', kie: 'https://kie.ai/billing' };
   var LVL_ORDER = { danger: 0, warn: 1 };
-  var TAB_NAME = { prod: 'Production', trackads: 'TrackAds', dm: 'Auto-DM', compte: 'Insight' };
+  var TAB_NAME = { prod: 'Production', trackads: 'BloxAI', dm: 'Auto-DM', compte: 'Insight' };
   // Métriques de la fenêtre 30 j refusées par Instagram (part_errors d'ig-insights, normalisées dans D.err), sous les
   // libellés de l'onglet Insight qui les affiche. Celles de l'Accueil d'abord. reach_by_follow n'est affiché nulle part :
   // son refus ne rend aucun chiffre faux, il n'est donc pas compté.
@@ -434,7 +451,7 @@
   function clip(s) { s = String(s || ''); return s.length > 160 ? s.slice(0, 159) + '…' : s; }
   function homeAlerts(ig) {
     var out = [];
-    function add(lvl, title, sub, o) { o = o || {}; out.push({ lvl: lvl, title: title, sub: sub || '', tab: o.tab || null, ext: o.ext || null, retry: o.retry || null, tk: !!o.tk }); }
+    function add(lvl, title, sub, o) { o = o || {}; out.push({ lvl: lvl, title: title, sub: sub || '', tab: o.tab || null, ext: o.ext || null, retry: o.retry || null, tk: !!o.tk, list: o.list || null }); }
     var A = CF.acct.accounts, S = CF.acct.ig[HOME_RANGE], M = CF.acct.media, DS = CF.dm[HOME_DM], PS = CF.prod, V = CF.prov;
     var u = '@' + selName(), kept = function (x, what) { return x ? ' · ' + what + ' du ' + hm(new Date(x.fetchedAt)) + ' conservés' : ''; };
     // Instagram : trois états pilotés par le token (maquette §14)
@@ -488,6 +505,86 @@
       }
       if (Z.bricks.flagged) add('warn', Z.bricks.flagged + ' ' + plural(Z.bricks.flagged, 'brique signalée', 'briques signalées'), 'Statut « signalée » dans la bibliothèque de briques : à revoir avant de l’utiliser.', { tab: 'prod' });
     }
+    // BloxAI (16/10) : ce qui attend une décision d'Axel (vérifier, payer) et ce qui bloque les diffuseurs (stock)
+    var BS = CF.bx, BD = BS.data;
+    if (BS.state === 'error') add('warn', 'BloxAI : chiffres indisponibles', BS.error + kept(BD, 'chiffres'), { retry: 'bx' });
+    if (BD) {
+      var e24 = BD.asg.d24.expired, a24 = BD.asg.d24.abandoned;
+      if (e24) add('warn', e24 + ' ' + plural(e24, 'mission échouée', 'missions échouées') + ' en 24' + NB + 'h', 'Délai de 24' + NB + 'h dépassé sans liens collés : '
+        + plural(e24, 'la vidéo est revenue', 'les vidéos sont revenues') + ' dans le stock commun' + (a24 ? ' · ' + a24 + ' ' + plural(a24, 'abandon') + ' en plus' : '')
+        + '.' + (BD.settings.pauseHours != null && BD.settings.pauseFailures != null && BD.settings.pauseWindowDays != null
+          ? ' Pause de ' + fInt(BD.settings.pauseHours) + NB + 'h après ' + fInt(BD.settings.pauseFailures) + ' échecs en ' + fInt(BD.settings.pauseWindowDays) + NB + 'j.' : ''), { tab: 'trackads' });
+      var nChk = bxToCheckN(BD);
+      // 17/10 (contrat 3) : plus rien n'est validé ni refusé sans Axel — un lien sans « Valider » passe « En attente de vérification »
+      if (nChk) add('warn', nChk + ' ' + plural(nChk, 'publication') + ' à vérifier', 'Liens collés par les diffuseurs : ouvre-les dans l’onglet BloxAI, vérifie la vidéo et la mention Publicité, puis Valider (conforme : gains comptés à la fin des '
+        + bxTrackDays(BD) + NB + 'jours de suivi) ou Refuser (motif). Rien n’est validé ni refusé sans toi : sans décision, le lien passe « En attente de vérification » à la fin du suivi.', { tab: 'trackads' });
+      var nHeld = bxHeldN(BD);
+      if (nHeld) add('warn', nHeld + ' ' + plural(nHeld, 'publication') + ' en attente de vérification', 'Suivi terminé sans « Valider », ou vues pas relues dans les 48' + NB + 'h avant la fin : aucun gain tant que tu n’as pas décidé (Valider avec les vues figées, ou Refuser).', { tab: 'trackads' });
+      if (BD.identityUndeleted) add('warn', BD.identityUndeleted + ' ' + plural(BD.identityUndeleted, 'copie de pièce d’identité', 'copies de pièces d’identité') + ' pas encore supprimée' + (BD.identityUndeleted > 1 ? 's' : ''), 'Décision prise mais fichier encore dans le stockage BloxAI : nouvel essai automatique ; s’il persiste, supprime-le à la main (contrat art. 4.4 : 7 jours au plus).', { tab: 'trackads' });
+      var nId = BD.identity ? BD.identity.length : 0;
+      if (nId) add('warn', nId + ' ' + plural(nId, 'pièce d’identité', 'pièces d’identité') + ' à vérifier', 'Âge et identité, à la main, avant le premier versement : Voir, compare avec le nom légal déclaré à la 1re acceptation des conditions, puis Valider (date de naissance et nom lus sur la pièce) ou Refuser.', { tab: 'trackads' });
+      var PO = BD.money.payouts || [];
+      if (PO.length) {
+        var due = PO.reduce(function (a, x) { return a + x.amount; }, 0);
+        var chg = PO.filter(function (x) { return x.detailsChanged; }).length;
+        // 17/10 (round 5, contrats 2 et 9) : titulaire ≠ nom vérifié sur la pièce, aucun nom vérifié, coordonnées modifiées récemment
+        var nDiff = PO.filter(function (x) { return bxNameCheck(x) === 'diff'; }).length, nNone = PO.filter(function (x) { return bxNameCheck(x) === 'none'; }).length;
+        var nRec = PO.filter(function (x) { return !!bxRecent(x); }).length;
+        // 18/10 (round 6) : depuis le dernier versement payé, quel que soit le délai de 72 h (R1a) ; nom vérifié ≠ nom légal
+        // déclaré à la 1re acceptation des conditions (R2) ; titulaire partiel (R4)
+        var cntP = function (k) { return PO.filter(function (x) { var h = bxPaidHist(x); return !!(h && h[k]); }).length; };
+        var nPaidChg = cntP('changed'), nDest = cntP('dest'), nFirst = cntP('first');
+        var nPart = PO.filter(function (x) { return bxNameCheck(x) === 'partial'; }).length, nDecl = PO.filter(function (x) { return bxDeclCheck(x) === 'diff'; }).length;
+        var nFrz = PO.filter(function (x) { return x.payFrozen; }).length;
+        add('warn', PO.length + ' ' + plural(PO.length, 'versement') + ' à faire · ' + fEur(due), 'Envoie le virement à la destination FIGÉE à la demande (PayPal ou IBAN dans l’onglet BloxAI), puis « Marquer payé ».'
+          + (chg ? ' ' + chg + ' ' + plural(chg, 'diffuseur a', 'diffuseurs ont') + ' changé de coordonnées depuis : vérifie avant de payer.' : '')
+          + (nRec ? ' ' + nRec + ' ' + plural(nRec, 'versement') + ' avec des coordonnées modifiées récemment (moins de 72' + NB + 'h) : confirme avec le diffuseur par un autre canal.' : '')
+          + (nDest ? ' ' + nDest + ' ' + plural(nDest, 'versement') + ' vers une destination différente du dernier versement payé : ne paie pas sans avoir confirmé avec le diffuseur.' : '')
+          + (nPaidChg ? ' ' + nPaidChg + ' ' + plural(nPaidChg, 'versement') + ' avec coordonnées, mot de passe ou adresse e-mail changés depuis le dernier versement payé : vérifie avant de payer.' : '')
+          + (nFirst ? ' ' + nFirst + ' ' + plural(nFirst, 'premier versement', 'premiers versements') + ' à un diffuseur : vérifie la pièce et le titulaire.' : '')
+          + (nDiff ? ' ' + nDiff + ' ' + plural(nDiff, 'titulaire différent', 'titulaires différents') + ' du nom vérifié sur la pièce d’identité : ne paie pas sans vérifier.' : '')
+          + (nPart ? ' ' + nPart + ' ' + plural(nPart, 'titulaire partiel', 'titulaires partiels') + ' (des prénoms ne correspondent pas) : vérifie que c’est bien le diffuseur.' : '')
+          + (nDecl ? ' ' + nDecl + ' ' + plural(nDecl, 'nom vérifié différent', 'noms vérifiés différents') + ' du nom légal déclaré à la 1re acceptation des conditions : pièce d’une autre personne ?' : '')
+          + (nNone ? ' ' + nNone + ' ' + plural(nNone, 'versement') + ' sans nom vérifié sur la pièce d’identité.' : '')
+          // 18/10 (round 7, R7-5) : versement ouvert d'un diffuseur dont Axel a gelé les versements
+          + (nFrz ? ' ' + nFrz + ' ' + plural(nFrz, 'versement') + ' d’un diffuseur aux versements gelés : ne paie pas sans avoir levé le doute (Annuler ce versement, ou Dégeler).' : ''), { tab: 'trackads' });
+      }
+      // 17/10 (round 5, contrat 2) : versements reportés par BloxAI (coordonnées ou mot de passe changés depuis moins de 72 h)
+      // 18/10 (round 7, R7-5) : diffuseurs GELÉS (BX_FROZEN) à part : ce n'est pas un délai, rien ne repart sans « Dégeler »
+      var DFall = BD.money.deferred || [], DF = DFall.filter(function (d) { return !bxDefFrozen(d); }), DFz = DFall.filter(bxDefFrozen);
+      if (DFz.length) add('warn', DFz.length + ' ' + plural(DFz.length, 'diffuseur aux versements gelés', 'diffuseurs aux versements gelés') + ' · ' + fEur(DFz.reduce(function (a, d) { return a + (d.balance || 0); }, 0)) + ' en attente',
+        'Gelés par toi : BloxAI ne crée aucun versement tant que tu ne les dégèles pas (motif et « Dégeler » dans l’onglet BloxAI).', { tab: 'trackads' });
+      if (DF.length) add('warn', DF.length + ' ' + plural(DF.length, 'versement reporté', 'versements reportés') + ' · coordonnées modifiées récemment', 'Coordonnées de versement, pièce d’identité, nom légal, mot de passe ou adresse e-mail changés depuis moins de 72' + NB + 'h : BloxAI ne crée aucun versement avant la fin du délai (session volée ?). Si ce n’était pas le diffuseur, préviens-le par un autre canal (détail dans l’onglet BloxAI).', { tab: 'trackads' });
+      // Kit ↔ stock commun (17/10, revue) : une vidéo part sur UN seul compte. Comparé à ce que le kit tient (posts à
+      // programmer / programmés / publiés) : jamais d'action « Remettre » sur une vidéo passée au kit (fichier peut-être libéré).
+      var KV = PS.data ? PS.data.qc.kitVfs : null;
+      if (KV) {
+        var orphan = [], twice = [];
+        Object.keys(BD.byVf).forEach(function (vf) {
+          var e = BD.byVf[vf];
+          if (e.status === 'kit' && !KV.vfs[vf] && (KV.complete || (e.created != null && KV.oldest != null && e.created >= KV.oldest))) orphan.push(vf);
+          else if (KV.vfs[vf] && (e.status === 'open' || e.status === 'assigned' || e.status === 'done')) twice.push(vf);
+        });
+        var few = function (l) { return l.slice(0, 6).join(', ') + (l.length > 6 ? '…' : ''); };
+        if (twice.length) add('danger', twice.length + ' ' + plural(twice.length, 'vidéo') + ' à la fois dans le kit et chez les diffuseurs', few(twice)
+          + ' : ' + plural(twice.length, 'elle est', 'elles sont') + ' aussi dans le stock commun, en mission ou publiée' + (twice.length > 1 ? 's' : '') + ' par un diffuseur. Une vidéo encore ouverte est retirée du stock à la prochaine recharge du kit ; une vidéo prise ou publiée par un diffuseur : ne programme pas son post.', { tab: 'trackads' });
+        if (orphan.length) add('warn', orphan.length + ' ' + plural(orphan.length, 'vidéo sortie', 'vidéos sorties') + ' du stock commun sans post dans le kit', few(orphan)
+          + ' : retrait interrompu. La prochaine recharge du kit (au plus tard celle de la nuit) ' + plural(orphan.length, 'la remet', 'les remet') + ' dans le stock commun. Si l’alerte reste après la nuit, ' + plural(orphan.length, 'cette vidéo est bloquée', 'ces vidéos sont bloquées') + ' : à vérifier.', { tab: 'trackads' });
+      }
+      var K = BD.stock, kb = BD.settings.kitBuffer;
+      if (K.open === 0) add('danger', 'Stock commun vide', 'Plus aucune vidéo validée en attente : ni le kit ni les diffuseurs ne peuvent être servis. Valide de nouvelles vidéos.', { tab: 'prod' });
+      else if (K.available === 0) add('warn', 'Plus de mission pour les diffuseurs', fInt(K.open) + ' ' + plural(K.open, 'vidéo') + ' en stock, toutes gardées pour le kit (réserve de ' + (kb == null ? '—' : fInt(kb)) + ') : les diffuseurs voient « Plus de vidéo disponible ».', { tab: 'trackads' });
+      else if (K.available != null && K.available < 5) add('warn', 'Stock des diffuseurs bas · ' + K.available + ' ' + plural(K.available, 'mission'), 'Au-delà de la réserve du kit (' + (kb == null ? '—' : fInt(kb)) + ') : valide de nouvelles vidéos pour ne pas bloquer les diffuseurs.', { tab: 'trackads' });
+      // 18/10 (round 7, R7-6) : alertes e-mail de BloxAI aux diffuseurs (moyen de paiement, mot de passe, e-mail modifiés)
+      // pas parties sur 7 jours (notif_log : refus de Resend, clé absente, limite) : le diffuseur n'a pas été prévenu
+      var NF = BD.notif;
+      if (NF && NF.count7) add('warn', NF.count7 + ' ' + plural(NF.count7, 'alerte e-mail non envoyée', 'alertes e-mail non envoyées') + ' aux diffuseurs · 7' + NB + 'j',
+        'BloxAI n’a pas pu prévenir ' + plural(NF.count7, 'ce diffuseur', 'ces diffuseurs') + ' d’un changement sur son compte : préviens-' + plural(NF.count7, 'le', 'les')
+        + ' par un autre canal avant tout versement, puis vérifie la clé et le quota Resend de BloxAI.' + (!NF.last.length ? '' : NF.count7 > NF.last.length ? ' Les ' + NF.last.length + ' derniers :' : ' Détail :'),
+        { list: NF.last.map(bxNotifLine) });
+      var bxMiss = bxMissing(BD);
+      if (bxMiss.length) add('warn', 'BloxAI : ' + bxMiss.length + ' ' + plural(bxMiss.length, 'donnée') + ' non ' + plural(bxMiss.length, 'renvoyée'), bxMiss.join(', ') + ' · les cartes concernées affichent « — ».', { tab: 'trackads' });
+    }
     // 07/10 (Axel) : plus de brouillons TikTok (publication à la main) → plus d'alerte « comptes TikTok »
     // Soldes fournisseurs (provider-watch : ok / bas, jamais le montant)
     if (V.state === 'error') add('warn', 'Soldes fournisseurs illisibles', V.error + ' · réessaie dans un instant.', { retry: 'prov' });
@@ -520,7 +617,8 @@
       { k: 'media', l: 'publications', S: CF.acct.media, off: off },
       { k: 'dm', l: 'Auto-DM 30' + NB + 'j', S: DS, part: !!(DS.data && (!DS.data.cron || dmMissing(DS.data).length)) },
       { k: 'prod', l: 'production', S: CF.prod },
-      { k: 'prov', l: 'soldes fournisseurs', S: CF.prov, part: !!(V && V.list.some(function (p) { return p.error || p.unconfirmed; })) }
+      { k: 'prov', l: 'soldes fournisseurs', S: CF.prov, part: !!(V && V.list.some(function (p) { return p.error || p.unconfirmed; })) },
+      { k: 'bx', l: 'BloxAI', S: CF.bx, part: !!(CF.bx.data && bxMissing(CF.bx.data).length) }
     ].map(function (x) {
       // une source qui répond « liste en erreur » (publications : media_error) n'est pas « vérifiée »
       var bad = x.S.state === 'error' || !!(x.S.data && x.S.data.error);
@@ -534,6 +632,7 @@
     var DS = CF.dm[HOME_DM], Y = dmModel(DS, DS.data, HOME_DM);
     return '<section class="cf-title"><h1>Vue d’ensemble</h1><div class="cf-sub">' + esc(longDate(new Date())) + '</div>'
       + '</section>'
+      + homeIdHTML()   // 18/10 (round 7, R7-16) : pièces d'identité à vérifier, en tête quand il y en a
       + homeAlertsHTML(alerts, src)
       + homePayHTML()
       + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
@@ -554,7 +653,9 @@
         : a.retry ? '<button type="button" class="cf-alert-go" data-act="home-retry" data-src="' + a.retry + '">Réessayer' + svg(IC.refresh, 12) + '</button>'
         : a.ext ? '<a class="cf-alert-go" href="' + esc(a.ext) + '" target="_blank" rel="noopener noreferrer">Recharger' + svg(IC.external, 12) + '</a>' : '';
       return '<div class="cf-alert is-' + a.lvl + '"><span class="cf-alert-ic">' + svg(a.lvl === 'danger' ? IC.alert : IC.clock, 15) + '</span>'
-        + '<span class="cf-alert-t"><b>' + esc(a.title) + '</b><span>' + esc(a.sub) + '</span></span>' + go + '</div>';
+        + '<span class="cf-alert-t"><b>' + esc(a.title) + '</b><span>' + esc(a.sub) + '</span>'
+        // 18/10 (round 7, R7-6) : détail ligne par ligne (échecs d'envoi des alertes e-mail)
+        + (a.list && a.list.length ? '<ul class="cf-alert-list">' + a.list.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>' : '') + '</span>' + go + '</div>';
     }).join('');
     var tail = '';
     if (wait.length) tail = '<div class="cf-status" role="status"><span class="cf-spin" aria-hidden="true"></span>' + esc('Chargement… · ' + wait.map(function (x) { return x.l; }).join(', ')) + '</div>';
@@ -570,19 +671,49 @@
     var V = CF.prov.data, pAt = V ? Math.max.apply(null, V.list.map(function (p) { return p.at || 0; })) : 0;
     var provOk = src.some(function (x) { return x.k === 'prov' && x.st === 'ok'; });
     var foot = 'Sources vérifiées : ' + (okL.length ? okL.join(' · ') : '—') + (pAt && provOk ? ' (soldes relevés ' + ago(pAt) + ' par provider-watch)' : '')
-      + (probs.length ? ' · ' + probs.join(' · ') + ' (voir les alertes)' : '')
-      + ' · pas encore surveillé : TrackAds (missions échouées, demandes de paiement), Phase 3 pas encore branchée.';
+      + (probs.length ? ' · ' + probs.join(' · ') + ' (voir les alertes)' : '');
     return '<section class="cf-card" aria-labelledby="cfAlT"><div class="cf-alerts-h"><h2 class="cf-h2" id="cfAlT">À surveiller</h2><span class="cf-badge" data-alerts="' + n + '">'
       + (wait.length && !n ? '…' : n) + '</span></div>'
       + '<div class="cf-alerts">' + rows + tail + '</div><div class="cf-hsrc">' + esc(foot) + '</div></section>';
   }
 
-  // Paiements TrackAds : Phase 3 pas encore construite → « — », jamais les montants de la maquette.
+  // Versements BloxAI (16/10) : « Qui dois-je payer ? » — versements ouverts (demandés ou en attente) et solde non versé, lus
+  // dans CF.bx ; le détail (PayPal / IBAN) et « Marquer payé » sont dans l'onglet BloxAI.
   function homePayHTML() {
-    return '<section class="cf-card" aria-labelledby="cfPayT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfPayT">Demandes de paiement <span class="cf-badge">0</span></h2>'
-      + '<span class="cf-meta">' + esc('users TrackAds · 0,50' + NB + '€ / 1' + NB + '000 vues') + '</span></div>'
-      + '<div class="cf-pay-ks"><div class="cf-pay-k"><b>0,00' + NB + '€</b><span>Solde non demandé</span></div><div class="cf-pay-k"><b>0,00' + NB + '€</b><span>À verser (demandes en attente)</span></div></div></div>'
-      + '<div class="cf-empty-s cf-dashed" data-pay="none">Aucune demande de paiement.</div></section>';
+    var B = bxModel(), D = B.D, P = D ? D.money.payouts : null, n = P ? P.length : null;
+    var due = P ? P.reduce(function (a, x) { return a + x.amount; }, 0) : null;
+    var v = function (c) { return B.pending ? '…' : c == null ? '—' : fEur(c); };
+    var k = function (c, l) { return '<div class="cf-pay-k"><b class="' + (c ? 'is-v' : '') + '">' + esc(v(c)) + '</b><span>' + esc(l) + '</span></div>'; };
+    var body;
+    if (B.pending) body = spin('Chargement des versements BloxAI…');
+    else if (!D) body = emptyLine('—', B.why);
+    else if (!P) body = emptyLine('—', 'versements non renvoyés par BloxAI');
+    else if (!n) body = '<div class="cf-empty-s cf-dashed" data-pay="none">Aucun versement à faire.</div>';
+    else {
+      body = '<div class="cf-bx-list">' + P.slice(0, 5).map(function (x) {
+        return '<div class="cf-bx-row is-pay"><span class="cf-bx-main"><b>' + esc((x.name || 'diffuseur') + ' · ' + fEur(x.amount)) + '</b>'
+          + '<span class="cf-meta">' + esc([BX_KIND[x.kind] || 'versement', x.period ? 'période du ' + dmy(ymdDate(x.period)) : '', BX_METHOD[x.method] || 'moyen de paiement non renseigné'].filter(Boolean).join(' · ')) + '</span></span>'
+          + '<span class="cf-bx-chips"><span class="cf-qchip ' + (x.status === 'requested' ? 'is-pend' : '') + '">' + esc(BX_PAY_ST[x.status] || 'statut inconnu') + '</span>'
+          // 17/10 (round 5) : à vérifier avant de payer (détail dans l'onglet BloxAI)
+          + (x.payFrozen ? '<span class="cf-qchip is-flag is-ko" data-frozen="1">' + svg(IC.alert, 11) + 'Versements gelés</span>' : '')   // 18/10 (round 7, R7-5)
+          + (bxRecent(x) ? '<span class="cf-qchip is-flag is-warn">' + svg(IC.alert, 11) + 'Modifiées récemment</span>' : '')
+          + (bxNameCheck(x) === 'diff' ? '<span class="cf-qchip is-flag is-ko">' + svg(IC.alert, 11) + 'Titulaire ≠ pièce</span>' : '')
+          // 18/10 (round 6) : R4 titulaire partiel, R2 pièce ≠ nom déclaré, R1a depuis le dernier versement payé
+          + (bxNameCheck(x) === 'partial' ? '<span class="cf-qchip is-flag is-warn">' + svg(IC.alert, 11) + 'Titulaire partiel</span>' : '')
+          + (bxDeclCheck(x) === 'diff' ? '<span class="cf-qchip is-flag is-ko">' + svg(IC.alert, 11) + 'Pièce ≠ nom déclaré</span>' : '')
+          + (function (h) {   // même ordre que la ligne de l'onglet BloxAI
+            return !h ? '' : (h.dest ? '<span class="cf-qchip is-flag is-ko">' + svg(IC.alert, 11) + 'Destination différente</span>' : '')
+              + (h.changed ? '<span class="cf-qchip is-flag is-warn">' + svg(IC.alert, 11) + 'Changées depuis le dernier versement</span>' : '')
+              + (h.first ? '<span class="cf-qchip is-flag is-warn">' + svg(IC.alert, 11) + '1er versement</span>' : '');
+          })(bxPaidHist(x)) + '</span></div>';
+      }).join('') + '</div>' + (n > 5 ? '<div class="cf-meta">' + esc('+ ' + (n - 5) + ' ' + plural(n - 5, 'autre') + ' dans l’onglet BloxAI') + '</div>' : '')
+        + '<button type="button" class="cf-btn is-sm cf-bx-go" data-act="home-go" data-tab="trackads">Payer depuis l’onglet BloxAI' + svg(IC.arrow, 12) + '</button>';
+    }
+    var rate = !D ? (B.pending ? 'chargement' : 'tarif indisponible') : D.settings.rateCentsPer1000 != null ? fEur(D.settings.rateCentsPer1000) + ' / 1' + NB + '000 vues validées' : 'tarif non renvoyé';
+    return '<section class="cf-card" aria-labelledby="cfPayT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfPayT">Versements à faire <span class="cf-badge">' + esc(B.pending ? '…' : n == null ? '—' : String(n)) + '</span></h2>'
+      + '<span class="cf-meta">' + esc('diffuseurs BloxAI · ' + rate) + '</span></div>'
+      + '<div class="cf-pay-ks">' + k(D ? D.money.unpaid : null, 'Solde non versé (gains validés − versements)') + k(due, 'À verser (versements ouverts)') + '</div></div>'
+      + body + '</section>';
   }
 
   // ── cartes résumé : 4 chiffres par onglet, repris de son modèle ──
@@ -610,16 +741,23 @@
       : !M.cap ? hstat('togen', '—', 'Vidéos à générer', M.ruleShort)
         : hstat('togen', fInt(M.cap.remaining), 'Vidéos à générer', M.genSub);
     // places de la maquette (01-accueil) : [En stock (orange) | Jours de contenu] [À valider | Vidéos à générer]
-    var stock = !D ? na('stock', 'En stock', { acc: true }) : hstat('stock', fInt(M.stock), 'En stock', 'approuvées · prêtes à poster', { acc: true });
+    var stock = !D ? na('stock', 'En stock', { acc: true }) : hstat('stock', M.stock == null ? (M.stockWait ? '…' : '—') : fInt(M.stock), 'En stock', M.stockSub, { acc: true });
     var pend = !D ? na('qc-pending', 'À valider') : hstat('qc-pending', fInt(D.qc.pending), 'À valider', 'file QC');
     var days = hstat('days', M.days.txt, 'Jours de contenu', M.days.sub);
     return hcard('prod', 'Production', IC.layers, 'état actuel', [stock, days, pend, gen], '');
   }
   function homeTrackCard() {
-    // TrackAds pas encore lancé : aucune donnée → 0 partout (Axel 29/09), mêmes zéros que l'onglet TrackAds
-    return hcard('trackads', 'TrackAds', IC.reach, '30' + NB + 'j', [
-      hstat('views', '0', 'Vues gagnées · 30' + NB + 'j', 'sur 30' + NB + 'j', { acc: true }), hstat('active', '0', 'Users actifs', 'sur 0 inscrit'),
-      hstat('missions', '0', 'Missions en cours', '24' + NB + 'h pour publier'), hstat('solde', '0,00' + NB + '€', 'Solde non demandé', 'aucun user')
+    // BloxAI (16/10) : mêmes chiffres que l'onglet BloxAI (CF.bx) ; « — » + raison tant que BloxAI ne répond pas
+    var B = bxModel(), D = B.D, per = '30' + NB + 'j';
+    var na = function (k, label, o) { return B.pending ? hstat(k, '…', label, 'chargement', o) : hstat(k, '—', label, B.why, o); };
+    if (!D) return hcard('trackads', 'BloxAI', IC.reach, per, [na('views', 'Vues · 30' + NB + 'j', { acc: true }), na('active', 'Diffuseurs actifs'), na('missions', 'Missions en cours'), na('solde', 'Solde non versé')], '');
+    var v30 = D.series ? D.series.slice(-30).reduce(function (a, x) { return x.views == null ? a : a + x.views; }, 0) : null;
+    var nPay = D.money.payouts ? D.money.payouts.length : null;
+    return hcard('trackads', 'BloxAI', IC.reach, per, [
+      v30 == null ? hstat('views', '—', 'Vues · 30' + NB + 'j', 'série 30' + NB + 'j non renvoyée', { acc: true }) : hstat('views', fInt(v30), 'Vues · 30' + NB + 'j', 'publications des diffuseurs', { acc: true }),
+      hstat('active', bxN(D.users.active7), 'Diffuseurs actifs', D.users.active7 == null ? BX_NR : 'sur 7' + NB + 'j · ' + bxN(D.users.total) + ' ' + plural(D.users.total, 'inscrit')),
+      hstat('missions', bxN(D.asg.active), 'Missions en cours', D.asg.active == null ? BX_NR : '24' + NB + 'h pour publier · ' + bxN(bxToCheckN(D)) + ' à vérifier'),
+      hstat('solde', D.money.unpaid == null ? '—' : fEur(D.money.unpaid), 'Solde non versé', D.money.unpaid == null ? BX_NR : nPay == null ? 'versements non renvoyés' : nPay + ' ' + plural(nPay, 'versement') + ' à faire')
     ], '');
   }
   function homeDmCard(Y) {
@@ -1073,7 +1211,7 @@
   function tkHandle(openId) {
     var a = (CF.tk.data ? CF.tk.data.list : []).filter(function (x) { return x.openId === openId; })[0];
     if (!a) return;
-    var v = window.prompt('@ TikTok de « ' + (a.name || 'ce compte') + ' » (vide pour l’effacer) :', a.handle ? '@' + a.handle : '@');
+    var v = window.prompt('@ TikTok de « ' + (dlgName(a.name) || 'ce compte') + ' » (vide pour l’effacer) :', a.handle ? '@' + a.handle : '@');   // 18/10 (R7-10)
     if (v === null) return;
     v = String(v).trim().replace(/^@+/, '');
     if (v && !/^[A-Za-z0-9._]{2,24}$/.test(v)) { ui.tkRecon = { ok: false, at: Date.now(), text: '@ invalide : lettres, chiffres, points et _ uniquement (2 à 24).' }; schedule(); return; }
@@ -1087,7 +1225,7 @@
   function tkTest(openId) {
     var a = (CF.tk.data ? CF.tk.data.list : []).filter(function (x) { return x.openId === openId; })[0];
     if (!a || ui.tkBusy) return;
-    if (!window.confirm('Envoyer la prochaine vidéo du kit dans les brouillons TikTok de ' + tkName(a) + ' ?')) return;
+    if (!window.confirm('Envoyer la prochaine vidéo du kit dans les brouillons TikTok de ' + dlgName(tkName(a)) + ' ?')) return;   // 18/10 (R7-10)
     ui.tkBusy = true;
     ui.tkRecon = { ok: true, at: Date.now(), text: 'Préparation de l’envoi vers ' + tkName(a) + '…' }; schedule();
     CF.tkSendTest(openId, function (t) { ui.tkRecon = { ok: true, at: Date.now(), text: t }; schedule(); }).then(function (r) {
@@ -1161,7 +1299,6 @@
   var FEM = { liaison: 1, musique: 1, contenu: 1 };   // « Démos les plus performantes »
   var NOT_YET = 'pas encore mesurable';   // briques non parlées : pas reconnues dans l'audio des reels (arrivera avec les productions)
   var MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-  var TRACK_NA = 'TrackAds pas encore lancé';
   // Axel 13/10 : « "audio d'Axel" on peut oublier, pas fan de Character-3 pour créer le contenu » → hors des vidéos possibles,
   // du stock à générer et des briques qui manquent (usine/coherence.js, opts.offVoices). Les vidéos déjà faites restent en base.
   var OFF_VOICES = ['axel'];
@@ -1173,7 +1310,9 @@
   function lipHooks(L) { return L.lipsyncHooks || L.hooks; }
   function fDays(v) { return v < 1 ? '<' + NB + '1' + NB + 'j' : '≈' + NB + fInt(v) + NB + 'j'; }
   function shorten(s, n) { s = String(s || ''); return s.length <= n ? s : s.slice(0, n).replace(/\s+\S*$/, '') + '…'; }
-  function subjName(s) { return s === 'generique' ? 'générique' : s === 'general' ? 'général' : s; }   // un seul nom par module : l'ID du catalogue (maquette §14)
+  // 18/10 (round 7, R7-15) : l'ancien sujet « trackads » (module renommé BloxAI le 15/10) s'affiche « bloxai » ; la valeur
+  // en base ne change pas (identifiant du catalogue)
+  function subjName(s) { return s === 'generique' ? 'générique' : s === 'general' ? 'général' : s === 'trackads' ? 'bloxai' : s; }   // un seul nom par module : l'ID du catalogue (maquette §14)
   function live(b) { return !!b && b.status !== 'retired'; }   // brique retirée : exclue partout (tuiles, listes, capacité, performance)
   function isAlias(b) { return !!(b && b.meta && b.meta.alias_of); }   // H64 = alias de H63 : jamais compté comme un hook de plus
   // proposition de style (sous-titres S20–S24 : brouillon, meta.proposal) : montrée à part, jamais comptée comme prête
@@ -1236,11 +1375,22 @@
       M.miss = missModel(M);
     }
     // Rythme de publication : MES reels par jour sur 30 j (le « Reels par jour » de l'onglet Insight, goalValue) + les posts
-    // par jour des users TrackAds (pas lancé : 0).
+    // par jour des diffuseurs BloxAI (missions envoyées, série 30 j ; bx = null tant que BloxAI ne la rend pas).
     var S30 = CF.acct.ig[HOME_RANGE], off = S30.kind === 'disconnected' || CF.acct.media.kind === 'disconnected';
-    var G = goalValue(model(S30, S30.data, off, HOME_RANGE), GOAL.perDay), TRACK_PER_DAY = 0;
-    M.rate = { v: G.v == null ? null : G.v + TRACK_PER_DAY, n: G.n, loading: !!G.loading, na: G.na, off: off };
-    M.stock = D ? D.qc.stock : null;                  // approuvées PAS encore programmées / postées (kit : factory_posts.combo.vf = template)
+    var BXS = CF.bx, BXD = BXS.data, ser = BXD && BXD.series ? BXD.series.slice(-30) : null;
+    var bxPerDay = ser && ser.length ? ser.reduce(function (a, x) { return a + (x.submitted || 0); }, 0) / 30 : null;
+    var G = goalValue(model(S30, S30.data, off, HOME_RANGE), GOAL.perDay);
+    M.rate = { v: G.v == null ? null : G.v + (bxPerDay || 0), bx: bxPerDay, n: G.n, loading: !!G.loading, na: G.na, off: off };
+    // 16/10 (Axel : « un seul stock pour tout le monde ») : stock = missions « open » du stock commun BloxAI + vidéos du kit
+    // encore à programmer (factory_posts « todo »). Une des deux sources illisible → « — » + raison : l'ancien calcul
+    // (approuvées non programmées) compterait aussi les vidéos déjà données aux diffuseurs.
+    var bxOpen = BXD ? BXD.stock.open : null, kitT = D ? D.qc.kitTodo : null;
+    M.stock = null; M.stockParts = null; M.stockWait = false; M.stockWhy = '';
+    if (D && bxOpen != null && kitT != null) { M.stock = bxOpen + kitT; M.stockParts = { open: bxOpen, kit: kitT }; }
+    else if (D && kitT == null) M.stockWhy = 'kit illisible (factory_posts)';
+    else if (D && !BXD && (BXS.loading || BXS.state === 'idle')) M.stockWait = true;
+    else if (D) M.stockWhy = !BXD ? 'stock commun BloxAI illisible' + (BXS.error ? ' : ' + BXS.error : '') : 'stock commun non renvoyé par BloxAI';
+    M.stockSub = M.stockParts ? fInt(M.stockParts.open) + ' stock commun + ' + fInt(M.stockParts.kit) + ' kit à programmer' : M.stockWait ? 'chargement' : M.stockWhy;
     M.toGen = M.cap ? M.cap.remaining : null;
     // production / jour = vidéos finales rendues (lignes factory_qc) par jour sur 30 j
     M.prodDay = D ? D.qc.list.filter(function (q) { return q.created != null && Date.now() - q.created <= 30 * 864e5; }).length / 30 : null;
@@ -1253,6 +1403,7 @@
     var d = { v: null, txt: '—', sub: '', wait: false }, goalDay = M.need.v;
     if (M.pending) { d.txt = '…'; d.sub = 'chargement'; d.wait = true; }
     else if (!D) d.sub = M.why;
+    else if (M.stock == null) { d.txt = M.stockWait ? '…' : '—'; d.sub = M.stockSub; d.wait = M.stockWait; }
     else { d.v = M.stock / goalDay; d.txt = M.stock ? fDays(d.v) : '0' + NB + 'j'; d.sub = 'vidéos prêtes ÷ ' + fRate2(goalDay) + ' posts' + NB + '/' + NB + 'jour' + (M.need.real ? ' (Instagram, 7' + NB + 'j)' : ''); }
     M.days = d;
     pmCache = { ver: CF.ver, m: M };
@@ -1316,6 +1467,7 @@
     if (CF.status !== 'ready') return;
     CF.loadAccounts();
     CF.loadProd();
+    CF.loadBx();   // 16/10 : stock = missions « open » du stock commun BloxAI + kit à programmer
     CF.loadInsights(HOME_RANGE);   // rythme de publication : mêmes cases que l'Accueil (cache 15 min)
     CF.loadMedia();
   }
@@ -1385,9 +1537,9 @@
     return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + modes + '</section>';
   }
 
-  // ── 01 · Contenu posté : nos reels par mois (publications Instagram déjà chargées) ; TrackAds « — » ──
+  // ── 01 · Contenu posté : nos reels par mois (publications Instagram déjà chargées) ; BloxAI = missions publiées par les diffuseurs ──
   function postedHTML() {
-    var ms = mediaState(), months = [], total = null;
+    var ms = mediaState(), months = [], total = null, bxDone = CF.bx.data ? CF.bx.data.stock.done : null;
     if (ms.st === 'ok') {
       var reels = ms.MD.list.filter(function (p) { return (p.type === 'REELS' || p.type === 'VIDEO') && p.ms != null; });
       total = reels.length;
@@ -1400,7 +1552,7 @@
       }
     }
     var right = '<div class="cf-ptot"><span><b>' + esc(total == null ? '—' : fInt(total)) + '</b><span><i class="cf-pl is-aa"></i>AvatarAds</span></span>'
-      + '<span><b>0</b><span><i class="cf-pl is-ta"></i>TrackAds</span></span></div>';
+      + '<span><b' + (bxDone == null ? ' class="is-na"' : '') + ' title="' + esc(bxDone == null ? bxWhyShort() : 'missions publiées par les diffuseurs BloxAI') + '">' + esc(bxDone == null ? (CF.bx.loading && !CF.bx.data ? '…' : '—') : fInt(bxDone)) + '</b><span><i class="cf-pl is-ta"></i>BloxAI</span></span></div>';
     var body;
     if (ms.st === 'wait') body = spin('Chargement des publications…');
     else if (ms.st !== 'ok') body = emptyLine('—', ms.why);
@@ -1432,7 +1584,7 @@
       return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span><span class="cf-stile-s">' + esc(s) + '</span></div>';
     }
     var wait = M.pending ? '…' : null;
-    var tiles = tile('stock', wait || (D ? fInt(M.stock) : '—'), 'En stock', D ? 'approuvées · prêtes à poster' : M.why, 'is-acc')
+    var tiles = tile('stock', wait || (!D || M.stock == null ? (M.stockWait ? '…' : '—') : fInt(M.stock)), 'En stock', D ? M.stockSub : M.why, 'is-acc')
       + tile('days', d.txt, 'Jours de contenu', d.sub, d.v != null && d.v < 2 ? 'is-err' : '');
     var need = M.need ? M.need.v : GOAL.perDay.target, pd = M.prodDay;   // 13/10 : rythme Instagram réel (7 j), sinon l'objectif   // besoin = l'objectif de publication (5 / jour)
     var bar = need && pd != null ? Math.min(100, pd / need * 100) : 0;
@@ -1645,8 +1797,8 @@
       + '<div class="cf-over">variantes par avatar</div>' + avH + chips;
   }
 
-  // ── panneau 02 · Montages prêts : approuvés par période (courbe de la maquette, téléchargés « — » tant que TrackAds
-  //    n'est pas lancé), par module (clic = les vidéos en stock, chacune se lit) ──
+  // ── panneau 02 · Montages prêts : approuvés par période (courbe de la maquette) et pris en mission BloxAI (16/10 : série
+  //    30 j de BloxAI pour 7 j / 30 j, compteur 24 h, total des missions prises au-delà), par module (clic = les vidéos en stock) ──
   var MONT_PER = [['24h', '24' + NB + 'h'], ['7j', '7' + NB + 'j'], ['30j', '30' + NB + 'j'], ['6m', '6' + NB + 'mois'], ['all', 'All time']];
   function montSeries(list, per) {
     var now = new Date(), B = [], labels = [], unit, perL, i;
@@ -1689,15 +1841,17 @@
     function kpi(cls, l, v, s) {
       return '<div class="cf-mkpi"><span class="cf-mkpi-l"><i class="' + cls + '"></i>' + esc(l) + '</span><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-mkpi-s">' + esc(s) + '</span></div>';
     }
+    var dl = bxTaken(per);   // missions BloxAI prises sur la période (null + raison si BloxAI ne le dit pas)
     var kpis = '<div class="cf-mkpis">' + kpi('is-appr', 'approuvés', fInt(sum), fDec(sum / NP, 1) + ' par ' + S.unit + ' · ' + S.perL
       + (S.undated ? ' · ' + S.undated + ' sans date d’approbation' : ''))
-      + kpi('is-dl', 'téléchargés', '0', 'missions TrackAds')
-      + kpi('is-gap', 'écart', fInt(sum), 'approuvés − téléchargés') + '</div>';
+      + kpi('is-dl', 'pris en mission', dl.v == null ? '—' : fInt(dl.v), dl.v == null ? dl.why : dl.sub)
+      + kpi('is-gap', 'écart', dl.v == null ? '—' : fGap(sum - dl.v), 'approuvés − pris en mission') + '</div>';
     // courbe (maquette) : viewBox 1000 × 150, max × 1,2, valeurs affichées jusqu'à 14 points
-    var cmx = Math.max(2, Math.max.apply(null, S.r)) * 1.2;
+    var cmx = Math.max(2, Math.max.apply(null, S.r.concat(dl.per || []))) * 1.2;
     var X = function (k) { return NP > 1 ? k / (NP - 1) * 1000 : 500; }, Y = function (v) { return 150 - v / cmx * 150; };
     var d = S.r.map(function (v, k) { return (k ? 'L' : 'M') + X(k).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ');
     var showV = NP <= 14;
+    var dlPath = dl.per ? dl.per.map(function (v, k) { return (k ? 'L' : 'M') + X(k).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ') : '';
     var dots = S.r.map(function (v, k) {
       var pos = 'left:' + (X(k) / 10).toFixed(2) + '%;top:' + (Y(v) / 1.5).toFixed(2) + '%';
       return '<span class="cf-mdot' + (NP > 14 ? ' is-sm' : '') + '" data-i="' + k + '" style="' + pos + '"></span>' + (showV ? '<span class="cf-mval" style="' + pos + '">' + v + '</span>' : '');
@@ -1707,11 +1861,13 @@
       var on = x[0] === per;
       return '<button type="button" class="cf-mper-b' + (on ? ' is-on' : '') + '" data-act="pipe-per" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
     }).join('') + '</div>';
-    montCur = { n: NP, r: S.r.slice(), labels: S.labels.slice(), hot: false };
-    var chart = '<div class="cf-mchart"><div class="cf-mchart-h"><span class="cf-mchart-t">' + esc('Montages approuvés et téléchargés · par ' + S.unit) + '</span>' + seg + '</div>'
+    montCur = { n: NP, r: S.r.slice(), dl: dl.per ? dl.per.slice() : null, labels: S.labels.slice(), hot: false };
+    var chart = '<div class="cf-mchart"><div class="cf-mchart-h"><span class="cf-mchart-t">' + esc('Montages approuvés' + (dl.per ? ' et pris en mission' : '') + ' · par ' + S.unit) + '</span>' + seg + '</div>'
       + '<div class="cf-mplot" role="img" aria-label="' + esc('Montages approuvés par ' + S.unit + ' ' + S.perL + ' : ' + fInt(sum)) + '">'
       + '<div class="cf-mgrid" aria-hidden="true"><i></i><i></i><i></i></div>'
-      + '<svg viewBox="0 0 1000 150" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="' + d + '" fill="none" stroke="#ff6b35" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>'
+      + '<svg viewBox="0 0 1000 150" preserveAspectRatio="none" aria-hidden="true" focusable="false">'
+      + (dlPath ? '<path d="' + dlPath + '" fill="none" stroke="var(--cf-ok)" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' : '')
+      + '<path d="' + d + '" fill="none" stroke="#ff6b35" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>'
       + dots + '<div class="cf-mhover" hidden></div></div>'
       + '<div class="cf-mx">' + pick.map(function (k) { return '<span>' + esc(S.labels[k]) + '</span>'; }).join('') + '</div></div>';
     // par module (modèle de rendu de la vidéo, comme la file QC) : vidéos en stock
@@ -1748,8 +1904,8 @@
     box.innerHTML = '<span class="cf-mvl" style="left:' + x.toFixed(2) + '%"></span><div class="cf-mtip" style="left:' + x.toFixed(2) + '%;transform:translateX(' + (i > ch.n / 2 ? 'calc(-100% - 12px)' : '12px') + ')">'
       + '<span class="cf-mtip-d">' + esc(ch.labels[i]) + '</span>'
       + '<span class="cf-mtip-r"><span><i class="is-appr"></i>approuvés</span><b>' + esc(fInt(ch.r[i])) + '</b></span>'
-      + '<span class="cf-mtip-r"><span><i class="is-dl"></i>téléchargés</span><b>—</b></span>'
-      + '<span class="cf-mtip-r is-gap"><span>écart</span><b>—</b></span></div>';
+      + '<span class="cf-mtip-r"><span><i class="is-dl"></i>pris en mission</span><b>' + esc(ch.dl ? fInt(ch.dl[i]) : '—') + '</b></span>'
+      + '<span class="cf-mtip-r is-gap"><span>écart</span><b>' + esc(ch.dl ? fGap(ch.r[i] - ch.dl[i]) : '—') + '</b></span></div>';
     box.hidden = false;
     ch.hot = true;
     [].forEach.call(plot.querySelectorAll('.cf-mdot'), function (dt) { dt.classList.toggle('is-hot', dt.getAttribute('data-i') === String(i)); });
@@ -1773,6 +1929,8 @@
   }
   function openVf(qid, trigger) {
     if (!qid || !CF.prod.data) return;
+    // 16/10 : bloc « Diffusion » de la fiche (Instagram, TikTok, BloxAI) : mêmes cases du store que l'Accueil (caches 5-15 min)
+    CF.loadBx(); CF.loadTts(); CF.loadMedia();
     if (ui.modal) { ui.modal = { vf: qid }; renderModal(); return; }
     openModal({ vf: qid }, trigger);
   }
@@ -1801,7 +1959,9 @@
     return '<div class="cf-vf" data-qid="' + esc(q.id) + '"><div class="cf-vf-h"><h2 class="cf-vf-t" id="cfModalTitle">' + esc(vfName(q)) + '</h2><span class="cf-meta">' + esc(meta) + '</span>' + histH
       + (q.status === 'refused' ? '<span class="cf-vf-why">' + esc(q.reason ? 'motif : « ' + q.reason + ' »' : 'motif : aucun') + '</span>' : '')
       + (q.status === 'pending' ? '<button type="button" class="cf-btn is-sm cf-vf-rev" data-act="qc-open" data-qid="' + esc(q.id) + '">Ouvrir la revue</button>' : '') + '</div>'
-      + media + '<div class="cf-over">Composants</div>' + comps + '</div>';
+      + media + '<div class="cf-over">Composants</div>' + comps
+      // Diffusion (16/10) : rempli à part (renderModal) pour que l'arrivée des chiffres ne recrée jamais le lecteur vidéo
+      + '<div class="cf-vf-diff" aria-live="polite"></div></div>';
   }
 
   function comboChips(q) {
@@ -2330,6 +2490,1209 @@
   function videoModalHTML(v) {
     return '<div class="cf-vsheet"><h2 class="cf-h2" id="cfModalTitle">' + esc(v.title) + '</h2><div class="cf-meta">' + esc(v.sub) + '</div>'
       + '<div class="cf-vbox cf-mbox"><video class="cf-rvid" controls playsinline preload="metadata" src="' + esc(vFirst(v.url)) + '"></video><span class="cf-vmsg">rendu introuvable (fichier illisible)</span></div></div>';
+  }
+
+  // ══ BloxAI (16/10/2026, ex-TrackAds ; Axel : « un seul stock pour tout le monde ») ═════════════════════════════════
+  // Lit CF.bx (edge bloxai → fonction factory de BloxAI, payload bx_factory_stats) : stock commun et kit, cycle des missions
+  // (24 h pour publier ET coller les liens), séries 30 j, diffuseurs (classement), à vérifier, pièces d'identité,
+  // versements. « 0 » = mesuré et nul ; « — » + raison = BloxAI ne le dit pas. Chaque action est un clic explicite (motif
+  // ou confirmation) envoyé par CF.bxAdmin ; les chiffres sont relus juste après. Tout texte venu de BloxAI passe par esc().
+  var BX_NR = 'non renvoyé par BloxAI';
+  var BX_KIND = { monthly: 'versement mensuel', mid_month: 'versement du 15', request: 'demande (palier Elite)' };
+  var BX_METHOD = { paypal: 'PayPal', iban: 'virement IBAN' };
+  var BX_PAY_ST = { requested: 'demandé', pending: 'à verser', paid: 'payé', cancelled: 'annulé' };
+  var BX_MST = { open: ['dans le stock commun', 'is-pend'], assigned: ['en mission', 'is-pend'], done: ['publiée par un diffuseur', 'is-ok'],
+    kit: ['passée au kit', 'is-ok'], retired: ['retirée du stock', 'is-ko'] };
+  var BX_AST = { active: ['en cours', 'is-pend'], submitted: ['liens envoyés', 'is-ok'], abandoned: ['abandonnée', 'is-ko'], expired: ['échouée · 24 h dépassées', 'is-ko'] };
+  var BX_PST = { verif: ['en suivi', 'is-pend'], valid: ['validée', 'is-ok'], refus: ['refusée', 'is-ko'] };
+  var BX_NET = { instagram: ['Instagram', /(^|\.)instagram\.com$/i], tiktok: ['TikTok', /(^|\.)tiktok\.com$/i], youtube: ['YouTube', /(^|\.)(youtube\.com|youtu\.be)$/i] };
+  var BX_SORT = [['fiab', 'Fiabilité'], ['vues', 'Vues'], ['rapid', 'Rapidité']];
+  var BX_LIST_MAX = 15, BX_RANK_MAX = 20;
+  // Courbe des missions : 3 séries, palette catégorielle validée (validate_palette.js, toutes paires, CVD ΔE ≥ 9) ; une
+  // échelle par graphique (vues à part, jamais deux axes) ; légende avec totaux + bulle : jamais la couleur seule.
+  var BX_SER = [{ k: 'claimed', l: 'prises', c: '#2a78d6' }, { k: 'lost', l: 'échouées ou abandonnées', c: '#eb6834' }, { k: 'submitted', l: 'envoyées', c: '#1baf7a' }];
+  var bxCharts = {}, bxHot = false;
+
+  function ensureBx() {
+    if (CF.status !== 'ready') return;
+    CF.loadBx();
+    CF.loadProd();   // kit à programmer (factory_posts) et fiches des vidéos finales (VF)
+  }
+  function fEur(c) { return c == null ? null : fDec(c / 100, 2) + NB + '€'; }
+  function bxN(v) { return v == null ? '—' : fInt(v); }
+  function fGap(n) { return n < 0 ? MINUS + fInt(-n) : fInt(n); }   // écart négatif : vrai signe moins
+  function fHours(h) { return h == null ? null : h < 1 ? Math.max(1, Math.round(h * 60)) + NB + 'min' : fDec(h, h < 10 ? 1 : 0) + NB + 'h'; }
+  function bxWhyShort() {
+    var S = CF.bx;
+    if (S.kind === 'missing') return 'fonction bloxai pas encore déployée';
+    if (S.kind === 'auth') return 'session expirée : reconnecte-toi';
+    if (S.state === 'error') return 'BloxAI illisible : ' + S.error;
+    return S.loading || S.state === 'idle' ? 'chargement' : 'BloxAI illisible';
+  }
+  function bxModel() {
+    var S = CF.bx, D = S.data;
+    return { S: S, D: D, pending: !D && (S.loading || S.state === 'idle'), why: D ? '' : bxWhyShort() };
+  }
+  // Parties du contrat bx_factory_stats absentes de la réponse (chacune affiche « — » là où elle sert)
+  function bxMissing(D) {
+    var out = [];
+    var chk = function (o, keys, label) { if (keys.some(function (k) { return o[k] == null; })) out.push(label); };
+    chk(D.stock, ['open', 'available', 'assigned', 'done', 'kit', 'retired'], 'stock');
+    chk(D.asg, ['active', 'submitted', 'abandoned', 'expired'], 'missions');
+    chk(D.pub, ['verif', 'valid', 'refus', 'views'], 'publications');
+    chk(D.users, ['total', 'active7'], 'diffuseurs');
+    chk(D.money, ['unpaid'], 'solde');
+    if (!D.money.payouts) out.push('versements');
+    if (!D.identity) out.push('pièces d’identité');
+    if (!D.toCheck) out.push('liste à vérifier');
+    if (!D.ranking) out.push('classement');
+    if (!D.series) out.push('série 30' + NB + 'j');
+    return out;
+  }
+  // Jour de Paris (AAAA-MM-JJ) d'un instant : les jours de la série BloxAI
+  var PARIS_DAY = (function () {
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }); } catch (e) { return null; }
+  })();
+  function parisDay(t) { return PARIS_DAY ? PARIS_DAY.format(new Date(t)) : new Date(t).toISOString().slice(0, 10); }
+  // Missions BloxAI prises sur une période des « Montages prêts » (Production) : 24 h = compteur de BloxAI, 7 / 30 j = série
+  // 30 j (un point par jour, aligné sur la courbe), au-delà = toutes les missions prises depuis le lancement (16/10).
+  function bxTaken(per) {
+    var D = CF.bx.data;
+    if (!D) return { v: null, why: bxWhyShort(), per: null };
+    var A = D.asg;
+    if (per === '24h') return A.d24.claimed == null ? { v: null, why: BX_NR, per: null } : { v: A.d24.claimed, sub: 'missions BloxAI · 24' + NB + 'h', per: null };
+    if (per === '7j' || per === '30j') {
+      if (!D.series || !D.series.length) return { v: null, why: 'série 30' + NB + 'j ' + BX_NR, per: null };
+      var n = per === '7j' ? 7 : 30, by = Object.create(null), now = new Date(), arr = [];
+      D.series.forEach(function (x) { by[x.day] = x.claimed; });
+      for (var i = n - 1; i >= 0; i--) {
+        var k = parisDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 12).getTime());
+        arr.push(by[k] == null ? 0 : by[k]);   // jour absent de la série = aucune mission prise ce jour-là
+      }
+      return { v: arr.reduce(function (a, x) { return a + x; }, 0), sub: 'missions BloxAI · sur ' + n + NB + 'j', per: arr };
+    }
+    var t = [A.active, A.submitted, A.abandoned, A.expired];
+    if (t.some(function (x) { return x == null; })) return { v: null, why: BX_NR, per: null };
+    return { v: t.reduce(function (a, x) { return a + x; }, 0), sub: 'missions BloxAI prises depuis le lancement', per: null };
+  }
+  // Fiche d'une vidéo finale depuis un VF (factory_qc.template = « VF-0001 »)
+  var vfMapCache = { ver: -1, m: null };
+  function vfQid(vf) {
+    if (vfMapCache.ver !== CF.ver || !vfMapCache.m) {
+      var m = Object.create(null), PD = CF.prod.data;
+      if (PD) PD.qc.list.forEach(function (q) { if (q.template && !m[q.template]) m[q.template] = q.id; });
+      vfMapCache = { ver: CF.ver, m: m };
+    }
+    return vf ? vfMapCache.m[vf] || null : null;
+  }
+  function bxVfChip(vf) {
+    if (!vf) return '<span class="cf-chip is-muted">VF inconnue</span>';
+    var q = vfQid(vf);
+    return q ? '<button type="button" class="cf-chip is-brick is-btn" data-act="vf-open" data-qid="' + esc(q) + '" title="Fiche de la vidéo">' + esc(vf) + '</button>'
+      : '<span class="cf-chip">' + esc(vf) + '</span>';
+  }
+  function bxNetIc(n) { return n === 'instagram' ? IG_GLYPH : svg(n === 'tiktok' ? IC.tiktok : IC.video, 14); }
+  function bxTile(k, v, l, s, cls) {
+    return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span><span class="cf-stile-s">' + esc(s) + '</span></div>';
+  }
+  function bxKpi(k, l, v, s) {
+    return '<div class="cf-mkpi" data-k="' + k + '"><span class="cf-mkpi-l">' + esc(l) + '</span><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-mkpi-s">' + esc(s) + '</span></div>';
+  }
+  // only (18/10, round 7) : filtre facultatif (l'Accueil n'affiche que les messages des pièces d'identité)
+  function bxMsgHTML(only) {
+    var m = ui.bx.msg;
+    if (!m || Date.now() - m.at >= 10 * 60 * 1000 || (only && !only(m))) return '';
+    return '<div class="cf-acct-msg' + (m.ok ? ' is-ok' : ' is-err') + '" role="status">' + esc(m.text)
+      + (/Recharge le tableau de bord/.test(m.text || '') ? ' <button type="button" class="cf-link-btn" data-act="page-reload">Recharger la page</button>' : '') + '</div>';
+  }
+  function bxDis(k) { return ui.bx.busy[k] ? ' disabled' : ''; }
+  // en-tête de carte avec le compteur dans le titre (comme « Versements à faire » de l'Accueil) et un contrôle à droite
+  // ── Suivi des vues (17/10, revue 2) : « Valider » = CONFORME, côté BloxAI (checked_at) : le lien sort de « À vérifier »
+  // mais reste en suivi ; ses gains sont comptés à la fin des tracking_days (30 j) par bx_close_tracking, avec les vues
+  // figées ce jour-là (views_at_close).
+  // 17/10 (audit, contrat 3) : AUCUNE décision d'argent sans Axel. bx_close_tracking ne refuse JAMAIS tout seul et ne
+  // valide QUE les liens conformes dont les vues ont été relues dans les 48 h avant la fin du suivi ; tout autre lien au
+  // suivi fini reste « verif » avec metrics.held_since : « En attente de vérification », aucun gain tant qu'Axel n'a pas
+  // décidé (Valider → vues figées, ou Refuser). Les signaux du relevé (vidéo introuvable, doublon, publiée avant la mission,
+  // même compte, chaîne YouTube non vérifiée) ne sont qu'une INFORMATION ; close_refusal = motif proposé pour un refus.
+  function bxTrackDays(D) { return D && D.settings && D.settings.trackingDays != null ? D.settings.trackingDays : 30; }   // défaut = celui de BloxAI
+  // fin du suivi : closes_at de BloxAI, sinon date du lien + tracking_days ; inconnue → null
+  function bxTrackEnd(x, D) { return !x ? null : x.closes != null ? x.closes : x.created != null ? x.created + bxTrackDays(D) * 864e5 : null; }
+  function bxTracking(x, D) { var e = bxTrackEnd(x, D); return e == null || Date.now() < e; }
+  // liens « à vérifier » : en suivi et pas encore regardés (total exact de BloxAI ; ancienne version sans « unchecked » : verif)
+  function bxToCheckN(D) {
+    if (!D) return null;
+    return D.pub.unchecked != null ? D.pub.unchecked : D.pub.verif;
+  }
+  // 17/10 (contrat 3) : liens « En attente de vérification » (total de BloxAI s'il le renvoie, sinon ceux de la liste)
+  function bxHeld(x) { return !!(x && x.status === 'verif' && x.flags && x.flags.held); }
+  function bxHeldN(D) {
+    if (!D) return null;
+    if (D.pub.held != null) return D.pub.held;
+    return D.toCheck ? D.toCheck.filter(bxHeld).length : null;
+  }
+  // 17/10 (round 5, contrat 5) : pourquoi BloxAI retient le lien (hold_reason, écrit pour le diffuseur) → phrase pour Axel.
+  // Texte inconnu (nouvelle version de BloxAI) : affiché tel quel. Ordre = celui de bx_hold_reason (repère d'abord).
+  // 18/10 (round 6, R3) : nouvelle raison 'engagement' de bx_hold_reason (code seul ou phrase française) : très peu de
+  // j'aime et de commentaires pour les vues, ou presque toutes les vues en un seul jour. Testée EN PREMIER (sa phrase peut
+  // parler de « vues achetées », qui sinon donnerait la hausse depuis le « conforme ») ; 3e élément = clé (cf. bxHoldKey).
+  // 18/10 (round 7, R7-3) : raison EXACTE 'views_dropped' de bx_hold_reason (avant 'engagement') : 2 lectures de suite sous
+  // 80 % du maximum relevé → phrase du contrat ; testée en premier (« vues achetées » sinon pris par d'autres motifs).
+  // R7-1 : 'engagement' couvre aussi « plus de 10 fois les abonnés du compte en vues dès le 1er jour » (20 000 vues et plus)
+  var BX_HOLD_DROP = 'Vues retirées par le réseau : la vidéo a perdu plus de 20' + NB + '% de ses vues — vues achetées probables';
+  var BX_HOLD = [
+    [/views.?dropped|vues retirees|perdu plus de 20/, BX_HOLD_DROP, 'drop'],
+    [/engagement|j.aime|likes|commentaire|un seul jour|en un jour|abonnes/, 'Engagement anormal : très peu de j’aime et de commentaires pour ces vues, presque toutes les vues en un seul jour, ou plus de 10 fois les abonnés du compte en vues dès le 1er jour — vues achetées possibles', 'eng'],
+    [/supprim|archiv|privee/, 'vidéo supprimée, archivée ou rendue privée pendant le suivi'],
+    [/doublon/, 'doublon d’un autre lien (même vidéo)'],
+    [/avant la mission/, 'vidéo publiée avant la prise de la mission'],
+    [/meme chaine|chaine youtube a deja|par chaine/, 'autre lien de la mission sur la même chaîne YouTube : un seul lien payé par chaîne'],
+    [/un seul lien|meme compte|deja un lien/, 'autre lien de la mission sur le même compte : un seul lien payé par compte'],
+    [/youtube|chaine/, 'chaîne YouTube pas vérifiée par le diffuseur : rien ne prouve que la vidéo est la sienne'],
+    [/relue|relu |48 ?h/, 'vues pas relues sur le compte du diffuseur dans les 48' + NB + 'h avant la fin (compte déconnecté, accès retiré ou vidéo hors de portée du relevé)'],
+    [/achet|hausse|multipli|suspect|gonfl|explos|x ?5|×/, 'vues en très forte hausse depuis ton « conforme » (vues achetées ?)'],
+    [/pas encore verifiee|pas encore marquee/, 'pas encore marquée conforme par toi']
+  ];
+  function bxHoldText(r) {
+    var s = String(r || ''), n = s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    for (var i = 0; i < BX_HOLD.length; i++) if (BX_HOLD[i][0].test(n)) return BX_HOLD[i][1];
+    return s;
+  }
+  // 18/10 (round 6, R3) : clé du motif ('eng' = engagement anormal), null sinon. Un motif d'engagement est montré même
+  // pendant le suivi (les autres motifs n'y disent rien d'utile : la relecture des 48 h n'a pas encore eu lieu)
+  // 18/10 (round 7, R7-3) : 'drop' (vues retirées par le réseau) aussi, pendant le suivi comme après
+  function bxHoldLive(r) { var k = bxHoldKey(r); return k === 'eng' || k === 'drop'; }
+  function bxHoldKey(r) {
+    if (!r) return null;
+    var n = String(r).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    for (var i = 0; i < BX_HOLD.length; i++) if (BX_HOLD[i][0].test(n)) return BX_HOLD[i][2] || null;
+    return null;
+  }
+  // 18/10 (round 6, R3) : engagement relevé sur la vidéo — j'aime, commentaires, partages (part des vues), plus forte hausse
+  // de vues sur un seul jour (part des vues). '' = rien de renvoyé par BloxAI. Aucun verdict ici : c'est bx_hold_reason
+  // (raison 'engagement') qui retient le lien ; ces chiffres servent à Axel pour décider.
+  function bxPct(v) { var p = v * 100; return fDec(p, p < 1 ? 2 : p < 10 ? 1 : 0) + NB + '%'; }
+  function bxEngText(x) {
+    var vv = x.viewsAtClose != null ? x.viewsAtClose : x.views, parts = [];
+    if (x.likes != null) parts.push(fInt(x.likes) + ' j’aime');
+    if (x.comments != null) parts.push(fInt(x.comments) + ' ' + plural(x.comments, 'commentaire'));
+    if (x.shares != null) parts.push(fInt(x.shares) + ' ' + plural(x.shares, 'partage'));
+    var s = parts.join(' · ');
+    if (x.likes != null && x.comments != null && vv) s += ' (' + bxPct((x.likes + x.comments) / vv) + ' de j’aime + commentaires pour ' + fInt(vv) + ' ' + plural(vv, 'vue') + ')';
+    if (x.maxDayGain != null) s += (s ? ' · ' : '') + 'plus forte hausse sur un jour : ' + fInt(x.maxDayGain) + ' ' + plural(x.maxDayGain, 'vue')
+      + (vv ? ' (' + bxPct(Math.min(x.maxDayGain, vv) / vv) + ' des vues)' : '');
+    // 18/10 (round 7, R7-2) : j'aime, commentaires, partages figés à la fin du suivi (engagement_at_close)
+    if (x.engFrozen && parts.length) s += ' · j’aime, commentaires et partages figés à la fin du suivi';
+    return s;
+  }
+  // 18/10 (round 7, R7-1) : vues du 1er relevé quotidien et abonnés du compte connecté de ce lien ('' = rien de renvoyé) ;
+  // plus de 10 fois les abonnés dès le 1er jour = vues achetées possibles (bx_engagement_odd, à partir de 20 000 vues)
+  function bxAudOdd(x) { return x.firstDayViews != null && x.followers != null && x.followers > 0 && x.firstDayViews > 10 * x.followers; }
+  function bxAudText(x) {
+    var parts = [];
+    if (x.firstDayViews != null) parts.push('vues du 1er jour : ' + fInt(x.firstDayViews));
+    if (x.followers != null) parts.push('compte de ' + fInt(x.followers) + ' ' + plural(x.followers, 'abonné'));
+    else if (x.firstDayViews != null) parts.push('abonnés du compte inconnus');
+    var s = parts.join(' · ');
+    if (x.firstDayViews != null && x.followers) {
+      var r = x.firstDayViews / x.followers;
+      s += ' (' + fDec(r, r < 10 ? 1 : 0) + ' fois ses abonnés dès le 1er jour' + (bxAudOdd(x) ? ' : plus de 10 fois, vues achetées possibles' : '') + ')';
+    }
+    return s;
+  }
+  // 18/10 (round 7, R7-3) : vues retirées par le réseau (views = maximum relevé, last_views = dernière lecture réelle)
+  function bxDropText(x) {
+    var v = x.views, l = x.lastViews;
+    return 'la vidéo a perdu plus de 20' + NB + '% de ses vues sur 2 lectures de suite' + (v != null && l != null ? ' (maximum relevé ' + fInt(v) + ', dernière lecture ' + fInt(l)
+      + (v > 0 && l < v ? ', ' + MINUS + bxPct((v - l) / v) : '') + ')' : '');
+  }
+  // 17/10 (round 5, contrat 6) : vues au « conforme » d'Axel (checked_views) → vues figées à la fin du suivi (ou actuelles
+  // pendant le suivi) ; même seuil que bx_hold_reason : plus de 5 fois ET plus de 100 000 vues de plus = hausse suspecte
+  function bxJump(x) {
+    var c = x.checkedViews, v = x.viewsAtClose != null ? x.viewsAtClose : x.views;
+    return x.checked != null && c != null && v != null && v > Math.max(c * 5, c + 100000);
+  }
+  // Signaux du relevé des vues (reseaux de BloxAI) en puces lisibles : [texte, classe, détail], dans l'ordre de BloxAI
+  // (le premier donne le motif proposé pour un refus). 16/10 : même ordre partout (BloxAI, app des diffuseurs, ce tableau
+  // de bord) : missing_since > dup_of > too_old > same_account > yt_unverified. 17/10 : information, jamais un refus automatique.
+  function bxFlagChips(x) {
+    var F = x.flags || {}, out = [];
+    if (F.missing) out.push(['Vidéo introuvable', 'is-ko', (F.missingSince != null ? 'introuvable depuis le ' + dmy(new Date(F.missingSince)) : 'introuvable au dernier relevé') + ' (supprimée, archivée ou privée)']);
+    if (F.dup) out.push(['Doublon', 'is-ko', F.dupOf ? 'même vidéo que le lien n° ' + F.dupOf + ', qui seul compte' : 'même vidéo qu’un autre lien, qui seul compte']);
+    if (F.tooOld) out.push(['Publiée avant la mission', 'is-ko', (F.publishedAt != null ? 'publiée le ' + dmy(new Date(F.publishedAt)) + ' à ' + hm(new Date(F.publishedAt)) : 'publiée') + ', avant la prise de la mission']);
+    // 16/10 : same_account = la base a refusé de rattacher ce lien au compte où reseaux a trouvé sa vidéo (un lien par
+    // compte et par mission) : 2e vidéo de la même mission sur ce compte, seul l'autre lien compte
+    if (F.sameAccount) out.push(['Même compte', 'is-ko', '2e vidéo de la mission sur ce compte : ' + (F.sameAccountOf ? 'seul le lien n° ' + F.sameAccountOf + ' compte' : 'seul l’autre lien compte')]);
+    if (F.ytUnverified) out.push(['Chaîne YouTube non vérifiée', 'is-warn', 'vidéo sur une chaîne que le diffuseur n’a pas déclarée' + (F.ytChannel ? ' (' + F.ytChannel + ')' : '')]);
+    if (x.viewsDropped) out.push(['Vues retirées', 'is-ko', bxDropText(x)]);   // 18/10 (round 7, R7-3)
+    return out;
+  }
+  function bxFlagged(x) { return bxFlagChips(x).length > 0; }
+  // 17/10 (contrat 3) : motif PROPOSÉ pour un refus d'Axel (pré-rempli dans « Refuser ») : celui de BloxAI (close_refusal)
+  // s'il le renvoie, sinon le 1er signal ; jamais appliqué tout seul
+  function bxMotif(x) {
+    if (!x || x.status !== 'verif') return null;
+    if (x.closeRefusal) return x.closeRefusal;
+    var fl = bxFlagChips(x);
+    return fl.length ? fl[0][0] + ' : ' + fl[0][2] : null;
+  }
+  function bxHead(t, sub, n, right) {
+    return '<div class="cf-card-h"><div><h3 class="cf-h2">' + esc(t) + (n === undefined ? '' : ' <span class="cf-badge">' + esc(n == null ? '—' : String(n)) + '</span>') + '</h3>'
+      + (sub ? '<span class="cf-meta">' + esc(sub) + '</span>' : '') + '</div>' + (right || '') + '</div>';
+  }
+
+  function bxHTML() {
+    var B = bxModel(), D = B.D, S = B.S;
+    var sub = D ? 'Stock commun · missions · diffuseurs · versements · relevé BloxAI ' + ago(D.generatedAt || D.fetchedAt) : longDate(new Date());
+    var head = '<section class="cf-title cf-bx-title"><div><h1>BloxAI</h1><div class="cf-sub">' + esc(sub) + '</div></div>'
+      + '<button type="button" class="cf-btn is-sm" data-act="bx-refresh"' + (S.loading ? ' disabled' : '') + '>' + svg(IC.refresh, 13) + (S.loading ? 'Lecture…' : 'Actualiser') + '</button></section>';
+    var top = '';
+    if (S.state === 'error' && D) top += banner('err', IC.alert, '<b>BloxAI : lecture impossible</b> · ' + esc(S.error) + ' · chiffres de ' + esc(hm(new Date(D.fetchedAt))) + ' conservés');
+    else if (S.loading && D) top += spin('Actualisation de BloxAI…');
+    if (D) { var miss = bxMissing(D); if (miss.length) top += banner('warn', IC.alert, '<b>Données absentes : ' + esc(miss.join(', ')) + '</b> · ' + esc(BX_NR + ' : les cartes concernées affichent « — ».')); }
+    top += bxMsgHTML();
+    if (!D) {
+      return '<div class="cf-prod cf-bx">' + head + top + (B.pending ? spin('Chargement de BloxAI…')
+        : '<section class="cf-card">' + emptyLine('—', B.why) + '<button type="button" class="cf-btn is-sm cf-bx-go" data-act="bx-refresh">' + svg(IC.refresh, 13) + 'Réessayer</button></section>') + '</div>';
+    }
+    return '<div class="cf-prod cf-bx">' + head + top
+      + phead('01', 'Stock commun', 'une vidéo validée part sur un seul compte : kit d’Axel ou diffuseur') + bxStockHTML(D)
+      + phead('02', 'Missions', '24' + NB + 'h pour publier et coller les liens') + bxCycleHTML(D) + bxSeriesHTML(D)
+      + phead('03', 'À vérifier', 'liens collés par les diffuseurs') + bxCheckHTML(D)
+      + phead('04', 'Diffuseurs', 'inscriptions · classement') + bxUsersHTML(D) + bxRankHTML(D)
+      + phead('05', 'Paiements', 'pièces d’identité · versements') + '<div class="cf-prow2 is-b">' + bxIdHTML(D) + bxPayHTML(D) + '</div>'
+      + '</div>';
+  }
+
+  // ── 01 · stock commun (missions BloxAI) et kit (factory_posts « à faire ») ──
+  function bxStockHTML(D) {
+    var K = D.stock, St = D.settings, PS = CF.prod, PD = PS.data, kitT = PD ? PD.qc.kitTodo : null;
+    var kitV = PD ? (kitT == null ? '—' : fInt(kitT)) : (PS.loading || PS.state === 'idle' ? '…' : '—');
+    var kitF = PD ? PD.qc.kitFar : null;
+    var kitS = PD ? (kitT == null ? 'kit illisible (factory_posts)' : 'posts « à faire » des comptes Instagram' + (kitF ? ' · dont ' + fInt(kitF) + ' au-delà de J+7' : ''))
+      : PS.state === 'error' ? 'production illisible : ' + PS.error : 'chargement de la production';
+    var tiles = '<div class="cf-stiles">'
+      + bxTile('open', bxN(K.open), 'Stock commun', K.open == null ? BX_NR : 'vidéos validées en attente' + (St.kitBuffer == null ? '' : ' · dont ' + fInt(Math.min(K.open, St.kitBuffer)) + ' en réserve pour le kit'), 'is-acc')
+      + bxTile('avail', bxN(K.available), 'Ouvertes aux diffuseurs', K.available == null ? BX_NR : 'au-delà de la réserve du kit (' + bxN(St.kitBuffer) + ')', K.available === 0 ? 'is-err' : '')
+      + bxTile('kit', kitV, 'Kit à programmer', kitS, '')
+      + bxTile('assigned', bxN(K.assigned), 'En mission', K.assigned == null ? BX_NR : 'prises · 24' + NB + 'h pour publier', '')
+      + bxTile('done', bxN(K.done), 'Publiées par les diffuseurs', K.done == null ? BX_NR : 'missions terminées (liens envoyés)', '')
+      + bxTile('kitTotal', bxN(K.kit), 'Passées au kit', K.kit == null ? BX_NR : 'retirées du stock pour les comptes d’Axel (total)', '')
+      + bxTile('retired', bxN(K.retired), 'Retirées', K.retired == null ? BX_NR : 'sorties du stock à la main', '')
+      + '</div>';
+    var rules = [St.kitBuffer != null ? 'réserve du kit ' + fInt(St.kitBuffer) + ' ' + plural(St.kitBuffer, 'vidéo') : null,
+      St.deadlineH != null ? 'délai ' + fDec(St.deadlineH, 0) + NB + 'h' : null,
+      St.cooldownMin != null ? fDec(St.cooldownMin, 0) + NB + 'min entre deux missions' : null,
+      St.pauseFailures != null && St.pauseWindowDays != null && St.pauseHours != null ? 'pause de ' + fDec(St.pauseHours, 0) + NB + 'h après ' + St.pauseFailures + ' échecs en ' + St.pauseWindowDays + NB + 'j' : null,
+      St.trackingDays != null ? 'vues suivies ' + St.trackingDays + NB + 'j' : null,
+      St.rateCentsPer1000 != null ? fEur(St.rateCentsPer1000) + ' / 1' + NB + '000 vues validées' : null,
+      St.payoutMinCents != null ? 'versement dès ' + fEur(St.payoutMinCents) : null].filter(Boolean);
+    return '<section class="cf-card" data-block="bx-stock">' + chead('Stock commun et kit', 'comptes d’Axel servis en premier : le kit garde 7 jours d’avance, le reste est ouvert aux diffuseurs') + tiles
+      + '<div class="cf-meta">' + esc('Réglages BloxAI : ' + (rules.length ? rules.join(' · ') : '—')) + '</div></section>';
+  }
+
+  // ── 02 · cycle des missions + publications des diffuseurs ──
+  function bxCycleHTML(D) {
+    var A = D.asg, P = D.pub, d24 = A.d24;
+    var fin = A.submitted != null && A.expired != null && A.abandoned != null ? A.submitted + A.expired + A.abandoned : null;
+    var flow = '<ol class="cf-bx-flow">' + [['01', 'Prise', 'par un diffuseur'], ['02', 'En cours', '24' + NB + 'h pour publier et coller les liens'],
+      ['03', 'En suivi', 'liens collés · vues suivies ' + bxTrackDays(D) + NB + 'j · refus possible'], ['04', 'Validée ou refusée', 'par toi seulement : conforme et vues relues dans les 48' + NB + 'h avant la fin → validée avec ses vues ; sinon en attente de vérification']].map(function (x) {
+      return '<li><span class="cf-pnum">' + x[0] + '</span><b>' + esc(x[1]) + '</b><span>' + esc(x[2]) + '</span></li>';
+    }).join('') + '</ol><div class="cf-meta">Échouée (24' + NB + 'h dépassées) ou abandonnée : la vidéo revient tout de suite dans le stock, jamais re-proposée au même diffuseur.</div>';
+    var k = '<div class="cf-mkpis">'
+      + bxKpi('active', 'En cours', bxN(A.active), A.active == null ? BX_NR : (A.downloadedActive == null ? '' : 'dont ' + fInt(A.downloadedActive) + ' ' + plural(A.downloadedActive, 'téléchargée') + ' · ') + '24' + NB + 'h pour publier')
+      + bxKpi('submitted', 'Envoyées', bxN(A.submitted), A.submitted == null ? BX_NR : 'liens collés à temps')
+      + bxKpi('verif', 'En suivi', bxN(P.verif), P.verif == null ? BX_NR : 'publications · ' + bxN(bxToCheckN(D)) + ' à vérifier')
+      + bxKpi('valid', 'Validées', bxN(P.valid), P.valid == null ? BX_NR : 'publications · vues comptées')
+      + bxKpi('refus', 'Refusées', bxN(P.refus), P.refus == null ? BX_NR : 'publications refusées (motif)')
+      + bxKpi('expired', 'Échouées', bxN(A.expired), A.expired == null ? BX_NR : 'délai de 24' + NB + 'h dépassé')
+      + bxKpi('abandoned', 'Abandonnées', bxN(A.abandoned), A.abandoned == null ? BX_NR : 'rendues par le diffuseur')
+      + bxKpi('rate', 'Réussite', fin ? fPct(A.submitted, fin) : '—', fin == null ? BX_NR : fin ? 'envoyées ÷ missions terminées' : 'aucune mission terminée')
+      + '</div>';
+    var d = [[d24.claimed, 'prise', 'prises'], [d24.submitted, 'envoyée', 'envoyées'], [d24.expired, 'échouée', 'échouées'], [d24.abandoned, 'abandonnée', 'abandonnées']];
+    var last = 'Dernières 24' + NB + 'h : ' + d.map(function (x) { return x[0] == null ? '— ' + x[2] : fInt(x[0]) + ' ' + plural(x[0], x[1], x[2]); }).join(' · ');
+    var eng = '<div class="cf-mkpis">' + [['views', 'Vues', P.views], ['validViews', 'Vues validées', P.validViews], ['likes', 'Likes', P.likes], ['comments', 'Commentaires', P.comments],
+      ['shares', 'Partages', P.shares], ['saves', 'Enregistrements', P.saves]].map(function (x) {
+      return bxKpi(x[0], x[1], bxN(x[2]), x[2] == null ? BX_NR : x[0] === 'validViews' ? 'comptées dans les gains' : 'toutes publications');
+    }).join('') + '</div>';
+    return '<section class="cf-card" data-block="bx-cycle">' + chead('Cycle des missions', 'mission = 24' + NB + 'h pour publier ET coller les liens') + flow + k
+      + '<div class="cf-meta">' + esc(last) + '</div></section>'
+      + '<section class="cf-card" data-block="bx-pubs">' + chead('Publications des diffuseurs', 'vues relues sur Instagram, TikTok et YouTube') + eng + '</section>';
+  }
+
+  // ── 02 · séries 30 j : missions par jour (lignes) et vues par jour (barres), une échelle chacune ──
+  function bxXLabels(days, n) {
+    return '<div class="cf-mx">' + [0, Math.round((n - 1) / 2), n - 1].filter(function (k, j, a) { return a.indexOf(k) === j; })
+      .map(function (k) { return '<span>' + esc(dm(ymdDate(days[k]))) + '</span>'; }).join('') + '</div>';
+  }
+  function bxBars(key, title, days, vals, unit) {
+    var n = days.length, known = vals.filter(function (v) { return v != null; });
+    var tot = known.reduce(function (a, v) { return a + v; }, 0), mx = Math.max(1, Math.max.apply(null, known.concat([0])));
+    bxCharts[key] = { n: n, days: days, bars: true, rows: [{ l: unit[1], c: 'var(--cf-accent)', v: vals }] };
+    return '<div class="cf-mchart"><div class="cf-mchart-h"><span class="cf-mchart-t">' + esc(title) + '</span><span class="cf-meta">' + esc(known.length ? fInt(tot) + ' ' + plural(tot, unit[0], unit[1]) + ' sur ' + n + NB + 'j' : BX_NR) + '</span></div>'
+      + '<div class="cf-mplot cf-bxplot is-bars" data-bx="' + key + '" role="img" aria-label="' + esc(title + ' : ' + fInt(tot) + ' ' + plural(tot, unit[0], unit[1]) + ' sur ' + n + ' jours, maximum ' + fInt(mx) + ' par jour') + '">'
+      + '<span class="cf-bx-ymax" aria-hidden="true">' + esc(fInt(mx)) + '</span>'
+      + '<div class="cf-bx-bars" aria-hidden="true">' + vals.map(function (v) {
+        return '<i' + (v == null ? ' class="is-na"' : '') + ' style="height:' + (v ? Math.max(2, v / mx * 100) : 0).toFixed(1) + '%"></i>';
+      }).join('') + '</div><div class="cf-bxhover" hidden></div></div>' + bxXLabels(days, n) + '</div>';
+  }
+  function bxSeriesHTML(D) {
+    var ser = D.series, head = chead('Sur 30 jours', 'jours de Paris · survole une courbe pour le détail du jour');
+    if (!ser) return '<section class="cf-card" data-block="bx-series">' + head + emptyLine('—', 'série 30' + NB + 'j ' + BX_NR) + '</section>';
+    if (!ser.length) return '<section class="cf-card" data-block="bx-series">' + head + '<div class="cf-empty-s">Aucun jour dans la série.</div></section>';
+    var n = ser.length, days = ser.map(function (x) { return x.day; });
+    var z = function (v) { return v == null ? 0 : v; };
+    var vals = { claimed: ser.map(function (x) { return z(x.claimed); }), submitted: ser.map(function (x) { return z(x.submitted); }),
+      lost: ser.map(function (x) { return z(x.expired) + z(x.abandoned); }) };
+    var tot = function (k) { return vals[k].reduce(function (a, x) { return a + x; }, 0); };
+    var top = Math.max(1, Math.max.apply(null, vals.claimed.concat(vals.submitted, vals.lost))), mx = top * 1.15;
+    var X = function (i) { return n > 1 ? i / (n - 1) * 1000 : 500; }, Y = function (v) { return 150 - v / mx * 150; };
+    var paths = BX_SER.map(function (s2) {
+      return '<path d="' + vals[s2.k].map(function (v, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ')
+        + '" fill="none" stroke="' + s2.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    }).join('');
+    bxCharts.miss = { n: n, days: days, bars: false, rows: [
+      { l: 'prises', c: BX_SER[0].c, v: vals.claimed }, { l: 'envoyées', c: BX_SER[2].c, v: vals.submitted },
+      { l: 'échouées ou abandonnées', c: BX_SER[1].c, v: vals.lost },
+      { l: '· échouées', sub: true, v: ser.map(function (x) { return x.expired; }) }, { l: '· abandonnées', sub: true, v: ser.map(function (x) { return x.abandoned; }) }] };
+    var legend = '<div class="cf-bx-leg">' + BX_SER.map(function (s2) {
+      return '<span><i style="background:' + s2.c + '"></i>' + esc(s2.l) + ' <b>' + esc(fInt(tot(s2.k))) + '</b></span>';
+    }).join('') + '</div>';
+    var miss = '<div class="cf-mchart"><div class="cf-mchart-h"><span class="cf-mchart-t">Missions par jour</span></div>' + legend
+      + '<div class="cf-mplot cf-bxplot" data-bx="miss" role="img" aria-label="' + esc('Missions par jour sur ' + n + ' jours : ' + fInt(tot('claimed')) + ' prises, ' + fInt(tot('submitted')) + ' envoyées, ' + fInt(tot('lost')) + ' échouées ou abandonnées') + '">'
+      + '<span class="cf-bx-ymax" aria-hidden="true">' + esc(fInt(top)) + '</span><div class="cf-mgrid" aria-hidden="true"><i></i><i></i><i></i></div>'
+      + '<svg viewBox="0 0 1000 150" preserveAspectRatio="none" aria-hidden="true" focusable="false">' + paths + '</svg><div class="cf-bxhover" hidden></div></div>'
+      + bxXLabels(days, n) + '</div>';
+    return '<section class="cf-card" data-block="bx-series">' + head + '<div class="cf-bx-charts">' + miss
+      + bxBars('views', 'Vues par jour', days, ser.map(function (x) { return x.views; }), ['vue', 'vues']) + '</div></section>';
+  }
+  // bulle d'une courbe BloxAI : le jour survolé (souris ou doigt), sans redessiner le panneau
+  function bxHover(plot, clientX) {
+    var ch = bxCharts[plot.getAttribute('data-bx')];
+    if (!ch || !ch.n) return;
+    var rc = plot.getBoundingClientRect();
+    if (!rc.width) return;
+    var f = Math.max(0, Math.min(1, (clientX - rc.left) / rc.width));
+    var i = ch.bars ? Math.min(ch.n - 1, Math.floor(f * ch.n)) : Math.round(f * (ch.n - 1));
+    var box = plot.querySelector('.cf-bxhover');
+    if (!box || (box._i === i && !box.hidden)) return;
+    box._i = i;
+    var x = ch.bars ? (i + 0.5) / ch.n * 100 : ch.n > 1 ? i / (ch.n - 1) * 100 : 50;
+    box.innerHTML = '<span class="cf-mvl" style="left:' + x.toFixed(2) + '%"></span><div class="cf-mtip" style="left:' + x.toFixed(2) + '%;transform:translateX(' + (i > ch.n / 2 ? 'calc(-100% - 12px)' : '12px') + ')">'
+      + '<span class="cf-mtip-d">' + esc(dmy(ymdDate(ch.days[i]))) + '</span>'
+      + ch.rows.map(function (r) {
+        var v = r.v[i];
+        return '<span class="cf-mtip-r' + (r.sub ? ' is-gap' : '') + '"><span>' + (r.c ? '<i style="background:' + r.c + '"></i>' : '') + esc(r.l) + '</span><b>' + esc(v == null ? '—' : fInt(v)) + '</b></span>';
+      }).join('') + '</div>';
+    box.hidden = false;
+    bxHot = true;
+  }
+  function bxHide() {
+    bxHot = false;
+    [].forEach.call(document.querySelectorAll('.cf-bxhover'), function (b) { b.hidden = true; b._i = null; });
+  }
+
+  // ── 03 · à vérifier : liens en attente de vérification, puis en suivi pas encore regardés (du plus ancien au plus récent),
+  //    puis les derniers refus ──
+  function bxCheckRow(x, D) {
+    var net = BX_NET[x.network], u = safeUrl(x.url || '', net[1]), k = 'pub:' + x.id, dis = bxDis(k);
+    var t = x.created != null ? new Date(x.created) : null, end = bxTrackEnd(x, D), live = bxTracking(x, D);
+    var verif = x.status === 'verif', checked = verif && x.checked != null, held = bxHeld(x), fl = verif ? bxFlagChips(x) : [], F = x.flags || {}, mot = bxMotif(x);
+    var st = !verif ? BX_PST[x.status] || ['statut inconnu', '']
+      : held ? ['En attente de vérification', 'is-pend'] : checked ? (live ? ['conforme · en suivi', 'is-ok'] : ['conforme · suivi terminé', 'is-ok'])
+        : live ? ['à vérifier · en suivi', 'is-pend'] : ['à vérifier · suivi terminé', 'is-pend'];
+    var dEnd = end != null ? dmy(new Date(end)) : '';
+    // 17/10 (round 5) : après la fin du suivi, « Valider avec les vues figées » (validate_frozen : aucun chiffre envoyé) ;
+    // caché seulement pour un lien conforme que BloxAI validera au prochain passage (aucun motif de retenue)
+    var frozenOk = verif && !live && end != null && (held || !checked || !!x.holdReason);
+    var jump = verif && bxJump(x);
+    var info = [x.name || 'diffuseur', t ? 'collé le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue',
+      x.views == null ? '— vue' : fInt(x.views) + ' ' + plural(x.views, 'vue'), x.status === 'valid' && x.validViews != null ? fInt(x.validViews) + ' ' + plural(x.validViews, 'validée') : '',
+      // 18/10 (round 7, R7-3) : dernière lecture réelle quand elle est sous le maximum relevé (vues retirées ?)
+      verif && x.lastViews != null && x.views != null && x.lastViews < x.views ? 'dernière lecture : ' + fInt(x.lastViews) + ' ' + plural(x.lastViews, 'vue') : '',
+      verif && x.checkedViews != null ? fInt(x.checkedViews) + ' ' + plural(x.checkedViews, 'vue') + ' au « conforme »' : '',
+      verif && !live && x.viewsAtClose != null ? fInt(x.viewsAtClose) + ' ' + plural(x.viewsAtClose, 'vue figée', 'vues figées') + ' à la fin du suivi' : '',
+      fl.length && F.seenViews != null ? fInt(F.seenViews) + ' ' + plural(F.seenViews, 'vue relevée', 'vues relevées') + ' sur la vidéo' : '',
+      verif && x.lastRead != null ? 'vues relues le ' + dmy(new Date(x.lastRead)) + ' à ' + hm(new Date(x.lastRead)) : '',
+      // 17/10 (round 5, contrat 3) : dernière lecture faite au plus tard à la fin du suivi (celle qui compte pour les 48 h)
+      verif && !live && x.readAtClose != null && x.readAtClose !== x.lastRead ? 'dernière lecture avant la fin du suivi le ' + dmy(new Date(x.readAtClose)) + ' à ' + hm(new Date(x.readAtClose)) : '',
+      !verif ? '' : held ? 'en attente de vérification' + (F.heldSince != null ? ' depuis le ' + dmy(new Date(F.heldSince)) : '') + ' : aucun gain tant que tu n’as pas décidé'
+        : end == null ? 'date du lien inconnue : vues encore suivies'
+        : live ? (checked ? 'gains comptés à la fin du suivi le ' + dEnd + ' si ses vues sont relues dans les 48' + NB + 'h avant' : 'fin du suivi le ' + dEnd + ' : sans « Valider », en attente de vérification')
+        : checked ? 'suivi terminé le ' + dEnd + ' : validée au prochain passage avec ses vues figées si elles ont été relues dans les 48' + NB + 'h avant, sinon en attente de vérification'
+        : 'suivi terminé le ' + dEnd + ' : en attente de ta décision'].filter(Boolean).join(' · ');
+    // signal du relevé : à vérifier par Axel, jamais un refus automatique (motif proposé, pré-rempli dans « Refuser »)
+    var cons = verif && fl.length ? 'signal à vérifier : rien n’est refusé automatiquement, à toi de décider' + (mot ? ' · motif proposé : « ' + mot + ' »' : '') : '';
+    // 18/10 (round 6, R3) : engagement (j'aime, commentaires, partages, plus forte hausse sur un jour) ; motif de retenue
+    // « engagement anormal » montré aussi pendant le suivi (les autres motifs : seulement après la fin)
+    var eng = verif ? bxEngText(x) : '', showHold = verif && x.holdReason && (!live || bxHoldLive(x.holdReason)), aud = verif ? bxAudText(x) : '';
+    var acts = u ? '<a class="cf-btn is-sm" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + svg(IC.external, 12) + 'Ouvrir</a>' : '<span class="cf-meta">lien illisible</span>';
+    if (verif) {
+      acts += '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-pub-ko" data-id="' + esc(x.id) + '"' + dis + '>Refuser</button>'
+        + (frozenOk ? '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-pub-frozen" data-id="' + esc(x.id) + '"' + dis
+          + ' title="Suivi terminé : ses vues figées à la fin du suivi (chiffre de BloxAI) comptent tout de suite dans les gains">' + svg(IC.check, 12) + (ui.bx.busy[k] ? 'Enregistrement…' : 'Valider avec les vues figées') + '</button>'
+        : !live || (checked && !held) ? '' : '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-pub-ok" data-id="' + esc(x.id) + '"' + dis
+          + ' title="Conforme : la vidéo sort de « À vérifier » ; ses gains seront comptés à la fin du suivi">' + svg(IC.check, 12) + (ui.bx.busy[k] ? 'Enregistrement…' : 'Valider') + '</button>');
+    } else if (x.status === 'refus') {
+      acts += '<button type="button" class="cf-btn is-sm" data-act="bx-pub-reset" data-id="' + esc(x.id) + '"' + dis + '>' + (ui.bx.busy[k] ? 'Enregistrement…' : 'Remettre à vérifier') + '</button>';
+    }
+    // chaîne YouTube non déclarée : lien direct pour la regarder (identifiant déjà filtré dans cf-store.js)
+    var ch = fl.length && F.ytUnverified && F.ytChannel ? safeUrl('https://www.youtube.com/channel/' + F.ytChannel, BX_NET.youtube[1]) : '';
+    return '<div class="cf-bx-row" data-pub="' + esc(x.id) + '"' + (fl.length ? ' data-flagged="1"' : '') + (held ? ' data-held="1"' : '') + '><span class="cf-bx-ic" aria-hidden="true">' + bxNetIc(x.network) + '</span>'
+      + '<span class="cf-bx-main"><span class="cf-bx-l1">' + bxVfChip(x.vf) + '<b>' + esc(net[0]) + '</b><span class="cf-qchip ' + st[1] + '">' + esc(st[0]) + '</span>'
+      + fl.map(function (f) { return '<span class="cf-qchip is-flag ' + f[1] + '" title="' + esc(f[2]) + '">' + svg(IC.alert, 11) + esc(f[0]) + '</span>'; }).join('') + '</span>'
+      + '<span class="cf-meta">' + esc(info) + '</span>'
+      + (eng ? '<span class="cf-meta" data-eng="1">' + esc('engagement : ' + eng) + '</span>' : '')
+      // 18/10 (round 7, R7-1) : vues du 1er jour et abonnés du compte (orange au-delà de 10 fois les abonnés)
+      + (aud ? '<span class="' + (bxAudOdd(x) ? 'cf-bx-why is-warn' : 'cf-meta') + '" data-aud="1">' + esc('audience : ' + aud) + '</span>' : '')
+      + (fl.length ? '<span class="cf-bx-why is-warn">' + esc(fl.map(function (f) { return f[0] + ' : ' + f[2]; }).join(' · '))
+        + (ch ? ' · <a class="cf-link" href="' + esc(ch) + '" target="_blank" rel="noopener noreferrer">voir la chaîne' + svg(IC.external, 11) + '</a>' : '') + '</span>' : '')
+      // 17/10 (round 5) : motif de retenue de BloxAI après la fin du suivi (pendant le suivi, il ne dit rien d'utile : la
+      // relecture des 48 h n'a pas encore eu lieu) ; hausse anormale des vues depuis le « conforme »
+      + (showHold ? '<span class="cf-bx-why is-warn" data-hold="1"' + (bxHoldKey(x.holdReason) === 'eng' ? ' data-hold-eng="1"' : bxHoldKey(x.holdReason) === 'drop' ? ' data-hold-drop="1"' : '') + ' title="' + esc('BloxAI : ' + x.holdReason) + '">' + esc('retenue par BloxAI : ' + bxHoldText(x.holdReason)) + '</span>' : '')
+      + (jump ? '<span class="cf-bx-why is-warn" data-jump="1">' + esc('vues au « conforme » : ' + fInt(x.checkedViews) + ' → ' + fInt(x.viewsAtClose != null ? x.viewsAtClose : x.views)
+        + (x.viewsAtClose != null ? ' figées à la fin du suivi' : ' aujourd’hui') + ' : hausse de plus de 5 fois et de plus de 100' + NB + '000 vues, vues achetées ? Vérifie les statistiques natives avant de valider') + '</span>' : '')
+      + (cons ? '<span class="cf-bx-why">' + esc('→ ' + cons) + '</span>' : '')
+      + (x.status === 'refus' ? '<span class="cf-bx-why">' + esc(x.reason ? 'motif : « ' + x.reason + ' »' : 'motif : aucun') + '</span>' : '') + '</span>'
+      + '<span class="cf-bx-acts">' + acts + '</span></div>';
+  }
+  function bxCheckHTML(D) {
+    var L = D.toCheck, nV = L ? bxToCheckN(D) : null, td = bxTrackDays(D), nH = bxHeldN(D);
+    var sub = 'ouvre le lien, vérifie la vidéo et la mention Publicité : Valider (conforme : la vidéo sort de la liste, ses gains seront comptés à la fin des '
+      + td + NB + 'jours de suivi) ou Refuser (motif visible par le diffuseur). Rien n’est validé ni refusé sans toi : sans « Valider », ou sans vues relues dans les 48' + NB + 'h avant la fin, le lien passe « En attente de vérification »'
+      + ' ; suivi fini : « Valider avec les vues figées » (chiffre de BloxAI, rien de tapé) ou Refuser';
+    if (!L) return '<section class="cf-card" data-block="bx-check">' + bxHead('À vérifier', sub, nV) + emptyLine('—', 'liste ' + BX_NR) + '</section>';
+    // ordre : en attente de vérification d'abord (gains bloqués), puis l'ordre de BloxAI — à vérifier du plus ancien au plus
+    // récent, (déjà conformes, s'il y en a), puis les derniers refus
+    var rank = function (x) { return x.status !== 'verif' ? 3 : bxHeld(x) ? 0 : x.checked != null ? 2 : 1; };
+    var sorted = L.map(function (x, i) { return { x: x, i: i }; }).sort(function (a, b) { return rank(a.x) - rank(b.x) || a.i - b.i; }).map(function (o) { return o.x; });
+    var nList = sorted.filter(function (x) { return rank(x) === 1; }).length, nFlag = sorted.filter(function (x) { return rank(x) <= 1 && bxFlagged(x); }).length;
+    if (nH) sub += ' · ' + nH + ' en attente de vérification (aucun gain sans ta décision)';
+    if (nFlag) sub += ' · ' + nFlag + ' ' + plural(nFlag, 'lien signalé', 'liens signalés') + ' par le relevé des vues (à vérifier : jamais de refus automatique)';
+    if (nV != null && nV > nList) sub += ' · les ' + nList + ' plus ' + plural(nList, 'ancien', 'anciens') + ' affichés sur ' + fInt(nV);
+    var head = bxHead('À vérifier', sub, nV);
+    if (!L.length) return '<section class="cf-card" data-block="bx-check">' + head + '<div class="cf-empty-s cf-dashed">Aucune publication à vérifier.</div></section>';
+    var shown = ui.bx.allCheck ? sorted : sorted.slice(0, BX_LIST_MAX);
+    return '<section class="cf-card" data-block="bx-check">' + head + '<div class="cf-bx-list">' + shown.map(function (x) { return bxCheckRow(x, D); }).join('') + '</div>'
+      + (sorted.length > BX_LIST_MAX ? '<button type="button" class="cf-link-btn" data-act="bx-all-check">' + esc(ui.bx.allCheck ? 'Réduire la liste' : 'Voir les ' + sorted.length + ' publications') + '</button>' : '')
+      + '</section>';
+  }
+
+  // ── 04 · diffuseurs : inscriptions et classement ──
+  function bxUsersHTML(D) {
+    var U = D.users, sg = U.signups;
+    var tiles = '<div class="cf-stiles">'
+      + bxTile('total', bxN(U.total), 'Inscrits', U.total == null ? BX_NR : 'comptes BloxAI', 'is-acc')
+      + bxTile('onboarded', bxN(U.onboarded), 'Profil terminé', U.onboarded == null ? BX_NR : 'peuvent demander une mission', '')
+      + bxTile('active7', bxN(U.active7), 'Actifs · 7' + NB + 'j', U.active7 == null ? BX_NR : 'ont pris une mission', '')
+      + bxTile('ig', bxN(U.ig), 'Instagram relié', U.ig == null ? BX_NR : 'connexion directe', '')
+      + bxTile('tt', bxN(U.tt), 'TikTok relié', U.tt == null ? BX_NR : 'connexion directe', '')
+      + bxTile('paused', bxN(U.paused), 'En pause', U.paused == null ? BX_NR : 'après trop d’échecs en 7' + NB + 'j', U.paused ? 'is-err' : '')
+      + '</div>';
+    var chart = !sg ? emptyLine('—', 'inscriptions par jour ' + BX_NR) : !sg.length ? '<div class="cf-empty-s">Aucune inscription sur 30' + NB + 'j.</div>'
+      : bxBars('signups', 'Inscriptions par jour', sg.map(function (x) { return x.day; }), sg.map(function (x) { return x.n; }), ['inscription', 'inscriptions']);
+    return '<section class="cf-card" data-block="bx-users">' + chead('Diffuseurs', 'comptes BloxAI · connexions Instagram et TikTok') + tiles + chart + '</section>';
+  }
+  function bxRankRow(x, i) {
+    var hs = [x.ig ? 'IG @' + x.ig : '', x.tt ? 'TikTok @' + x.tt : ''].filter(Boolean).join(' · ') || 'aucun compte relié';
+    var pause = x.pausedUntil != null && x.pausedUntil > Date.now() ? '<span class="cf-qchip is-ko">' + esc('en pause jusqu’au ' + dm(new Date(x.pausedUntil)) + ' à ' + hm(new Date(x.pausedUntil))) + '</span>' : '';
+    var m = function (k, v, l) { return '<span class="cf-bx-rk-m" data-m="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span>' + esc(l) + '</span></span>'; };
+    var mis = [[x.claimed, 'prise', 'prises'], [x.submitted, 'envoyée', 'envoyées'], [x.expired, 'échouée', 'échouées'], [x.abandoned, 'abandonnée', 'abandonnées']]
+      .map(function (y) { return y[0] == null ? '— ' + y[2] : fInt(y[0]) + ' ' + plural(y[0], y[1], y[2]); }).join(' · ');
+    return '<div class="cf-bx-rk"><span class="cf-bx-rk-n">' + (i + 1) + '</span>'
+      + '<span class="cf-bx-main"><b>' + esc(x.name || 'diffuseur') + '</b><span class="cf-meta">' + esc(hs) + '</span><span class="cf-meta">' + esc(mis) + '</span>' + pause + '</span>'
+      + m('fiab', x.reliability == null ? '—' : fDec(x.reliability * 100, 0) + NB + '%', 'fiabilité')
+      + m('vues', bxN(x.views), x.validViews == null ? 'vues' : 'vues · ' + fInt(x.validViews) + ' validées')
+      + m('vpp', x.vpp == null ? '—' : fInt(x.vpp), 'vues / publication')
+      + m('rapid', x.medianH == null ? '—' : fHours(x.medianH), 'délai médian') + '</div>';
+  }
+  function bxRankHTML(D) {
+    var R = D.ranking, srt = ui.bx.sort;
+    var seg = '<div class="cf-seg" role="group" aria-label="Tri du classement">' + BX_SORT.map(function (x) {
+      var on = x[0] === srt;
+      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="bx-sort" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
+    }).join('') + '</div>';
+    var head = chead('Classement des diffuseurs', 'fiabilité = envoyées ÷ (envoyées + échouées + abandonnées) · rapidité = délai médian entre la prise et l’envoi', seg);
+    if (!R) return '<section class="cf-card" data-block="bx-rank">' + head + emptyLine('—', 'classement ' + BX_NR) + '</section>';
+    if (!R.length) return '<section class="cf-card" data-block="bx-rank">' + head + '<div class="cf-empty-s cf-dashed">Aucun diffuseur n’a encore pris de mission.</div></section>';
+    var nn = function (v, dflt) { return v == null ? dflt : v; };
+    var L = R.slice().sort(function (a, b) {
+      if (srt === 'vues') return nn(b.views, -1) - nn(a.views, -1);
+      if (srt === 'rapid') return nn(a.medianH, Infinity) - nn(b.medianH, Infinity) || nn(b.reliability, -1) - nn(a.reliability, -1);
+      return nn(b.reliability, -1) - nn(a.reliability, -1) || nn(b.views, -1) - nn(a.views, -1);
+    });
+    var shown = ui.bx.allRank ? L : L.slice(0, BX_RANK_MAX);
+    return '<section class="cf-card" data-block="bx-rank">' + head + '<div class="cf-bx-list">' + shown.map(bxRankRow).join('') + '</div>'
+      + (L.length > BX_RANK_MAX ? '<button type="button" class="cf-link-btn" data-act="bx-all-rank">' + esc(ui.bx.allRank ? 'Réduire le classement' : 'Voir les ' + L.length + ' diffuseurs') + '</button>' : '')
+      + '</section>';
+  }
+
+  // ── 05 · pièces d'identité (avant le premier versement) et versements ──
+  function bxIdHTML(D) {
+    var L = D.identity;
+    var head = bxHead('Pièces d’identité', 'âge (18 ans révolus) et identité vérifiés à la main avant le premier versement · pièce comparée au nom légal déclaré à la 1re acceptation des conditions · nom lu sur la pièce comparé au titulaire de chaque versement · copie supprimée après la décision', L ? L.length : null)
+      + (D.identityUndeleted ? '<div class="cf-bx-why is-warn">' + esc(D.identityUndeleted + ' ' + plural(D.identityUndeleted, 'copie déjà décidée', 'copies déjà décidées') + ' encore dans le stockage BloxAI : nouvel essai automatique') + '</div>' : '');
+    if (!L) return '<section class="cf-card" data-block="bx-id">' + head + emptyLine('—', 'pièces d’identité ' + BX_NR) + '</section>';
+    if (!L.length) return '<section class="cf-card" data-block="bx-id">' + head + '<div class="cf-empty-s cf-dashed">Aucune pièce à vérifier.</div></section>';
+    return '<section class="cf-card" data-block="bx-id">' + head + '<div class="cf-bx-list">' + L.map(function (x) {
+      var k = 'id:' + x.id, dis = bxDis(k), kv = bxDis('idv:' + x.id), t = x.created != null ? new Date(x.created) : null;
+      // 18/10 (round 6, R2) : nom légal déclaré à la 1re acceptation des conditions (non modifiable) et nom déclaré actuel,
+      // à comparer avec la pièce avant « Valider »
+      return '<div class="cf-bx-row is-id" data-idrow="' + esc(x.id) + '"><span class="cf-bx-main"><b>' + esc(x.name || 'diffuseur') + '</b>'
+        + '<span class="cf-meta">' + esc([x.email || 'e-mail inconnu', t ? 'déposée le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue'].join(' · ')) + '</span>'
+        + bxDeclLines(x) + '</span>'
+        + '<span class="cf-bx-acts"><button type="button" class="cf-btn is-sm" data-act="bx-id-view" data-id="' + esc(x.id) + '"' + kv + '>' + svg(IC.eye, 12) + (ui.bx.busy['idv:' + x.id] ? 'Ouverture…' : 'Voir') + '</button>'
+        + '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-id-ko" data-id="' + esc(x.id) + '"' + dis + '>Refuser</button>'
+        + '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-id-ok" data-id="' + esc(x.id) + '"' + dis + '>' + svg(IC.check, 12) + (ui.bx.busy[k] ? 'Enregistrement…' : 'Valider') + '</button></span></div>';
+    }).join('') + '</div></section>';
+  }
+  // nom légal déclaré à la 1re acceptation, nom déclaré actuel, nom réécrit depuis (onglet BloxAI et Accueil, 18/10)
+  function bxDeclLines(x) {
+    var dm = bxDeclMoved(x);
+    return (x.declaredKnown ? (x.declaredFirst ? '<span class="cf-bx-how" data-decl-first="1">' + esc('nom légal déclaré à la 1re acceptation des conditions : ' + x.declaredFirst) + '</span>'
+        + '<span class="cf-bx-how" data-decl-cur="1">' + esc('nom déclaré actuel : ' + (x.declaredCurrent || '—')) + '</span>'
+      : '<span class="cf-bx-why is-warn" data-decl-first="0">aucun nom légal déclaré à l’acceptation des conditions : compare la pièce avec le diffuseur</span>') : '')
+      + (dm ? '<span class="cf-bx-why is-warn" data-decl-moved="1">' + esc(dm + ' : la pièce doit être au nom de la 1re acceptation') + '</span>' : '');
+  }
+
+  // ── 18/10 (round 7, R7-16) : Accueil — « Pièces d'identité à vérifier » en tête, avec l'aperçu de l'image ──
+  // Aperçu = URL signée de 300 s demandée à BloxAI (op identity_url, la même que « Voir ») pour les BX_PREV_MAX premières
+  // pièces ; redemandée après 4 min (l'image déjà affichée reste en attendant). Oubliée dès la décision (bxIdAfter : image
+  // détruite côté BloxAI). PDF / HEIC : pas d'aperçu dans la page (« Ouvrir »). Valider / Refuser = bxIdDecide, mêmes
+  // contrôles que l'onglet BloxAI (date de naissance, 18 ans, nom lu, comparaison au nom de la 1re acceptation).
+  var BX_PREV_MAX = 6, BX_PREV_TTL = 240000;
+  function bxIdPrevKind(u) {
+    var path = '';
+    try { path = new URL(u).pathname.toLowerCase(); } catch (e) { /* rien */ }
+    return /\.pdf$/.test(path) ? 'pdf' : /\.(heic|heif)$/.test(path) ? 'heic' : 'img';
+  }
+  function bxIdPrevGet(id, keep) {
+    var e = { state: 'loading', url: keep && keep.url || null, kind: keep && keep.kind || null, at: Date.now() };
+    ui.bx.idPrev[id] = e;
+    CF.bxIdentityUrl(id).then(function (r) {
+      if (ui.bx.idPrev[id] !== e) return;   // décision prise entre-temps : rien n'est gardé
+      ui.bx.idPrev[id] = r && r.ok ? { state: 'ok', url: r.url, kind: bxIdPrevKind(r.url), at: Date.now() } : { state: 'err', error: (r && r.error) || 'erreur inconnue', at: Date.now() };
+      schedule();
+    });
+  }
+  function bxIdPrevLoad() {
+    var D = CF.bx.data, L = D && D.identity ? D.identity.slice(0, BX_PREV_MAX) : [], P = ui.bx.idPrev, on = {};
+    L.forEach(function (x) { on[x.id] = 1; });
+    Object.keys(P).forEach(function (id) { if (!on[id]) delete P[id]; });   // pièce décidée ou sortie de la liste : URL oubliée
+    L.forEach(function (x) {
+      var e = P[x.id];
+      if (e && (e.state !== 'ok' || Date.now() - e.at < BX_PREV_TTL)) return;   // en cours, en erreur (« Réessayer ») ou encore fraîche
+      bxIdPrevGet(x.id, e);
+    });
+  }
+  function homeIdRow(x) {
+    var k = 'id:' + x.id, dis = bxDis(k), kv = bxDis('idv:' + x.id), t = x.created != null ? new Date(x.created) : null, P = ui.bx.idPrev[x.id], who = x.name || 'diffuseur', prev;
+    if (P && P.url && P.kind === 'img' && (P.state === 'ok' || P.state === 'loading')) prev = '<img class="cf-idh-img" src="' + esc(P.url) + '" alt="' + esc('Pièce d’identité de ' + who) + '" data-idimg="' + esc(x.id) + '" referrerpolicy="no-referrer" decoding="async">';
+    else if (P && P.url && (P.state === 'ok' || P.state === 'loading')) prev = '<div class="cf-idh-ph" data-prev="' + P.kind + '">' + svg(IC.eye, 18) + esc((P.kind === 'pdf' ? 'Pièce en PDF' : 'Photo HEIC') + ' : pas d’aperçu dans la page, ouvre-la') + '</div>';
+    else if (P && (P.state === 'err' || P.state === 'imgerr')) prev = '<div class="cf-idh-ph is-err" data-prev="' + P.state + '">' + esc(P.state === 'err' ? 'Aperçu indisponible : ' + P.error : 'Aperçu illisible (lien expiré ou format non affiché)')
+      + '<button type="button" class="cf-link-btn" data-act="bx-id-prev" data-id="' + esc(x.id) + '">Réessayer</button></div>';
+    else prev = '<div class="cf-idh-ph" data-prev="loading"><span class="cf-spin" aria-hidden="true"></span>Chargement de l’aperçu…</div>';
+    return '<div class="cf-idh-row" data-hid="' + esc(x.id) + '"><div class="cf-idh-prev">' + prev + '</div>'
+      + '<div class="cf-bx-main"><b>' + esc(who) + '</b><span class="cf-meta">' + esc([x.email || 'e-mail inconnu', t ? 'déposée le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue'].join(' · ')) + '</span>'
+      + bxDeclLines(x)
+      + '<span class="cf-bx-acts cf-idh-acts"><button type="button" class="cf-btn is-sm" data-act="bx-id-view" data-id="' + esc(x.id) + '"' + kv + '>' + svg(IC.external, 12) + (ui.bx.busy['idv:' + x.id] ? 'Ouverture…' : 'Ouvrir en grand') + '</button>'
+      + '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-id-ko" data-id="' + esc(x.id) + '"' + dis + '>Refuser</button>'
+      + '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-id-ok" data-id="' + esc(x.id) + '"' + dis + '>' + svg(IC.check, 12) + (ui.bx.busy[k] ? 'Enregistrement…' : 'Valider') + '</button></span></div></div>';
+  }
+  function homeIdHTML() {
+    var D = CF.bx.data, L = D && D.identity ? D.identity : [], now = Date.now();
+    var done = (ui.bx.idDone || []).filter(function (d) { return now - d.at < 10 * 60 * 1000; });
+    // messages des pièces seulement : refus de l'edge (dont « Recharge le tableau de bord »), date ou nom invalides…
+    var msg = bxMsgHTML(function (m) { return !!(m.k && /^idv?:/.test(m.k) && (m.fail || m.say)); });
+    if (!L.length && !done.length && !msg) return '';
+    var n = L.length;
+    var doneH = done.length ? '<div class="cf-idh-done">' + done.map(function (d) {
+      var ok = d.fd === true;
+      return '<div class="cf-idh-done-r ' + (ok ? 'is-ok' : 'is-warn') + '" data-done="' + esc(d.id) + '" data-fd="' + (d.fd === true ? '1' : d.fd === false ? '0' : 'na') + '">' + svg(ok ? IC.check : IC.alert, 13)
+        + '<span>' + esc(d.head + ' · ' + (ok ? 'image détruite' : d.fd === false ? 'image pas encore détruite : suppression en attente, nouvel essai automatique côté BloxAI (vérifie qu’elle disparaît)'
+          : 'destruction de l’image non confirmée par BloxAI : vérifie que la copie a disparu')) + '</span></div>';
+    }).join('') + '</div>' : '';
+    return '<section class="cf-card cf-idh" data-block="home-id" aria-labelledby="cfIdhT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfIdhT">Pièces d’identité à vérifier <span class="cf-badge">' + n + '</span></h2>'
+      + '<span class="cf-meta">' + esc('âge (18 ans révolus) et identité, à la main, avant le premier versement : compare la pièce avec le nom légal déclaré à la 1re acceptation des conditions, puis Valider (date de naissance et nom lus sur la pièce) ou Refuser (motif). L’image est détruite dès ta décision.') + '</span></div></div>'
+      + msg + doneH
+      + (n ? '<div class="cf-idh-list">' + L.slice(0, BX_PREV_MAX).map(homeIdRow).join('') + '</div>'
+        + (n > BX_PREV_MAX ? '<button type="button" class="cf-link-btn" data-act="home-go" data-tab="trackads">' + esc('+ ' + (n - BX_PREV_MAX) + ' ' + plural(n - BX_PREV_MAX, 'autre pièce', 'autres pièces') + ' dans l’onglet BloxAI') + '</button>' : '')
+        : '<div class="cf-empty-s cf-dashed">Plus aucune pièce à vérifier.</div>')
+      + '</section>';
+  }
+  function bxIban(s) { return String(s).replace(/(.{4})(?=.)/g, '$1 '); }
+  function bxPayHTML(D) {
+    var M = D.money, P = M.payouts;
+    var k = function (c, l) { return '<div class="cf-pay-k"><b class="' + (c ? 'is-v' : '') + '">' + esc(c == null ? '—' : fEur(c)) + '</b><span>' + esc(l) + '</span></div>'; };
+    var head = bxHead('Versements', 'le 1er du mois · le 15 pour les paliers Pro et Elite · Elite : à la demande', P ? P.length : null)
+      + '<div class="cf-pay-ks cf-bx-payks">' + k(M.validated, 'Gains validés') + k(M.paid, 'Déjà versé') + k(M.unpaid, 'Solde non versé') + '</div>';
+    if (!P) return '<section class="cf-card" data-block="bx-pay">' + head + emptyLine('—', 'versements ' + BX_NR) + '</section>';
+    var defer = bxDeferHTML(M.deferred);
+    if (!P.length) return '<section class="cf-card" data-block="bx-pay">' + head + '<div class="cf-empty-s cf-dashed">Aucun versement à faire.</div>' + defer + '</section>';   // defer : reportés et gelés (18/10)
+    return '<section class="cf-card" data-block="bx-pay">' + head + '<div class="cf-bx-list">' + P.map(function (x) {
+      var kk = 'pay:' + x.id, dis = bxDis(kk), t = x.created != null ? new Date(x.created) : null;
+      var how = bxPayDest(x) || (x.method === 'paypal' ? 'PayPal · e-mail PayPal absent' : x.method === 'iban' ? 'IBAN absent' : null);
+      // 17/10 (round 5, contrats 2 et 9) : nom vérifié sur la pièce à côté du titulaire, coordonnées modifiées récemment
+      var nc = bxNameCheck(x), rc = bxRecent(x);
+      // 18/10 (round 6) : depuis le dernier versement payé (R1a), nom légal déclaré (R2), titulaire partiel (R4)
+      var ph = bxPaidHist(x), pt = bxPaidTexts(x), dc = bxDeclCheck(x), dm = bxDeclMoved(x);
+      var chip = function (c, t) { return '<span class="cf-qchip is-flag ' + c + '">' + svg(IC.alert, 11) + esc(t) + '</span>'; };
+      // 18/10 (round 7, R7-5) : « Annuler ce versement » (ouvert seulement) et « Geler les versements » / « Dégeler » ; seulement
+      // quand BloxAI envoie le gel (freezeKnown : sa version connaît bx_admin_payout_cancel et bx_admin_freeze)
+      var canCancel = x.freezeKnown && (x.status === 'requested' || x.status === 'pending');
+      return '<div class="cf-bx-row is-pay" data-pay="' + esc(x.id) + '"' + (x.payFrozen ? ' data-frozen="1"' : '') + (nc === 'diff' ? ' data-name-diff="1"' : '') + (rc ? ' data-recent="1"' : '')
+        + (ph && ph.first ? ' data-first="1"' : '') + (ph && ph.changed ? ' data-paid-changed="1"' : '') + (ph && ph.dest ? ' data-dest-diff="1"' : '') + (dc ? ' data-decl="' + dc + '"' : '')
+        + '><span class="cf-bx-main"><span class="cf-bx-l1"><b>' + esc((x.name || 'diffuseur') + ' · ' + fEur(x.amount)) + '</b>'
+        + '<span class="cf-qchip ' + (x.status === 'requested' ? 'is-pend' : '') + '">' + esc(BX_PAY_ST[x.status] || 'statut inconnu') + '</span>'
+        + (x.payFrozen ? chip('is-ko', 'Versements gelés') : '')
+        + (x.detailsChanged ? '<span class="cf-qchip is-flag is-warn">' + svg(IC.alert, 11) + 'Coordonnées modifiées</span>' : '')
+        + (rc ? '<span class="cf-qchip is-flag is-warn">' + svg(IC.alert, 11) + 'Modifiées récemment</span>' : '')
+        + (nc === 'diff' ? '<span class="cf-qchip is-flag is-ko">' + svg(IC.alert, 11) + 'Titulaire ≠ pièce</span>' : '')
+        + (nc === 'partial' ? chip('is-warn', 'Titulaire partiel') : '')
+        + (dc === 'diff' ? chip('is-ko', 'Pièce ≠ nom déclaré') : '')
+        + (ph && ph.dest ? chip('is-ko', 'Destination différente') : '')
+        + (ph && ph.changed ? chip('is-warn', 'Changées depuis le dernier versement') : '')
+        + (ph && ph.first ? chip('is-warn', '1er versement') : '') + '</span>'
+        + '<span class="cf-meta">' + esc([BX_KIND[x.kind] || 'versement', x.period ? 'période du ' + dmy(ymdDate(x.period)) : '', t ? 'créé le ' + dmy(t) : '', x.email || ''].filter(Boolean).join(' · ')) + '</span>'
+        + (x.payFrozen ? '<span class="cf-bx-why" data-frozen-t="1">' + esc(bxFrozenText(x) + ' ; ne paie pas ce versement sans avoir levé le doute (Annuler ce versement, ou Dégeler)') + '</span>' : '')
+        + (how ? '<span class="cf-bx-how">' + esc((x.frozen ? 'figée à la demande · ' : 'profil actuel (non figé) · ') + how) + '</span>' : '<span class="cf-bx-why is-warn">moyen de paiement non renseigné : à demander au diffuseur</span>')
+        + '<span class="' + (nc === 'ok' || nc === 'paypal' ? 'cf-bx-how' : 'cf-bx-why is-warn') + '" data-name="' + nc + '">' + esc(bxNameText(x)) + '</span>'
+        + (dc && dc !== 'nover' ? '<span class="' + (dc === 'ok' ? 'cf-bx-how' : 'cf-bx-why' + (dc === 'none' ? ' is-warn' : '')) + '" data-decl-t="1">' + esc(bxDeclText(x)) + '</span>' : '')
+        + (dm ? '<span class="cf-bx-why is-warn" data-decl-moved="1">' + esc(dm) + '</span>' : '')
+        + (x.detailsChanged ? '<span class="cf-bx-why is-warn">' + esc('le diffuseur a changé ses coordonnées après la demande : paie la destination figée ci-dessus (ou vérifie avec lui avant)') + '</span>' : '')
+        + (rc ? '<span class="cf-bx-why is-warn">' + esc(bxRecentText(rc) + ' : ' + bxCoolEnd(rc) + ' ; paie la destination figée ci-dessus, en cas de doute confirme avec le diffuseur par un autre canal') + '</span>' : '')
+        + pt.map(function (p) { return '<span class="cf-bx-why' + (p[0] === 'dest' ? '' : ' is-warn') + '" data-paid="' + p[0] + '">' + esc(p[1]) + '</span>'; }).join('') + '</span>'
+        + '<span class="cf-bx-acts">' + bxFreezeBtn(x)
+        + (canCancel ? '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-pay-cancel" data-id="' + esc(x.id) + '"' + dis + '>' + (ui.bx.busy[kk] === 'admin_payout_cancel' ? 'Annulation…' : 'Annuler ce versement') + '</button>' : '')
+        + '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-pay" data-id="' + esc(x.id) + '"' + dis + '>' + svg(IC.check, 12) + (ui.bx.busy[kk] === 'admin_payout_paid' ? 'Enregistrement…' : 'Marquer payé') + '</button></span></div>';
+    }).join('') + '</div>' + defer + '</section>';
+  }
+  // 17/10 (round 5, contrat 2) : diffuseurs dont le versement est REPORTÉ (BX_COOLDOWN : coordonnées de versement ou mot de
+  // passe changés depuis moins de 72 h) — rien à payer pour l'instant, BloxAI le crée au premier passage après le délai.
+  // Session volée ? Axel peut prévenir le diffuseur par un autre canal avant.
+  // 18/10 (round 7, R7-5) : gel des versements par Axel — un diffuseur gelé n'a JAMAIS de versement créé (BX_FROZEN) ; ses
+  // lignes de payouts_deferred sont montrées à part (bxFrozenHTML), avec « Dégeler »
+  function bxDefFrozen(d) { return !!(d && (d.payFrozen || d.reason === 'BX_FROZEN')); }
+  function bxFrozenText(x) { return 'versements gelés par toi' + (x.payFrozenReason ? ' (motif : « ' + x.payFrozenReason + ' »)' : '') + ' : BloxAI ne crée plus aucun versement pour ce diffuseur'; }
+  function bxFreezeBtn(x) {
+    if (!x || !x.freezeKnown || !x.userId) return '';
+    var fk = 'frz:' + x.userId;
+    return '<button type="button" class="cf-btn is-sm' + (x.payFrozen ? '' : ' is-ko') + '" data-act="bx-freeze" data-uid="' + esc(x.userId) + '" data-on="' + (x.payFrozen ? '0' : '1') + '"' + bxDis(fk) + '>'
+      + (ui.bx.busy[fk] ? 'Enregistrement…' : x.payFrozen ? 'Dégeler' : 'Geler les versements') + '</button>';
+  }
+  function bxFrozenHTML(L) {
+    if (!L || !L.length) return '';
+    return '<div class="cf-bx-sub" data-block="bx-frozen"><span class="cf-meta"><b>' + esc(L.length + ' ' + plural(L.length, 'diffuseur aux versements gelés', 'diffuseurs aux versements gelés')) + '</b>'
+      + esc(' · aucun versement créé tant que tu ne dégèles pas') + '</span><div class="cf-bx-list">' + L.map(function (d) {
+        return '<div class="cf-bx-row is-pay is-defer" data-frozen-user="' + esc(d.userId) + '"><span class="cf-bx-main"><span class="cf-bx-l1"><b>' + esc((d.name || 'diffuseur') + (d.balance != null ? ' · solde ' + fEur(d.balance) : '')) + '</b>'
+          + '<span class="cf-qchip is-flag is-ko">' + svg(IC.alert, 11) + 'Versements gelés</span></span>'
+          + (d.email ? '<span class="cf-meta">' + esc(d.email) + '</span>' : '')
+          + '<span class="cf-bx-why">' + esc(bxFrozenText(d)) + '</span>'
+          + '<span class="cf-bx-how">' + esc(d.verifiedName ? 'nom vérifié sur la pièce : ' + d.verifiedName : 'aucun nom vérifié sur la pièce d’identité') + '</span></span>'
+          + (d.freezeKnown ? '<span class="cf-bx-acts">' + bxFreezeBtn(Object.assign({}, d, { payFrozen: true })) + '</span>' : '') + '</div>';
+      }).join('') + '</div></div>';
+  }
+  function bxDeferHTML(LL) {
+    var L = (LL || []).filter(function (d) { return !bxDefFrozen(d); }), F = bxFrozenHTML((LL || []).filter(bxDefFrozen));
+    if (!L.length) return F;
+    return F + '<div class="cf-bx-sub" data-block="bx-defer"><span class="cf-meta"><b>' + esc(L.length + ' ' + plural(L.length, 'versement reporté', 'versements reportés')) + '</b>'
+      + esc(' · coordonnées modifiées récemment : aucun versement créé avant la fin du délai de sécurité') + '</span><div class="cf-bx-list">' + L.map(function (d) {
+        var rc = bxRecent(d) || (d.cooldownUntil != null ? { at: null, pwd: false, until: d.cooldownUntil } : null);
+        return '<div class="cf-bx-row is-pay is-defer" data-defer="' + esc(d.userId) + '"><span class="cf-bx-main"><span class="cf-bx-l1"><b>' + esc((d.name || 'diffuseur') + (d.balance != null ? ' · solde ' + fEur(d.balance) : '')) + '</b>'
+          + '<span class="cf-qchip is-pend">Reporté</span><span class="cf-qchip is-flag is-warn">' + svg(IC.alert, 11) + 'Modifiées récemment</span></span>'
+          + (d.email ? '<span class="cf-meta">' + esc(d.email) + '</span>' : '')
+          + '<span class="cf-bx-why is-warn">' + esc((rc ? bxRecentText(rc) + ' : ' + bxCoolEnd(rc) : 'coordonnées modifiées récemment : versement reporté par BloxAI') + ' ; si ce n’était pas le diffuseur, préviens-le par un autre canal') + '</span>'
+          + '<span class="cf-bx-how">' + esc(d.verifiedName ? 'nom vérifié sur la pièce : ' + d.verifiedName : 'aucun nom vérifié sur la pièce d’identité') + '</span></span>'
+          + (d.freezeKnown ? '<span class="cf-bx-acts">' + bxFreezeBtn(d) + '</span>' : '') + '</div>';   // 18/10 (round 7) : geler aussi un diffuseur reporté
+      }).join('') + '</div></div>';
+  }
+
+  // ── fiche d'une vidéo finale : bloc « Diffusion » (Instagram, TikTok, BloxAI) ──
+  function bxDiffRow(ic, name, body) {
+    return '<div class="cf-bx-drow"><span class="cf-bx-dn">' + ic + '<b>' + esc(name) + '</b></span><div class="cf-bx-db">' + body + '</div></div>';
+  }
+  // somme des valeurs connues ; « ≥ » quand une publication n'a pas ce chiffre (jamais un total présenté comme complet)
+  function bxSum(L, k) {
+    var x = L.filter(function (p) { return p[k] != null; });
+    return x.length ? (x.length < L.length ? '≥' + NB : '') + fInt(x.reduce(function (a, p) { return a + p[k]; }, 0)) : '—';
+  }
+  function vfIgRow(vf) {
+    var ms = mediaState(), nm = 'Instagram';
+    if (ms.st === 'wait') return bxDiffRow(IG_GLYPH, nm, '<span class="cf-meta">chargement des publications…</span>');
+    if (ms.st !== 'ok') return bxDiffRow(IG_GLYPH, nm, '<span class="cf-meta">' + esc('— · ' + ms.why) + '</span>');
+    var L = ms.MD.list.filter(function (p) { return p.recipe && String(p.recipe.vf || '').split('_')[0] === vf; });
+    if (!L.length) return bxDiffRow(IG_GLYPH, nm, '<span class="cf-meta">' + esc('aucune publication reconnue sur @' + selName()) + '</span>');
+    var v = bxSum(L, 'views'), lk = bxSum(L, 'likes');
+    var links = L.slice(0, 4).map(function (p) {
+      var u = safeUrl(p.permalink, IG_HOST), d = p.ms != null ? dm(new Date(p.ms)) : 'sans date';
+      return u ? '<a class="cf-link" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(d + ' · ' + bxN(p.views) + ' vues') + svg(IC.external, 11) + '</a>' : '<span class="cf-meta">' + esc(d) + '</span>';
+    }).join('');
+    return bxDiffRow(IG_GLYPH, nm, '<span class="cf-bx-dv"><b>' + esc(v) + '</b> vues · ' + esc(lk) + ' likes · ' + esc(L.length + ' ' + plural(L.length, 'publication')) + '</span><span class="cf-bx-dl">' + links + '</span>');
+  }
+  function vfTtRow(vf) {
+    var S = CF.tts, D = S.data, nm = 'TikTok', ic = svg(IC.tiktok, 14);
+    if (!D) return bxDiffRow(ic, nm, '<span class="cf-meta">' + esc(S.state === 'error' ? '— · stats TikTok illisibles : ' + S.error : 'chargement des stats TikTok…') + '</span>');
+    var L = [];
+    D.accounts.forEach(function (a) { a.videos.forEach(function (v) { if (v.recipe && v.recipe.vf === vf) L.push({ v: v, a: a }); }); });
+    if (!L.length) return bxDiffRow(ic, nm, '<span class="cf-meta">' + esc(D.accounts.length ? 'aucune vidéo reconnue sur les comptes reliés' : '— · aucun compte TikTok relié pour les stats') + '</span>');
+    var V = L.map(function (x) { return x.v; }), v = bxSum(V, 'views'), lk = bxSum(V, 'likes');
+    var links = L.slice(0, 4).map(function (x) {
+      var u = safeUrl(x.v.url || '', BX_NET.tiktok[1]), d = (x.a.username ? '@' + x.a.username + ' · ' : '') + (x.v.ms != null ? dm(new Date(x.v.ms)) : 'sans date');
+      return u ? '<a class="cf-link" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(d + ' · ' + bxN(x.v.views) + ' vues') + svg(IC.external, 11) + '</a>' : '<span class="cf-meta">' + esc(d) + '</span>';
+    }).join('');
+    return bxDiffRow(ic, nm, '<span class="cf-bx-dv"><b>' + esc(v) + '</b> vues · ' + esc(lk) + ' likes · ' + esc(L.length + ' ' + plural(L.length, 'vidéo')) + '</span><span class="cf-bx-dl">' + links + '</span>');
+  }
+  function vfBxRow(vf) {
+    var B = bxModel(), D = B.D, nm = 'BloxAI', ic = svg(IC.reach, 14);
+    if (!D) return bxDiffRow(ic, nm, '<span class="cf-meta">' + esc(B.pending ? 'chargement de BloxAI…' : '— · ' + B.why) + '</span>');
+    var E = D.byVf[vf];
+    if (!E) return bxDiffRow(ic, nm, '<span class="cf-meta">pas dans le stock commun BloxAI (kit d’Axel, ou vidéo pas encore poussée)</span>');
+    var st = BX_MST[E.status] || ['statut inconnu', ''], k = 'vf:' + vf, dis = bxDis(k), KV = CF.prod.data ? CF.prod.data.qc.kitVfs : null;
+    // retire : seulement « open » ; reopen : seulement « retired » et jamais une vidéo du kit d'Axel (revérifié par le proxy)
+    var act = E.status === 'open' ? '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-mission" data-vf="' + esc(vf) + '" data-d="retire"' + dis + '>' + (ui.bx.busy[k] ? 'Enregistrement…' : 'Retirer du stock') + '</button>'
+      : E.status === 'retired' && !(KV && KV.vfs[vf]) ? '<button type="button" class="cf-btn is-sm" data-act="bx-mission" data-vf="' + esc(vf) + '" data-d="reopen"' + dis + '>' + (ui.bx.busy[k] ? 'Enregistrement…' : 'Remettre dans le stock') + '</button>' : '';
+    // passée au kit mais sans post dans le kit (retrait interrompu) : jamais « Remettre » ici (fichier peut-être libéré),
+    // la recharge suivante du kit la reprend (journal des retraits)
+    var orphan = E.status === 'kit' && KV && !KV.vfs[vf] && (KV.complete || (E.created != null && KV.oldest != null && E.created >= KV.oldest));
+    if (orphan) act = '<span class="cf-meta">' + esc('aucun post dans le kit : retrait interrompu, repris par la prochaine recharge du kit (sinon, à vérifier)') + '</span>';
+    var asg = E.assignments.slice(0, 8).map(function (a) {
+      var s2 = BX_AST[a.status] || ['statut inconnu', ''], when = a.assigned != null ? 'prise le ' + dm(new Date(a.assigned)) + ' à ' + hm(new Date(a.assigned)) : 'date inconnue';
+      var end = a.submitted != null ? 'envoyée le ' + dm(new Date(a.submitted)) : a.ended != null ? 'fin le ' + dm(new Date(a.ended)) : a.status === 'active' && a.deadline != null ? 'échéance ' + dm(new Date(a.deadline)) + ' à ' + hm(new Date(a.deadline)) : '';
+      return '<span class="cf-bx-dli"><span class="cf-qchip ' + s2[1] + '">' + esc(s2[0]) + '</span>' + esc([a.name || 'diffuseur', when, end].filter(Boolean).join(' · ')) + '</span>';
+    }).join('');
+    var pubs = E.publications.slice(0, 8).map(function (p) {
+      var n2 = BX_NET[p.network], u = safeUrl(p.url || '', n2[1]), s3 = BX_PST[p.status] || ['statut inconnu', ''];
+      var txt = n2[0] + ' · ' + bxN(p.views) + ' vues' + (p.status === 'valid' && p.validViews != null ? ' · ' + fInt(p.validViews) + ' validées' : '');
+      return '<span class="cf-bx-dli"><span class="cf-qchip ' + s3[1] + '">' + esc(s3[0]) + '</span>'
+        + (u ? '<a class="cf-link" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(txt) + svg(IC.external, 11) + '</a>' : esc(txt)) + '</span>';
+    }).join('');
+    return bxDiffRow(ic, nm, '<span class="cf-bx-l1"><span class="cf-qchip ' + st[1] + '">' + esc(st[0]) + '</span>' + (E.missionId ? '<span class="cf-meta">mission n° ' + esc(E.missionId) + '</span>' : '') + act + '</span>'
+      + (asg ? '<span class="cf-bx-dlist">' + asg + '</span>' : '<span class="cf-meta">jamais prise par un diffuseur</span>')
+      + (pubs ? '<span class="cf-bx-dlist">' + pubs + '</span>' : ''));
+  }
+  function vfDiffHTML(qid) {
+    var D = CF.prod.data, q = D ? D.qc.list.filter(function (x) { return x.id === qid; })[0] : null;
+    if (!q) return '';
+    var vf = q.template && /^VF-\d{4}$/.test(q.template) ? q.template : null, head = '<div class="cf-over">Diffusion</div>';
+    if (!vf) return head + '<span class="cf-meta">numéro de vidéo finale (VF-0000) absent : diffusion non rattachable</span>';
+    return head + '<div class="cf-bx-diff">' + vfIgRow(vf) + vfTtRow(vf) + vfBxRow(vf) + '</div>' + bxMsgHTML();
+  }
+
+  // ── actions d'administration (clic explicite → CF.bxAdmin → chiffres relus) ──
+  // okText : texte, ou fonction (réponse) → texte (16/10 : message d'une décision sur un lien tiré de la ligne renvoyée)
+  // 17/10 : okText peut aussi renvoyer { text, ok:false } (décision enregistrée MAIS à surveiller : copie de pièce pas supprimée)
+  // 18/10 (round 7) : busy[k] = l'action en cours (libellé du bouton) ; le message garde sa clé k (l'Accueil n'affiche que
+  // ceux des pièces d'identité) ; refus 409 « Recharge le tableau de bord » de l'edge (R7-7, page d'avant la version 89) :
+  // expliqué, avec un bouton « Recharger la page »
+  function bxRun(k, payload, okText) {
+    if (ui.bx.busy[k]) return;
+    ui.bx.busy[k] = (payload && payload.op) || 1; ui.bx.msg = null;
+    schedule();
+    CF.bxAdmin(payload).then(function (r) {
+      delete ui.bx.busy[k];
+      var t = r && r.ok ? (typeof okText === 'function' ? okText(r) : okText) : null, er = (r && r.error) || 'erreur inconnue';
+      ui.bx.msg = r && r.ok ? (t && typeof t === 'object' ? { ok: t.ok !== false, text: t.text, at: Date.now(), k: k } : { ok: true, text: t, at: Date.now(), k: k })
+        : { ok: false, fail: true, k: k, at: Date.now(), text: 'Non enregistré : ' + er + (/^Recharge le tableau de bord/.test(er) ? ' (cette page est d’une version plus ancienne que celle que BloxAI accepte pour l’argent et les pièces d’identité : rien n’a été fait)' : '') };
+      schedule();
+    });
+  }
+  // Message après une décision sur un lien, d'après la ligne que BloxAI vient d'écrire (r.pub, cf-store bxPubRow) et non
+  // d'après la liste affichée avant le clic (16/10 : un signal apparu depuis sur un lien au suivi fini → « Valider » le
+  // refuse ; l'ancien message disait « validée »). null = ligne absente (edge bloxai d'avant le 16/10) : texte d'avant le clic.
+  function bxPubDone(p, d, who, x, D) {
+    if (!p) return null;
+    var fl = bxFlagChips(p), sig = fl.map(function (f) { return f[0]; }).join(', ');
+    if (p.status === 'refus') {
+      var mot = p.reason ? ' · motif : « ' + p.reason + ' »' : '';
+      return d === 'refuse' ? 'Publication refusée : ' + who + mot + '.'
+        : 'Décision enregistrée : ' + who + ' refusée' + (fl.length ? ' (signal du relevé des vues : ' + sig + ')' : '') + mot + ', 0 vue validée.';
+    }
+    if (p.status === 'valid') {
+      // 17/10 (round 5) : « Valider avec les vues figées » → le dit aussi dans le message
+      return 'Publication validée' + (d === 'validate_frozen' ? ' avec ses vues figées' : '') + ' : ' + who + (p.validViews != null ? ' · ' + fInt(p.validViews) + ' ' + plural(p.validViews, 'vue validée', 'vues validées') : '') + '.';
+    }
+    // toujours en suivi : conforme (checked_at), en attente de vérification, ou remise à vérifier ; fin du suivi = closes_at
+    // de la liste, sinon date du lien. 17/10 (contrat 3) : un signal n'entraîne jamais de refus automatique.
+    var end = bxTrackEnd({ closes: x.closes, created: p.created != null ? p.created : x.created }, D), day = end != null ? ' (' + dmy(new Date(end)) + ')' : '';
+    if (p.flags && p.flags.held) return 'Publication toujours en attente de vérification : ' + who + '. Aucun gain tant que BloxAI ne l’a pas validée : actualise, puis réessaie ou refuse.';
+    var risk = fl.length ? ' Signalée par le relevé des vues (' + sig + ') : à revérifier avant la fin du suivi, rien n’est refusé automatiquement.' : '';
+    if (p.checked != null) return 'Publication conforme : ' + who + '. Sortie de « À vérifier » ; gains comptés à la fin du suivi' + day + ' si ses vues sont relues dans les 48' + NB + 'h avant.' + risk;
+    return 'Publication remise à vérifier : ' + who + '.' + (fl.length ? ' Signalée par le relevé des vues : ' + sig + ' (à vérifier : jamais de refus automatique).' : '');
+  }
+  function bxFind(list, id) { return (list || []).filter(function (x) { return x.id === id; })[0] || null; }
+  // 18/10 (round 6, R3) : lignes « Engagement » des fenêtres « Valider » / « Valider avec les vues figées » ; noHold = motif
+  // de retenue déjà écrit dans la fenêtre (vues figées)
+  function bxEngLines(x, noHold) {
+    var e = bxEngText(x), h = !noHold && bxHoldLive(x.holdReason) ? '\nRetenue par BloxAI : ' + bxHoldText(x.holdReason) + '.' : '';
+    // 18/10 (round 7, R7-1 / R7-3) : vues du 1er jour, abonnés du compte ; vues retirées par le réseau
+    var a = bxAudText(x), r7 = (a ? '\nAudience : ' + a + '.' : '') + (x.viewsDropped ? '\nVues retirées par le réseau : ' + bxDropText(x) + '.' : '');
+    // BloxAI d'avant le round 6 (aucune clé d'engagement) : pas de ligne ; clés présentes mais vides : « non relevé »
+    if (!x.engKnown && !e) return h || r7 ? '\n' + r7 + h : '';
+    return '\n\nEngagement : ' + (e || 'non relevé par BloxAI (j’aime, commentaires, partages et hausse sur un jour inconnus)') + '.' + r7 + h;
+  }
+  function bxAsk(text, dflt) { var v = window.prompt(text, dflt || ''); return v == null ? null : String(v).trim(); }
+  function bxSay(ok, text, k) { ui.bx.msg = { ok: ok, text: text, at: Date.now(), k: k || null, say: true }; schedule(); }
+  // 18/10 (round 7, R7-10) : copie d'une ligne BloxAI dont TOUS les noms sont nettoyés pour une fenêtre (dlgName) : Nom du
+  // diffuseur 40 caractères ; noms légaux, nom lu, titulaire, PayPal, motif de gel : retours à la ligne et contrôles
+  // ramenés à une espace. Les contrôles (titulaire ≠ pièce, destination…) donnent le même résultat (comparaison mot à mot).
+  function bxDlg(x) {
+    if (!x) return x;
+    var c = Object.assign({}, x), L = function (v) { return typeof v === 'string' ? dlgName(v, 120) || null : v; };
+    if (typeof x.name === 'string') c.name = dlgName(x.name) || null;
+    ['verifiedName', 'ibanHolder', 'declaredFirst', 'declaredCurrent', 'paypal', 'email'].forEach(function (k) { c[k] = L(x[k]); });
+    ['lastPaid', 'destRaw'].forEach(function (k) { if (x[k]) c[k] = Object.assign({}, x[k], { holder: L(x[k].holder), paypal: L(x[k].paypal), iban: L(x[k].iban) }); });
+    if (typeof x.payFrozenReason === 'string') c.payFrozenReason = dlgName(x.payFrozenReason, 300);
+    return c;
+  }
+  function bxPubDecide(id, d) {
+    var D = CF.bx.data, x = D && bxFind(D.toCheck, id);
+    if (!x) return;
+    var who = (x.vf || 'vidéo') + ' · ' + BX_NET[x.network][0] + ' · ' + (dlgName(x.name) || 'diffuseur');   // 18/10 (R7-10)
+    if (d === 'refuse') {
+      var why = bxAsk('Refuser la publication ' + who + '.\nMotif (le diffuseur le verra) :', bxMotif(x) || '');
+      if (why == null) return;
+      if (!why) { bxSay(false, 'Motif obligatoire pour refuser.'); return; }
+      bxRun('pub:' + id, { op: 'admin_publication', id: id, decision: 'refuse', reason: why.slice(0, 300) }, function (r) {
+        return bxPubDone(r.pub, 'refuse', who, x, D) || 'Publication refusée : ' + who + '.';
+      });
+    } else if (d === 'validate') {
+      // Valider = conforme (checked_at côté BloxAI) : un lien en suivi pas encore regardé, ou un lien « En attente de
+      // vérification » (17/10 : suivi fini, gains bloqués jusqu'à cette décision) ; un refus se « Remet à vérifier »
+      // 17/10 (round 5) : suivi fini → toujours « Valider avec les vues figées » (un « validate » simple laisserait retenu un
+      // lien pas relu dans les 48 h avant la fin)
+      if (x.status === 'verif' && bxTrackEnd(x, D) != null && !bxTracking(x, D)) { bxPubDecide(id, 'validate_frozen'); return; }
+      if (x.status !== 'verif' || (x.checked != null && !bxHeld(x))) { bxSay(false, 'Publication ' + who + ' déjà ' + (x.status === 'refus' ? 'refusée : « Remettre à vérifier » d’abord.' : 'traitée.')); return; }
+      var td = bxTrackDays(D), end = bxTrackEnd(x, D), live = bxTracking(x, D), fl = bxFlagChips(x);
+      var day = end != null ? ' (le ' + dmy(new Date(end)) + ')' : '', vv = x.viewsAtClose != null ? x.viewsAtClose : x.views;
+      var q = 'Valider la publication ' + who + ' ?\n'
+        + (live ? 'Conforme : la vidéo sort de « À vérifier » ; ses gains seront comptés à la fin des ' + td + ' jours' + day + ', avec ses vues de ce jour-là, si le relevé a pu les relire dans les 48 h avant (sinon : en attente de vérification).'
+          : 'Suivi des vues terminé : ses ' + (vv == null ? '' : fInt(vv) + ' ') + 'vues figées à la fin du suivi comptent tout de suite dans les gains du diffuseur.')
+        + (fl.length ? '\n\nAttention, signalé par le relevé des vues : ' + fl.map(function (f) { return f[0] + ' (' + f[2] + ')'; }).join(' ; ') + '.'
+          + ' Rien n’est refusé automatiquement : vérifie ce signal avant de valider (sinon, Refuser).' : '')
+        // 18/10 (round 6, R3) : engagement de la vidéo (vues achetées ?) et motif « engagement anormal » de BloxAI
+        + bxEngLines(x);
+      if (!window.confirm(q)) return;
+      // texte d'avant le clic : seulement si l'edge ne renvoie pas la ligne écrite (sinon bxPubDone, l'état réel)
+      var before = live
+        ? 'Publication conforme : ' + who + '. Sortie de « À vérifier » ; gains comptés à la fin du suivi' + (end != null ? ' (' + dmy(new Date(end)) + ')' : '') + ' si ses vues sont relues dans les 48' + NB + 'h avant.'
+        : 'Publication validée : ' + who + '.';
+      bxRun('pub:' + id, { op: 'admin_publication', id: id, decision: 'validate' }, function (r) { return bxPubDone(r.pub, 'validate', who, x, D) || before; });
+    } else if (d === 'validate_frozen') {
+      // 17/10 (round 5, contrat 5) : après la fin du suivi seulement, BloxAI valide avec SES vues figées (views_at_close,
+      // sinon les vues du dernier relevé) : aucun chiffre ne part d'ici. Pour un lien retenu (pas relu dans les 48 h avant
+      // la fin, chaîne non vérifiée, signal…) : Axel a vérifié lui-même (statistiques natives du diffuseur, contrat 7.4).
+      var end2 = bxTrackEnd(x, D);
+      if (x.status !== 'verif' || end2 == null || bxTracking(x, D)) { bxSay(false, 'Publication ' + who + ' : « Valider avec les vues figées » seulement après la fin du suivi, sur un lien encore à vérifier.'); return; }
+      var fl2 = bxFlagChips(x), vf2 = x.viewsAtClose != null ? x.viewsAtClose : x.views;
+      var q2 = 'Valider la publication ' + who + ' avec ses vues figées ?\n'
+        + 'Suivi des vues terminé : ses ' + (vf2 == null ? '' : fInt(vf2) + ' ') + 'vues figées à la fin du suivi comptent tout de suite dans les gains du diffuseur.'
+        + ' Fin du suivi le ' + dmy(new Date(end2)) + ' ; le chiffre est celui de BloxAI, rien n’est tapé ici.'
+        + (x.holdReason ? '\n\nRetenue par BloxAI : ' + bxHoldText(x.holdReason) + '.' : '')
+        + (x.checkedViews != null ? '\nVues au « conforme » : ' + fInt(x.checkedViews) + (bxJump(x) ? ', hausse anormale depuis : vues achetées ?' : '') + '.' : '')
+        + (fl2.length ? '\n\nAttention, signalé par le relevé des vues : ' + fl2.map(function (f) { return f[0] + ' (' + f[2] + ')'; }).join(' ; ') + '.' : '')
+        + bxEngLines(x, true)   // 18/10 (round 6, R3) : le motif de retenue est déjà au-dessus
+        + '\n\nValide seulement si tu as vérifié la vidéo et ses vues (statistiques natives du diffuseur au besoin, contrat art. 7.4). Sinon, Refuser.';
+      if (!window.confirm(q2)) return;
+      bxRun('pub:' + id, { op: 'admin_publication', id: id, decision: 'validate_frozen' }, function (r) {
+        return bxPubDone(r.pub, 'validate_frozen', who, x, D) || 'Publication validée avec ses vues figées : ' + who + '.';
+      });
+    } else if (d === 'reset') {
+      if (!window.confirm('Remettre la publication ' + who + ' en vérification ?')) return;
+      bxRun('pub:' + id, { op: 'admin_publication', id: id, decision: 'reset' }, function (r) {
+        return bxPubDone(r.pub, 'reset', who, x, D) || 'Publication remise à vérifier : ' + who + '.';
+      });
+    }
+  }
+  // 17/10 (contrat 5) : destination du versement telle que figée à sa création (jamais le profil modifié depuis)
+  function bxPayDest(x) {
+    return x.method === 'paypal' ? (x.paypal ? 'PayPal · ' + x.paypal : null)
+      : x.method === 'iban' ? (x.iban ? 'IBAN · ' + (x.ibanHolder ? x.ibanHolder + ' · ' : '') + bxIban(x.iban) : null) : null;
+  }
+  // 17/10 (round 5, contrat 2) : coordonnées de versement (payout_updated_at ; 18/10 : aussi dépôt d'une pièce ou nom légal
+  // changé) ou mot de passe (password_changed_at) changés
+  // il y a moins de 72 h → « coordonnées modifiées récemment » (BloxAI ne crée alors aucun versement : BX_COOLDOWN).
+  // Fin du délai : cooldown_until de BloxAI quand il le renvoie (null = aucun délai en cours), sinon le changement le plus
+  // récent + payout_cooldown_hours (72 h par défaut). Renvoie { at, pwd, until } ou null.
+  // 18/10 (round 7, R7-4) : changement d'adresse e-mail (email_changed_at) compté aussi — à égalité, l'ordre reste
+  // coordonnées, mot de passe, e-mail. Renvoie { at, pwd, mail, until } ou null.
+  function bxRecent(x) {
+    var now = Date.now(), D = CF.bx && CF.bx.data, last = null;
+    var h = D && D.settings && D.settings.payoutCooldownH != null && D.settings.payoutCooldownH > 0 ? D.settings.payoutCooldownH : 72;
+    [[x.payoutUpdated, ''], [x.passwordChanged, 'pwd'], [x.emailChanged, 'mail']].forEach(function (z) { if (z[0] != null && (!last || z[0] > last.at)) last = { at: z[0], what: z[1] }; });
+    var until = x.cooldownKnown ? x.cooldownUntil : last ? last.at + h * 3600e3 : null;
+    if (until == null || until <= now) return null;
+    return { at: last ? last.at : null, pwd: !!last && last.what === 'pwd', mail: !!last && last.what === 'mail', until: until };
+  }
+  function bxRecentText(c) {
+    var d = c.at != null ? new Date(c.at) : null;
+    return 'coordonnées modifiées récemment (' + (d ? (c.pwd ? 'mot de passe changé' : c.mail ? 'adresse e-mail changée' : 'coordonnées de versement, pièce ou nom légal changés') + ' le ' + dmy(d) + ' à ' + hm(d)
+      : 'coordonnées, mot de passe ou adresse e-mail changés') + ')';
+  }
+  function bxCoolEnd(c) { var u = new Date(c.until); return 'BloxAI ne crée aucun nouveau versement avant le ' + dmy(u) + ' à ' + hm(u); }
+  // 17/10 (round 5, contrat 9) : nom lu par Axel sur la pièce vérifiée (verified_name) ↔ titulaire de l'IBAN figé.
+  // Comparaison sans accents, casse, ponctuation ni ordre des mots. 'ok' | 'diff' | 'none' (aucun nom vérifié) |
+  // 'paypal' (pas de titulaire à comparer : nom PayPal à vérifier chez PayPal)
+  // 17/10 (round 5) : toutes écritures (lettres et chiffres Unicode), civilités (M., Mme, Mlle, Mr…) ignorées ; titulaire
+  // sans ses autres prénoms = même personne (au moins 2 mots, TOUS lus sur la pièce : rien d'inventé ne passe) ; les deux
+  // noms restent affichés
+  var BX_CIVIL = { m: 1, mme: 1, mlle: 1, mr: 1, mrs: 1, ms: 1, monsieur: 1, madame: 1, mademoiselle: 1 };
+  function bxNameWords(s) {
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ')
+      .filter(function (w) { return w && !BX_CIVIL[w]; }).sort();
+  }
+  // 18/10 (round 6, R4) : 'ok' SEULEMENT si les mots sont exactement les mêmes (même multiensemble, sans accents, casse,
+  // ponctuation, civilités ni ordre) ; titulaire qui n'a qu'une PARTIE des mots de la pièce → 'partial' (orange : un parent
+  // qui porte un des prénoms du diffuseur passait « ok » : « MARTIN Lucas Paul » / « Paul Martin », « Jean-Pierre Dupont » /
+  // « Jean Dupont », « Marie Claire Durand » / « Claire Durand ») ; sinon 'diff'.
+  function bxNameSame(a, b) { var x = bxNameWords(a), y = bxNameWords(b); return x.length > 0 && x.join(' ') === y.join(' '); }
+  function bxNameCheck(x) {
+    var vn = bxNameWords(x.verifiedName);
+    if (!vn.length) return 'none';
+    if (x.method !== 'iban') return 'paypal';
+    var ho = bxNameWords(x.ibanHolder);
+    if (!ho.length) return 'diff';
+    if (ho.join(' ') === vn.join(' ')) return 'ok';
+    var left = vn.slice();
+    return ho.every(function (w) { var i = left.indexOf(w); if (i < 0) return false; left.splice(i, 1); return true; }) ? 'partial' : 'diff';
+  }
+  function bxNameText(x) {
+    var c = bxNameCheck(x);
+    if (c === 'ok') return 'titulaire = nom vérifié sur la pièce d’identité';
+    if (c === 'partial') return 'Titulaire partiel : des prénoms ne correspondent pas (' + x.ibanHolder + ' ≠ ' + x.verifiedName + ') — vérifie que c’est bien le diffuseur';
+    if (c === 'paypal') return 'nom vérifié sur la pièce : ' + x.verifiedName + ' (vérifie que le compte PayPal est à ce nom avant d’envoyer)';
+    if (c === 'none') return 'aucun nom vérifié sur la pièce d’identité : vérifie le titulaire avant de payer';
+    return 'titulaire « ' + (x.ibanHolder || '—') + ' » ≠ nom vérifié sur la pièce « ' + x.verifiedName + ' » : BloxAI ne verse rien à un tiers (contrat art. 9.2), vérifie avant de payer';
+  }
+  // 18/10 (round 6, R2) : nom vérifié sur la pièce ↔ nom légal déclaré à la 1re acceptation des conditions (non modifiable :
+  // un voleur de session qui fait valider SA pièce ne peut pas le réécrire). null = BloxAI ne l'envoie pas (ancienne
+  // version : rien d'affiché) ; 'nover' = aucun nom vérifié (déjà signalé) ; 'none' = aucun nom déclaré ; 'ok' = mêmes
+  // mots (sans accents, casse ni ordre) ; 'diff' = autre chose (même un prénom en plus ou en moins : à vérifier).
+  function bxDeclCheck(x) {
+    if (!x.declaredKnown) return null;
+    if (!bxNameWords(x.verifiedName).length) return 'nover';
+    if (!bxNameWords(x.declaredFirst).length) return 'none';
+    return bxNameSame(x.verifiedName, x.declaredFirst) ? 'ok' : 'diff';
+  }
+  function bxDeclText(x) {
+    var c = bxDeclCheck(x);
+    if (c === 'ok') return 'nom vérifié = nom légal déclaré à la 1re acceptation des conditions';
+    if (c === 'none') return 'aucun nom légal déclaré à la 1re acceptation des conditions : compare la pièce avec le diffuseur avant de payer';
+    if (c === 'diff') return 'nom vérifié sur la pièce « ' + x.verifiedName + ' » ≠ nom légal déclaré à la 1re acceptation des conditions « ' + x.declaredFirst + ' » : pièce d’une autre personne ? Vérifie avant de payer';
+    return '';
+  }
+  // nom déclaré modifié depuis la 1re acceptation des conditions (texte, '' sinon)
+  function bxDeclMoved(x) {
+    return x.declaredFirst && x.declaredCurrent && !bxNameSame(x.declaredFirst, x.declaredCurrent)
+      ? 'nom déclaré modifié depuis la 1re acceptation des conditions : « ' + x.declaredCurrent + ' » (1re acceptation : « ' + x.declaredFirst + ' »)' : '';
+  }
+  // 18/10 (round 6, R1a) : comparaison avec le DERNIER VERSEMENT PAYÉ, quel que soit l'état du délai de 72 h (le voleur de
+  // session attend la fin du délai : plus aucun « modifiées récemment » quand le versement apparaît). Destination
+  // normalisée : IBAN sans espaces en majuscules (+ titulaire, mots sans accents ni casse), PayPal en minuscules.
+  function bxDestKey(d) {
+    if (!d || !d.method) return null;
+    if (d.method === 'paypal') return 'paypal:' + String(d.paypal || '').trim().toLowerCase();
+    return 'iban:' + String(d.iban || '').replace(/\s+/g, '').toUpperCase() + '|' + bxNameWords(d.holder).join(' ');
+  }
+  function bxDestShow(d) {
+    return d.method === 'paypal' ? 'PayPal · ' + (d.paypal || '—')
+      : 'IBAN · ' + (d.holder ? d.holder + ' · ' : '') + bxIban(String(d.iban || '—').replace(/\s+/g, '').toUpperCase());
+  }
+  // { first, changed, dest, destUnknown } ou null (BloxAI sans last_paid_at : rien d'affiché, jamais « premier versement »
+  // à tort). first = aucun versement payé avant ; changed = coordonnées ou mot de passe changés depuis le dernier payé ;
+  // dest = destination ≠ celle du dernier payé ; destUnknown = dernier payé sans destination figée (versement ancien)
+  function bxPaidHist(x) {
+    if (!x.paidKnown) return null;
+    if (x.lastPaidAt == null) return { first: true, changed: false, dest: false, destUnknown: false };
+    var a = bxDestKey(x.destRaw), b = bxDestKey(x.lastPaid);
+    return { first: false, changed: !!x.changedSincePaid, dest: !!(a && b && a !== b), destUnknown: !b };
+  }
+  // quoi a changé à changed_at : mot de passe, ou payout_updated_at (18/10 : BloxAI le pose aussi au dépôt d'une pièce
+  // d'identité et quand le nom légal change : « coordonnées de versement, pièce ou nom légal changés ») ; changed_at = le plus récent
+  function bxChangedWhat(x) {
+    return x.changedAt == null ? '' : x.passwordChanged === x.changedAt ? 'mot de passe changé' : x.payoutUpdated === x.changedAt ? 'coordonnées de versement, pièce ou nom légal changés'
+      : x.emailChanged === x.changedAt ? 'adresse e-mail changée' : '';   // 18/10 (round 7, R7-4)
+  }
+  function bxAtText(t) { var d = new Date(t); return dmy(d) + ' à ' + hm(d); }
+  // phrases pour la ligne de versement, l'Accueil et « Marquer payé » (tableau de textes, vide = rien à signaler)
+  function bxPaidTexts(x) {
+    var h = bxPaidHist(x), out = [];
+    if (!h) return out;
+    var what = bxChangedWhat(x);
+    if (h.first) {
+      out.push(['first', 'Premier versement à ce diffuseur : vérifie la pièce et le titulaire'
+        + (x.changedAt != null ? ' (' + (what || 'coordonnées, mot de passe ou adresse e-mail changés') + ' le ' + bxAtText(x.changedAt) + ')' : '')]);
+      return out;
+    }
+    var paid = ' (le ' + dmy(new Date(x.lastPaidAt)) + ')';
+    if (h.changed) out.push(['changed', 'Coordonnées, mot de passe ou adresse e-mail changés ' + (x.changedAt != null ? 'le ' + bxAtText(x.changedAt) + ' ' : '')
+      + 'depuis le dernier versement payé' + paid + (what ? ' : ' + what : '') + ' ; en cas de doute, confirme avec le diffuseur par un autre canal']);
+    if (h.dest) out.push(['dest', 'Destination différente du dernier versement payé' + paid + ' : ' + bxDestShow(x.lastPaid)]);
+    else if (h.destUnknown) out.push(['destUnknown', 'Destination du dernier versement payé' + paid + ' inconnue (versement d’avant le gel des destinations) : vérifie que c’est bien le compte du diffuseur']);
+    return out;
+  }
+  function bxPayPaid(id) {
+    var D = CF.bx.data, x = D && bxDlg(bxFind(D.money.payouts, id));   // 18/10 (R7-10) : noms nettoyés pour la fenêtre
+    if (!x) return;
+    var dest = bxPayDest(x), nc = bxNameCheck(x), rc = bxRecent(x), dc = bxDeclCheck(x), dm = bxDeclMoved(x);
+    // 18/10 (round 6) : titulaire partiel (R4), nom légal déclaré à la 1re acceptation (R2), depuis le dernier versement
+    // payé — premier versement, coordonnées ou mot de passe changés, destination différente — quel que soit le délai (R1a)
+    var paid = bxPaidTexts(x).map(function (p) { return (p[0] === 'dest' ? 'ATTENTION : ' : 'Attention : ') + p[1] + '.\n'; }).join('');
+    // 18/10 (round 7, R7-5) : BloxAI ne bloque pas « Marquer payé » d'un versement d'un diffuseur GELÉ (créé avant le gel) :
+    // confirmation explicite d'abord ; Annuler → rien
+    if (x.payFrozen && !window.confirm('Diffuseur gelé : les versements de ' + (x.name || 'ce diffuseur') + ' sont gelés' + (x.payFrozenReason ? ' (motif : ' + x.payFrozenReason + ')' : '')
+      + '.\nCe versement de ' + fEur(x.amount) + ' a été créé avant le gel. Le marquer payé quand même ?\n(Sinon : Annuler, puis « Annuler ce versement » ou « Dégeler ».)')) return;
+    var ref = bxAsk('Versement de ' + fEur(x.amount) + ' à ' + (x.name || 'ce diffuseur') + ' envoyé ?\n'
+      + (dest ? 'Destination' + (x.frozen ? ' figée à la demande' : '') + ' : ' + dest + '\n' : '')
+      // 18/10 (round 7, R7-5) : versements du diffuseur gelés par Axel
+      + (x.payFrozen ? 'ATTENTION : les versements de ce diffuseur sont GELÉS' + (x.payFrozenReason ? ' (motif : ' + x.payFrozenReason + ')' : '') + ' : ne paie pas sans avoir levé le doute (sinon : Annuler ce versement).\n' : '')
+      + (x.verifiedName ? 'Nom vérifié sur la pièce d’identité : ' + x.verifiedName + '\n' : '')
+      + (nc === 'diff' ? 'ATTENTION : le titulaire (' + (x.ibanHolder || '—') + ') ne correspond pas au nom vérifié sur la pièce (' + x.verifiedName + '). BloxAI ne verse rien à un tiers (contrat art. 9.2) : ne paie pas sans avoir vérifié.\n'
+        : nc === 'partial' ? 'Attention : ' + bxNameText(x) + ' (contrat art. 9.2 : rien à un tiers).\n'
+        : nc === 'none' ? 'Attention : aucun nom vérifié sur la pièce d’identité de ce diffuseur, vérifie le titulaire avant de payer.\n' : '')
+      + (x.declaredFirst ? 'Nom légal déclaré à la 1re acceptation des conditions : ' + x.declaredFirst + '\n' : '')
+      + (dc === 'diff' ? 'ATTENTION : le nom vérifié sur la pièce (' + x.verifiedName + ') ne correspond pas au nom légal déclaré à la 1re acceptation des conditions (' + x.declaredFirst + ') : pièce d’une autre personne ? Ne paie pas sans avoir vérifié.\n'
+        : dc === 'none' ? 'Attention : aucun nom légal déclaré à la 1re acceptation des conditions.\n' : '')
+      + (dm ? 'Attention : ' + dm + '.\n' : '')
+      + (x.detailsChanged ? 'Attention : le diffuseur a changé ses coordonnées depuis la demande, paie bien la destination ci-dessus.\n' : '')
+      + (rc ? 'Attention : ' + bxRecentText(rc) + '. Paie la destination figée ci-dessus ; en cas de doute, confirme avec le diffuseur par un autre canal.\n' : '')
+      + paid
+      + 'Référence du virement (facultatif), puis OK :');
+    if (ref == null) return;
+    bxRun('pay:' + id, { op: 'admin_payout_paid', id: id, reference: ref.slice(0, 120) }, 'Versement de ' + fEur(x.amount) + ' marqué payé (' + (x.name || 'diffuseur') + ').');
+  }
+  // 18/10 (round 7, R7-5) : « Annuler ce versement » — motif obligatoire PUIS confirmation ; BloxAI passe le versement en
+  // 'cancelled' (motif gardé) et le montant revient au solde du diffuseur (rien n'est envoyé). Sans gel, BloxAI en recréera
+  // un au prochain passage : la confirmation le dit.
+  function bxPayCancel(id) {
+    var D = CF.bx.data, x = D && bxDlg(bxFind(D.money.payouts, id));
+    if (!x) return;
+    var who = x.name || 'ce diffuseur', dest = bxPayDest(x), K = 'pay:' + id;
+    if (x.status !== 'requested' && x.status !== 'pending') { bxSay(false, 'Versement de ' + fEur(x.amount) + ' à ' + who + ' : seul un versement encore à faire peut être annulé.', K); return; }
+    var why = bxAsk('Annuler le versement de ' + fEur(x.amount) + ' à ' + who + ' ?\n' + (dest ? 'Destination figée : ' + dest + '\n' : '')
+      + 'Rien n’est envoyé : le montant revient au solde du diffuseur.\nMotif (obligatoire, gardé avec le versement ; le diffuseur le verra) :');
+    if (why == null) return;
+    if (!why) { bxSay(false, 'Motif obligatoire pour annuler un versement.', K); return; }
+    if (!window.confirm('Confirmer l’annulation du versement de ' + fEur(x.amount) + ' à ' + who + ' ?\nMotif : ' + dlgName(why, 300) + '\n'
+      + (x.payFrozen ? 'Ses versements restent gelés : aucun nouveau versement tant que tu ne les dégèles pas.' : 'Le montant revient à son solde : BloxAI créera un nouveau versement au prochain passage, sauf si tu gèles ses versements.'))) return;
+    bxRun(K, { op: 'admin_payout_cancel', id: id, reason: why.slice(0, 300) }, 'Versement de ' + fEur(x.amount) + ' à ' + who + ' annulé : le montant revient à son solde.'
+      + (x.payFrozen ? '' : ' Pour qu’aucun nouveau versement ne soit créé, gèle ses versements.'));
+  }
+  // 18/10 (round 7, R7-5) : « Geler les versements » (motif obligatoire, lisible par le diffuseur sur son profil) / « Dégeler »
+  // (confirmation : bx_admin_freeze efface le motif au dégel) — gelé : BloxAI ne crée plus aucun versement (BX_FROZEN) ; ses
+  // gains restent comptés (versement de la période créé après le dégel) ; les versements déjà ouverts restent à annuler à part
+  function bxFreeze(uid, on) {
+    var D = CF.bx.data, M = D ? D.money : null;
+    var row = M ? (M.payouts || []).filter(function (x) { return x.userId === uid; })[0] || (M.deferred || []).filter(function (x) { return x.userId === uid; })[0] : null;
+    if (!row || !row.freezeKnown) return;
+    var x = bxDlg(row), who = x.name || 'ce diffuseur', K = 'frz:' + uid, open = (M.payouts || []).filter(function (p) { return p.userId === uid && (p.status === 'requested' || p.status === 'pending'); });
+    if (!on) {
+      if (!window.confirm('Dégeler les versements de ' + who + ' ?' + (x.payFrozenReason ? '\nGelés pour : ' + x.payFrozenReason : '') + '\nBloxAI pourra de nouveau créer ses versements (au prochain passage).')) return;
+      bxRun(K, { op: 'admin_freeze', user: uid, on: false }, 'Versements de ' + who + ' dégelés : BloxAI pourra de nouveau créer ses versements.');
+      return;
+    }
+    var why = bxAsk('Geler les versements de ' + who + ' ?\nBloxAI ne créera plus aucun versement pour ce diffuseur tant que tu ne les dégèles pas (ses gains restent comptés).'
+      + (open.length ? '\n' + open.length + ' ' + plural(open.length, 'versement déjà ouvert', 'versements déjà ouverts') + ' : à annuler à part (« Annuler ce versement »), sinon ' + plural(open.length, 'il reste', 'ils restent') + ' à payer.' : '')
+      + '\nMotif (obligatoire ; le diffuseur le verra sur son profil) :', 'Vérification en cours');
+    if (why == null) return;
+    if (!why) { bxSay(false, 'Motif obligatoire pour geler les versements.', K); return; }
+    bxRun(K, { op: 'admin_freeze', user: uid, on: true, reason: why.slice(0, 300) }, 'Versements de ' + who + ' gelés : BloxAI ne crée plus aucun versement pour ce diffuseur.');
+  }
+  // 18/10 (round 7, R7-6) : une ligne par alerte e-mail non partie (date, alerte, diffuseur, cause)
+  // reason = texte français de la fonction notif (affiché tel quel) ; type parfois null (alerte non reconnue) ; status = code HTTP
+  var BX_NOTIF_T = { payout_changed: 'moyen de paiement modifié', password_changed: 'mot de passe modifié', email_changed: 'adresse e-mail modifiée' };
+  function bxNotifLine(f) {
+    var why = f.status === 503 ? 'clé Resend absente (503)' : f.status === 429 ? 'limite d’envoi atteinte (429)' : f.status != null ? 'HTTP ' + f.status : '';
+    return [f.at != null ? dmy(new Date(f.at)) + ' à ' + hm(new Date(f.at)) : 'date inconnue', f.type ? 'alerte « ' + (BX_NOTIF_T[f.type] || f.type) + ' »' : 'alerte',
+      f.name || 'diffuseur', f.reason || '', why].filter(Boolean).join(' · ');
+  }
+  // Date de naissance JJ/MM/AAAA (ou AAAA-MM-JJ) → AAAA-MM-JJ, date réelle entre 1900 et aujourd'hui, sinon null
+  function bxBirth(v) {
+    var m = /^(\d{1,2})[\/.\- ](\d{1,2})[\/.\- ](\d{4})$/.exec(v), iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+    var y = m ? +m[3] : iso ? +iso[1] : 0, mo = m ? +m[2] : iso ? +iso[2] : 0, d = m ? +m[1] : iso ? +iso[3] : 0;
+    var t = new Date(Date.UTC(y, mo - 1, d));
+    if (!y || t.getUTCFullYear() !== y || t.getUTCMonth() !== mo - 1 || t.getUTCDate() !== d || y < 1900 || t.getTime() > Date.now()) return null;
+    return y + '-' + p2(mo) + '-' + p2(d);
+  }
+  function bxIdDecide(id, d) {
+    var D = CF.bx.data, x = D && bxDlg(bxFind(D.identity, id));   // 18/10 (R7-10) : noms nettoyés pour les fenêtres
+    if (!x) return;
+    var who = x.name || 'ce diffuseur', K = 'id:' + id;
+    if (d === 'verified') {
+      // 18/10 (round 6, R2) : les deux noms déclarés, à comparer avec la pièce AVANT de valider (un voleur de session peut
+      // envoyer SA pièce ; le nom de la 1re acceptation des conditions, lui, ne se réécrit pas)
+      var decl = !x.declaredKnown ? ''
+        : x.declaredFirst ? 'Nom légal déclaré à la 1re acceptation des conditions : ' + x.declaredFirst + '\nNom déclaré actuel : ' + (x.declaredCurrent || '—')
+          + (x.declaredCurrent && !bxNameSame(x.declaredFirst, x.declaredCurrent) ? ' (modifié depuis la 1re acceptation)' : '')
+          + '\nCompare ces noms avec la pièce : si elle est au nom d’une autre personne, Annuler puis Refuser.\n'
+        : 'Aucun nom légal déclaré à l’acceptation des conditions : compare la pièce avec le diffuseur avant de valider.\n';
+      var v = bxAsk('Valider la pièce d’identité de ' + who + '.\n' + decl + 'Date de naissance lue sur la pièce (JJ/MM/AAAA) :');
+      if (v == null) return;
+      var iso = bxBirth(v);
+      if (!iso) { bxSay(false, 'Date de naissance invalide : tape par exemple 21/03/2004.', K); return; }
+      // 17/10 (contrat 7, art. 4.2) : le titulaire du compte est toujours un adulte — validation refusée sous 18 ans (BloxAI
+      // et l'edge la refusent aussi) ; âge révolu au jour près
+      var b = iso.split('-').map(Number), n = new Date(), age = n.getFullYear() - b[0] - ((n.getMonth() + 1 < b[1] || (n.getMonth() + 1 === b[1] && n.getDate() < b[2])) ? 1 : 0);
+      if (age < 18) { bxSay(false, 'Pièce de ' + who + ' : ' + age + ' ans. Moins de 18 ans : validation impossible (contrat art. 4.2, un mineur participe seulement via le compte d’un adulte). Refuse-la avec ce motif.', K); return; }
+      // 17/10 (round 5, contrat 9) : nom lu sur la pièce (verified_name), comparé au titulaire de l'IBAN avant chaque
+      // versement ; obligatoire pour valider (l'edge bloxai le refuse aussi sans nom)
+      var nm = bxAsk('Valider la pièce d’identité de ' + who + ' (' + age + ' ans).\nNom et prénom(s) lus sur la pièce, tels qu’écrits (comparés au titulaire de l’IBAN avant chaque versement) :'
+        + (x.declaredFirst ? '\n(nom légal déclaré à la 1re acceptation des conditions : ' + x.declaredFirst + ')' : ''));
+      if (nm == null) return;
+      nm = nm.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ').replace(/\s+/g, ' ').trim();   // 17/10 : mêmes caractères écartés que factory
+      if (nm.length < 2 || nm.length > 120 || !/\p{L}/u.test(nm)) { bxSay(false, 'Nom lu sur la pièce obligatoire pour valider (2 à 120 caractères), par exemple : Léa Martin.', K); return; }
+      // 18/10 (round 6, R2) : nom lu ≠ nom légal de la 1re acceptation (sans accents, casse ni ordre des mots) → confirmation
+      if (x.declaredFirst && !bxNameSame(nm, x.declaredFirst)
+        && !window.confirm('ATTENTION : le nom lu sur la pièce (' + nm + ') ne correspond pas au nom légal déclaré à la 1re acceptation des conditions (' + x.declaredFirst + ').\n'
+          + 'Pièce d’une autre personne (session volée ?) : dans le doute, Annuler puis Refuser la pièce. Un prénom en plus ou en moins sur la pièce peut être normal : vérifie.\n\nValider quand même ?')) return;
+      bxRun(K, { op: 'admin_identity', id: id, status: 'verified', birthdate: iso, name: nm }, bxIdAfter(id, 'Pièce validée pour ' + who + ' (' + age + ' ans)'));
+    } else {
+      var why = bxAsk('Refuser la pièce d’identité de ' + who + '.\nMotif (le diffuseur le verra) :');
+      if (why == null) return;
+      if (!why) { bxSay(false, 'Motif obligatoire pour refuser.', K); return; }
+      bxRun(K, { op: 'admin_identity', id: id, status: 'refused', reason: why.slice(0, 300) }, bxIdAfter(id, 'Pièce refusée pour ' + who));
+    }
+  }
+  // 17/10 (contrat 6) : la copie de la pièce est-elle vraiment supprimée ? false / inconnu → avertissement, jamais « supprimée »
+  // 18/10 (round 7, R7-16) : « image détruite » seulement quand BloxAI le confirme (file_deleted === true : fichier supprimé
+  // du stockage identity et file_deleted_at posé par factory dans la même opération)
+  function bxIdDone(head, r) {
+    if (r.fileDeleted === true) return head + ' · image détruite (copie supprimée du stockage BloxAI).';
+    if (r.fileDeleted === false) return { ok: false, text: head + ', mais l’image n’est PAS encore détruite : suppression en attente, nouvel essai automatique côté BloxAI. Vérifie qu’elle disparaît (contrat art. 4.4 : 7 jours au plus).' };
+    return { ok: false, text: head + ' · destruction de l’image non confirmée par BloxAI : vérifie que la copie a bien disparu.' };
+  }
+  // 18/10 (round 7, R7-16) : après la décision — aperçu oublié tout de suite (plus aucune URL de la pièce gardée), décision
+  // notée pour le bloc de l'Accueil (10 min) avec la réponse réelle de BloxAI sur la destruction de l'image
+  function bxIdAfter(id, head) {
+    return function (r) {
+      delete ui.bx.idPrev[id];
+      ui.bx.idDone = [{ id: id, head: head, fd: r.fileDeleted, at: Date.now() }].concat((ui.bx.idDone || []).filter(function (d) { return d.id !== id; })).slice(0, 10);
+      return bxIdDone(head, r);
+    };
+  }
+  // Voir une pièce : l'onglet s'ouvre DANS le clic (Safari bloque window.open après un await), puis l'URL signée (300 s) y est chargée
+  function bxIdView(id) {
+    var k = 'idv:' + id;
+    if (ui.bx.busy[k]) return;
+    var w = window.open('about:blank', '_blank');
+    if (!w) { bxSay(false, 'Popup bloquée : autorise les popups pour avatarads.fr puis réessaie.', k); return; }
+    try { w.opener = null; } catch (e) { /* rien */ }
+    ui.bx.busy[k] = 1; ui.bx.msg = null; schedule();
+    CF.bxIdentityUrl(id).then(function (r) {
+      delete ui.bx.busy[k];
+      if (r && r.ok) { try { w.location.replace(r.url); } catch (e) { w.location.href = r.url; } }
+      else { try { w.close(); } catch (e) { /* rien */ } bxSay(false, 'Pièce illisible : ' + ((r && r.error) || 'erreur inconnue'), k); }
+      schedule();
+    });
+  }
+  function bxMission(vf, d) {
+    if (!/^VF-\d{4}$/.test(vf || '') || (d !== 'retire' && d !== 'reopen')) return;
+    // retire : seulement une vidéo encore « open » ; reopen : seulement une vidéo retirée à la main, jamais une vidéo du kit
+    // (son fichier du stock peut déjà être libéré par factory-release). Le proxy bloxai revérifie sur l'état relu à l'instant.
+    var E = CF.bx.data && CF.bx.data.byVf[vf], KV = CF.prod.data ? CF.prod.data.qc.kitVfs : null;
+    if (!E || E.status !== (d === 'retire' ? 'open' : 'retired')) { bxSay(false, vf + ' : action impossible dans son état actuel, actualise BloxAI.'); return; }
+    if (d === 'reopen' && KV && KV.vfs[vf]) { bxSay(false, vf + ' est dans le kit d’Axel : jamais remise dans le stock commun.'); return; }
+    if (!window.confirm(d === 'retire' ? 'Retirer ' + vf + ' du stock commun ?\nElle ne sera plus proposée, ni au kit ni aux diffuseurs.' : 'Remettre ' + vf + ' dans le stock commun ?')) return;
+    bxRun('vf:' + vf, { op: 'admin_mission', vf: vf, decision: d }, d === 'retire' ? vf + ' retirée du stock commun.' : vf + ' remise dans le stock commun.');
   }
 
   // ── onglets pas encore branchés ──
@@ -3810,7 +5173,13 @@
     if (ui.modal.asm) { setHTML($('cfModalBody'), asmSheetHTML(ui.modal.asm)); return; }
     if (ui.modal.qc) { renderQcModal(); return; }
     if (ui.modal.video) { setHTML($('cfModalBody'), videoModalHTML(ui.modal.video)); return; }
-    if (ui.modal.vf) { setHTML($('cfModalBody'), vfSheetHTML(ui.modal.vf)); return; }
+    if (ui.modal.vf) {
+      var vb = $('cfModalBody');
+      setHTML(vb, vfSheetHTML(ui.modal.vf));
+      var vd = vb.querySelector('.cf-vf-diff');
+      if (vd) setHTML(vd, vfDiffHTML(ui.modal.vf));
+      return;
+    }
     var cur = CF.acct.media.data && CF.acct.media.data.list.filter(function (x) { return x.id === ui.modal.post.id; })[0];
     if (cur) ui.modal.post = cur;   // la liste a pu être relue : jamais un module périmé dans la fiche
     var p = ui.modal.post, rank = ui.modal.rank;
@@ -3929,8 +5298,26 @@
       else if (act === 'net-range') { ui.netRange = el.getAttribute('data-k'); if (ui.netRange !== HOME_RANGE) CF.loadInsights(ui.netRange); schedule(); }
       else if (act === 'net-ser') { ui.netHidden = ui.netHidden || {}; var nk = el.getAttribute('data-k'); ui.netHidden[nk] = !ui.netHidden[nk]; schedule(); }
       else if (act === 'net-more') { ui.netN = (ui.netN || 5) + 10; schedule(); }
-      else if (act === 'ta-set') { ui.ta[el.getAttribute('data-k')] = el.getAttribute('data-v'); schedule(); }
-      else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); else if (src === 'tk') CF.loadTk({ force: true }); }
+      // ── onglet BloxAI (16/10) : lecture, tri, listes, décisions d'administration (motif ou confirmation dans le clic) ──
+      else if (act === 'bx-refresh') CF.loadBx({ force: true, fresh: true });
+      else if (act === 'bx-sort') { var bs = el.getAttribute('data-k'); if (BX_SORT.some(function (x) { return x[0] === bs; })) { ui.bx.sort = bs; render(); } }
+      else if (act === 'bx-all-rank') { ui.bx.allRank = !ui.bx.allRank; render(); }
+      else if (act === 'bx-all-check') { ui.bx.allCheck = !ui.bx.allCheck; render(); }
+      else if (act === 'bx-pub-ok') bxPubDecide(el.getAttribute('data-id'), 'validate');
+      else if (act === 'bx-pub-frozen') bxPubDecide(el.getAttribute('data-id'), 'validate_frozen');
+      else if (act === 'bx-pub-ko') bxPubDecide(el.getAttribute('data-id'), 'refuse');
+      else if (act === 'bx-pub-reset') bxPubDecide(el.getAttribute('data-id'), 'reset');
+      else if (act === 'bx-pay') bxPayPaid(el.getAttribute('data-id'));
+      else if (act === 'bx-id-view') bxIdView(el.getAttribute('data-id'));   // l'onglet s'ouvre dans ce clic (Safari)
+      else if (act === 'bx-id-ok') bxIdDecide(el.getAttribute('data-id'), 'verified');
+      else if (act === 'bx-id-ko') bxIdDecide(el.getAttribute('data-id'), 'refused');
+      // 18/10 (round 7) : aperçu d'une pièce à redemander, annuler un versement, geler / dégeler, page à recharger (R7-7)
+      else if (act === 'bx-id-prev') { var pid = el.getAttribute('data-id'); if (CF.bx.data && bxFind(CF.bx.data.identity, pid)) { bxIdPrevGet(pid); schedule(); } }
+      else if (act === 'bx-pay-cancel') bxPayCancel(el.getAttribute('data-id'));
+      else if (act === 'bx-freeze') bxFreeze(el.getAttribute('data-uid'), el.getAttribute('data-on') === '1');
+      else if (act === 'page-reload') location.reload();
+      else if (act === 'bx-mission') bxMission(el.getAttribute('data-vf'), el.getAttribute('data-d'));
+      else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); else if (src === 'tk') CF.loadTk({ force: true }); else if (src === 'bx') CF.loadBx({ force: true }); }
       // ── comptes TikTok (Audit 02/10) ──
       else if (act === 'tk-connect') tkStart(el.getAttribute('data-k'));   // la popup s'ouvre dans ce clic (Safari)
       else if (act === 'tk-handle') tkHandle(el.getAttribute('data-k'));
@@ -3986,7 +5373,7 @@
     // Clavier : un sélecteur (étape, tuile, avatar, module, période, type…) re-rendu par render() garde le focus. Avant le
     // clic (capture), on note le bouton qui a le focus ; après (le rendu est synchrone), s'il a disparu et que le focus est
     // tombé sur <body>, on le rend au bouton équivalent du nouveau DOM (mêmes data-act / data-k / data-side…).
-    var FOCUS_KEYS = ['data-act', 'data-k', 'data-side', 'data-tab', 'data-range', 'data-i', 'data-bid', 'data-rid', 'data-qid'], keepFocus = null;
+    var FOCUS_KEYS = ['data-act', 'data-k', 'data-side', 'data-tab', 'data-range', 'data-i', 'data-bid', 'data-rid', 'data-qid', 'data-id', 'data-vf'], keepFocus = null;
     document.addEventListener('click', function (e) {
       var el = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
       keepFocus = el && document.activeElement === el ? { el: el, sel: FOCUS_KEYS.filter(function (a) { return el.hasAttribute(a); }).map(function (a) {
@@ -4030,14 +5417,18 @@
     document.addEventListener('mousemove', function (e) {
       var plot = e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
       if (plot) hover(plot, e.clientX); else if (evoCur || dmCur) evoHide();
-      var mp = e.target && e.target.closest ? e.target.closest('.cf-mplot') : null;   // courbe des montages (pipeline)
+      var mp = e.target && e.target.closest ? e.target.closest('.cf-mplot:not(.cf-bxplot)') : null;   // courbe des montages (pipeline)
       if (mp) montHover(mp, e.clientX); else if (montCur && montCur.hot) montHide();
+      var bp = e.target && e.target.closest ? e.target.closest('.cf-bxplot') : null;   // courbes BloxAI (16/10)
+      if (bp) bxHover(bp, e.clientX); else if (bxHot) bxHide();
     });
     var onTouch = function (e) {
       var t = e.touches && e.touches[0], plot = t && e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
       if (plot) hover(plot, t.clientX); else if (evoCur || dmCur) evoHide();
-      var mp = t && e.target && e.target.closest ? e.target.closest('.cf-mplot') : null;
+      var mp = t && e.target && e.target.closest ? e.target.closest('.cf-mplot:not(.cf-bxplot)') : null;
       if (mp) montHover(mp, t.clientX); else if (montCur && montCur.hot) montHide();
+      var bp = t && e.target && e.target.closest ? e.target.closest('.cf-bxplot') : null;
+      if (bp) bxHover(bp, t.clientX); else if (bxHot) bxHide();
     };
     document.addEventListener('touchstart', onTouch, { passive: true });
     document.addEventListener('touchmove', onTouch, { passive: true });
@@ -4056,6 +5447,11 @@
       // vignette (render/image) refusée : l'image d'origine, une seule fois
       if (t && t.tagName === 'IMG' && t.getAttribute('data-full')) { var full = t.getAttribute('data-full'); t.removeAttribute('data-full'); t.src = full; return; }
       if (t && t.tagName === 'IMG' && t.closest && t.closest('.cf-thumb, .cf-avatar, .cf-sheet-media, .cf-tk-pic')) t.classList.add('is-broken');
+      // 18/10 (round 7, R7-16) : aperçu d'une pièce illisible (lien expiré, format) → message + « Réessayer », jamais une image cassée
+      if (t && t.tagName === 'IMG' && t.hasAttribute && t.hasAttribute('data-idimg')) {
+        var iid = t.getAttribute('data-idimg'), ip = ui.bx.idPrev[iid];
+        if (ip && ip.url && t.getAttribute('src') === ip.url) { ui.bx.idPrev[iid] = { state: 'imgerr', at: Date.now() }; schedule(); }
+      }
       // vidéo / audio introuvable (rendu, démo, revue QC) : message à la place du lecteur, jamais un lecteur cassé
       if (t && (t.tagName === 'VIDEO' || t.tagName === 'AUDIO') && t.closest && t.closest('.cf-mbox')) t.closest('.cf-mbox').classList.add('is-broken');
     }, true);
@@ -4064,7 +5460,8 @@
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible' && CF.status === 'ready') {
         CF.refresh({ igRange: ui.tab === 'compte' ? ui.range : null, dmRange: ui.tab === 'dm' ? ui.dmRange : null,
-          home: ui.tab === 'home' ? { ig: HOME_RANGE, dm: HOME_DM } : null, prod: ui.tab === 'prod' });
+          home: ui.tab === 'home' ? { ig: HOME_RANGE, dm: HOME_DM } : null, prod: ui.tab === 'prod',
+          bx: ui.tab === 'trackads' || ui.tab === 'home' || ui.tab === 'prod' });
       }
     });
     // Auto-DM et Production : notre base, relue toutes les 2 min tant que l'onglet (ou l'Accueil) est affiché
