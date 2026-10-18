@@ -11234,6 +11234,8 @@ function _imgSetProg(p){
   if(pct) pct.textContent = Math.round(Math.min(100,p))+'%';
 }
 function _imgProgStart(label){
+  // Axel 19/10 : chaque clic sur « Générer » remet la GRANDE vue (la vue réduite du clic dans le texte restait pendant l'attente)
+  try{ _imgCompose(false, true); }catch(_){}
   { const a=document.getElementById('imgActions'); if(a) a.style.display='none'; }  // boutons cachés pendant le chargement
   { const z=document.getElementById('imgZone'); if(z){ z.style.minHeight='clamp(320px,52vh,560px)';   // boîte haute → « génération en cours » centré (plus trop en haut)
       // ordinateur (09/10) : la boîte d'attente prend le format choisi et la taille de l'image à venir (CSS #imgZone.img-attente)
