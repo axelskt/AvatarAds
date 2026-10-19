@@ -2,8 +2,8 @@
 # Creative Factory — ACCÉLÈRE les clips Omni (hooks + CTA) trop lents (Axel 19/10 : « tous les anciens clips en 1,00x : mets-les
 # tous minimum en 1,10x, hook et CTA »). Pour chaque variante ACTIVE (la plus récente par photo × brique, comme lot.py) dont la
 # vitesse est sous le minimum : téléchargement, accélération (image setpts + voix atempo, hauteur gardée), même encodage que
-# derush.py, dépôt variants/<nom>-x110.mp4 puis NOUVELLE ligne factory_variants (elle devient la variante active). L'ancien
-# fichier et son ancienne ligne restent (rien n'est supprimé).
+# derush.py, dépôt variants/<nom>-x110.mp4 puis NOUVELLE ligne factory_variants mise à jour (adresse du clip x110). L'ancien
+# fichier reste dans le stockage (rien n'est supprimé).
 # Vitesse d'un fichier = suffixe -xNNN (-x110, -x105…) ; sans suffixe = prise brute 1,00x (clips d'avant la règle du 16/10).
 # usage : python3 usine/lots/accelerer.py [--min 1.10] [--go]   (sans --go : liste seulement)
 import argparse, os, re, subprocess, sys, tempfile
@@ -47,5 +47,6 @@ for (av, br), r, v in lents:
             if not storage_cp(out, dst, 'video/mp4'): log('  ✗ dépôt'); continue
             code, size = head_url(B + '/' + dst)
             if code != 200 or size != os.path.getsize(out): log('  ✗ relecture (%s, %s)' % (code, size)); continue
-    q("insert into factory_variants (avatar_id, brick_id, video_url, format) values ('%s','%s','%s','omni')" % (av, br, B + '/' + dst))
+    # une ligne par photo × brique × format (clé primaire) : on remplace l'adresse ; l'ancien fichier reste dans le stockage
+    q("update factory_variants set video_url='%s' where avatar_id='%s' and brick_id='%s' and format='omni'" % (B + '/' + dst, av, br))
     log('  ✓')

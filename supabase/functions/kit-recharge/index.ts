@@ -149,7 +149,10 @@ export function cap(name: string, c?: Combo | null): string {
 }
 
 export type Item = { vf: string, video_url: string, combo: Combo }
-export type Prev = { unit: string | null, kind: Kind | null }
+export type Prev = { unit: string | null, kind: Kind | null, logo?: boolean }
+// 19/10 (Axel : « faudra bien tout répartir ») : vidéo à texte choc LOGOS (TH27 / TH36) — jamais deux à la suite sur un compte
+export const LOGO_TH = new Set(['TH27', 'TH36'])
+export const isLogo = (c?: Combo | null): boolean => !!c && typeof c.texte_choc === 'string' && LOGO_TH.has(c.texte_choc as string)
 export type Pick = { account: string, at: number, item: Item }
 export type Plan = { picks: Pick[], stopped: Record<string, { at: number, why: string, left: number }> }
 
@@ -218,18 +221,21 @@ export function planAll(slots: Record<string, number[]>, prev: Record<string, Pr
     if (stopped[s.a]) { stopped[s.a].left++; continue }
     const p = last[s.a] || { unit: null, kind: null }
     let i = -1
-    for (const strict of [true, false]) {   // d'abord photo différente ET type alterné, sinon photo différente seulement
+    // d'abord photo différente + type alterné + pas deux vidéos à logos de suite ; puis photo différente + pas deux logos ;
+    // enfin photo différente seulement
+    for (const lvl of [2, 1, 0]) {
       i = left.findIndex((it) => {
         const u = unitOf(it.combo)
         if (u && p.unit && u === p.unit) return false
-        return !(strict && p.kind && kindOf(it.combo) === p.kind)
+        if (lvl >= 1 && p.logo && isLogo(it.combo)) return false
+        return !(lvl === 2 && p.kind && kindOf(it.combo) === p.kind)
       })
       if (i >= 0) break
     }
     if (i < 0) { stopped[s.a] = { at: s.at, why: left.length ? 'même photo / réaction que le post précédent' : 'stock vide', left: 1 }; continue }
     const it = left.splice(i, 1)[0]
     picks.push({ account: s.a, at: s.at, item: it })
-    last[s.a] = { unit: unitOf(it.combo), kind: kindOf(it.combo) }
+    last[s.a] = { unit: unitOf(it.combo), kind: kindOf(it.combo), logo: isLogo(it.combo) }
   }
   return { picks, stopped }
 }
@@ -452,7 +458,7 @@ async function run(dry: boolean, holder: string): Promise<Response> {
       if (r.error) throw new Error('lecture du kit : ' + r.error.message)
       const row = (r.data || [])[0] as { scheduled_at: string, combo: Combo | null } | undefined
       last[a] = row ? Date.parse(row.scheduled_at) : null
-      prev[a] = row ? { unit: unitOf(row.combo), kind: kindOf(row.combo) } : { unit: null, kind: null }
+      prev[a] = row ? { unit: unitOf(row.combo), kind: kindOf(row.combo), logo: isLogo(row.combo) } : { unit: null, kind: null }
       slots[a] = slotsFor(a, last[a], nowMs)
     }
     if (!ACCOUNTS.some((a) => slots[a].length)) return json(tail({ ok: true, ...summary({ dry, nowMs, slots, last, plan: null, stock: null }), ignored: [] }))
