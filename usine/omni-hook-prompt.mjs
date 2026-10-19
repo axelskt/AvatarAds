@@ -24,6 +24,10 @@ export const HOOK_PERFORMANCE = [
   // Axel 16/10 : bégaiement / mots dits deux fois → une seule prise propre, chaque mot UNE fois, et le temps en trop se
   // remplit par des gestes et un sourire, JAMAIS en redisant des mots. Aucun exemple de mot français entre guillemets ici :
   // le moteur pourrait le dire (seule la réplique entre « … » est parlée). Cas réel : A3-2 H81 « un bracelet en bracelet ».
+  // Axel 19/10 (A1-13 H87 : un premier « j'ai » chuchoté juste avant le vrai, après une virgule ; « il le fait souvent, c'est
+  // relou ») : le doublon tombe presque toujours sur le PREMIER mot court d'une nouvelle proposition, après une virgule ou un
+  // point. Consigne explicite + rappel en toute fin de prompt (la fin pèse le plus). Toujours aucun mot français cité en exemple.
+  'NO DOUBLED WORD AFTER A PAUSE: at every comma or full stop he goes straight into the next words — the first word of each new part of the sentence (often a short pronoun and its verb) is said ONE time only, never whispered first and then said again, never started twice.',
   'ONE CLEAN TAKE (absolute priority over every gesture and expression above): the line is said exactly ONCE, from the first word to the last, each word exactly once and in order — no stutter, no repeated word, no repeated group of words, no repeated syllable, no false start, no restart, no going back to re-say a part of the sentence after a gesture, a head move or closed eyes, no filler sound or filler word, no word added for emphasis. A perfectly fluent native speaker who never trips on a word. If the line is finished before the end of the clip, he stops talking and keeps smiling and gesturing silently — he never repeats words to fill the time.'
 ].join(' ');
 
@@ -42,5 +46,5 @@ function pronunciation(line) {
 }
 // Réplique + performance, dans l'ordre attendu par le MCP (la réplique entre « … » est dite mot pour mot).
 export function hookPrompt(line) {
-  return `The person in the photo talks to their phone, which is propped up in front of them so BOTH hands are free (handheld-free UGC framing, same place, same outfit), and says in French, as a native Parisian from Paris, France (standard metropolitan French with the natural, neutral accent of Paris, like a young French content creator from Paris), directly to the camera: « ${line} »${pronunciation(line)} ${HOOK_PERFORMANCE} Voice: a native Parisian speaking standard French from France, with the neutral accent of Paris.`;
+  return `The person in the photo talks to their phone, which is propped up in front of them so BOTH hands are free (handheld-free UGC framing, same place, same outfit), and says in French, as a native Parisian from Paris, France (standard metropolitan French with the natural, neutral accent of Paris, like a young French content creator from Paris), directly to the camera: « ${line} »${pronunciation(line)} ${HOOK_PERFORMANCE} Voice: a native Parisian speaking standard French from France, with the neutral accent of Paris. Final check: every word of the line is heard exactly once — no word, however short, is ever said twice.`;
 }
