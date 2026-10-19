@@ -64,7 +64,8 @@ function burn(video, output, words, opts = {}) {
   // l'illustration du hook (l'influenceur caché derrière « = 💸💸💸 », les logos posés au milieu des cartes). Pendant le texte
   // à logos, l'illustration se cale dans la plus grande bande LIBRE (au-dessus ou au-dessous du bloc, hors sous-titres) et
   // réduit au besoin en gardant son format : le bloc et l'illustration ne se touchent plus jamais.
-  const LB = choc && choc.layout.logos ? choc.layout : null;
+  // Axel 19/10 (VF-0553, 0573, 0577 : « le texte choc cache l'image ») : même règle pour TOUT texte choc, pas seulement les logos.
+  const LB = choc ? choc.layout : null;
   const fitLogos = b => {
     if (!LB || !(b.style === 'hook' || b.pair) || b.at >= choc.end) return b;
     const spans = [[250, LB.y - 30], [LB.y + LB.h + 30, 1290]].map(([a, z]) => [a, z, z - a]).sort((p, q) => q[2] - p[2]);
