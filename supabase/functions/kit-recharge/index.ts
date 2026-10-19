@@ -52,6 +52,17 @@ export const ACCOUNTS = Object.keys(HRS)
 // Un compte ne reçoit que les vidéos de son avatar (parlées : la photo ; sans voix : la réaction) ; les vidéos d'un avatar sans
 // compte (A5, filles / garçons…) restent dans le stock commun BloxAI pour les diffuseurs.
 export const ACCOUNT_AV: Record<string, string> = { avataradss: 'A3', leoadsia: 'A4', 'ialebd.axel': 'A1' }
+// 19/10 (Axel : « pour leoadsia, en attendant, on peut prendre tous les posts hors A1 et A3 ») : faute d'assez d'A4, ce compte
+// prend aussi tout ce qui n'est ni A1 ni A3 (A5, têtes choquées filles / garçons…), l'A4 toujours en premier.
+export const ACCOUNT_ALSO: Record<string, string[]> = { leoadsia: ['A1', 'A3'] }   // avatars EXCLUS du complément
+export function avatarFits(account: string, c?: Combo | null, strictAv = false): boolean {
+  const av = ACCOUNT_AV[account]
+  if (!av) return true
+  const a = avatarOf(c)
+  if (a === av) return true
+  const ex = ACCOUNT_ALSO[account]
+  return !strictAv && !!ex && !(a && ex.includes(a))
+}
 export function avatarOf(c?: Combo | null): string | null {
   if (!c) return null
   if (typeof c.avatar === 'string' && /^A\d+$/.test(c.avatar)) return c.avatar
@@ -234,21 +245,22 @@ export function planAll(slots: Record<string, number[]>, prev: Record<string, Pr
     const p = last[s.a] || { unit: null, kind: null }
     const av = ACCOUNT_AV[s.a]
     let i = -1
-    // d'abord photo différente + type alterné + pas deux vidéos à logos de suite ; puis photo différente + pas deux logos ;
-    // enfin photo différente seulement
-    for (const lvl of [2, 1, 0]) {
+    // d'abord l'avatar du compte (puis son complément, ACCOUNT_ALSO) ; à chaque fois : photo différente + type alterné + pas
+    // deux vidéos à logos de suite ; puis photo différente + pas deux logos ; enfin photo différente seulement
+    for (const lvl of [5, 4, 3, 2, 1, 0]) {
+      const own = lvl >= 3, l = lvl % 3
       i = left.findIndex((it) => {
-        if (av && avatarOf(it.combo) !== av) return false
+        if (!avatarFits(s.a, it.combo, own)) return false
         const u = unitOf(it.combo)
         if (u && p.unit && u === p.unit) return false
-        if (lvl >= 1 && p.logo && isLogo(it.combo)) return false
-        return !(lvl === 2 && p.kind && kindOf(it.combo) === p.kind)
+        if (l >= 1 && p.logo && isLogo(it.combo)) return false
+        return !(l === 2 && p.kind && kindOf(it.combo) === p.kind)
       })
       if (i >= 0) break
     }
     if (i < 0) {
-      const any = left.some((it) => !av || avatarOf(it.combo) === av)
-      stopped[s.a] = { at: s.at, why: !any ? (av ? 'aucune vidéo ' + av + ' dans le stock' : 'stock vide') : 'même photo / réaction que le post précédent', left: 1 }
+      const any = left.some((it) => avatarFits(s.a, it.combo))
+      stopped[s.a] = { at: s.at, why: !any ? (av ? 'aucune vidéo ' + av + (ACCOUNT_ALSO[s.a] ? ' ni hors ' + ACCOUNT_ALSO[s.a].join(' / ') : '') + ' dans le stock' : 'stock vide') : 'même photo / réaction que le post précédent', left: 1 }
       continue
     }
     const it = left.splice(i, 1)[0]
