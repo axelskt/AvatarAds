@@ -163,8 +163,10 @@ function workingDemo(src) {
 
 const TS = 0.25;      // durée du slide de raccord (Axel 30/09 : transition RAPIDE, « boom »)
 const TRANS = 'slideleft';
-// Traitement AVATAR (CTA) pour casser le côté « IA figée » : grain + tremblement selfie tenu à la main
-// (dérive + micro-tremble, repris de camOrganiqueFilter du render-worker). Le hook/la démo = vraie vidéo, pas touchés.
+// Traitement AVATAR pour casser le côté « IA figée » : grain + tremblement selfie tenu à la main
+// (dérive + micro-tremble, repris de camOrganiqueFilter du render-worker). Appliqué au CTA ET, depuis le 18/10 (Axel :
+// « il faut mettre l'effet de tremblement sur chaque vidéo »), au HOOK avatar ; jamais à la démo ni à un hook avant/après
+// (médaillon incrusté).
 const GRAIN = 'noise=alls=9:allf=t+u,eq=saturation=1.03:contrast=1.02';
 // Tremblé main tenue « faible » (validé Axel) : vraies fréquences ~1-3 Hz, A=8px, rotation 0,4°, zoom 1,09.
 const SHAKE = "scale=iw*1.09:ih*1.09:flags=lanczos,rotate='(0.4*(sin(5.7*t)+0.4*sin(11.3*t)))*PI/180':c=black,"
@@ -488,7 +490,7 @@ if (cta) { inputs.push('-i', cta); iCta=n++; }
 
 // démo prolongée sur sa dernière image : le glissement vers le CTA se fait APRÈS la fin de la démo, jamais sur ses mots
 // hook : léger zoom avant continu (1,00 → 1,07) pour le rendre plus vivant (Axel 29/09)
-let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
+let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1${avantApres ? '' : ',' + AV_TREAT}[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : vfix(hookId || idFromFile(hookVoice)) + VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,atrim=0:${(L2 + TS).toFixed(3)},afade=t=out:st=${L2.toFixed(3)}:d=${TS},adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
@@ -578,9 +580,13 @@ if (FMT.hasChoc(format)) {
     reserved: format.subs !== 'aucun' ? [{ x: 0, y: 1310, w: 1080, h: 200, why: 'bande des sous-titres + 60 px de marge' }] : [] };   // 11/10 (A3, VF-0109) : à 1370 le texte du milieu se collait aux sous-titres
   // tirage : d'abord une phrase qui tient LISIBLE (≥ 54 px, Axel 06/10 : 41-48 px trop petit), sinon n'importe laquelle qui tient
   const fitsOk = q => FMT.chocLayout(FMT.chocString(q), lay).level === 'ok';
-  const fitsBig = q => { const l = FMT.chocLayout(FMT.chocString(q), lay); return l.level === 'ok' && l.size >= 54; };
+  // Axel 19/10 (« aucune vidéo avec les logos en texte choc » sur 80) : un texte À LOGOS (TH27, TH36) est lisible par ses logos
+  // de 200 px et plus — TH36 dessine sa phrase à 41 px par construction et le seuil de 54 px l'écartait toujours ; et parmi
+  // ~35 textes tirés au hasard, TH27 ne sortait presque jamais. Démo Claude (MCP) : un texte à logos UNE FOIS SUR TROIS.
+  const fitsBig = q => { const l = FMT.chocLayout(FMT.chocString(q), lay); return l.level === 'ok' && (l.size >= 54 || !!q.logos); };
   const pickArgs = { demo: demoRef, tx, done, hook: hookId, rand };
-  let p = chocForced || FMT.pickChoc({ ...pickArgs, fits: fitsBig });
+  const aLogos = FMT.TEXTES_CHOC.filter(q => q.logos && !q.retired && !FMT.chocWhy(q, demoRef, tx) && fitsOk(q));
+  let p = chocForced || (aLogos.length && rand() < 1 / 3 ? aLogos[Math.floor(rand() * aLogos.length)] : null) || FMT.pickChoc({ ...pickArgs, fits: fitsBig });
   if (!chocForced && p && !fitsBig(p)) p = FMT.pickChoc({ ...pickArgs, fits: fitsOk });
   if (!p) { console.error('✗ aucune phrase choc compatible avec la démo (' + (sidecar.demo || 'démo inconnue') + ')'); process.exit(2); }
   const text = FMT.chocString(p), layout = FMT.chocLayout(text, lay);

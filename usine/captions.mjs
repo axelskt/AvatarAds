@@ -131,7 +131,7 @@ function burn(video, output, words, opts = {}) {
     if (c.grp) return `<div class="cap clip grp" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">`
       + c.grp.map((x, k) => `<span class="gw" id="c${i}w${k}">${x.t}</span>`).join(' ') + `</div>`;
     const cls = 'cap clip' + (big ? ' big' + (FMT.isStrong(c.t) ? ' hot' : '') : '');
-    const st = big ? ` style="font-size:${FMT.bigCapSize(c.t, 800)}px"` : '';   // 800 = largeur de la zone sûre
+    const st = big ? ` style="font-size:${FMT.bigCapSize(c.t, 800, 68, 44)}px"` : '';   // 800 = largeur de la zone sûre ; 68 px au plus (Axel 18/10)
     return `<div class="${cls}" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}"${st}>${c.t}</div>`;
   }).join('\n      ');
   const anim = caps.map((c,i)=> c.grp
@@ -164,7 +164,15 @@ function burn(video, output, words, opts = {}) {
     };
     const line = l => esc(l).replace(EMOJI, m => { const f = appleEmoji(m); return f ? `<img class="emj" src="${f}" alt="">` : `<span class="em">${m}</span>`; });
     const cs = /^CS\d{2}$/.test(String(choc.style || '')) ? choc.style : 'CS01';   // style du texte choc (Axel 01/10, 11 styles validés)
-    if (L.logos) {   // TH27 (Axel 12/10) : logos officiels AvatarAds + Claude en gros, « = 💸💸💸 » dessous, sans bandeau
+    if (L.logos === 'cheat') {   // TH36 (Axel 18/10) : [Claude] + [AvatarAds] = 🔥, puis la phrase dans un bandeau blanc natif
+      const T = decodeURIComponent(new URL('../render-worker/assets/tuto/', import.meta.url).pathname);
+      copyFileSync(join(T, 'logo-claude-carre.png'), join(work, 'lg-claude-sq.png')); copyFileSync(join(T, 'logo-avatarads.png'), join(work, 'lg-aa.png'));
+      const ff = appleEmoji('🔥'), fire = ff ? `<img class="fire" src="${ff}" alt="">` : '<span class="em fire">🔥</span>';
+      chocHtml = `<div class="choc clip choc-cheat" id="choc" data-start="0" data-duration="${end.toFixed(3)}" style="left:${L.x}px;top:${L.y}px;width:${L.w}px;height:${L.h}px;`
+        + `--lg:${L.logo}px;--gap:${L.gap}px;--fs:${L.size}px">`
+        + `<div class="cr1"><img class="lg" src="lg-claude-sq.png" alt=""><span class="op">+</span><img class="lg" src="lg-aa.png" alt=""><span class="op">=</span>${fire}</div>`
+        + `<div class="cr2"><span>${esc('Cheat code pour générer des pubs')}</span></div></div>`;
+    } else if (L.logos) {   // TH27 (Axel 12/10) : logos officiels AvatarAds + Claude en gros, « = 💸💸💸 » dessous, sans bandeau
       const T = decodeURIComponent(new URL('../render-worker/assets/tuto/', import.meta.url).pathname);
       copyFileSync(join(T, 'logo-avatarads.png'), join(work, 'lg-aa.png')); copyFileSync(join(T, 'logo-claude.png'), join(work, 'lg-claude.png'));
       // Axel 12/10 : « les émojis argent sont à moitié flous » → l'image 64 px agrandie ×2 ; emoji Apple rendu une fois en 320 px
@@ -220,42 +228,44 @@ function burn(video, output, words, opts = {}) {
     (script plus bas), jamais coupé ni débordant. Axel 11/10 : « mal centré, + sur la droite » → bande CENTRÉE sur
     l'image (x 140 → 940, axe à 540) au lieu de x 80 → 880 (axe à 480, 60 px trop à gauche) ; les mots courts restent
     loin des icônes, seul un mot de 800 px frôle la colonne de droite */
- /* Axel 12/10 : « ça sert à rien de faire les sous-titres trop gros » → tout réduit (base 82 → 70, Anton 96-98 → 72, gros 108 → 90) */
+ /* Axel 12/10 : « ça sert à rien de faire les sous-titres trop gros » → tout réduit (base 82 → 70, Anton 96-98 → 72, gros 108 → 90)
+    Axel 18/10 (captures TikTok) : « nos sous-titres sont beaucoup trop gros » → encore −25 % (base 54, Anton 56, gros 68 ;
+    les gros passaient en réalité à 108 px : la taille venait de bigCapSize, plus du CSS) */
  .cap{position:absolute;left:140px;width:800px;bottom:450px;z-index:5;text-align:center;
-   font-weight:900;font-size:70px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
-   -webkit-text-stroke:7px #000;paint-order:stroke fill;
+   font-weight:900;font-size:54px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
+   -webkit-text-stroke:6px #000;paint-order:stroke fill;
    text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;line-height:1}
  /* gros sous-titres colorés : même bande basse, mot fort en jaune */
- .cap.big{bottom:450px;font-size:90px;-webkit-text-stroke:9px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
+ .cap.big{bottom:450px;font-size:68px;-webkit-text-stroke:7px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
  /* groupe de sous-titres (moments clés) : la phrase en bloc sur 2-3 lignes, chaque mot s'allume quand il est dit */
  .broll{position:absolute;z-index:4;object-fit:cover;border-radius:34px;border:5px solid #fff;box-shadow:0 22px 60px rgba(0,0,0,.45);background:transparent}
- .cap.grp{white-space:normal;font-size:64px;line-height:1.1;-webkit-text-stroke:7px #000}
+ .cap.grp{white-space:normal;font-size:50px;line-height:1.1;-webkit-text-stroke:6px #000}
  .cap.grp .gw{display:inline-block;opacity:0}
  /* style « boite » : texte noir sur pastille blanche arrondie, sans contour */
- .cap.bx{-webkit-text-stroke:0;text-shadow:none;color:#111;font-size:66px}
- .cap.bx .bw,.cap.bx.grp .gw{background:#fff;border-radius:16px;padding:6px 20px 8px;box-shadow:0 8px 24px rgba(0,0,0,.28);line-height:1.15}
- .cap.bx.grp{font-size:62px;line-height:1.45}
+ .cap.bx{-webkit-text-stroke:0;text-shadow:none;color:#111;font-size:50px}
+ .cap.bx .bw,.cap.bx.grp .gw{background:#fff;border-radius:13px;padding:5px 15px 6px;box-shadow:0 8px 24px rgba(0,0,0,.28);line-height:1.15}
+ .cap.bx.grp{font-size:48px;line-height:1.45}
  .cap.bx.grp .gw{margin:0 2px}
  .st-S03 .cap.bx,.st-S07 .cap.bx,.st-S05 .cap.bx{color:#fff}
  .st-S03 .cap.bx .bw,.st-S03 .cap.bx.grp .gw{background:#1d6bff}
  .st-S07 .cap.bx .bw,.st-S07 .cap.bx.grp .gw{background:#e11d2e}
  .st-S05 .cap.bx .bw,.st-S05 .cap.bx.grp .gw{background:#ff2d8a;border-radius:40px}
  .st-S05 .cap.bx.grp .gw:nth-child(even){background:#ffe600;color:#111}
- .st-S01 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:72px;letter-spacing:.02em;-webkit-text-stroke:4px #000}
+ .st-S01 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:56px;letter-spacing:.02em;-webkit-text-stroke:3px #000}
  .st-S04 .cap{color:#e9fff0;-webkit-text-stroke:2px #0b2a14;text-shadow:0 0 16px #39ff88,0 0 40px #8a4dff,0 4px 12px rgba(0,0,0,.5)}
- .st-S06 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:72px;color:#ffe600;-webkit-text-stroke:7px #000}
- .st-S08 .cap{font-size:70px;-webkit-text-stroke:7px #000}
- .st-S09 .cap{font-family:'Inter',sans-serif;font-weight:800;text-transform:none;-webkit-text-stroke:0;font-size:74px;text-shadow:0 3px 16px rgba(0,0,0,.8)}
+ .st-S06 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:56px;color:#ffe600;-webkit-text-stroke:6px #000}
+ .st-S08 .cap{font-size:54px;-webkit-text-stroke:6px #000}
+ .st-S09 .cap{font-family:'Inter',sans-serif;font-weight:800;text-transform:none;-webkit-text-stroke:0;font-size:56px;text-shadow:0 3px 16px rgba(0,0,0,.8)}
  .st-S10 .cap{-webkit-text-stroke:0;text-shadow:0 4px 18px rgba(0,0,0,.75),0 1px 3px rgba(0,0,0,.6)}
- .st-S11 .cap{font-size:70px;color:#ff6a1a;-webkit-text-stroke:6px #000}
+ .st-S11 .cap{font-size:54px;color:#ff6a1a;-webkit-text-stroke:5px #000}
  .st-S12 .cap{-webkit-text-stroke:3px #2a0a1c;text-shadow:0 0 18px #ff3da6,0 0 42px rgba(255,61,166,.75),0 4px 14px rgba(0,0,0,.5)}
- .st-S13 .cap{font-family:'Inter',sans-serif;font-weight:600;text-transform:none;-webkit-text-stroke:0;font-size:64px;letter-spacing:0;text-shadow:0 2px 12px rgba(0,0,0,.85)}
- .st-S14 .cap{font-family:'Playfair Display',serif;font-weight:700;font-style:italic;text-transform:none;-webkit-text-stroke:0;font-size:78px;text-shadow:0 3px 16px rgba(0,0,0,.85)}
- .st-S15 .cap{-webkit-text-stroke:6px #000;text-shadow:5px 6px 0 #ff6a1a}
- .st-S16 .cap{color:#ffe600;-webkit-text-stroke:6px #000;text-shadow:5px 6px 0 #000}
+ .st-S13 .cap{font-family:'Inter',sans-serif;font-weight:600;text-transform:none;-webkit-text-stroke:0;font-size:50px;letter-spacing:0;text-shadow:0 2px 12px rgba(0,0,0,.85)}
+ .st-S14 .cap{font-family:'Playfair Display',serif;font-weight:700;font-style:italic;text-transform:none;-webkit-text-stroke:0;font-size:60px;text-shadow:0 3px 16px rgba(0,0,0,.85)}
+ .st-S15 .cap{-webkit-text-stroke:5px #000;text-shadow:4px 5px 0 #ff6a1a}
+ .st-S16 .cap{color:#ffe600;-webkit-text-stroke:5px #000;text-shadow:4px 5px 0 #000}
  .st-S17 .cap{-webkit-text-stroke:0;text-shadow:0 0 14px #ff1a1a,0 0 38px rgba(255,26,26,.85),0 3px 10px rgba(0,0,0,.6)}
- .st-S18 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:72px;color:#ffd24a;-webkit-text-stroke:5px #7a0c0c;text-shadow:0 5px 0 #b3121a,0 8px 18px rgba(0,0,0,.5)}
- .st-S19 .cap{font-family:'Montserrat',sans-serif;font-weight:900;color:#ffe600;-webkit-text-stroke:7px #000}
+ .st-S18 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:56px;color:#ffd24a;-webkit-text-stroke:4px #7a0c0c;text-shadow:0 4px 0 #b3121a,0 8px 18px rgba(0,0,0,.5)}
+ .st-S19 .cap{font-family:'Montserrat',sans-serif;font-weight:900;color:#ffe600;-webkit-text-stroke:6px #000}
  /* phrase choc : texte « natif » TikTok, bandeau blanc par ligne, placée par chocLayout (zone sûre, hors visage) */
  .choc{position:absolute;z-index:6;font-family:'Inter',sans-serif;font-weight:700;color:#111;transform-origin:50% 50%}
  .choc .cl{display:flex;justify-content:var(--jc,center);margin:0}
@@ -271,6 +281,16 @@ function burn(video, output, words, opts = {}) {
  .choc-logos .lg1 img.lgc{transform:scale(1.3)}
  .choc-logos .lg2{font-size:calc(var(--lg) * .55);line-height:1;gap:calc(var(--lg) * .06)}
  .choc-logos .lg2 .emj{height:1.15em;margin-left:0;vertical-align:middle}
+ /* TH36 : réf. TikTok au 1:1 (Axel 18/10) — logos 231 px, « + » / « = » blancs, 🔥 176 px, bandeau blanc arrondi texte noir Inter 700 */
+ .choc-cheat{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:var(--gap)}
+ .choc-cheat .cr1{display:flex;align-items:center;justify-content:center;gap:calc(var(--lg) * .17)}
+ .choc-cheat .cr1 img.lg{width:var(--lg);height:var(--lg);display:block;filter:drop-shadow(0 6px 16px rgba(0,0,0,.35))}
+ .choc-cheat .op{color:#fff;font-family:'Inter',sans-serif;font-weight:800;font-size:calc(var(--lg) * .26);line-height:1;text-shadow:0 2px 8px rgba(0,0,0,.45)}
+ .choc-cheat .fire{height:calc(var(--lg) * .76);width:auto;display:block;margin-left:calc(var(--lg) * -.06)}
+ .choc-cheat .em.fire{font-family:'Noto Color Emoji',sans-serif;font-size:calc(var(--lg) * .62);line-height:1}
+ .choc-cheat .cr2{display:flex;justify-content:center}
+ .choc-cheat .cr2>span{display:inline-block;background:#fff;color:#000;font-family:'Inter',sans-serif;font-weight:700;font-size:var(--fs);line-height:1.1;
+   padding:calc(var(--fs) * .5) calc(var(--fs) * .45);border-radius:calc(var(--fs) * .3);white-space:nowrap}
  /* 11 styles de texte choc validés par Axel le 01/10 (planche CS01-CS15 ; refusés : CS04 orange, CS09 carte unique,
     CS12 dégradé, CS14 sticker penché, CS06 néon rouge ; JAMAIS de jaune ; CS16 = surligneur rouge ajouté). CS01 = la base ci-dessus (bandeau blanc natif TikTok). */
  .cs-CS02 .cl>span{background:#111;color:#fff}

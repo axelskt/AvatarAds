@@ -102,7 +102,11 @@
     { id: 'TH34', text: "8 ANS QUE J'ATTEND CE JOUR", emoji: '😭😭😭', module: 'generique' },   // Axel 14/10 (orthographe d'Axel)
     // Axel 15/10 : format « scotch » (fille au bureau qui se scotche la bouche, réf. emzzztech) — titre + sous-ligne plus petite
     // (sub), orthographe d'Axel ; hors tirage aléatoire des TH (pick_th s'arrête à TH34), réservé au format scotch.
-    { id: 'TH35', text: 'pov : ta pas de taff mais tu veux le dernier iphone', sub: "comment je fait de l'argent en ligne", module: 'scotch' }
+    { id: 'TH35', text: 'pov : ta pas de taff mais tu veux le dernier iphone', sub: "comment je fait de l'argent en ligne", module: 'scotch' },
+    // Axel 18/10 : variante « cheat code » des logos (réf. TikTok « Claude + Creatify = 🔥 / Cheat code for generating Ads ») :
+    // logo Claude (carré orange) + logo AvatarAds = 🔥 sur une ligne, phrase dans un bandeau blanc natif dessous ; vidéos Claude
+    // seulement. Rendu spécial (logos:'cheat') : placement chocCheatLayout, dessin dans captions.mjs. Dimensions = la réf. au 1:1.
+    { id: 'TH36', text: 'Cheat code pour générer des pubs', emoji: '🔥', module: 'mcp-claude', logos: 'cheat' }
   ];
   // Format Insomnie (Axel 12/10) : « Tu essaies de dormir mais tu repenses à… » — banque À PART (factory_bricks TI…,
   // meta.format 'insomnie'), jamais tirée avec les TH ; demos = démos muettes autorisées (sinon générique)
@@ -266,21 +270,23 @@
   var CANVAS = { w: 1080, h: 1920 };
   // Zone sûre TikTok / Reels (canevas 1080 × 1920) : ce que l'interface de l'appli recouvre.
   var UI_RESERVED = [
-    { x: 0, y: 0, w: 1080, h: 220, why: 'barre du haut TikTok / Reels' },
+    { x: 0, y: 0, w: 1080, h: 290, why: 'barre du haut TikTok / Reels' },   // 18/10 (Axel, capture TikTok) : 220 → 290, le texte touchait les onglets
     { x: 940, y: 620, w: 140, h: 900, why: 'icônes à droite' },
     { x: 0, y: 1450, w: 1080, h: 470, why: 'légende et pseudo en bas' }
   ];
-  // Médaillon « avant » des hooks avant/après (gabarit usine/transformations-omni.md : bord mesuré 588–1039 × 90–888) + marge.
-  var INSET_AVANT_APRES = { x: 566, y: 68, w: 496, h: 842, why: 'médaillon « avant » du hook avant/après' };
+  // Médaillon « avant » des hooks avant/après + marge de 22 px. 18/10 (Axel) : médaillon plus petit, dans la zone sûre TikTok —
+  // bord 517–928 × 247–973 (assemble-hk.mjs) ; avant : 588–1039 × 90–888.
+  var INSET_AVANT_APRES = { x: 495, y: 225, w: 455, h: 770, why: 'médaillon « avant » du hook avant/après' };
   // Axel 01/10 (VF-0022 / 0025) : la phrase en colonne étroite à gauche du médaillon, « pas fan ». Elle doit former un RECTANGLE
   // large, quitte à mordre sur la moitié gauche du médaillon → seule sa moitié droite reste interdite à la phrase choc.
-  var INSET_AVANT_APRES_CHOC = { x: 814, y: 68, w: 248, h: 842, why: 'moitié droite du médaillon « avant »' };
-  var TOP_MIN = 230, BOTTOM_MAX = 1440, HAUT_MAX = 780;   // centre de la phrase au-dessus de HAUT_MAX = « en haut »
+  var INSET_AVANT_APRES_CHOC = { x: 722, y: 225, w: 228, h: 770, why: 'moitié droite du médaillon « avant »' };
+  var TOP_MIN = 300, BOTTOM_MAX = 1440, HAUT_MAX = 780;   // 18/10 (Axel) : texte choc plus bas, sous les onglets (230 → 300)   // centre de la phrase au-dessus de HAUT_MAX = « en haut »
   // Axel 06/10 (VF-0043) : sur un avant / après, la phrase est CENTRÉE (dans la zone sûre) juste SOUS le médaillon — elle peut
-  // toucher son bas (bord à 889 px) —, plus jamais en haut à gauche contre le médaillon.
-  var SOUS_MEDAILLON = { zone: 'sous-medaillon', align: 'center', left: 150, right: 930, top: 889 - 16 };   // axe 540 (14/10)
+  // toucher son bas (bord à 973 px depuis le 18/10, 889 avant) —, plus jamais en haut à gauche contre le médaillon.
+  var SOUS_MEDAILLON = { zone: 'sous-medaillon', align: 'center', left: 150, right: 930, top: 973 - 16 };   // axe 540 (14/10)
   // Axel 01/10 (VF-0023 / 0028 / 0030) : phrase trop petite → plus gros, toujours dans la zone sûre (62 px au plus avant).
-  var SIZES = [78, 72, 66, 60, 54, 48, 44, 41];   // la plus grande qui tient ; 44 / 41 = repli quand les visages prennent toute la place
+  // Axel 18/10 : « un peu moins gros » → 78 au plus devient 66 (−15 %).
+  var SIZES = [66, 62, 58, 54, 50, 46, 44, 41];   // la plus grande qui tient ; 44 / 41 = repli quand les visages prennent toute la place
   // largeur approchée d'un caractère (em) — police de la phrase : Inter 700 ; filet de sécurité à l'affichage (fit).
   function charEm(ch) {
     if (/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(ch)) return 1.2;
@@ -376,9 +382,43 @@
     if (o.faces == null) reasons.push('visages non vérifiés (détection indisponible)');
     return Object.assign(hit, { level: reasons.length ? 'review' : 'ok', reasons: reasons });
   }
+  // TH36 (Axel 18/10) : ligne « [Claude] + [AvatarAds] = 🔥 » puis bandeau blanc « Cheat code pour générer des pubs ».
+  // Mesures prises sur la réf. (vidéo 706 px → 1080 px) : logos 231 px, 🔥 176 px de haut, ligne 832 px de large, écart 20 px,
+  // bandeau 96 px de haut (texte Inter 700 46 px). Placé comme TH27 : en haut et le plus gros possible, hors visage et zone sûre.
+  var CHEAT_TXT = 'Cheat code pour générer des pubs 🔥';
+  function chocCheatLayout(o) {
+    var wide = faceRects(o.faces, true), core = faceRects(o.faces, false);
+    var fixed = UI_RESERVED.concat(o.avantApres ? [INSET_AVANT_APRES_CHOC] : []).concat(o.reserved || []);
+    var brow = core.map(function (r) { return { x: r.x, y: r.y + 0.2 * r.h, w: r.w, h: 0.8 * r.h, why: r.why }; });
+    var dims = function (sc) {
+      var logo = Math.round(231 * sc), gap = Math.round(20 * sc), size = Math.round(46 * sc), boxH = Math.round(96 * sc);
+      var w = Math.round(880 * sc);
+      return { logo: logo, gap: gap, size: size, boxH: boxH, w: w, h: logo + gap + boxH, scale: sc };
+    };
+    var hit = null, reasons = [], PASSES = [];
+    [1, 0.9, 0.8].forEach(function (sc) { PASSES.push([wide, 'haut', sc], [core, 'haut', sc], [brow, 'haut', sc]); });
+    [1, 0.9, 0.8].forEach(function (sc) { PASSES.push([wide, 'milieu', sc], [core, 'milieu', sc]); });
+    var mk = function (d, y, zone) {
+      return { zone: zone, x: Math.round(CANVAS.w / 2 - d.w / 2), y: y, w: d.w, h: d.h, scale: d.scale, logo: d.logo, gap: d.gap, size: d.size,
+        lineH: d.size, boxH: d.boxH, padX: 0, padY: 0, lines: [CHEAT_TXT], align: 'center', maxW: d.w, logos: 'cheat' };
+    };
+    PASSES.some(function (pass) {
+      var d = dims(pass[2]), obstacles = fixed.concat(pass[0]), x = Math.round(CANVAS.w / 2 - d.w / 2);
+      var rg = pass[1] === 'haut' ? [TOP_MIN, HAUT_MAX - d.h / 2] : [HAUT_MAX - 40, BOTTOM_MAX - d.h];
+      for (var y = rg[0]; y <= rg[1]; y += 10) {
+        var r = { x: x, y: y, w: d.w, h: d.h };
+        if (!obstacles.some(function (ob) { return inter(r, ob) > 0; })) { hit = mk(d, y, pass[1]); return true; }
+      }
+      return false;
+    });
+    if (!hit) { hit = mk(dims(0.8), TOP_MIN, 'haut'); reasons.push('texte choc sur un visage : aucune zone libre dans la zone sûre'); }
+    if (o.faces == null) reasons.push('visages non vérifiés (détection indisponible)');
+    return Object.assign(hit, { level: reasons.length ? 'review' : 'ok', reasons: reasons });
+  }
   function chocLayout(text, o) {
     o = o || {};
     if (String(text || '').trim() === LOGO_TXT) return chocLogoLayout(o);
+    if (String(text || '').trim() === CHEAT_TXT) return chocCheatLayout(o);
     var words = String(text || '').trim().split(/\s+/).filter(Boolean);
     var segs = String(text || '').trim().split('\n').map(function (t) { return t.trim().split(/\s+/).filter(Boolean); }).filter(function (w) { return w.length; });   // \n = ligne forcée (TH26)
     var fixed = UI_RESERVED.concat(o.avantApres ? [INSET_AVANT_APRES_CHOC] : []).concat(o.reserved || []);
@@ -516,10 +556,10 @@
     if (/[0-9€$]/.test(ch)) return 0.67;
     return 0.8;
   }
-  function bigCapSize(word, maxW, base) {
-    base = base || 108; maxW = maxW || 900;
+  function bigCapSize(word, maxW, base, min) {
+    base = base || 108; maxW = maxW || 900; min = min || 56;
     var em = 0; Array.from(String(word || '').toUpperCase()).forEach(function (c) { em += capEm(c); });
-    return em ? Math.max(56, Math.min(base, Math.floor(maxW / em))) : base;
+    return em ? Math.max(min, Math.min(base, Math.floor(maxW / em))) : base;
   }
   // Coupe les sous-titres pendant la phrase choc : une caption finie avant chocEnd disparaît, une caption à cheval commence à chocEnd.
   function capsAfterChoc(caps, chocEnd) {

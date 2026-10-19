@@ -64,10 +64,17 @@ if (OPT.reaction && OPT.demo) {
 }
 const text = FMT.chocString(p);
 
+// Tremblement main tenue « faible » validé (Axel 20/09) + grain : MÊMES valeurs que GRAIN / SHAKE de build.mjs. Axel 18/10 :
+// « il faut mettre l'effet de tremblement sur chaque vidéo » → la réaction (avatar) le reçoit, avant le texte choc
+// (le texte reste fixe) ; la démo, non.
+const GRAIN = 'noise=alls=9:allf=t+u,eq=saturation=1.03:contrast=1.02';
+const SHAKE = "scale=iw*1.09:ih*1.09:flags=lanczos,rotate='(0.4*(sin(5.7*t)+0.4*sin(11.3*t)))*PI/180':c=black,"
+  + "crop=1080:1920:x='(iw-1080)/2+8*(sin(6.3*t)+0.5*sin(12.9*t+1)+0.3*sin(19.7*t))':"
+  + "y='(ih-1920)/2+8*(cos(7.1*t)+0.5*sin(13.7*t+0.5)+0.25*sin(22.3*t))'";
 // ── 1) réaction : les 3 premières secondes, muette (piste silencieuse : le rendu HyperFrames attend un son) ──
 const H = Math.min(parseFloat(OPT['hook-s'] || '3') || 3, dur(reaction));
 const hook = join(work, 'hook.mp4');
-ff(['-i', reaction, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-t', H.toFixed(3), '-map', '0:v', '-map', '1:a', '-vf', VF,
+ff(['-i', reaction, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-t', H.toFixed(3), '-map', '0:v', '-map', '1:a', '-vf', VF + ',' + GRAIN + ',' + SHAKE,
   '-c:v', 'libx264', '-crf', '16', '-preset', 'fast', '-c:a', 'aac', '-b:a', '128k', '-shortest', hook]);
 const fz = faceZones(hook, 0, H, 0.5);
 // 11/10 : la tête BOUGE pendant la réaction (recul, main à la bouche) → marge de 40 % sous le visage détecté, sinon le texte

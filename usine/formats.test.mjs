@@ -50,10 +50,14 @@ test('chocEnd : fixe = 3 s bornées à la vidéo ; hook = durée du hook ; sans 
 });
 
 // ── banque de phrases choc ──
-test('banque : 34 phrases TH01…TH34, modules connus, TH13 exige TX-O02a', () => {
-  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 34 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
-  F.TEXTES_CHOC.forEach(p => assert.ok(['generique', 'mcp-claude', 'omni', 'montage-ia'].includes(p.module), p.id));
-  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH29', 'TH30', 'TH31', 'TH32']);
+test('banque : 36 phrases TH01…TH36, modules connus, TH13 exige TX-O02a', () => {
+  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 36 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
+  F.TEXTES_CHOC.forEach(p => assert.ok(['generique', 'mcp-claude', 'omni', 'montage-ia', 'scotch'].includes(p.module), p.id));   // scotch = TH35 (15/10)
+  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH29', 'TH30', 'TH31', 'TH32', 'TH35', 'TH36']);
+  // TH36 (Axel 18/10) : bloc « cheat code » (logos Claude + AvatarAds = 🔥, bandeau dessous) aux mesures de la réf.
+  const C = F.chocLayout(F.chocString(F.textChoc('TH36')), { faces: [] });
+  assert.equal(C.logos, 'cheat'); assert.equal(C.logo, 208); assert.equal(C.size, 41); assert.equal(C.boxH, 86); assert.equal(C.y, 300);   // 18/10 : sous les onglets (y 300) → échelle 0,9 pour rester au-dessus des icônes assert.ok(C.x >= 0 && C.x + C.w <= 1080);
+  assert.equal(F.chocString(F.textChoc('TH36')), 'Cheat code pour générer des pubs 🔥');
   assert.equal(F.chocString(F.textChoc('TH29')), '🚨CLAUDE PEUT ENFIN GÉNÉRER DES IMAGES ET VIDÉOS... 🤯');
   assert.equal(F.textChoc('TI09').text, 'Tu essaies de dormir mais tu repenses au nombre de millionnaires que l\'IA va créer cette année');
   assert.equal(F.textChoc('TI01'), null);
@@ -67,7 +71,7 @@ test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.
   const md = readFileSync(BANK, 'utf8'), sec = md.split(/^## /m).find(x => /^VALIDÉES/.test(x));
   assert.ok(sec, 'section VALIDÉES');
   const lines = sec.split('\n').filter(l => /^TH\d{2} /.test(l));
-  assert.equal(lines.length, 34);
+  assert.equal(lines.length, 36);
   lines.forEach(l => {
     const m = /^(TH\d{2}) (.+?)\s{2,}\((.+)\)\s*$/.exec(l);
     assert.ok(m, l);
@@ -202,8 +206,8 @@ function checkBox(L, text, extra) {
   assert.ok(L.lines.every(l => F.textEm(l) * L.size <= L.maxW + 1), 'lignes dans la boîte');
   assert.ok(L.size >= 41 && L.size <= 78);
 }
-test('chocLayout sans visage : EN HAUT (y = 230), zone sûre TikTok/Reels, 19 phrases, niveau ok', () => {
-  ALL_TEXTS.forEach(t => { const L = F.chocLayout(t, { faces: [] }); checkBox(L, t); assert.equal(L.zone, 'haut'); assert.equal(L.y, 230); assert.equal(L.level, 'ok'); });
+test('chocLayout sans visage : EN HAUT (y = 300, sous les onglets TikTok — Axel 18/10), zone sûre TikTok/Reels, 19 phrases, niveau ok', () => {
+  ALL_TEXTS.forEach(t => { const L = F.chocLayout(t, { faces: [] }); checkBox(L, t); assert.equal(L.zone, 'haut'); assert.equal(L.y, 300); assert.ok(L.size <= 66, 'au plus 66 px (Axel 18/10)'); assert.equal(L.level, 'ok'); });
 });
 test('chocLayout hook avant/après : CENTRÉ juste sous le médaillon « avant » (Axel 06/10), rectangle large, zone sûre', () => {
   ALL_TEXTS.forEach(t => { const L = F.chocLayout(t, { faces: [], avantApres: true }); checkBox(L, t); assert.ok(L.lines.length <= 4, 'rectangle, pas une colonne : ' + L.lines.length + ' lignes'); assert.equal(L.level, 'ok');
@@ -295,17 +299,21 @@ test('publish-qc.mjs : format inconnu / F05 / phrase sans format / désaccord av
   r = run({ avatar: 'A1', hook: 'H74' }); assert.equal(r.status, 2); assert.match(r.stderr, /TH99.* absent de la banque validée/);
 });
 
-console.log(results.join('\n'));
-test('TH27 (logos AvatarAds + Claude) : en haut sous la barre du haut (y ≥ 230), jamais sous 80 %, jamais sur les yeux', () => {
+test('TH27 (logos AvatarAds + Claude) : en haut sous les onglets (y ≥ 300), jamais sous 80 %, jamais sur les yeux', () => {
   const t = F.chocString(F.textChoc('TH27'))
   const free = F.chocLayout(t, { faces: [], center: true })
-  assert.equal(free.zone, 'haut'); assert.ok(free.y >= 230); assert.equal(free.scale, 1); assert.ok(free.logos)
-  const face = [0.2712, 0.249, 0.4458, 0.2658]   // A3-3 H17 (test réel du 12/10)
+  assert.equal(free.zone, 'haut'); assert.ok(free.y >= 300); assert.equal(free.scale, 1); assert.ok(free.logos)
+  // 18/10 (Axel) : avatar cadré avec de la place au-dessus de la tête (visage vers le milieu de l'image) → logos en haut
+  const face = [0.2712, 0.36, 0.4458, 0.2658]
   const L = F.chocLayout(t, { faces: [face], center: true })
-  assert.equal(L.zone, 'haut'); assert.ok(L.y >= 230); assert.ok(L.scale >= 0.8)
+  assert.equal(L.zone, 'haut'); assert.ok(L.y >= 300); assert.ok(L.scale >= 0.8)
   assert.ok(L.y + L.h <= (face[1] + 0.2 * face[3]) * 1920, 'au-dessus des 80 % bas du visage (yeux, bouche)')
+  // avatar trop près (A3-3 H17, test réel du 12/10) : plus de place sous les onglets → jamais sur les yeux ni la bouche
+  const near = [0.2712, 0.249, 0.4458, 0.2658], N = F.chocLayout(t, { faces: [near], center: true })
+  assert.ok(N.y + N.h <= (near[1] + 0.2 * near[3]) * 1920 || N.y >= (near[1] + near[3]) * 1920, 'ni yeux ni bouche')
 })
 
+console.log(results.join('\n'));
 const fails = results.filter(r => r.startsWith('FAIL')).length;
 console.log(`\n${results.length - fails}/${results.length} OK`);
 process.exit(fails ? 1 : 0);
