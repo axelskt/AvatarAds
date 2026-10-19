@@ -2,7 +2,7 @@
 // Creative Factory — PLAN d'un lot (14/10, reconstruit dans le repo). Lit l'instantané écrit par lot.py (bricks.json,
 // variantes, recettes déjà produites) et choisit les recettes. Règles d'Axel appliquées ici :
 //  · jamais une recette déjà produite (Omni : photo|hook|démo ; Texte + musique : réaction|démo), refusées comprises ;
-//  · démos « image → vidéo » d'abord (Omni, motion control, static ads), puis Claude, Images IA seules ≤ 1 par lot (~1/10) ;
+//  · démos « image → vidéo » d'abord (Omni, motion control, static ads, Express depuis le 19/10), puis Claude, Images IA seules ≤ 1 par lot (~1/10) ;
 //  · jamais la démo intérieure (C-OMNI-03 / C-OMNIM-03), ni C-IMGIA-05 / C-IMGIAM-01 (supprimées) ;
 //  · hook × démo compatibles (coherence.js, pairLevel ok) ; pour chaque photo, le hook le MOINS utilisé ;
 //  · Texte + musique : une réaction part avec 5 démos muettes au plus (anti-shadowban) ; réactions les moins utilisées d'abord ;
@@ -38,7 +38,7 @@ const HOOKS = (process.env.HOOKS || '').split(',').map(s => s.trim()).filter(Boo
 const PHOTOS = (process.env.PHOTOS || '').split(',').map(s => s.trim()).filter(Boolean)
 const demos = B.filter(b => b.kind === 'contenu' && ready(b) && !/^C-[A-Z]+M-/.test(b.id) && b.meta?.voice !== false && b.meta?.muette !== true && !EXCLUS.has(b.id) && (!DEMO_PREF || b.id.startsWith(DEMO_PREF)))
 const mdemos = B.filter(b => b.kind === 'contenu' && ready(b) && /^C-[A-Z]+M-/.test(b.id) && !EXCLUS.has(b.id)).map(b => b.id)
-const PRI = d => /OMNI|-MC-|MCM|SADS/.test(d) ? 0 : /MCP/.test(d) ? 1 : 2
+const PRI = d => /OMNI|-MC-|MCM|SADS|EXP/.test(d) ? 0 : /MCP/.test(d) ? 1 : 2
 const lotUse = {}
 const pick = (list, n) => { const out = [], l = [...list]
   while (out.length < n && l.length) {
