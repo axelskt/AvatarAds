@@ -154,9 +154,11 @@ function workingDemo(src) {
   const out = join(CACHE, 'demos', basename(src).replace(/\.[^.]+$/, '') + '-' + fileKey(src) + '-' + FPS + 'fps.mp4');
   if (!existsSync(out)) {
     console.log('  démo : version de travail 1080×1920 ' + FPS + ' i/s (une seule fois) → ' + basename(out));
-    const tmp = out + '.part.mp4';
+    // 19/10 : fichier temporaire PROPRE au processus — un lot rend 3 vidéos à la fois ; deux rendus qui préparaient la même
+    // démo neuve (C-EXP-01, 4K) écrivaient le même .part et le second échouait au renommage (ENOENT, VF-0633 perdue)
+    const tmp = out + '.' + process.pid + '.part.mp4';
     ff(['-i', src, '-vf', VF, ...VENC, '-g', String(FPS), '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', tmp]);
-    renameSync(tmp, out);
+    if (existsSync(out)) rmSync(tmp, { force: true }); else renameSync(tmp, out);
   }
   return out;
 }
