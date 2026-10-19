@@ -3,13 +3,15 @@
 # Une page HTML autonome : chaque vidéo de la file de revue (factory_qc, en attente) avec son affiche (image 0), sa légende
 # (VF, photo, hook et sa phrase, démo, CTA, durée) et le lecteur qui ne charge la vidéo qu'au clic. Rien n'est validé ici :
 # la validation reste « validé VF-… » (valider.py) ou le tableau de bord.
-# usage : python3 usine/lots/revue.py VF-0542 VF-0631 sortie.html   (bornes incluses)
+# usage : python3 usine/lots/revue.py VF-0542 VF-0631 sortie.html [VF-0544 VF-0560 …]   (bornes incluses ; liste = seulement celles-là)
 import html, json, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from outils import q
+from outils import q, vf_ok
 
 a, b, out = sys.argv[1], sys.argv[2], sys.argv[3]
+seuls = {v for v in sys.argv[4:] if vf_ok(v)}   # 19/10 : VF-… en plus = seulement ces vidéos (reprises)
 rows = q("select template, status, video_url, poster_url, brick_combo, technical from factory_qc where template between '%s' and '%s' order by template" % (a, b))
+if seuls: rows = [r for r in rows if r['template'] in seuls]
 hooks = {r['id']: (r['meta'] or {}).get('transcript') or (r['meta'] or {}).get('script') or r['label'] for r in q("select id, label, meta from factory_bricks where kind='hook'")}
 def duree(t):
     for c in ((t or {}).get('checks') or []):
