@@ -153,7 +153,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 
   // 19/10 (Axel : « plus de programmation, je mets en brouillon et je poste à la main ; les créneaux tu peux les supprimer ») :
   // plus d'heures, seulement le jour et l'ordre ; « C'est posté » (statut 'scheduled' en base = fait, rattaché aux stats).
-  var VIEWS = [['todo', 'À poster'], ['old', 'Postées']];
+  var VIEWS = [['todo', 'À préparer'], ['old', 'En brouillon / postées']];
   var now = function () { return new Date().toISOString(); };
   // Posts « skipped » (sortis du kit : stock commun BloxAI, 16/10) jamais comptés : ni « programmées », ni dans les numéros.
   function mine(a) { return S.posts.filter(function (p) { return p.account === (a || S.acct) && p.status !== 'skipped'; }); }
@@ -333,7 +333,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     void document.body.offsetHeight;
     cards.forEach(function (c) { c.classList.add('leaving'); });
     setTimeout(render, cards.length ? 420 : 0);
-    var label = one ? 'N°' + num(one) + ' postée' : list.length + ' vidéo' + (list.length > 1 ? 's' : '') + ' postée' + (list.length > 1 ? 's' : '');
+    var label = one ? 'N°' + num(one) + ' en brouillon' : list.length + ' vidéo' + (list.length > 1 ? 's' : '') + ' en brouillon';
     toast(label, function () { setStatus(list, 'todo').then(function (ok) { if (ok) { S.cur = list[0].id; render(); } }); });
     setStatus(list, 'scheduled').then(function (ok) {   // setStatus remet l'ancien état et redessine si la base refuse
       if (!one) marking = false;
@@ -344,7 +344,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   function acctCard(A) {
     var all = mine(A.id), left = todo(A.id).length;
     return '<button type="button" class="acct" style="--c:' + A.c + '" data-act="acct" data-a="' + A.id + '" aria-pressed="' + (S.acct === A.id) + '">'
-      + '<span class="n"><i></i>@' + A.id + '</span><span class="m">' + (all.length - left) + ' / ' + all.length + ' postées · ' + left + ' à poster</span>'
+      + '<span class="n"><i></i>@' + A.id + '</span><span class="m">' + (all.length - left) + ' / ' + all.length + ' en brouillon · ' + left + ' à préparer</span>'
       + '<span class="bar"><i style="width:' + (all.length ? Math.round((all.length - left) / all.length * 100) : 0) + '%"></i></span></button>';
   }
 
@@ -352,24 +352,30 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     var T = todo(), list = nextBatch();
     if (S.view !== 'todo' || !list.length) return '';
     var first = list[0], last = list[list.length - 1];
-    return '<div class="send"><div class="send-h"><div><b>' + T.length + ' vidéo' + (T.length > 1 ? 's' : '') + ' à poster</b>'
+    return '<div class="send"><div class="send-h"><div><b>' + T.length + ' vidéo' + (T.length > 1 ? 's' : '') + ' à préparer</b>'
       + '<div class="meta">Les ' + (list.length > 1 ? list.length + ' prochaines' : 'prochaine') + ' : n° ' + pad(num(first)) + (list.length > 1 ? ' → ' + pad(num(last)) : '')
       + ' · ' + esc(dayLabel(first.scheduled_at))
       + (list.length > 1 && dayKey(last.scheduled_at) !== dayKey(first.scheduled_at) ? ' → ' + esc(dayLabel(last.scheduled_at)) : '') + '</div></div>'
-      + '<button type="button" class="btn ok" data-act="next15">' + IC.check + list.length + ' vidéo' + (list.length > 1 ? 's' : '') + ' postée' + (list.length > 1 ? 's' : '') + '</button></div></div>';
+      + '<button type="button" class="btn ok" data-act="next15">' + IC.check + list.length + ' vidéo' + (list.length > 1 ? 's' : '') + ' en brouillon</button></div></div>';
   }
 
+  // 19/10 : démo de la vidéo (repartir.py les fait tourner : jamais deux fois la même de suite)
+  var FAM = [['C-OMNI', 'Omni'], ['C-EXP', 'Express'], ['C-MCP', 'Claude'], ['C-CLAUDE', 'Claude'], ['C-MC', 'Motion Control'], ['C-SADS', 'Pubs statiques'], ['C-IMGIA', 'Images IA']];
+  function famOf(c) {
+    c = c || {}; var d = String(c.contenu || ''), f = FAM.filter(function (x) { return d.indexOf(x[0]) === 0; })[0];
+    return (f ? f[1] : 'Démo') + (c.format === 'F05' ? ' · sans voix' : ' · parlée');
+  }
   function postHTML(p) {
     var done = p.status !== 'todo', id = vidId(p);
     return '<div class="post' + (done ? ' is-done' : '') + (p.id === S.cur ? ' cur' : '') + '" data-pid="' + esc(p.id) + '">'
       + '<span class="no">' + num(p) + '</span>'
       + (p.video_deleted_at ? '<div class="gone">vidéo<br>retirée du<br>stockage</div>'
         : '<video src="' + esc(p.video_url) + '" poster="' + esc(String(p.video_url).replace(/\.mp4$/, '-poster.jpg')) + '" muted playsinline preload="none" data-act="play"></video>')   // 07/10 : affiche JPEG (Safari laissait des cases noires en chargeant 70 vidéos)
-      + '<div style="min-width:0"><div class="t">' + esc(dayLabel(p.scheduled_at)) + '</div>'
+      + '<div style="min-width:0"><div class="t">' + esc(dayLabel(p.scheduled_at)) + '</div><div class="d">' + esc(famOf(p.combo)) + '</div>'
       + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div>'
       + '<div class="id">ID ' + esc(id) + '<button type="button" data-act="copyid" data-id="' + esc(p.id) + '" title="Copier l’ID">' + IC.copy + '</button></div></div>'
       + '<div class="act">' + oneBtn(p) + '<button type="button" class="btn ghost" data-act="copy" data-id="' + esc(p.id) + '">' + IC.copy + 'Copier la légende</button>'
-      + (done ? '' : '<button type="button" class="btn ok" data-act="done" data-id="' + esc(p.id) + '">' + IC.check + 'C’est posté</button>')   // 18/10 : de retour sur chaque vidéo
+      + (done ? '' : '<button type="button" class="btn ok" data-act="done" data-id="' + esc(p.id) + '">' + IC.check + 'En brouillon</button>')   // 18/10 : de retour sur chaque vidéo
       + '</div>'
       + '</div>';
   }
@@ -388,8 +394,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
       out += postHTML(p);
     });
     if (last) out += '</div>';
-    var EMPTY = { todo: mine().length ? 'Tout est posté sur @' + S.acct : 'Aucun post prévu sur @' + S.acct,
-      old: 'Aucune vidéo postée' };
+    var EMPTY = { todo: mine().length ? 'Tout est en brouillon sur @' + S.acct : 'Aucun post prévu sur @' + S.acct,
+      old: 'Aucune vidéo en brouillon ou postée' };
     if (!list.length) out = '<div class="card empty" style="margin-top:14px"><b>' + esc(EMPTY[S.view]) + '</b>'
       + (S.view === 'todo' && !mine().length ? 'Les posts apparaissent ici dès que les vidéos finales sont assemblées et planifiées.' : '') + '</div>';
     var tabs = '<div class="tabs">' + VIEWS.map(function (v) {
@@ -413,8 +419,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   });
 
   async function load() {
-    // 90 derniers jours (onglet Anciennes) à +30 jours.
-    var from = new Date(Date.now() - 90 * 86400000).toISOString(), to = new Date(Date.now() + 30 * 86400000).toISOString();
+    // 90 derniers jours (onglet Postées) à +33 jours.
+    var from = new Date(Date.now() - 90 * 86400000).toISOString(), to = new Date(Date.now() + 33 * 86400000).toISOString();   // 19/10 : kit à J+30
     var r = await sb.from('factory_posts').select('id, scheduled_at, platform, account, video_url, caption, status, done_at, combo, video_deleted_at')
       .eq('platform', 'instagram').gte('scheduled_at', from).lte('scheduled_at', to).order('scheduled_at').order('id');
     if (r.error) { S.err = r.error.message; render(); return; }

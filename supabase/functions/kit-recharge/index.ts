@@ -71,7 +71,11 @@ export function avatarOf(c?: Combo | null): string | null {
   const re = typeof c.reaction === 'string' ? /^R-(?:I-)?(A\d+)(?:-|$)/.exec(c.reaction) : null
   return re ? re[1] : null
 }
-export const DAYS = 7                      // J+7 compris
+// 19/10 (Axel : « y'a que 30 posts ; mets genre 20 vidéos dans BloxAI, pas plus, ça sert à rien pour le moment ») : le kit
+// se remplit 30 jours à l'avance et laisse toujours BX_RESERVE vidéos (les plus anciennes) dans le stock des diffuseurs.
+export const DAYS = 30                     // J+30 compris
+// 20 OUVERTES aux diffuseurs : BloxAI n'en propose qu'au-delà de son réglage kit_buffer (15) → 20 + 15 laissées au stock
+export const BX_RESERVE = 35
 export const LEAD_MS = 60 * 60 * 1000      // pas de créneau à moins d'une heure
 const PARKED = '2090-01-01T00:00:00Z'      // posts « garés » en 2099 par un script coupé : ignorés (comme valider.py)
 const ROUNDS = 3
@@ -139,7 +143,7 @@ export function parisToUtc(day: string, hour: number): number {
 const fr = (ms: number, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, ...o }).format(new Date(ms))
 const dayLabel = (day: string) => fr(parisToUtc(day, 12), { weekday: 'long', day: 'numeric', month: 'long' })
 
-// Créneaux vides d'un compte : après son dernier post (ou maintenant + 1 h), jusqu'au jour J+7 compris (Paris).
+// Créneaux vides d'un compte : après son dernier post (ou maintenant + 1 h), jusqu'au jour J+DAYS compris (Paris).
 export function slotsFor(account: string, lastMs: number | null, nowMs: number): number[] {
   const from = Math.max(lastMs ?? -Infinity, nowMs + LEAD_MS)
   const end = addDays(parisDate(nowMs), DAYS)
@@ -168,6 +172,10 @@ export function cap(name: string, c?: Combo | null): string {
     return "Commente « CLAUDE » et je t'envoie le lien en privé."
   }
   if (s.includes('_CTA-CLAUDE_')) return "Commente « CLAUDE » et je t'envoie le lien en privé pour faire la même chose."
+  // 19/10 : les CTA AIDE, MONTAGE et PLAN demandent leur propre mot-clé (l'auto-DM les connaît déjà)
+  if (s.includes('_CTA-AIDE_')) return "Commente « AIDE » et je t'envoie le lien pour tester par toi-même."
+  if (s.includes('_CTA-MONTAGE_')) return "Commente « MONTAGE » et je t'envoie tout en privé."
+  if (s.includes('_CTA-PLAN_')) return "Commente « PLAN » et je t'envoie la configuration exacte que j'utilise."
   return "Écris « SITE » en commentaire et je t'envoie le tutoriel complet gratuitement pour faire la même chose."
 }
 
@@ -509,7 +517,7 @@ async function run(dry: boolean, holder: string): Promise<Response> {
       if (error) throw new Error('lecture du kit : ' + error.message)
       const dup = [...new Set((data || []).map((x: { vf: string | null }) => x.vf).filter(Boolean) as string[])]
       if (dup.length) {
-        items = all.filter((x) => !dup.includes(x.vf))
+        items = items.filter((x) => !dup.includes(x.vf))   // garde l'ordre (plus récentes d'abord)
         // déjà dans le kit d'Axel MAIS encore ouverte aux diffuseurs : retirée du stock (atomique : seulement si encore « open »)
         let note = ''
         if (!dry) {
@@ -525,6 +533,9 @@ async function run(dry: boolean, holder: string): Promise<Response> {
         }
       }
     }
+
+    // réserve des diffuseurs : les BX_RESERVE plus anciennes ne sont jamais prises par le kit
+    items = items.slice(0, Math.max(0, items.length - BX_RESERVE))
 
     if (dry) {
       const plan = planAll(slots, prev, items)
