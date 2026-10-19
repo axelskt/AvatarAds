@@ -166,7 +166,9 @@ function burn(video, output, words, opts = {}) {
     const cs = /^CS\d{2}$/.test(String(choc.style || '')) ? choc.style : 'CS01';   // style du texte choc (Axel 01/10, 11 styles validés)
     if (L.logos === 'cheat') {   // TH36 (Axel 18/10) : [Claude] + [AvatarAds] = 🔥, puis la phrase dans un bandeau blanc natif
       const T = decodeURIComponent(new URL('../render-worker/assets/tuto/', import.meta.url).pathname);
-      copyFileSync(join(T, 'logo-claude-carre.png'), join(work, 'lg-claude-sq.png')); copyFileSync(join(T, 'logo-avatarads.png'), join(work, 'lg-aa.png'));
+      // Axel 19/10 : « supprime le fond blanc du logo Claude » → le carré de render-worker avait des coins BLANCS opaques (liseré
+      // blanc autour du carré orange) ; version nettoyée (coins transparents, étoile intacte) rangée dans usine/assets.
+      copyFileSync(decodeURIComponent(new URL('./assets/logo-claude-carre.png', import.meta.url).pathname), join(work, 'lg-claude-sq.png')); copyFileSync(join(T, 'logo-avatarads.png'), join(work, 'lg-aa.png'));
       const ff = appleEmoji('🔥'), fire = ff ? `<img class="fire" src="${ff}" alt="">` : '<span class="em fire">🔥</span>';
       chocHtml = `<div class="choc clip choc-cheat" id="choc" data-start="0" data-duration="${end.toFixed(3)}" style="left:${L.x}px;top:${L.y}px;width:${L.w}px;height:${L.h}px;`
         + `--lg:${L.logo}px;--gap:${L.gap}px;--fs:${L.size}px">`
