@@ -1,7 +1,7 @@
 // Recharge du kit de publication (16/10/2026, Axel : « un seul stock pour tout le monde », les comptes d'Axel servis en
 // premier). Le kit garde 7 JOURS D'AVANCE : pour chaque compte Instagram, les créneaux vides entre son dernier post
 // (à programmer / programmé / publié) et J+7 (heure de Paris, jour J+7 compris) sont remplis avec des vidéos du STOCK
-// COMMUN BloxAI (missions « open », plus anciennes d'abord), retirées du stock (status 'kit') AVANT d'entrer dans
+// COMMUN BloxAI (missions « open », plus récentes d'abord depuis le 19/10), retirées du stock (status 'kit') AVANT d'entrer dans
 // factory_posts. Tout le reste du stock reste ouvert aux diffuseurs.
 //  · créneaux : @avataradss à 12-14-16-18-20 h, @leoadsia à 12-16-20 h (Axel 16/10), @ialebd.axel à 11-13-15-17-19 h (comme valider.py), jamais à
 //    moins d'une heure (le temps de programmer) ; un trou AVANT le dernier post n'est jamais comblé ;
@@ -48,6 +48,18 @@ const TZ = 'Europe/Paris'
 // Axel 16/10 : @leoadsia plafonne (aucune vidéo au-dessus de 167 vues) → 3 posts par jour (12-16-20 h) au lieu de 5
 export const HRS: Record<string, number[]> = { avataradss: [12, 14, 16, 18, 20], leoadsia: [12, 16, 20], 'ialebd.axel': [11, 13, 15, 17, 19] }
 export const ACCOUNTS = Object.keys(HRS)
+// 19/10 (Axel) : UN avatar par compte — @avataradss = A3 (comme @avatarads sur TikTok), @leoadsia = A4, @ialebd.axel = A1.
+// Un compte ne reçoit que les vidéos de son avatar (parlées : la photo ; sans voix : la réaction) ; les vidéos d'un avatar sans
+// compte (A5, filles / garçons…) restent dans le stock commun BloxAI pour les diffuseurs.
+export const ACCOUNT_AV: Record<string, string> = { avataradss: 'A3', leoadsia: 'A4', 'ialebd.axel': 'A1' }
+export function avatarOf(c?: Combo | null): string | null {
+  if (!c) return null
+  if (typeof c.avatar === 'string' && /^A\d+$/.test(c.avatar)) return c.avatar
+  const ph = typeof c.photo === 'string' ? /^(A\d+)-/.exec(c.photo) : null
+  if (ph) return ph[1]
+  const re = typeof c.reaction === 'string' ? /^R-(?:I-)?(A\d+)(?:-|$)/.exec(c.reaction) : null
+  return re ? re[1] : null
+}
 export const DAYS = 7                      // J+7 compris
 export const LEAD_MS = 60 * 60 * 1000      // pas de créneau à moins d'une heure
 const PARKED = '2090-01-01T00:00:00Z'      // posts « garés » en 2099 par un script coupé : ignorés (comme valider.py)
@@ -220,11 +232,13 @@ export function planAll(slots: Record<string, number[]>, prev: Record<string, Pr
   for (const s of all) {
     if (stopped[s.a]) { stopped[s.a].left++; continue }
     const p = last[s.a] || { unit: null, kind: null }
+    const av = ACCOUNT_AV[s.a]
     let i = -1
     // d'abord photo différente + type alterné + pas deux vidéos à logos de suite ; puis photo différente + pas deux logos ;
     // enfin photo différente seulement
     for (const lvl of [2, 1, 0]) {
       i = left.findIndex((it) => {
+        if (av && avatarOf(it.combo) !== av) return false
         const u = unitOf(it.combo)
         if (u && p.unit && u === p.unit) return false
         if (lvl >= 1 && p.logo && isLogo(it.combo)) return false
@@ -232,7 +246,11 @@ export function planAll(slots: Record<string, number[]>, prev: Record<string, Pr
       })
       if (i >= 0) break
     }
-    if (i < 0) { stopped[s.a] = { at: s.at, why: left.length ? 'même photo / réaction que le post précédent' : 'stock vide', left: 1 }; continue }
+    if (i < 0) {
+      const any = left.some((it) => !av || avatarOf(it.combo) === av)
+      stopped[s.a] = { at: s.at, why: !any ? (av ? 'aucune vidéo ' + av + ' dans le stock' : 'stock vide') : 'même photo / réaction que le post précédent', left: 1 }
+      continue
+    }
     const it = left.splice(i, 1)[0]
     picks.push({ account: s.a, at: s.at, item: it })
     last[s.a] = { unit: unitOf(it.combo), kind: kindOf(it.combo), logo: isLogo(it.combo) }
@@ -463,14 +481,15 @@ async function run(dry: boolean, holder: string): Promise<Response> {
     }
     if (!ACCOUNTS.some((a) => slots[a].length)) return json(tail({ ok: true, ...summary({ dry, nowMs, slots, last, plan: null, stock: null }), ignored: [] }))
 
-    // 2) stock commun (plus anciennes d'abord), filtré ; une vidéo déjà dans le kit n'y entre jamais deux fois
+    // 2) stock commun, filtré ; une vidéo déjà dans le kit n'y entre jamais deux fois
     const sl = listOf(await factory('stock_list', { limit: STOCK_LIMIT }), STOCK_KEYS)
     if (!sl) throw new BxError('BloxAI : liste du stock illisible')
     // 17/10 (contrat 9) : de BloxAI, seul le numéro ; adresse + recette relues dans factory_qc
     const nv = normItems(sl)
     const fq = nv.items.length ? fromQc(nv.items, await readQc(nv.items.map((x) => x.vf))) : { items: [] as Item[], ignored: [] as Ignored[] }
     const all = fq.items, ignored = [...nv.ignored, ...fq.ignored], nStock = nv.items.length   // stock annoncé par BloxAI (message « vide »)
-    let items = all
+    // 19/10 (Axel : « on n'a toujours pas testé les nouveaux hooks ») : les plus RÉCENTES d'abord (numéro VF décroissant)
+    let items = all.slice().sort((a, b) => b.vf.localeCompare(a.vf))
     const realigned: string[] = []
     if (all.length) {
       const { data, error } = await svc().from('factory_posts').select('vf:combo->>vf')
