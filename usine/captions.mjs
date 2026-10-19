@@ -60,6 +60,17 @@ function burn(video, output, words, opts = {}) {
   copyFileSync(video, join(work, 'src.mp4'));
   // B-roll en CARTE (Axel 29/09 : « pas en plein écran ») : image / vidéo arrondie, bordure blanche, centrée sur le visage,
   // arrive en pop et repart en fondu ; la voix continue dessous (vidéo muette)
+  // Axel 19/10 (VF-0658, 0672, 0690, 0696, 0726) : un texte choc À LOGOS (TH27 / TH36) est un gros bloc (~350 px) qui recouvrait
+  // l'illustration du hook (l'influenceur caché derrière « = 💸💸💸 », les logos posés au milieu des cartes). Pendant le texte
+  // à logos, l'illustration se cale dans la plus grande bande LIBRE (au-dessus ou au-dessous du bloc, hors sous-titres) et
+  // réduit au besoin en gardant son format : le bloc et l'illustration ne se touchent plus jamais.
+  const LB = choc && choc.layout.logos ? choc.layout : null;
+  const fitLogos = b => {
+    if (!LB || !(b.style === 'hook' || b.pair) || b.at >= choc.end) return b;
+    const spans = [[250, LB.y - 30], [LB.y + LB.h + 30, 1290]].map(([a, z]) => [a, z, z - a]).sort((p, q) => q[2] - p[2]);
+    const [a, z, h] = spans[0], sc = Math.min(1, h / b.H);
+    return { ...b, W: Math.round(b.W * sc), H: Math.round(b.H * sc), cy: Math.round((a + z) / 2) };
+  };
   const broll = (Array.isArray(opts.broll) ? opts.broll : []).filter(b => b && b.file && b.dur > 0.2).map((b, k) => {
     const ext = (b.file.match(/\.[a-z0-9]+$/i) || ['.mp4'])[0].toLowerCase(), name = 'broll' + k + ext;
     copyFileSync(b.file, join(work, name));
@@ -69,8 +80,8 @@ function burn(video, output, words, opts = {}) {
     const Wmax = b.style === 'hook' ? 720 : 460, Hmax = b.style === 'hook' ? 1040 : 760;
     const H = Math.min(Hmax, Math.round(Wmax / ar)), W = Math.round(H * ar) > Wmax ? Wmax : Math.round(H * ar);
     // 13/10 (Axel) : avant / après en DEUX cartes séparées d'un petit espace — l'avant entre par la gauche, l'après par la droite
-    if (b.pair) { const name2 = 'broll' + k + 'b' + ext; copyFileSync(b.pair, join(work, name2)); return { ...b, name, name2, k, W: 400, H: 711 }; }
-    return { ...b, name, k, W, H };
+    if (b.pair) { const name2 = 'broll' + k + 'b' + ext; copyFileSync(b.pair, join(work, name2)); return fitLogos({ ...b, name, name2, k, W: 400, H: 711 }); }
+    return fitLogos({ ...b, name, k, W, H });
   });
   words = words.slice().sort((a,b)=>a.start-b.start);
   // fusion « avatar »+« ads » puis fix marque
@@ -190,9 +201,9 @@ function burn(video, output, words, opts = {}) {
     // visible pleine opacité dès 0 (couverture) ; sortie courte juste avant la fin
     chocAnim = `tl.set('#choc',{autoAlpha:1,scale:1}, 0);\n      tl.to('#choc',{autoAlpha:0,scale:0.96,duration:0.16,ease:'power1.in'}, ${Math.max(0, end - 0.16).toFixed(3)});`;
   }
-  const cardStyle = b => `style="left:${540 - b.W / 2}px;top:${Math.round(800 - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
+  const cardStyle = b => `style="left:${540 - b.W / 2}px;top:${Math.round((b.cy || 800) - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
   const GAP = 28;   // espace entre les deux cartes d'un avant / après
-  const pairStyle = (b, side) => `style="left:${side ? 540 + GAP / 2 : 540 - GAP / 2 - b.W}px;top:${Math.round(800 - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
+  const pairStyle = (b, side) => `style="left:${side ? 540 + GAP / 2 : 540 - GAP / 2 - b.W}px;top:${Math.round((b.cy || 800) - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
   const brollHtml = broll.map(b => b.pair
     ? `<video class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${pairStyle(b, 0)} muted playsinline></video>`
       + `\n      <video class="broll clip" id="br${b.k}b" src="${b.name2}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${pairStyle(b, 1)} muted playsinline></video>`
