@@ -29,6 +29,7 @@ if [[ -n $ATTENDRE ]]; then
 fi
 for L in b c d e f g h i j k l m n o p q r s t u v w x y z; do
   NOM=$PRE$L; B=$(batt)
+  [[ -f "$DIR/$NOM.json" ]] && continue   # lot déjà lancé (état présent) : on passe au suivant
   if (( B <= SEUIL )); then say "batterie $B % ≤ $SEUIL % : arrêt avant $NOM"; break; fi
   say "lancement $NOM (batterie $B %)"
   (cd "$REPO" && exec python3 usine/lots/lot.py 6 5 $NOM > "$DIR/$NOM.log" 2>&1) &

@@ -582,11 +582,11 @@ if (FMT.hasChoc(format)) {
   const fitsOk = q => FMT.chocLayout(FMT.chocString(q), lay).level === 'ok';
   // Axel 19/10 (« aucune vidéo avec les logos en texte choc » sur 80) : un texte À LOGOS (TH27, TH36) est lisible par ses logos
   // de 200 px et plus — TH36 dessine sa phrase à 41 px par construction et le seuil de 54 px l'écartait toujours ; et parmi
-  // ~35 textes tirés au hasard, TH27 ne sortait presque jamais. Démo Claude (MCP) : un texte à logos UNE FOIS SUR TROIS.
+  // ~35 textes tirés au hasard, TH27 ne sortait presque jamais. Démo Claude (MCP) : un texte à logos DEUX FOIS SUR TROIS (Axel 19/10 : « priorise les textes choc logo pour les MCP »).
   const fitsBig = q => { const l = FMT.chocLayout(FMT.chocString(q), lay); return l.level === 'ok' && (l.size >= 54 || !!q.logos); };
   const pickArgs = { demo: demoRef, tx, done, hook: hookId, rand };
   const aLogos = FMT.TEXTES_CHOC.filter(q => q.logos && !q.retired && !FMT.chocWhy(q, demoRef, tx) && fitsOk(q));
-  let p = chocForced || (aLogos.length && rand() < 1 / 3 ? aLogos[Math.floor(rand() * aLogos.length)] : null) || FMT.pickChoc({ ...pickArgs, fits: fitsBig });
+  let p = chocForced || (aLogos.length && rand() < 2 / 3 ? aLogos[Math.floor(rand() * aLogos.length)] : null) || FMT.pickChoc({ ...pickArgs, fits: fitsBig });
   if (!chocForced && p && !fitsBig(p)) p = FMT.pickChoc({ ...pickArgs, fits: fitsOk });
   if (!p) { console.error('✗ aucune phrase choc compatible avec la démo (' + (sidecar.demo || 'démo inconnue') + ')'); process.exit(2); }
   const text = FMT.chocString(p), layout = FMT.chocLayout(text, lay);
