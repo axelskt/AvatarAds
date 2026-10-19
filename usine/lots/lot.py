@@ -5,7 +5,7 @@
 #   · parlées : son de la 1re image chacun son tour à 0 dB, jamais deux fois le même bruitage à la suite, Kaching sur « BOUM »,
 #     mac-typing sur le mot-clé du CTA, woosh 0 dB, rien sous −7 dB, musique normalisée −5 dB ; cartes du hook = RÉSULTATS seuls ;
 #   · sans voix : AUCUN bruitage, musique seule ; texte choc toujours centré (axe 540) ; TH13 supprimée.
-# Ici : recettes (plan.mjs), CTA cohérent avec la démo, textes choc et musiques des F05, 3 rendus à la fois, relance si le
+# Ici : recettes (plan.mjs), CTA cohérent avec la démo, textes choc et musiques des F05, 6 rendus à la fois (LOT_PAR), relance si le
 # texte choc tombe au milieu, dépôt qc/ en 'pending' (Axel valide), numérotation VF continue, reprise possible (état).
 import json, os, random, subprocess, sys, time, itertools
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -78,11 +78,13 @@ def prep(it, tag):
     cmd = ['node', 'usine/build-f05.mjs', r, d, out, m, '--choc', th, '--choc-style', cs, '--hook-s', '%g' % H, '--reaction', react, '--demo', demo, '--done', DONE]
     return dict(kind='m', react=react, demo=demo, music=m, th=th, cs=cs, out=out, cmd=cmd, it=it)
 env = dict(os.environ, PRODUCER_BROWSER_GPU_MODE='hardware')
+# 19/10 (Axel : « tu peux en faire 6 en même temps ») : rendus simultanés, 6 par défaut (avant 3) — LOT_PAR=3 pour revenir
+PAR = max(1, int(os.environ.get('LOT_PAR', '6')))
 # les fichiers partagés (démos, réactions) d'une série sont téléchargés AVANT de lancer les rendus en parallèle
 for si in range(S['serie'], len(S['series'])):
     t0 = time.time(); todo = [(it, 0) for it in S['series'][si]]
     while todo:
-        batch, todo = todo[:3], todo[3:]; js = []
+        batch, todo = todo[:PAR], todo[PAR:]; js = []
         for k, (it, tries) in enumerate(batch):
             try: j = prep(it, 's%d_%d_%d' % (si + 1, k, tries)); j['tries'] = tries; js.append(j)
             except Exception as e: log('✗ préparation', it, e); S['fail'].append({'it': it, 'err': str(e)[:200]})
