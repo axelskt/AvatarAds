@@ -3746,7 +3746,10 @@
       var o = on.indexOf(a.ig_id) >= 0, last = o && on.length === 1, st = CF.acctStats[a.ig_id] || {}, tok = tokenInfo(a);
       var pic = safeUrl(st.picture || (CF.igSel === a.ig_id ? profilePic() : '') || '');
       var tone = !tok ? '' : tok.expired ? ' is-err' : tok.days < 7 ? ' is-warn' : '';
-      var bad = !!tone || (broken && CF.igSel === a.ig_id);
+      // 19/10 (Axel : « comment je fais pour remettre le compte ? y'a pas de bouton ») : un compte qu'Instagram refuse
+      // (session invalidée, mot de passe changé…) garde son bouton même quand plusieurs comptes sont cochés.
+      var D0 = (CF.acct.ig[ui.range] || {}).data || {}, be = String(D0.basicError || '');
+      var bad = !!tone || (broken && CF.igSel === a.ig_id) || be.indexOf('@' + u) >= 0;
       var extra = [av, st.media != null ? fInt(st.media) + ' ' + plural(st.media, 'publication') : ''].filter(Boolean).join(' · ');
       var tokTxt = tok ? (tok.expired ? 'token expiré le ' + dmy(tok.date) : 'token ' + tok.days + NB + 'j') : '';
       return '<div class="cf-icard cf-acard' + (o ? ' is-on' : ' is-off') + '" style="--c:' + c + '">'
