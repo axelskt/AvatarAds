@@ -6,7 +6,10 @@
 #     liaisons déjà générés) restent UTILISABLES (Axel 19/10) ;
 #   · vues : dernière mesure de chaque média Instagram relié à une recette (ig_media_stats.combo), comptée pour chaque brique
 #     de sa recette — y compris une vidéo absente de factory_qc.
-# usage : python3 usine/lots/carte.py sortie.json
+#   · --omni : seulement Omni Flash (Axel 19/10 : « pas les clips faits avec Character-3 ») — clips factory_variants 'omni', vidéos
+#     voix 'omni' + Texte + musique (muettes) ; plus aucun clip ni vidéo lipsync ('axel') ; une ancienne photo sans clip Omni disparaît.
+#   · --sans A2,… : avatars exclus (leurs photos, clips et vidéos aussi).
+# usage : python3 usine/lots/carte.py sortie.json [--omni] [--sans A2]
 import json, os, re, sys, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from outils import q
@@ -30,8 +33,12 @@ REGLES = {
     'video': "vidéo produite : 'recette' pointe vers les briques utilisées ; 'publication' = statistiques Instagram réelles si publiée"}
 KEYS = ('voice', 'format', 'avatar', 'photo', 'hook', 'liaison', 'contenu', 'cta', 'texte_choc', 'style_choc', 'musique', 'sous_titre', 'reaction', 'assemblage')
 
-br = {b['id']: b for b in q("select id, kind, status, subject, label, meta from factory_bricks")}
-var = q("select avatar_id a, brick_id b from factory_variants")
+OMNI = '--omni' in sys.argv
+SANS = set(sys.argv[sys.argv.index('--sans') + 1].split(',')) if '--sans' in sys.argv else set()
+hors = lambda ph: bool(ph) and str(ph).split('-')[0] in SANS
+br = {b['id']: b for b in q("select id, kind, status, subject, label, meta from factory_bricks") if not (b['kind'] == 'avatar' and b['id'] in SANS)}
+var = [v for v in q("select avatar_id a, brick_id b, format f from factory_variants") if not hors(v['a']) and (not OMNI or v['f'] == 'omni')]
+avec_clip = {v['a'] for v in var}
 qc = q("select template vf, status, refusal_reason, created_at::text cree, poster_url, video_url, brick_combo c from factory_qc where template like 'VF-%' order by template")
 stats = q("select distinct on (media_id) media_id, combo, account, posted_at::text publie, permalink, views, reach, likes, comments, shares, saved, avg_watch_s "
           "from ig_media_stats order by media_id, day desc")
@@ -53,7 +60,7 @@ for b in br.values():
         th = {os.path.basename(u).rsplit('.', 1)[0]: u for u in (m.get('thumbs') or []) + (m.get('thumbs_retirees') or [])}
         for u, etat in [(u, 'ready') for u in (m.get('images') or [])] + [(u, 'ancienne') for u in (m.get('images_retirees') or [])]:
             pid = os.path.basename(u).rsplit('.', 1)[0]
-            if pid in nodes: continue
+            if pid in nodes or (OMNI and etat == 'ancienne' and pid not in avec_clip): continue
             N(pid, 'photo', '%s · %s' % (pid, ((m.get('decors') or {}).get(pid, '') or '').split(' (')[0]), status=etat, image=th.get(pid, u))
             L(b['id'], pid, 'avatar-photo')
     elif st != 'ready' and not (k == 'texte-choc' and st == 'draft'): continue
@@ -94,8 +101,10 @@ for s in stats:   # clé = numéro VF ; une statistique avec recette mais sans n
     if c: pub[c.get('vf') or 'IG-' + str(s['media_id'])] = s
 use, vues, npub = collections.Counter(), collections.Counter(), collections.Counter()
 videos = []
+garde = lambda c: not hors(c.get('photo') or c.get('avatar')) and not (OMNI and c.get('voice') == 'axel')
 for r in qc:
     c = {k: v for k, v in (r['c'] or {}).items() if k in KEYS and v}
+    if not garde(c): continue
     v = {'vf': r['vf'], 'date': (r['cree'] or '')[:16], 'statut': {'approved': 'validée', 'pending': 'en revue', 'refused': 'refusée'}.get(r['status'], r['status']),
          'recette': c, 'affiche': r['poster_url'], 'video': r['video_url']}
     if r['refusal_reason']: v['raison_refus'] = r['refusal_reason']
@@ -105,6 +114,7 @@ for r in qc:
 byvf = {v['vf']: v for v in videos}
 for vf, s in pub.items():
     c = {k: x for k, x in (s['combo'] or {}).items() if k in KEYS and x}
+    if not garde(c): continue
     p = {'compte': s['account'], 'publiee_le': (s['publie'] or '')[:16], 'lien': s['permalink'], 'vues': s['views'], 'portee': s['reach'], 'likes': s['likes'],
          'commentaires': s['comments'], 'partages': s['shares'], 'enregistrements': s['saved'], 'visionnage_moyen_s': s['avg_watch_s']}
     if vf in byvf: byvf[vf]['publication'] = p
@@ -118,7 +128,7 @@ for n in nodes.values():
     if use[i]: n['videos'] = use[i]
     if npub[i]: n['publiees'] = npub[i]; n['vues'] = vues[i]
 nonrelies = [s for s in stats if not s['combo']]   # posts Instagram dont on ne connaît pas la recette
-out = {'genere_le': q("select now()::text t")[0]['t'][:16], 'regles': REGLES, 'nodes': list(nodes.values()), 'links': links, 'videos': sorted(videos, key=lambda v: v['vf']),
+out = {'filtre': {'omni_seulement': OMNI, 'avatars_exclus': sorted(SANS)}, 'genere_le': q("select now()::text t")[0]['t'][:16], 'regles': REGLES, 'nodes': list(nodes.values()), 'links': links, 'videos': sorted(videos, key=lambda v: v['vf']),
        'publications_non_reliees': {'nombre': len(nonrelies), 'vues': sum(s['views'] or 0 for s in nonrelies),
                                     'par_compte': dict(collections.Counter(s['account'] for s in nonrelies))}}
 json.dump(out, open(sys.argv[1], 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
