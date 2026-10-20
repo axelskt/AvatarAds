@@ -81,7 +81,7 @@ function burn(video, output, words, opts = {}) {
     const Wmax = b.style === 'hook' ? 720 : 460, Hmax = b.style === 'hook' ? 1040 : 760;
     const H = Math.min(Hmax, Math.round(Wmax / ar)), W = Math.round(H * ar) > Wmax ? Wmax : Math.round(H * ar);
     // 13/10 (Axel) : avant / après en DEUX cartes séparées d'un petit espace — l'avant entre par la gauche, l'après par la droite
-    if (b.pair) { const name2 = 'broll' + k + 'b' + ext; copyFileSync(b.pair, join(work, name2)); return fitLogos({ ...b, name, name2, k, W: 400, H: 711 }); }
+    if (b.pair) { const name2 = 'broll' + k + 'b' + ((b.pair.match(/\.[a-z0-9]+$/i) || [ext])[0].toLowerCase()); copyFileSync(b.pair, join(work, name2)); return fitLogos({ ...b, name, name2, k, W: 400, H: 711 }); }
     return fitLogos({ ...b, name, k, W, H });
   });
   words = words.slice().sort((a,b)=>a.start-b.start);
@@ -205,9 +205,11 @@ function burn(video, output, words, opts = {}) {
   const cardStyle = b => `style="left:${540 - b.W / 2}px;top:${Math.round((b.cy || 800) - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
   const GAP = 28;   // espace entre les deux cartes d'un avant / après
   const pairStyle = (b, side) => `style="left:${side ? 540 + GAP / 2 : 540 - GAP / 2 - b.W}px;top:${Math.round((b.cy || 800) - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
+  // 19/10 : une paire peut être faite d'IMAGES (deux pubs, deux avatars) → <img> pour un fichier image, <video> sinon
+  const pairEl = (b, side) => { const name = side ? b.name2 : b.name, id = 'br' + b.k + (side ? 'b' : ''), t = `data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${pairStyle(b, side)}`;
+    return /\.(png|jpe?g|webp)$/i.test(name) ? `<img class="broll clip" id="${id}" src="${name}" ${t} alt="">` : `<video class="broll clip" id="${id}" src="${name}" ${t} muted playsinline></video>`; };
   const brollHtml = broll.map(b => b.pair
-    ? `<video class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${pairStyle(b, 0)} muted playsinline></video>`
-      + `\n      <video class="broll clip" id="br${b.k}b" src="${b.name2}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${pairStyle(b, 1)} muted playsinline></video>`
+    ? pairEl(b, 0) + '\n      ' + pairEl(b, 1)
     : b.image
     ? `<img class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${cardStyle(b)} alt="">`
     : `<video class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${cardStyle(b)} muted playsinline></video>`).join('\n      ');

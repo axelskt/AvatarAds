@@ -464,7 +464,11 @@ if (OPT.illus) {
     let endAt = e.endDef;
     if (e.out) { const iOut = findW(toksOf(e.out), iIn + 1, e.to); if (iOut >= 0) endAt = hookW0[iOut].start + 0.3; }   // la sortie DÉMARRE sur ces mots
     endAt = Math.min(endAt, O1);
-    const file = e.file || pick(e.type);
+    let file = e.file || pick(e.type);
+    // Axel 19/10 : « deux images, une qui arrive de la gauche, l'autre de la droite, pour arriver centrées » — une illustration
+    // du HOOK tirée d'un pool (pub, avatar, fille, garçon, produit, démo…) devient une PAIRE : deux médias du même pool, deux
+    // marques différentes (pick écarte la marque déjà prise), affichés comme les avant / après Omni (captions.mjs, pair).
+    if (!e.file && file && !file.includes('::') && e.src === hookId) { const f2 = pick(e.type); if (f2 && !f2.includes('::')) file = file + '::' + f2; }
     // durée mini à l'écran (VF-0008 : « comme ça et attirer » ne laissait que 0,9 s à un avant / après) : 1,5 s pour une
     // image, 2,6 s pour une vidéo, dans la limite de la fin du hook / de la liaison
     if (file) endAt = Math.min(O1, Math.max(endAt, at + (IMG_RE.test(file) ? 1.5 : 2.6)));

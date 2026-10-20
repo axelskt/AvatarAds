@@ -47,14 +47,17 @@ const pick = (list, n) => { const out = [], l = [...list]
   return out }
 const O = [], M = []
 // ── Omni : une photo après l'autre (A4 / A3 alternés), le hook le moins utilisé qui a encore une démo libre ──
-const vars = X.variants.filter(v => v.f === 'omni' && /^H\d+$/.test(v.b) && /^A[34]-/.test(v.a) && ready(by[v.b]) && (!HOOKS.length || HOOKS.includes(v.b)) && (!PHOTOS.length || PHOTOS.includes(v.a)))
+// 20/10 (Axel) : A1 ouvert (compte @ialebd.axel). Une démo Claude (C-MCP) demande un CTA-CLAUDE de l'avatar (lot.py cta_for) :
+// un avatar sans ce CTA (A1 pour l'instant) ne reçoit pas de démo Claude.
+const avClaude = new Set(X.variants.filter(v => v.f === 'omni' && v.b === 'CTA-CLAUDE').map(v => v.a.split('-')[0]))
+const vars = X.variants.filter(v => v.f === 'omni' && /^H\d+$/.test(v.b) && /^A[134]-/.test(v.a) && ready(by[v.b]) && (!HOOKS.length || HOOKS.includes(v.b)) && (!PHOTOS.length || PHOTOS.includes(v.a)))
 const photos = [...new Set(vars.map(v => v.a))].sort((a, b) => (a.slice(3) - b.slice(3)) || a.localeCompare(b))
 let guard = 0
 while (O.length < +nO && guard++ < 80) for (const p of photos) {
   if (O.length >= +nO) break
   const hs = [...new Set(vars.filter(v => v.a === p).map(v => v.b))].sort((a, b) => (hookUse[p + '|' + a] || 0) - (hookUse[p + '|' + b] || 0) + (rnd() - 0.5) * 0.5)
   for (const h of hs) {
-    const free = demos.filter(d => COH.pairLevel(by[h], d) === 'ok' && illusOk(h, d) && !usedOmni.has([p, h, d.id].join('|'))).map(d => d.id)
+    const free = demos.filter(d => COH.pairLevel(by[h], d) === 'ok' && illusOk(h, d) && !usedOmni.has([p, h, d.id].join('|')) && (avClaude.has(p.split('-')[0]) || !/^C-MCP/.test(d.id))).map(d => d.id)
     const imgia = O.filter(o => /IMGIA/.test(o.demo)).length
     const cand = imgia >= 1 ? free.filter(d => !/IMGIA/.test(d)) : free
     if (!cand.length) continue
