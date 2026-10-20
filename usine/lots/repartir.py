@@ -36,6 +36,7 @@ def avatar(c):
     return m.group(1) if m else None
 def account_of(c):
     a = avatar(c)
+    if c.get('voix_off'): return 'leoadsia'   # Axel 21/10 : le format voix off Motion Control part sur @leoadsia
     return 'avataradss' if a == 'A3' else 'ialebd.axel' if a == 'A1' else 'leoadsia'
 def kind(c): return 'm' if c.get('format') == 'F05' else 'o'
 def unit(c): return c.get('reaction') if kind(c) == 'm' else c.get('photo')

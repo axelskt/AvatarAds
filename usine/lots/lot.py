@@ -33,7 +33,7 @@ if not S:
             for k in sorted(g, key=lambda k: -len(g[k])):
                 if g[k]: out.append(g[k].pop(0))
         return out
-    O = spread(P['O'], lambda x: x['photo']); M = spread(P['M'], lambda x: x['react']); seq = []
+    O = spread(P['O'] + P.get('V', []), lambda x: x['photo']); M = spread(P['M'], lambda x: x['react']); seq = []   # 21/10 : + voix off (VOIX_OFF=n)
     while O or M:
         if M: seq.append(M.pop(0))
         if O: seq.append(O.pop(0))
@@ -81,6 +81,16 @@ def prep(it, tag):
         cmd = ['node', 'usine/build.mjs', h, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--illus', 'auto', '--subs-style', 'auto',
                '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
         return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, hf_var=hv)
+    if it['k'] == 'v':   # Axel 21/10 : voix off Motion Control (usine/voix-off-mc.py), même photo / hook / CTA qu'une parlée
+        photo, hook, demo, tx = it['photo'], it['hook'], it['demo'], it['tx']
+        hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
+        h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
+        out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-vo.mp4'
+        subprocess.run(['python3', 'usine/voix-off-mc.py', h, tx, vis], cwd=REPO, check=True, capture_output=True)
+        cmd = ['node', 'usine/build.mjs', vis, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--avant-apres', '--medaillon', '520,450,405,720',
+               '--subs-style', 'auto', '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
+        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, vo=tx, vis=vis)
     react, demo = it['react'], it['demo']
     rm = bricks[react]['meta']; H = float(rm.get('duration_s') or 3)
     r = get(rm['media'], os.path.basename(rm['media'])); d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
@@ -112,8 +122,10 @@ for si in range(S['serie'], len(S['series'])):
                 name, T, zone = publish(j, vf); S['next'] += 1
                 S['ok'].append({'vf': vf, 'name': name, 'serie': si + 1}); log('✓', name, T, zone)
             except Exception as e: log('✗ dépôt', j['it'], e); S['fail'].append({'it': j['it'], 'err': str(e)[:300]})
-            try: os.remove(j['out'] + '.log')
-            except OSError: pass
+            for x_ in (j['out'] + '.log', j.get('vis')):
+                try:
+                    if x_: os.remove(x_)
+                except OSError: pass
         save()
     S['serie'] = si + 1; save(); log('— série %d/%d en %.0f s' % (si + 1, len(S['series']), time.time() - t0))
 with open(os.path.join(WORK, NOM + '-liens.txt'), 'w') as f:

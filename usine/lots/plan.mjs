@@ -27,7 +27,7 @@ const { illusMismatch } = await import(join(USINE, 'illus-demo.js'))
 const illusOk = (h, d) => !illusMismatch(ILLUS[h], d)
 const usedOmni = new Set(), usedF05 = new Set(), demoUse = {}, hookUse = {}, reactUse = {}
 for (const q of X.qc) { const c = q.c || {}
-  if (c.voice === 'omni') { usedOmni.add([c.photo, c.hook, c.contenu].join('|')); if (q.s !== 'refused') hookUse[c.photo + '|' + c.hook] = (hookUse[c.photo + '|' + c.hook] || 0) + 1 }
+  if (c.voice === 'omni' && !c.voix_off) { usedOmni.add([c.photo, c.hook, c.contenu].join('|')); if (q.s !== 'refused') hookUse[c.photo + '|' + c.hook] = (hookUse[c.photo + '|' + c.hook] || 0) + 1 }
   if (c.format === 'F05') { usedF05.add(c.reaction + '|' + c.contenu); if (q.s !== 'refused') reactUse[c.reaction] = (reactUse[c.reaction] || 0) + 1 }
   if (c.contenu) demoUse[c.contenu] = (demoUse[c.contenu] || 0) + 1 }
 const ready = b => b && b.status === 'ready'
@@ -82,4 +82,18 @@ while (M.length < +nM && g2++ < 200) {
   if (!free.length) { reactUse[r] = 5; continue }
   const d = pick(free, 1)[0]; usedF05.add(r + '|' + d); reactUse[r] = (reactUse[r] || 0) + 1; M.push({ k: 'm', react: r, demo: d })
 }
-console.log(JSON.stringify({ O, M }))
+// ── Voix off Motion Control (Axel 21/10) : la VOIX d'une prise Omni (hook qui va avec la démo motion control), à l'image le
+//    résultat TX-M en plein écran + l'original en médaillon (usine/voix-off-mc.py), puis C-MC-01 et le CTA ; 7 fois max par
+//    voix (photo × hook) dans CE format, compté à part du plafond des hooks parlés ; paires TX-M01 / M02 / M04 en rotation ──
+const V = [], NVO = +(process.env.VOIX_OFF || 0), MCD = by['C-MC-01']
+if (NVO && MCD) {
+  const voUse = {}; let txi = 0
+  for (const q of X.qc) { const c = q.c || {}; if (c.voix_off) { txi++; if (q.s !== 'refused') voUse[c.photo + '|' + c.hook] = (voUse[c.photo + '|' + c.hook] || 0) + 1 } }
+  const TXS = ['TX-M01', 'TX-M02', 'TX-M04']
+  const cands = vars.filter(v => COH.pairLevel(by[v.b], MCD) === 'ok' && (voUse[v.a + '|' + v.b] || 0) < CAP_HOOK)
+    .sort((a, b) => (voUse[a.a + '|' + a.b] || 0) - (voUse[b.a + '|' + b.b] || 0) + (rnd() - 0.5) * 0.8)
+  const seen = new Set()
+  for (const v of cands) { if (V.length >= NVO) break; const k = v.a + '|' + v.b; if (seen.has(k)) continue; seen.add(k)
+    V.push({ k: 'v', photo: v.a, hook: v.b, demo: 'C-MC-01', tx: TXS[txi++ % TXS.length] }) }
+}
+console.log(JSON.stringify({ O, M, V }))
