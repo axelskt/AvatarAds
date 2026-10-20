@@ -384,6 +384,19 @@ async function verifyWebhook(req: Request, body: string): Promise<boolean> {
 
 // ── E-mail de bienvenue (Resend) — envoyé UNE fois par compte (dédup email_log) ──
 const PLAN_LABEL: Record<string, string> = { starter: 'Starter', pro: 'Pro', elite: 'Élite' }
+// Axel 20/10 : achat fait SANS compte (page Tarifs, paiement intégré) → le compte AvatarAds est créé TOUT DE SUITE avec
+// l'e-mail saisi chez Whop. handle_new_user (trigger sur auth.users) applique alors l'achat en attente et supprime la ligne
+// pending_activations : le client n'a plus qu'à se connecter avec cette adresse (code e-mail ou Google, même adresse).
+// Sans mot de passe (block_password_signup). Compte déjà existant / adresse bloquée : null, l'achat reste en attente.
+async function ensureAccount(sb: any, email: string): Promise<string | null> {
+  try {
+    const { data, error } = await sb.auth.admin.createUser({ email, email_confirm: true })
+    if (error) { console.warn(`ℹ️ Compte non créé pour ${email} : ${error.message}`); return null }
+    console.log(`👤 Compte AvatarAds créé automatiquement pour ${email} (achat sans compte)`)
+    return data?.user?.id ?? null
+  } catch (e) { console.error('⚠️ ensureAccount:', e); return null }
+}
+
 async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string; firstName?: string; plan: string; credits: number; pending?: boolean }) {
   if (!RESEND_API_KEY) return
   try {
@@ -500,9 +513,18 @@ serve(async (req) => {
   // lookup : clé qui a trouvé le profil + échec de lecture (hors PGRST116), lus par résiliation et remboursement.
   const lookup: { by: 'abonnement' | 'email' | null; failed: boolean } = { by: null, failed: false }
   // Audit 04/10 (CRED-2) : clés passables en argument — le remboursement / litige les lit aussi sous data.payment.
+  // Axel 20/10 : les crédits vont au COMPTE AVATARADS qui a payé, pas à l'adresse saisie chez Whop. Le checkout de l'app
+  // envoie l'identifiant du compte connecté (metadata.aa_user_id) : il passe AVANT l'e-mail (client karimab4 : payé avec
+  // une adresse, inscrit avec une autre → compte resté en Free). Lecture tolérante (emplacement selon l'événement Whop).
+  const aaUid = String(data.metadata?.aa_user_id ?? data.membership?.metadata?.aa_user_id ?? data.checkout?.metadata?.aa_user_id ?? '').trim()
   const findProfile = async (mid: string | null = memberId, em: string = email) => {
     const cols = 'id, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used'
     lookup.by = null; lookup.failed = false
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(aaUid)) {
+      const { data: p, error } = await sb.from('profiles').select(cols).eq('id', aaUid).maybeSingle()
+      if (error && error.code !== 'PGRST116') lookup.failed = true
+      if (p) { lookup.by = 'abonnement'; return p }
+    }
     if (mid) {
       const { data: p, error } = await sb.from('profiles').select(cols).eq('whop_member_id', mid).maybeSingle()
       if (error && error.code !== 'PGRST116') lookup.failed = true
@@ -586,7 +608,14 @@ serve(async (req) => {
         }, { onConflict: 'email' })
         if (error) { console.error('❌ pending_activations:', error); return await failDb() }
         console.log(`⏳ Activation en attente pour ${email}: ${sub.plan}`)
-        await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0), pending: true })
+        const newId = await ensureAccount(sb, email)
+        if (newId) {
+          await markIgLeadPaid(sb, newId, sub.plan, 'free')
+          await creditReferral(sb, newId, email, planId, data, 'abonnement')
+          await sendWelcomeEmail(sb, { userId: newId, email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + carryPack })
+        } else {
+          await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0), pending: true })
+        }
       }
     } else if (pack) {
       if (profile) {
@@ -614,6 +643,7 @@ serve(async (req) => {
         }, { onConflict: 'email' })
         if (error) { console.error('❌ pending pack:', error); return await failDb() }
         console.log(`⏳ Pack en attente pour ${email}`)
+        await ensureAccount(sb, email)   // Axel 20/10 : même règle que l'abonnement (le pack est appliqué à la création)
       }
     }
   }
