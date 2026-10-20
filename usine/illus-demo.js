@@ -12,7 +12,7 @@ export function demoFamilies(d) {
   return f;
 }
 // type d'illustration → famille que la démo doit montrer ; « demo » / « video » suivent déjà la démo
-export const ILLUS_NEEDS = { omni: 'omni', pub: 'static-ads', fille: 'image-ia', avatar: 'image-ia', garcon: 'image-ia' };
+export const ILLUS_NEEDS = { omni: 'omni', voiture: 'omni', montre: 'omni', pub: 'static-ads', fille: 'image-ia', avatar: 'image-ia', garcon: 'image-ia' };
 // liste d'illustrations d'un hook + brique démo → raison du refus, ou '' si cohérent
 export function illusMismatch(list, d) {
   const f = demoFamilies(d);

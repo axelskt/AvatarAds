@@ -22,7 +22,8 @@
   "Axel 19/10 (VF-0678) : une démo static ads montre une PUB (affiche) dans le hook, jamais une personne — pub-svr-1…5 et pub-ciao-ugc (photos d'avatar tenant le produit) retirées du pool « pub ». VF-0679 : H80 (« transformer n'importe quel objet ») → avant / après Omni sur « transformer ».",
   "Axel 20/10 (VF-0754 : H23 « comment créer des vidéos IA comme ça » + démo Motion Control, rien dans le hook) : le type « demo » suit maintenant TOUS les modules — motion-control = pool « motion-control » (avant::après, Vidéo/Motion Control 1→1.1 et 2→2.1, jamais celui de la démo C-MC), express = « video-image-ia », démos Claude (C-MCP) = la famille de la démo (Omni, static ads, Express, Images IA ; illus-demo.js). Une démo sans famille montrable (C-CLAUDE) n'est plus proposée avec un hook à illustration « demo ». « p » = probabilité que l'illustration apparaisse (tirée sur le nom de la vidéo) : H90 « flippant » → la démo de la vidéo une fois sur deux.",
   "Axel 20/10 (VF-0752) : sur H78 les résultats Omni arrivaient trop tard (« meilleure qualité » ≈ 4,2 s) → une 1re paire dès « vidéos IA » (≈ 1 s), puis une 2e sur « meilleure qualité ».",
-  "Axel 21/10 (VF-0744) : H81 « transformer la voiture… en n'importe quelle voiture » n'avait AUCUNE illustration → paire avant/après Omni dès « transformer »."
+  "Axel 21/10 (VF-0744) : H81 « transformer la voiture… en n'importe quelle voiture » n'avait AUCUNE illustration → paire avant/après Omni dès « transformer ».",
+  "Axel 21/10 : H81 = 2-2 TOUJOURS avec la montre de luxe — 1re paire « voiture » (deux voitures, dès « transformer »), 2e paire « montre » (une voiture à gauche, la MONTRE à droite, dès « bracelet ») ; le temps est partagé à parts égales (build.mjs, 2-2 équitable). H19 « ce que tu regardes là » → la démo de la vidéo. H90 : la démo entre dès « commence » (sur « flippant » elle repartait 0,5 s après, VF-0848)."
  ],
  "pools": {
   "fille": [
@@ -124,6 +125,18 @@
   "motion-control": [
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/MC-1-avant.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/MC-1-apres.mp4",
    "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/MC-2-avant.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/MC-2-apres.mp4"
+  ],
+  "voiture": [
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4"
+  ],
+  "montre": [
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02a-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O02b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O06-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O12b-B.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/TX-O03-B.mp4"
   ]
  },
  "demo": {
@@ -583,7 +596,7 @@
   ],
   "H90": [
    {
-    "in": "flippant",
+    "in": "commence",
     "type": "demo",
     "p": 0.5
    }
@@ -591,7 +604,17 @@
   "H81": [
    {
     "in": "transformer",
-    "type": "omni"
+    "type": "voiture"
+   },
+   {
+    "in": "bracelet",
+    "type": "montre"
+   }
+  ],
+  "H19": [
+   {
+    "in": "regardes",
+    "type": "demo"
    }
   ]
  },

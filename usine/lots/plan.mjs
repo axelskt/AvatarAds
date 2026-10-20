@@ -38,13 +38,17 @@ const HOOKS = (process.env.HOOKS || '').split(',').map(s => s.trim()).filter(Boo
 const PHOTOS = (process.env.PHOTOS || '').split(',').map(s => s.trim()).filter(Boolean)
 const demos = B.filter(b => b.kind === 'contenu' && ready(b) && !/^C-[A-Z]+M-/.test(b.id) && b.meta?.voice !== false && b.meta?.muette !== true && !EXCLUS.has(b.id) && (!DEMO_PREF || b.id.startsWith(DEMO_PREF)))
 const mdemos = B.filter(b => b.kind === 'contenu' && ready(b) && /^C-[A-Z]+M-/.test(b.id) && !EXCLUS.has(b.id)).map(b => b.id)
-const PRI = d => /OMNI|-MC-|MCM|SADS|EXP/.test(d) ? 0 : /MCP/.test(d) ? 1 : 2
-const lotUse = {}
+// Axel 21/10 (« beaucoup de vidéos OMNI… faudrait que ça soit équitable ») : les familles de démo tournent À PARTS ÉGALES dans
+// un lot — Omni, static ads, motion control, Claude (MCP), Express ; Images IA seules restent ≤ 1 par lot (plus bas)
+const FAM = d => /MCP/.test(d) ? 'mcp' : /OMNI/.test(d) ? 'omni' : /SADS/.test(d) ? 'sads' : /-MCM?-/.test(d) ? 'mc' : /EXP/.test(d) ? 'exp' : 'autre'
+const lotUse = {}, famUse = {}
 const pick = (list, n) => { const out = [], l = [...list]
   while (out.length < n && l.length) {
-    l.sort((a, b) => ((lotUse[a] || 0) >= 2) - ((lotUse[b] || 0) >= 2) || (PRI(a) - PRI(b)) * 100 + ((lotUse[a] || 0) - (lotUse[b] || 0)) * 30 + (demoUse[a] || 0) - (demoUse[b] || 0) + (rnd() - 0.5) * 2)
-    const d = l.shift(); out.push(d); demoUse[d] = (demoUse[d] || 0) + 1; lotUse[d] = (lotUse[d] || 0) + 1 }
+    l.sort((a, b) => ((lotUse[a] || 0) >= 2) - ((lotUse[b] || 0) >= 2) || ((famUse[FAM(a)] || 0) - (famUse[FAM(b)] || 0)) * 100 + ((lotUse[a] || 0) - (lotUse[b] || 0)) * 30 + (demoUse[a] || 0) - (demoUse[b] || 0) + (rnd() - 0.5) * 2)
+    const d = l.shift(); out.push(d); demoUse[d] = (demoUse[d] || 0) + 1; lotUse[d] = (lotUse[d] || 0) + 1; famUse[FAM(d)] = (famUse[FAM(d)] || 0) + 1 }
   return out }
+// Axel 21/10 : H85 (« attirer des clients sur ton site ») et H89 (« 100 réels Instagram par heure ») ne vont pas avec une démo Omni
+const PAS_OMNI = new Set(['H85', 'H89'])
 const O = [], M = []
 // ── Omni : une photo après l'autre (A4 / A3 alternés), le hook le moins utilisé qui a encore une démo libre ──
 // 20/10 (Axel) : A1 ouvert (compte @ialebd.axel). Une démo Claude (C-MCP) demande un CTA-CLAUDE de l'avatar (lot.py cta_for) :
@@ -60,7 +64,7 @@ while (O.length < +nO && guard++ < 80) for (const p of photos) {
   if (O.length >= +nO) break
   const hs = [...new Set(vars.filter(v => v.a === p).map(v => v.b))].filter(h => (hookUse[p + '|' + h] || 0) < CAP_HOOK).sort((a, b) => (hookUse[p + '|' + a] || 0) - (hookUse[p + '|' + b] || 0) + (rnd() - 0.5) * 0.5)
   for (const h of hs) {
-    const free = demos.filter(d => COH.pairLevel(by[h], d) === 'ok' && illusOk(h, d) && !usedOmni.has([p, h, d.id].join('|')) && (avClaude.has(p.split('-')[0]) || !/^C-MCP/.test(d.id))).map(d => d.id)
+    const free = demos.filter(d => COH.pairLevel(by[h], d) === 'ok' && illusOk(h, d) && !(PAS_OMNI.has(h) && /OMNI/.test(d.id + ' ' + (d.label || ''))) && !usedOmni.has([p, h, d.id].join('|')) && (avClaude.has(p.split('-')[0]) || !/^C-MCP/.test(d.id))).map(d => d.id)
     const imgia = O.filter(o => /IMGIA/.test(o.demo)).length
     const cand = imgia >= 1 ? free.filter(d => !/IMGIA/.test(d)) : free
     if (!cand.length) continue

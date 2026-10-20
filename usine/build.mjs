@@ -49,8 +49,8 @@ let demo = demoSrc;
 // jamais le même choix que la vidéo précédente (fichier <cache>/dernier.json).
 const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_DOUCES = ['M01', 'M02', 'M03', 'M05', 'M06', 'M07', 'M15', 'M16', 'M18', 'M19'],   // Axel 07/10 : « les musiques douces je ne suis pas fan » (même liste que build-f05.mjs)
   MUSIC_OK = Array.from({ length: 25 }, (_, i) => 'M' + String(i + 1).padStart(2, '0')).filter(m => m !== 'M04' && !MUSIC_DOUCES.includes(m));
-// 06/10 : S14 (serif italique) retiré du tirage, Axel « pas fan » (VF-0059)
-const SUBS_OUT = ['S14'];
+// 06/10 : S14 (serif italique) retiré du tirage, Axel « pas fan » (VF-0059) ; 21/10 : S05 (pastilles rose / jaune) retiré (VF-0823)
+const SUBS_OUT = ['S14', 'S05'];
 const SUBS_ALL = Array.from({ length: 19 }, (_, i) => 'S' + String(i + 1).padStart(2, '0')).concat('S21').filter(s => !SUBS_OUT.includes(s));   // la banque + boîte blanche, sans les retirés
 const SUBS = { contour: 'S02', boite: 'S21', bleu: 'S03', rouge: 'S07', white: 'S10', neon: 'S12' };
 const LASTF = join(process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creative Factory', 'cache'), 'dernier.json');
@@ -350,7 +350,20 @@ const vHook = hookVoice ? Math.min(dur(hookVoice), dur(hook)) : dur(hook);
 // ── TIMING (Axel 30/09 : « dès qu'il s'arrête, boom, transition rapide », « l'avatar se fige, pas fluide ») ──
 // Le glissement part 0,08 s après le DERNIER MOT (hook ou liaison), dure 0,25 s ; jamais d'avatar figé avant.
 const hookW0 = hookWordsPre || (hookVoice ? emitWords(hookVoice, 0) : []);
-const hookLastEnd = hookW0.length ? hookW0[hookW0.length - 1].end : vHook;
+// Axel 21/10 (VF-0819, A1-11 · H90 coupé sur le rire) : un son qui CONTINUE après le dernier mot (rire, souffle) n'est plus
+// coupé par la transition — la fin du hook va jusqu'à ce que l'énergie retombe (fond + 7 dB pendant 0,15 s), 1,2 s au plus
+const tailAfter = (f, t0) => { try {
+  const raw = execFileSync('ffmpeg', ['-v', 'error', '-ss', t0.toFixed(3), '-t', '1.4', '-i', f, '-vn', '-ac', '1', '-ar', '16000', '-f', 's16le', '-'], { maxBuffer: 1 << 24 });
+  const a = new Int16Array(raw.buffer, raw.byteOffset, raw.length >> 1), n = 320, e = [];
+  for (let i = 0; i + n <= a.length; i += n) { let s2 = 0; for (let k = i; k < i + n; k++) s2 += a[k] * a[k]; e.push(20 * Math.log10(Math.sqrt(s2 / n) + 1e-9)); }
+  if (!e.length) return t0;
+  const thr = Math.max(40, [...e].sort((x, y) => x - y)[Math.floor(e.length * 0.1)] + 7);
+  let quiet = 0; for (let i = 0; i < e.length; i++) { quiet = e[i] < thr ? quiet + 1 : 0; if (quiet >= 8) return t0 + Math.max(0, (i - 7) * 0.02); }
+  return Math.min(t0 + 1.2, t0 + e.length * 0.02);
+} catch { return t0; } };
+const hookLastEnd0 = hookW0.length ? hookW0[hookW0.length - 1].end : vHook;
+const hookLastEnd = hookVoice && !liaisonAt ? Math.min(vHook, Math.max(hookLastEnd0, tailAfter(hookVoice, hookLastEnd0))) : hookLastEnd0;
+if (hookLastEnd > hookLastEnd0 + 0.1) console.log('  fin du hook prolongée de ' + (hookLastEnd - hookLastEnd0).toFixed(2) + ' s (son après le dernier mot)');
 const O1pre = Math.min(dur(hook), hookLastEnd + 0.08);
 const durH = O1pre + TS;
 const durD = dur(demo);
@@ -487,6 +500,11 @@ if (OPT.illus) {
     illusLog.push({ brique: e.src, mots: e.in, sortie: e.out || null, media: basename(file1) + (pair ? ' + ' + basename(pair) : ''), de: +at.toFixed(2), a: +endAt.toFixed(2) });
     cursor = iIn + 1;
   }
+  // Axel 21/10 (VF-0752 / VF-0844 « 2-2 ») : deux illustrations dans le HOOK = le temps est partagé ÉQUITABLEMENT entre elles
+  // (la seconde arrivait sur son mot et repartait presque aussitôt) — même fenêtre totale, coupée en deux moitiés égales
+  { const h2 = brollEvents.filter(e => e.style === 'hook' && e.at < (liaisonAt != null ? liaisonAt : O1)).sort((a, b) => a.at - b.at);
+    if (h2.length === 2) { const a0 = h2[0].at, z = Math.max(h2[0].at + h2[0].dur, h2[1].at + h2[1].dur), half = (z - a0) / 2;
+      if (half >= 1.0) { h2[0].dur = half + 0.3; h2[1].at = a0 + half; h2[1].dur = z - h2[1].at; console.log('  2-2 équitable : ' + half.toFixed(2) + ' s chacune'); } } }
   // deux illustrations qui se suivent : la première repart quand la suivante arrive (jamais deux grandes cartes empilées)
   const hk = brollEvents.filter(e => e.style === 'hook').sort((a, b) => a.at - b.at);
   hk.forEach((e, i) => { const n = hk[i + 1]; if (n && e.at + e.dur > n.at + 0.3) e.dur = Math.max(0.5, n.at + 0.3 - e.at); });
