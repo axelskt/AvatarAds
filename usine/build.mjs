@@ -450,8 +450,12 @@ if (OPT.illus) {
     if (type === 'avatar') type = mod === 'image-ia' ? 'demo' : 'fille';
     if (type === 'video') type = (BANK.video || {})[mod] || 'produit';
     const direct = (type === 'demo' || (type === 'pub' && mod === 'static-ads')) && BANK.demoMedia && BANK.demoMedia[OPT.demo], t = type === 'demo' ? (BANK.demo || {})[mod] : type;
-    const pool = (direct && direct.filter(f => !used.has(basename(f))).length ? direct : (BANK.pools || {})[t]) || [];
-    let free = pool.filter(f => !used.has(basename(f)));
+    // Axel 21/10 (VF-0752 : la montre dans les DEUX paires) : un clip déjà montré dans la vidéo n'est plus repris, même
+    // dans une autre paire « avant::après » — chaque moitié d'une paire compte
+    const parts = f => String(f).split('::').map(x => basename(x));
+    const fresh0 = f => !parts(f).some(x => used.has(x));
+    const pool = (direct && direct.filter(fresh0).length ? direct : (BANK.pools || {})[t]) || [];
+    let free = pool.filter(fresh0);
     if (!free.length) return null;
     // Axel 06/10 (VF-0044) : « un NOUVEAU produit à chaque mot » → jamais deux fois la même marque dans une vidéo tant
     // qu'il en reste une autre (CIAO, SVR, parfum, AXE, Lune, créatine, crème)
@@ -460,7 +464,7 @@ if (OPT.illus) {
     if (fresh.length) free = fresh;
     // filles et garçons mélangés : jamais deux avatars du même genre de suite (Axel 30/09)
     const genre = f => /garcon/.test(f) ? 'g' : /fille/.test(f) ? 'f' : '', rot = free.map((_, i) => free[(seedN + used.size + i) % free.length]);
-    const ref = rot.find(f => !genre(f) || genre(f) !== pick.last) || rot[0]; used.add(basename(ref)); if (genre(ref)) pick.last = genre(ref);
+    const ref = rot.find(f => !genre(f) || genre(f) !== pick.last) || rot[0]; parts(ref).forEach(x => used.add(x)); if (genre(ref)) pick.last = genre(ref);
     if (brand(ref)) usedBrands.add(brand(ref));
     // 13/10 : « avant::après » = deux clips montrés en deux cartes (captions.mjs, pair) ; chacun téléchargé à part
     const one = r => { if (!/^https?:/.test(r)) return join(BR, r); const f = join(work, 'illus-' + basename(r));   // média distant : copie de travail

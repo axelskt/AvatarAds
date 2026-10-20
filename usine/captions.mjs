@@ -75,14 +75,20 @@ function burn(video, output, words, opts = {}) {
   };
   const broll = (Array.isArray(opts.broll) ? opts.broll : []).filter(b => b && b.file && b.dur > 0.2).map((b, k) => {
     const ext = (b.file.match(/\.[a-z0-9]+$/i) || ['.mp4'])[0].toLowerCase(), name = 'broll' + k + ext;
-    copyFileSync(b.file, join(work, name));
+    // Axel 21/10 (VF-0768 : « la démo dans le hook freeze ») : un clip plus court que son temps à l'écran est BOUCLÉ (avant :
+    // il restait figé sur sa dernière image) — les images fixes sont copiées telles quelles
+    const place = (src, dst) => { if (/\.(png|jpe?g|webp|gif)$/i.test(src)) return copyFileSync(src, dst);
+      let d = 0; try { d = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', src]).toString()) || 0; } catch {}
+      if (d && d < b.dur + 0.4) { try { execFileSync('ffmpeg', ['-v', 'error', '-y', '-stream_loop', '-1', '-i', src, '-t', (b.dur + 0.5).toFixed(2), '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', dst]); return; } catch {} }
+      copyFileSync(src, dst); };
+    place(b.file, join(work, name));
     // carte au format du média (plus de bandes blanches autour d'une image) : largeur 460, hauteur ≤ 760
     let ar = 9 / 16; try { const [w, h] = execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0', b.file]).toString().trim().split(',').map(Number); if (w && h) ar = w / h; } catch {}
     // carte au format EXACT du média : si la hauteur est plafonnée, la largeur suit (VF-0017 : static ad 9:16 coupée en haut)
     const Wmax = b.style === 'hook' ? 720 : 460, Hmax = b.style === 'hook' ? 1040 : 760;
     const H = Math.min(Hmax, Math.round(Wmax / ar)), W = Math.round(H * ar) > Wmax ? Wmax : Math.round(H * ar);
     // 13/10 (Axel) : avant / après en DEUX cartes séparées d'un petit espace — l'avant entre par la gauche, l'après par la droite
-    if (b.pair) { const name2 = 'broll' + k + 'b' + ((b.pair.match(/\.[a-z0-9]+$/i) || [ext])[0].toLowerCase()); copyFileSync(b.pair, join(work, name2)); return fitLogos({ ...b, name, name2, k, W: 400, H: 711 }); }
+    if (b.pair) { const name2 = 'broll' + k + 'b' + ((b.pair.match(/\.[a-z0-9]+$/i) || [ext])[0].toLowerCase()); place(b.pair, join(work, name2)); return fitLogos({ ...b, name, name2, k, W: 400, H: 711 }); }
     return fitLogos({ ...b, name, k, W, H });
   });
   words = words.slice().sort((a,b)=>a.start-b.start);
