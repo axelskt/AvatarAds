@@ -80,8 +80,10 @@ Chaque vidéo = 2 formats : `hook+contenu+CTA` (court) et `hook+liaison+contenu+
 | **H87** · Normalement je devais pas en parler mais je pense que je vais vous choquer, j'ai trouvé littéralement la planque de cet hiver. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | **H88** · Claude et AvatarAds ont complètement tué les agences marketing. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
 | **H89** · Je ne sais pas comment c'est légal mais je fais plus de 100 réels Instagram par heure comme ça. | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **H90** · Ouahhh ça commence vraiment à devenir flippant là ce qu'on peut faire. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H91** · Je suis pas censé en parler mais là c'est vraiment trop une dinguerie ce qui se passe. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 
-**✅ par liaison** — L12 13 · L15 49 · L16 51 · L19 54 · L28 23 · L30 30 · L32 39 · L33/L35 27 · L34 33 · L48 45 · L58 26 · L70 39 (sur 56 hooks)
+**✅ par liaison** — L12 13 · L15 51 · L16 53 · L19 56 · L28 25 · L30 30 · L32 41 · L33/L35 27 · L34 33 · L48 47 · L58 28 · L70 41 (sur 58 hooks)
 
 > **Analyse cohérence : 12 liaisons validées** (L33=L35 ; L69 & L72 abandonnées).
 > **Étape suivante** : ranger chaque hook dans une ou plusieurs FAMILLES (multi-famille possible) + analyse « pourquoi telle famille et pas telle autre » (générique ≠ 100% des hooks).
