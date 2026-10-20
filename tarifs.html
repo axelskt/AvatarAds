@@ -69,7 +69,8 @@
 html{overflow-x:clip;max-width:100vw;scroll-behavior:smooth;background:var(--bg);color-scheme:light}
 body{
   /* Axel 20/10 : la touche de gris = le dégradé gris-bleu du hero de la LP (index.html .v2hero::before), sur toute la page */
-  background:linear-gradient(to bottom,#eef2f3 0%,#e7ecf0 12%,#e2e8ec 22%,#d8e0e7 38%,#ccd7df 55%,#b7c6d0 78%,#a0b2be 100%) fixed,var(--bg);
+  /* Axel 20/10 : dégradé « aller-retour » sur la hauteur de la page — clair en haut, gris-bleu au milieu, de nouveau clair au pied de page */
+  background:linear-gradient(to bottom,#eef2f3 0%,#e2e8ec 14%,#ccd7df 34%,#b4c3cd 52%,#ccd7df 72%,#e2e8ec 88%,#eef2f3 100%),var(--bg);
   color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:clip;
 }
 .mono{font-family:var(--mono)}
@@ -92,7 +93,7 @@ a{color:inherit;text-decoration:none}
 .pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
 .glass{background:rgba(238,242,243,.82);backdrop-filter:blur(12px)}
-footer .faint,footer .muted{color:#3f4a55}   /* pied de page lisible sur le bas du dégradé (gris ardoise) */
+footer .faint,footer .muted{color:#4a5560}   /* pied de page lisible sur le bas du dégradé */
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
 .row{display:flex;align-items:center}
 .col{display:flex;flex-direction:column}
