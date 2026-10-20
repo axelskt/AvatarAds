@@ -59,7 +59,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 .post .gone{width:64px;height:114px;border-radius:9px;background:var(--soft);color:var(--dim);font-size:9.5px;line-height:1.3;display:grid;place-items:center;text-align:center}
 .post .no{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--soft);font-weight:700;font-size:13px}
 .post.is-done .no{background:var(--ok);color:#fff}
-.post video{width:64px;height:114px;border-radius:9px;object-fit:cover;background:#000;display:block}
+.post video,.post img.pv{width:64px;height:114px;border-radius:9px;object-fit:cover;background:#000;display:block;cursor:pointer}
 .post .t{font-size:22px;font-weight:750;letter-spacing:-.02em;line-height:1.1}
 .post .d{color:var(--dim);font-size:13px;margin-bottom:6px}
 .post .c{font-size:13.5px;white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;user-select:text;-webkit-user-select:text}
@@ -165,7 +165,14 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   }
   function viewList(v) { var l = mine().filter(function (p) { return inView(p, v || S.view); }); return (v || S.view) === 'old' ? l.reverse() : l; }
   // Numéro d'ordre dans le compte, fixé par la date prévue : le même que dans le nom du fichier envoyé au téléphone.
-  function num(p) { return mine(p.account).indexOf(p) + 1; }
+  // 21/10 (Axel : « pas hyper fluide quand je change de compte ») : numéro lu dans un index fait UNE fois par rendu (avant :
+  // mine() + indexOf pour chaque carte = des centaines de filtres de toute la liste à chaque clic)
+  var NUM = { key: '', map: {} };
+  function num(p) {
+    var k = S.posts.length + '|' + p.account;
+    if (NUM.key !== k) { NUM.key = k; NUM.map = {}; mine(p.account).forEach(function (x, i) { NUM.map[x.id] = i + 1; }); }
+    return NUM.map[p.id] || 0;
+  }
   // Identifiant complet de la vidéo = nom du fichier final (avatar-hook-liaison-démo-CTA) : c'est lui qu'on recherche plus tard.
   function vidId(p) { return decodeURIComponent(String(p.video_url || '').split('?')[0].split('/').pop().replace(/\.mp4$/i, '')); }
   function fileName(p) {
@@ -263,7 +270,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
         var r = await fetch(SUPABASE_URL + '/functions/v1/factory-release', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, apikey: SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: ids }) });
         var b = await r.json().catch(function () { return {}; });
         (b.done || []).forEach(function (id) { var p = S.posts.find(function (x) { return x.id === id; }); if (p) p.video_deleted_at = new Date().toISOString(); });
-        (b.done || []).forEach(function (id) { var c = document.querySelector('.post[data-pid="' + id + '"] video'); if (c) c.outerHTML = '<div class="gone">vidéo<br>retirée du<br>stockage</div>';
+        (b.done || []).forEach(function (id) { var c = document.querySelector('.post[data-pid="' + id + '"] video, .post[data-pid="' + id + '"] img.pv'); if (c) c.outerHTML = '<div class="gone">vidéo<br>retirée du<br>stockage</div>';
           var o = document.querySelector('[data-act="one"][data-id="' + id + '"]'); if (o) o.remove(); });
         if (b.released) toast(b.released + ' vidéo' + (b.released > 1 ? 's' : '') + ' retirée' + (b.released > 1 ? 's' : '') + ' du stockage');
       } catch (e) { /* on réessaiera au prochain clic */ }
@@ -353,9 +360,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     if (S.view !== 'todo' || !list.length) return '';
     var first = list[0], last = list[list.length - 1];
     return '<div class="send"><div class="send-h"><div><b>' + T.length + ' vidéo' + (T.length > 1 ? 's' : '') + ' à préparer</b>'
-      + '<div class="meta">Les ' + (list.length > 1 ? list.length + ' prochaines' : 'prochaine') + ' : n° ' + pad(num(first)) + (list.length > 1 ? ' → ' + pad(num(last)) : '')
-      + ' · ' + esc(dayLabel(first.scheduled_at))
-      + (list.length > 1 && dayKey(last.scheduled_at) !== dayKey(first.scheduled_at) ? ' → ' + esc(dayLabel(last.scheduled_at)) : '') + '</div></div>'
+      + '<div class="meta">Les ' + (list.length > 1 ? list.length + ' prochaines' : 'prochaine') + ' : n° ' + pad(num(first)) + (list.length > 1 ? ' → ' + pad(num(last)) : '') + '</div></div>'
       + '<button type="button" class="btn ok" data-act="next15">' + IC.check + list.length + ' vidéo' + (list.length > 1 ? 's' : '') + ' en brouillon</button></div></div>';
   }
 
@@ -370,8 +375,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     return '<div class="post' + (done ? ' is-done' : '') + (p.id === S.cur ? ' cur' : '') + '" data-pid="' + esc(p.id) + '">'
       + '<span class="no">' + num(p) + '</span>'
       + (p.video_deleted_at ? '<div class="gone">vidéo<br>retirée du<br>stockage</div>'
-        : '<video src="' + esc(p.video_url) + '" poster="' + esc(String(p.video_url).replace(/\.mp4$/, '-poster.jpg')) + '" muted playsinline preload="none" data-act="play"></video>')   // 07/10 : affiche JPEG (Safari laissait des cases noires en chargeant 70 vidéos)
-      + '<div style="min-width:0"><div class="t">' + esc(dayLabel(p.scheduled_at)) + '</div><div class="d">' + esc(famOf(p.combo)) + '</div>'
+        : '<img class="pv" loading="lazy" decoding="async" alt="" src="' + esc(String(p.video_url).replace(/\.mp4$/, '-poster.jpg')) + '" data-act="play" data-id="' + esc(p.id) + '">')   // 21/10 : image légère, la vidéo n'est créée qu'au clic (des centaines de <video> rendaient le changement de compte lent)
+      + '<div style="min-width:0"><div class="t">' + esc(famOf(p.combo)) + '</div>'
       + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div>'
       + '<div class="id">ID ' + esc(id) + '<button type="button" data-act="copyid" data-id="' + esc(p.id) + '" title="Copier l’ID">' + IC.copy + '</button></div></div>'
       + '<div class="act">' + oneBtn(p) + '<button type="button" class="btn ghost" data-act="copy" data-id="' + esc(p.id) + '">' + IC.copy + 'Copier la légende</button>'
@@ -383,17 +388,10 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   function render() {
     var app = $('app');
     if (S.err) { app.innerHTML = '<div class="card empty"><b>Impossible de charger</b>' + esc(S.err) + '</div>'; return; }
-    var list = viewList(), out = '', last = '';
-    list.forEach(function (p) {
-      var k = dayKey(p.scheduled_at);
-      if (k !== last) {
-        var dd = list.filter(function (x) { return dayKey(x.scheduled_at) === k; });
-        out += (last ? '</div>' : '') + '<h2>' + esc(dayLabel(p.scheduled_at)) + ' · ' + dd.length + '</h2><div class="list">';
-        last = k;
-      }
-      out += postHTML(p);
-    });
-    if (last) out += '</div>';
+    // 21/10 (Axel : « supprime les jours de la semaine, je ne programme plus ») : une seule liste, dans l'ordre ; les cartes sont
+    // dessinées par paquets de 30 (les suivantes à l'approche du bas de page) : changer de compte reste instantané
+    var list = viewList(), out = list.length ? '<div class="list" id="plist">' + list.slice(0, 30).map(postHTML).join('') + '</div>' : '';
+    REST = list.slice(30);
     var EMPTY = { todo: mine().length ? 'Tout est en brouillon sur @' + S.acct : 'Aucun post prévu sur @' + S.acct,
       old: 'Aucune vidéo en brouillon ou postée' };
     if (!list.length) out = '<div class="card empty" style="margin-top:14px"><b>' + esc(EMPTY[S.view]) + '</b>'
@@ -401,7 +399,16 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     var tabs = '<div class="tabs">' + VIEWS.map(function (v) {
       return '<button type="button" class="tab" data-act="view" data-v="' + v[0] + '" aria-pressed="' + (S.view === v[0]) + '">' + v[1] + ' · ' + mine().filter(function (p) { return inView(p, v[0]); }).length + '</button>';
     }).join('') + '</div>';
-    app.innerHTML = '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + tabs + bulkHTML() + out;
+    app.innerHTML = '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + tabs + bulkHTML() + out + (REST.length ? '<div id="pmore" style="height:1px"></div>' : '');
+    watchMore();
+  }
+  var REST = [], IO = null;
+  function watchMore() {
+    if (IO) IO.disconnect();
+    var m = $('pmore'); if (!m) return;
+    var more = function () { var l = $('plist'); if (!l || !REST.length) return; l.insertAdjacentHTML('beforeend', REST.splice(0, 30).map(postHTML).join('')); if (!REST.length && m.parentNode) m.parentNode.removeChild(m); };
+    if ('IntersectionObserver' in window) { IO = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting; })) more(); }, { rootMargin: '1200px' }); IO.observe(m); }
+    else while (REST.length) more();
   }
 
   document.addEventListener('click', function (e) {
@@ -415,7 +422,10 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     else if (act === 'one' && p) { var O = S.one[p.id]; S.cur = p.id; if (O && O.state === 'ready') saveOne(p); else if (!O || O.state !== 'loading') prepareOne(p); }
     else if (act === 'copy' && p) { S.cur = p.id; copyText(p.caption, 'Légende n°' + num(p) + ' copiée'); render(); }
     else if (act === 'copyid' && p) copyText(vidId(p), 'ID copié');
-    else if (act === 'play') { if (el.paused) { el.muted = false; el.play(); } else el.pause(); }
+    else if (act === 'play') {
+      if (el.tagName === 'IMG' && p) { var v = document.createElement('video'); v.src = p.video_url; v.poster = el.src; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('data-act', 'play'); el.replaceWith(v); v.play().catch(function () {}); }
+      else if (el.paused) { el.muted = false; el.play(); } else el.pause();
+    }
   });
 
   async function load() {

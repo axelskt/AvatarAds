@@ -59,20 +59,28 @@ def cap(name, c):
 def esc(s): return str(s).replace("'", "''")
 
 def order(items, prev):
-    """items triés plus récents d'abord ; prev = dernier post figé {unit, kind, logo, fam} ; renvoie l'ordre de publication."""
+    """items triés plus récents d'abord ; prev = dernier post figé {unit, kind, logo, fam} ; renvoie l'ordre de publication.
+    Axel 21/10 (« trier correctement pour que le contenu soit varié à chaque fois ») : plus de « premier qui passe » (les
+    familles rares partaient au début, la fin de file n'était plus qu'Omni + Claude, 3 parlées d'affilée) — chaque pas prend la
+    vidéo au meilleur score : jamais la même photo / réaction de suite, pas la même famille que la précédente (ni, si possible,
+    que les 2 dernières), pas 3 parlées / sans voix d'affilée, pas deux textes à logos de suite ; les familles et formats
+    ABONDANTS sont étalés en proportion de ce qui reste, les plus récentes restent devant à score égal."""
+    from collections import Counter
     left, out, last = list(items), [], [prev] if prev else []
     while left:
         p = last[-1] if last else {}
-        fams = [x.get('fam') for x in last[-2:]]
-        def ok(it, lvl):
-            c = it['combo']
-            if p.get('unit') and unit(c) == p['unit']: return False
-            if lvl >= 1 and family(c) == p.get('fam'): return False
-            if lvl >= 2 and p.get('logo') and logo(c): return False
-            if lvl >= 3 and family(c) in fams: return False
-            if lvl >= 4 and p.get('kind') and kind(c) == p['kind']: return False
-            return True
-        i = next((k for lvl in (4, 3, 2, 1, 0) for k, it in enumerate(left) if ok(it, lvl)), 0)
+        fams2, kinds2 = [x.get('fam') for x in last[-2:]], [x.get('kind') for x in last[-2:]]
+        fc, kc, L = Counter(family(it['combo']) for it in left), Counter(kind(it['combo']) for it in left), len(left)
+        def score(ki):
+            k, it = ki; c = it['combo']; f, kd = family(c), kind(c); s = 0.0
+            if p.get('unit') and unit(c) == p['unit']: s += 1000
+            if f == p.get('fam'): s += 300
+            elif f in fams2: s += 80
+            if p.get('logo') and logo(c): s += 60
+            if len(kinds2) == 2 and kinds2[0] == kinds2[1] == kd: s += 120
+            s -= 400 * fc[f] / L + 60 * kc[kd] / L - 0.3 * k
+            return s
+        i = min(enumerate(left), key=score)[0]
         it = left.pop(i); c = it['combo']; out.append(it)
         last.append({'unit': unit(c), 'kind': kind(c), 'logo': logo(c), 'fam': family(c)})
     return out
