@@ -116,6 +116,20 @@ serve(async (req) => {
     return !!id
   }
 
+  // Axel 20/10 : bienvenue clients (c0) envoyée à UN abonné dont le compte a été rattaché à la main (paiement fait avec
+  // une autre adresse → le webhook n'a pas pu l'envoyer). Corps { welcome_user: "<uuid>" } ; même journal que le
+  // webhook (email_log 'welcome', unique) → jamais deux bienvenues. Réservé au cron (x-cron-key vérifiée plus haut).
+  let welcomeUser = ''
+  try { welcomeUser = String((await req.clone().json())?.welcome_user || '') } catch (_) { /* pas de corps */ }
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(welcomeUser)) {
+    const { data: u } = await sb.from('profiles').select('id, email, first_name, plan').eq('id', welcomeUser).maybeSingle()
+    if (!u || !u.plan || u.plan === 'free') return json({ ok: false, error: 'compte introuvable ou en Free' })
+    const m = BY_ID['c0']
+    if (!m) return json({ ok: false, error: 'e-mail c0 introuvable' })
+    const ok = await sendV2(u, m, 'welcome')
+    return json({ ok, envoye: ok, raison: ok ? null : 'bienvenue déjà envoyée ou envoi refusé' })
+  }
+
   // ── 1) Prospects : plan free sans aucun achat ──
   // Un client qui a payé ne reçoit pas la série prospects : les packs one-shot ne changent pas le plan, on exclut
   // donc toute trace d'achat (whop_member_id posé ou bought_credits > 0). drip_anchor = created_at par défaut ;
