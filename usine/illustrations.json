@@ -19,7 +19,9 @@
   "Axel 06/10 (VF-0044) : une brique qui ÉNUMÈRE = une image PAR MOT, pile sur le mot (L12 : homme → garçon, femme → fille, coach sportif → coach, puis un NOUVEAU produit à chaque mot : produit à vendre, produit physique, coaching, formation — UGC, UGC produit ou static ad). Chaque carte pousse la précédente.",
   "06/10 : démos Omni MCP C-MCP-09…16 (voix) + C-MCPM-07…12 (muettes, draft) → demoMedia = leur avant / après (O10 intérieur Porsche, O12 hélicoptère, O2-0c char).",
   "Axel 13/10 (VF-0357) : illustration Omni = un avant / après (médaillon) tiré AU HASARD parmi les 7 assemblages HK-O (Lambo, Porsche intérieur, hélico, Porsche ×2, char, montre) — pool « omni » et demoMedia C-OMNI-01…04 ; H78 → pool omni.",
-  "Axel 19/10 (VF-0678) : une démo static ads montre une PUB (affiche) dans le hook, jamais une personne — pub-svr-1…5 et pub-ciao-ugc (photos d'avatar tenant le produit) retirées du pool « pub ». VF-0679 : H80 (« transformer n'importe quel objet ») → avant / après Omni sur « transformer »."
+  "Axel 19/10 (VF-0678) : une démo static ads montre une PUB (affiche) dans le hook, jamais une personne — pub-svr-1…5 et pub-ciao-ugc (photos d'avatar tenant le produit) retirées du pool « pub ». VF-0679 : H80 (« transformer n'importe quel objet ») → avant / après Omni sur « transformer ».",
+  "Axel 20/10 (VF-0754 : H23 « comment créer des vidéos IA comme ça » + démo Motion Control, rien dans le hook) : le type « demo » suit maintenant TOUS les modules — motion-control = pool « motion-control » (avant::après, Vidéo/Motion Control 1→1.1 et 2→2.1, jamais celui de la démo C-MC), express = « video-image-ia », démos Claude (C-MCP) = la famille de la démo (Omni, static ads, Express, Images IA ; illus-demo.js). Une démo sans famille montrable (C-CLAUDE) n'est plus proposée avec un hook à illustration « demo ». « p » = probabilité que l'illustration apparaisse (tirée sur le nom de la vidéo) : H90 « flippant » → la démo de la vidéo une fois sur deux.",
+  "Axel 20/10 (VF-0752) : sur H78 les résultats Omni arrivaient trop tard (« meilleure qualité » ≈ 4,2 s) → une 1re paire dès « vidéos IA » (≈ 1 s), puis une 2e sur « meilleure qualité »."
  ],
  "pools": {
   "fille": [
@@ -117,12 +119,18 @@
    "avatar-ia-garcon-4k-c.jpg",
    "avatar-ia-garcon-axe.jpg",
    "avatar-ia-garcon-parfum.jpg"
+  ],
+  "motion-control": [
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/MC-1-avant.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/MC-1-apres.mp4",
+   "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/MC-2-avant.mp4::https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/pair/MC-2-apres.mp4"
   ]
  },
  "demo": {
   "image-ia": "fille",
   "omni": "omni",
-  "static-ads": "pub"
+  "static-ads": "pub",
+  "motion-control": "motion-control",
+  "express": "video-image-ia"
  },
  "demoMedia": {
   "C-IMGIA-02": [
@@ -447,6 +455,10 @@
   ],
   "H78": [
    {
+    "in": "videos ia",
+    "type": "omni"
+   },
+   {
     "in": "meilleure qualite",
     "out": "je te",
     "type": "omni"
@@ -567,12 +579,21 @@
     "in": "transformer",
     "type": "omni"
    }
+  ],
+  "H90": [
+   {
+    "in": "flippant",
+    "type": "demo",
+    "p": 0.5
+   }
   ]
  },
  "video": {
   "image-ia": "video-image-ia",
   "static-ads": "produit",
-  "omni": "omni"
+  "omni": "omni",
+  "motion-control": "motion-control",
+  "express": "video-image-ia"
  },
  "notes": [
   {

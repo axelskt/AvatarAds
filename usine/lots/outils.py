@@ -78,6 +78,7 @@ def publish(j, vf):
         if not line: raise RuntimeError('publish-qc : ' + (r.stdout + r.stderr)[-300:])
         row = json.loads(line[0]); row['brick_combo']['style_choc'] = fj.get('style_choc'); row['brick_combo']['cta_file'] = j['cf']
         if j.get('pair'): row['brick_combo']['illus_pair'] = j['pair']
+        if j.get('hf_var'): row['brick_combo']['hook_variant'] = j['hf_var']   # 20/10 : H89-GRILLE / H89-GRILLE-C
     else:
         poster = final[:-4] + '-poster.jpg'
         sh(['ffmpeg', '-v', 'error', '-y', '-ss', '1.5', '-i', final, '-vframes', '1', '-vf', 'scale=540:-1', poster])

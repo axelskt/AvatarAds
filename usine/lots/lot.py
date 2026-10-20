@@ -63,13 +63,16 @@ prev_th = [None]
 def prep(it, tag):
     if it['k'] == 'o':
         photo, hook, demo = it['photo'], it['hook'], it['demo']
-        hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
+        hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo); hv = None
+        # Axel 20/10 : H89 = hook « grille qui se multiplie » 7 fois sur 10 (coin ou centre, usine/grille-hook.py), sinon la prise normale
+        g = [k for k in ('H89-GRILLE', 'H89-GRILLE-C') if (photo, k, 'omni') in VAR] if hook == 'H89' else []
+        if g and random.random() < 0.7: hv = random.choice(g); hf = VAR[(photo, hv, 'omni')]
         h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
         d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
         out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag))
         cmd = ['node', 'usine/build.mjs', h, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--illus', 'auto', '--subs-style', 'auto',
                '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
-        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it)
+        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, hf_var=hv)
     react, demo = it['react'], it['demo']
     rm = bricks[react]['meta']; H = float(rm.get('duration_s') or 3)
     r = get(rm['media'], os.path.basename(rm['media'])); d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))

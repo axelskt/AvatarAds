@@ -16,6 +16,8 @@ export const ILLUS_NEEDS = { omni: 'omni', pub: 'static-ads', fille: 'image-ia',
 // liste d'illustrations d'un hook + brique démo → raison du refus, ou '' si cohérent
 export function illusMismatch(list, d) {
   const f = demoFamilies(d);
-  for (const e of list || []) { const need = ILLUS_NEEDS[e && e.type]; if (need && !f.has(need)) return 'l\'illustration « ' + e.type + ' » (« ' + e.in + ' ») demande une démo ' + need; }
+  for (const e of list || []) { const need = ILLUS_NEEDS[e && e.type]; if (need && !f.has(need)) return 'l\'illustration « ' + e.type + ' » (« ' + e.in + ' ») demande une démo ' + need;
+    // Axel 20/10 (VF-0754) : « demo » = montrer la démo dans le hook → la démo doit avoir quelque chose de montrable
+    if (e && e.type === 'demo' && !e.p && !['omni', 'static-ads', 'motion-control', 'express', 'image-ia'].some(x => f.has(x))) return 'l\'illustration « demo » (« ' + e.in + ' ») demande une démo montrable'; }
   return '';
 }

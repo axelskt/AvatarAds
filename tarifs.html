@@ -411,7 +411,17 @@ function _whopPanel(icon,title,text,btnHref,btnLabel){
 }
 function _whopOpenModal(){ var m=document.getElementById('whopCoModal'); if(m) m.style.display='flex'; document.body.style.overflow='hidden'; }
 // Paiement validé : le compte se crée (ou se connecte) avec l'e-mail du paiement → le plan l'attend déjà
+// Axel 20/10 : quelqu'un déjà connecté à son compte AvatarAds dans ce navigateur (/app/, même origine) paie SUR CE COMPTE :
+// e-mail repris et verrouillé chez Whop + identifiant du compte (metadata aa_user_id, lu en premier par whop-webhook).
+// Sans ça, une autre adresse saisie chez Whop créait un 2e compte et le sien restait en Free.
+function _aaCompte(){
+  try{ var s=JSON.parse(localStorage.getItem('sb-guvwgiejzkiodghywpwj-auth-token')||'null'), u=s&&(s.user||(s.currentSession&&s.currentSession.user));
+    if(u&&u.id&&u.email) return { id:String(u.id), email:String(u.email) }; }catch(_){}
+  return null;
+}
 function _whopPaidPanel(){
+  var acc=_aaCompte();
+  if(acc) return _whopPanel(_WHOP_OK,'Paiement confirmé','Ton plan et tes crédits arrivent sur ton compte AvatarAds <b style="color:var(--text)">'+_whopEsc(acc.email)+'</b>.','/app/','Ouvrir mon espace');
   // Axel 20/10 : le compte est désormais CRÉÉ au paiement (whop-webhook) avec l'e-mail saisi chez Whop → on dit de se connecter avec celui-là
   _whopPanel(_WHOP_OK,'Paiement confirmé','Ton compte AvatarAds est prêt avec <b style="color:var(--text)">l’e-mail que tu viens de saisir</b> : connecte-toi avec cette adresse (code reçu par e-mail ou Google), ton plan et tes crédits y sont déjà.','/app/','Me connecter');
 }
@@ -445,17 +455,18 @@ function _whopCheckout(url){
   var fail=function(why){ clearTimeout(slowT); if(seq!==window._whopSeq) return; console.warn('[whop] repli page Whop :',why); _whopFallback(url); };
   _whopElementsReady().then(function(W){
     if(seq!==window._whopSeq) return;
-    _whopCo=W.checkout.create({
+    var acc=_aaCompte();
+    _whopCo=W.checkout.create(Object.assign({
       plan:pid,
       returnUrl:location.origin+location.pathname+'?whop=retour',
       appearance:{ theme:{ appearance:'light', accentColor:'orange', grayColor:'auto' }, classes:{ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' }, 'whop-CheckoutExpressGooglePay':{ display:'none' } } },   // Google Pay masqué (Axel 09/10)
       onComplete:function(p){ if(p&&p.result==='payment'&&seq===window._whopSeq) setTimeout(function(){ if(seq===window._whopSeq){ _whopDestroy(); _whopPaidPanel(); } },1800); }
-    });
-    _whopCo.create('checkout',{
+    }, acc?{ metadata:{ aa_user_id:acc.id } }:{}));
+    _whopCo.create('checkout',Object.assign(acc?{ buyerEmail:acc.email, lockBuyerEmail:true }:{},{
       onReady:function(){ ready=true; clearTimeout(slowT); sp.style.display='none'; },
       // erreur APRÈS l'affichage (ex. 3D Secure) : jamais remplacé par « Payer sur Whop » (double paiement possible)
       onError:function(e){ var why=(e&&(e.code||e.message))||'erreur'; if(ready){ console.warn('[whop] erreur du module après affichage :',why); return; } fail(why); }
-    }).mount(mount);
+    })).mount(mount);
   }).catch(function(e){ fail(e&&e.message); });
 }
 function closeWhopCheckout(){ window._whopSeq=(window._whopSeq||0)+1; _whopDestroy(); clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }

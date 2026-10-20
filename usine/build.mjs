@@ -423,8 +423,13 @@ if (OPT.illus) {
   const nH = nHookW != null ? nHookW : hookW0.length, liaisonId = OPT.liaison ? idFromFile(OPT.liaison) : null;
   // module de la démo : son SUJET d'abord (static-ads, omni, image-ia) — meta.module vaut « image-ia » pour les démos static ads
   // (elles passent par Images IA) et faisait tirer une pub d'un AUTRE produit (VF-0017 : pub Lune sur une démo parfum)
-  const mod = demoBrick ? (demoBrick.subject || (demoBrick.meta && demoBrick.meta.module) || '') : (OPT.demo || '');
-  const seedN = [...basename(out)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7), used = new Set(brollEvents.map(e => basename(e.file)));
+  let mod = demoBrick ? (demoBrick.subject || (demoBrick.meta && demoBrick.meta.module) || '') : (OPT.demo || '');
+  // Axel 20/10 (VF-0754) : un module sans pool (démos Claude « mcp-claude ») prend la famille de ce que la démo MONTRE
+  // (Omni, static ads, motion control, Express, Images IA) — sinon un hook « comme ça » restait sans démo
+  if (demoBrick && !(BANK.demo || {})[mod]) {
+    const { demoFamilies } = await import(join(HERE, 'illus-demo.js')), fam = demoFamilies(demoBrick);
+    mod = ['omni', 'static-ads', 'motion-control', 'express', 'image-ia'].find(f => fam.has(f) && (BANK.demo || {})[f]) || mod; }
+  const seedN =[...basename(out)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7), used = new Set(brollEvents.map(e => basename(e.file)));
   const usedBrands = new Set(brollEvents.map(e => (/(ciao|svr|parfum|axe|lune|creatine|creme)/.exec(basename(e.file)) || [])[1]).filter(Boolean));
   // média d'un type : jamais deux fois le même dans une vidéo ; rotation d'une vidéo à l'autre (graine = nom de sortie)
   const pick = type => {
@@ -457,7 +462,10 @@ if (OPT.illus) {
   } else OPT.illus.split(';').map(x => x.trim()).filter(Boolean).forEach(x => { const [file, i, o] = x.split('|'); want.push({ file, in: i, out: o, from: 0, to: hookW0.length, endDef: O1, src: 'manuel' }); });
   let cursor = 0;
   for (const e of want) {
-    const iIn = findW(toksOf(e.in), Math.max(e.from, cursor), e.to);
+    // « p » (Axel 20/10, H90) : l'illustration n'apparaît qu'une vidéo sur 1/p — tirage stable sur le nom de la sortie
+    if (e.p != null && (([...basename(out) + (e.in || '')].reduce((a, c) => (a * 131 + c.charCodeAt(0)) >>> 0, 11) % 1000) / 1000) >= e.p) {
+      console.log('  illustration (' + e.src + ') « ' + e.in + ' » non tirée (p = ' + e.p + ')'); continue; }
+    const iIn =findW(toksOf(e.in), Math.max(e.from, cursor), e.to);
     if (iIn < 0) { console.warn('⚠ illustration ignorée (' + e.src + ') : « ' + e.in + ' » introuvable'); continue; }
     // l'avatar OUVRE toujours la vidéo (frame 0 = couverture, texte choc lisible) : jamais d'illustration avant 0,8 s
     const at = Math.max(0.8, hookW0[iIn].start - 0.05);
