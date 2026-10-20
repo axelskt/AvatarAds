@@ -27,7 +27,7 @@ const { illusMismatch } = await import(join(USINE, 'illus-demo.js'))
 const illusOk = (h, d) => !illusMismatch(ILLUS[h], d)
 const usedOmni = new Set(), usedF05 = new Set(), demoUse = {}, hookUse = {}, reactUse = {}
 for (const q of X.qc) { const c = q.c || {}
-  if (c.voice === 'omni') { usedOmni.add([c.photo, c.hook, c.contenu].join('|')); hookUse[c.photo + '|' + c.hook] = (hookUse[c.photo + '|' + c.hook] || 0) + 1 }
+  if (c.voice === 'omni') { usedOmni.add([c.photo, c.hook, c.contenu].join('|')); if (q.s !== 'refused') hookUse[c.photo + '|' + c.hook] = (hookUse[c.photo + '|' + c.hook] || 0) + 1 }
   if (c.format === 'F05') { usedF05.add(c.reaction + '|' + c.contenu); if (q.s !== 'refused') reactUse[c.reaction] = (reactUse[c.reaction] || 0) + 1 }
   if (c.contenu) demoUse[c.contenu] = (demoUse[c.contenu] || 0) + 1 }
 const ready = b => b && b.status === 'ready'
@@ -52,10 +52,13 @@ const O = [], M = []
 const avClaude = new Set(X.variants.filter(v => v.f === 'omni' && v.b === 'CTA-CLAUDE').map(v => v.a.split('-')[0]))
 const vars = X.variants.filter(v => v.f === 'omni' && /^H\d+$/.test(v.b) && /^A[134]-/.test(v.a) && ready(by[v.b]) && (!HOOKS.length || HOOKS.includes(v.b)) && (!PHOTOS.length || PHOTOS.includes(v.a)))
 const photos = [...new Set(vars.map(v => v.a))].sort((a, b) => (a.slice(3) - b.slice(3)) || a.localeCompare(b))
+// Axel 20/10 (A3-11 · H88 vu 16 fois, A4-1 · H20 18 fois) : une même photo ne garde pas le même hook plus de CAP_HOOK fois
+// (validées + en revue, refusées exclues) — au-delà, le tirage passe à un autre hook / une autre photo
+const CAP_HOOK = +(process.env.CAP_HOOK || 7)
 let guard = 0
 while (O.length < +nO && guard++ < 80) for (const p of photos) {
   if (O.length >= +nO) break
-  const hs = [...new Set(vars.filter(v => v.a === p).map(v => v.b))].sort((a, b) => (hookUse[p + '|' + a] || 0) - (hookUse[p + '|' + b] || 0) + (rnd() - 0.5) * 0.5)
+  const hs = [...new Set(vars.filter(v => v.a === p).map(v => v.b))].filter(h => (hookUse[p + '|' + h] || 0) < CAP_HOOK).sort((a, b) => (hookUse[p + '|' + a] || 0) - (hookUse[p + '|' + b] || 0) + (rnd() - 0.5) * 0.5)
   for (const h of hs) {
     const free = demos.filter(d => COH.pairLevel(by[h], d) === 'ok' && illusOk(h, d) && !usedOmni.has([p, h, d.id].join('|')) && (avClaude.has(p.split('-')[0]) || !/^C-MCP/.test(d.id))).map(d => d.id)
     const imgia = O.filter(o => /IMGIA/.test(o.demo)).length
