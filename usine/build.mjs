@@ -571,7 +571,9 @@ if (ctaW.length > 1) {
     a0 = st; a1 = Math.min(st + 1, ctaW.length - 1);
     const c = ctaW.findIndex((w, i) => i > st && i <= st + 5 && /^commentaire/.test(bare(w.text)));
     if (c > 0) a1 = c;
-    else { a1 = st; while (a1 + 1 < ctaW.length && a1 - st < 6 && !/[.!?,]$/.test(ctaW[a1].text)) a1++; }
+    // Axel 20/10 (VF-0752 / VF-0754) : « commente, GUIDE et je te l'envoie » — la virgule après le verbe arrêtait le groupe
+    // sur « commente » seul ; le mot-clé qui suit le verbe en fait TOUJOURS partie
+    else { a1 = Math.min(st + 1, ctaW.length - 1); while (a1 + 1 < ctaW.length && a1 - st < 6 && !/[.!?,]$/.test(ctaW[a1].text)) a1++; }
   }
   ctaW.slice(a0, a1 + 1).forEach(w => { w.g = 'g3'; });
 }

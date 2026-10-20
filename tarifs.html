@@ -446,12 +446,12 @@ function _whopCheckout(url){
   sp.innerHTML='<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>'
     +'<a class="whop-slow" href="'+_whopEsc(url)+'" target="_blank" rel="noopener" style="display:none;font-size:12px;color:var(--accent-2);text-decoration:underline">Le paiement tarde à s’afficher ? Ouvrir la page Whop</a>';
   var mount=document.createElement('div'); mount.style.cssText='position:relative;z-index:1';
-  // compte connecté : l'e-mail est verrouillé chez Whop (champ grisé) — Whop refuse les images dans son champ, le cadenas
-  // est donc posé juste au-dessus du module (Axel 20/10)
+  // compte connecté : l'e-mail est verrouillé chez Whop — Whop refuse les images dans son champ, le cadenas est donc posé
+  // juste au-dessus du module, avec l'adresse du compte (Axel 20/10 : bandeau seul, champ sans gris)
   var acc0=_aaCompte();
   if(acc0){ var lk=document.createElement('div');
     lk.style.cssText='display:flex;align-items:center;gap:8px;margin:14px 18px 0;padding:10px 12px;border:1px solid var(--border-2);border-radius:12px;background:var(--surface-2);font-size:12.5px;line-height:1.35;color:var(--text-2)';
-    lk.innerHTML='<span style="flex:1;min-width:0">Paiement relié à ton compte <b style="display:block;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_whopEsc(acc0.email)+'</b></span>'
+    lk.innerHTML='<span style="flex:1;min-width:0">Paiement relié à ton compte AvatarAds :<b style="display:block;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_whopEsc(acc0.email)+'</b></span>'
       +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--text-3)" aria-label="E-mail verrouillé"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
     body.appendChild(lk); }
   wrap.appendChild(sp); wrap.appendChild(mount); body.appendChild(wrap);
@@ -467,7 +467,7 @@ function _whopCheckout(url){
     _whopCo=W.checkout.create(Object.assign({
       plan:pid,
       returnUrl:location.origin+location.pathname+'?whop=retour',
-      appearance:{ theme:{ appearance:'light', accentColor:'orange', grayColor:'auto' }, classes:Object.assign({ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' }, 'whop-CheckoutExpressGooglePay':{ display:'none' } }, acc?{ 'whop-EmailInput':{ backgroundColor:'#EEF1F4', color:'#6B7785' } }:{}) },   // Google Pay masqué (Axel 09/10)
+      appearance:{ theme:{ appearance:'light', accentColor:'orange', grayColor:'auto' }, classes:Object.assign({ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' }, 'whop-CheckoutExpressGooglePay':{ display:'none' } }, {}) },   // Google Pay masqué (Axel 09/10)
       onComplete:function(p){ if(p&&p.result==='payment'&&seq===window._whopSeq) setTimeout(function(){ if(seq===window._whopSeq){ _whopDestroy(); _whopPaidPanel(); } },1800); }
     }, acc?{ metadata:{ aa_user_id:acc.id } }:{}));
     _whopCo.create('checkout',Object.assign(acc?{ buyerEmail:acc.email, lockBuyerEmail:true }:{},{
