@@ -20,7 +20,7 @@ export const HOOK_PERFORMANCE = [
   // Axel 12/10 (5e tour) : « encore plus d'expression au niveau de la tête » (réf. : yeux fermés en parlant, menton baissé puis relevé, moue « ooh »)
   'HEAD EXPRESSIONS (big, theatrical, like the best storytellers on TikTok): once or twice he keeps his EYES CLOSED while still talking, head tilted down as if savoring what he says, then brings the head back up with wide open eyes and simply CONTINUES with the next words (never re-says what he just said); the chin goes up proudly on a bold claim; a pursed-lips smirk with one eyebrow raised; an open-mouthed "ooh" face with eyebrows high on the surprising part; the head moves a lot between these expressions.',
   // Axel 12/10 : « parler plus rapidement » (H20 en 8 s : fini à 6,3 s puis figé) → débit rapide + durée = cran juste au-dessus de la parole
-  'DELIVERY: FAST, brisk pace (about 3.5 words per second), confident, fluid and well articulated like a charismatic content creator, energetic conversational rhythm, every word crisp and clear; never slow, never drawn out.',
+  // 20/10 : le débit n'est plus fixé ici — voir delivery(line, dur) (le temps en trop faisait redire des mots).
   // Axel 16/10 : bégaiement / mots dits deux fois → une seule prise propre, chaque mot UNE fois, et le temps en trop se
   // remplit par des gestes et un sourire, JAMAIS en redisant des mots. Aucun exemple de mot français entre guillemets ici :
   // le moteur pourrait le dire (seule la réplique entre « … » est parlée). Cas réel : A3-2 H81 « un bracelet en bracelet ».
@@ -45,6 +45,19 @@ function pronunciation(line) {
   return r.length ? ' PRONUNCIATION: ' + r.join('; ') + '.' : '';
 }
 // Réplique + performance, dans l'ordre attendu par le MCP (la réplique entre « … » est dite mot pour mot).
-export function hookPrompt(line) {
-  return `The person in the photo talks to their phone, which is propped up in front of them so BOTH hands are free (handheld-free UGC framing, same place, same outfit), and says in French, as a native Parisian from Paris, France (standard metropolitan French with the natural, neutral accent of Paris, like a young French content creator from Paris), directly to the camera: « ${line} »${pronunciation(line)} ${HOOK_PERFORMANCE} Voice: a native Parisian speaking standard French from France, with the neutral accent of Paris. Final check: every word of the line is heard exactly once — no word, however short, is ever said twice.`;
+// Axel 20/10 (« je comprends pas pourquoi il y a autant de répétitions ») : la cause est le TEMPS EN TROP. Le prompt imposait
+// « 3,5 mots par seconde » quelle que soit la durée du clip : 12 mots en 6 s = 3,4 s de parole, 2,6 s à remplir → le moteur
+// les remplissait en redisant un bout de phrase (A3-7 H90 « flippant là, ce » ×2, A1-13 CTA CLAUDE « je t'envoie le lien en
+// privé » ×2, H24 « et je te montre » ×2, H81 « comment faire » ×2) ou en ajoutant un mot (A1-11 H90 « c'est »). Les prises
+// propres du jour étaient celles où la phrase remplissait déjà le clip (H14, H48, CTA « 2 clics »). Désormais : la durée
+// est le plus petit cran kie (4/6/8/10 s) qui tient à ~3 mots/s, et le débit demandé = la phrase remplit tout le clip
+// moins une demi-seconde de fin. L'accélération x1,10 / x1,15 se fait ensuite au dérush, comme avant.
+const nbMots = line => String(line).replace(/[«»"'’.,!?;:…-]/g, ' ').split(/\s+/).filter(Boolean).length;
+export function dureeConseillee(line) { const n = nbMots(line); return [4, 6, 8, 10].find(d => n / 3.0 + 0.7 <= d) || 10; }
+function delivery(line, dur) {
+  const n = nbMots(line), rate = Math.max(2.0, Math.min(3.6, n / Math.max(1, dur - 0.6)));
+  return `DELIVERY: the line fills the WHOLE clip — about ${rate.toFixed(1)} words per second, so the last word lands about half a second before the end of the ${dur}-second clip; confident, fluid and well articulated like a charismatic content creator, energetic conversational rhythm, every word crisp and clear, no dead air between words.`;
+}
+export function hookPrompt(line, dur = dureeConseillee(line)) {
+  return `The person in the photo talks to their phone, which is propped up in front of them so BOTH hands are free (handheld-free UGC framing, same place, same outfit), and says in French, as a native Parisian from Paris, France (standard metropolitan French with the natural, neutral accent of Paris, like a young French content creator from Paris), directly to the camera: « ${line} »${pronunciation(line)} ${HOOK_PERFORMANCE} ${delivery(line, dur)} Voice: a native Parisian speaking standard French from France, with the neutral accent of Paris. Final check: every word of the line is heard exactly once — no word, however short, is ever said twice.`;
 }
