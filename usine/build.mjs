@@ -494,6 +494,9 @@ if (OPT.illus) {
     // image, 2,6 s pour une vidéo, dans la limite de la fin du hook / de la liaison
     if (file) endAt = Math.min(O1, Math.max(endAt, at + (IMG_RE.test(file) ? 1.5 : 2.6)));
     if (endAt - at < 0.7) { console.warn('⚠ illustration ignorée (' + e.src + ') : fenêtre trop courte (' + (endAt - at).toFixed(2) + ' s)'); continue; }
+    // Axel 21/10 (VF-0625 / VF-0692 : les cartes partaient 0,5 à 1 s avant la fin) : une illustration qui va jusqu'au bout du
+    // hook RESTE jusqu'au raccord — sa sortie (0,3 s) se joue PENDANT le glissement vers la démo, plus avant
+    if (endAt >= O1 - 0.01) endAt = O1 + 0.3;
     const [file1, pair] = String(file || '').split('::');
     if (!file || !existsSync(file1) || (pair && !existsSync(pair))) { console.warn('⚠ illustration ignorée (' + e.src + ') : aucun média « ' + (e.type || e.file) + ' » (module de la démo : ' + (mod || 'inconnu') + ')'); continue; }
     brollEvents.push({ file: file1, pair: pair || null, at, dur: endAt - at, image: IMG_RE.test(file1), style: 'hook' });
