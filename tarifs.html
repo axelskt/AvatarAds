@@ -13,7 +13,7 @@
 <title>Tarifs — AvatarAds · Choisis ton plan</title>
 <meta name="description" content="Starter, Pro ou Élite : choisis ton plan AvatarAds. Sans engagement, résiliation en 1 clic. Avatar IA, voix clonée, sous-titres — tout inclus.">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="theme-color" content="#0B0B0D">
+<meta name="theme-color" content="#EDF1F4">
 <meta name="author" content="AvatarAds">
 <link rel="canonical" href="https://avatarads.fr/tarifs.html">
 <meta property="og:title" content="Tarifs — AvatarAds · Choisis ton plan">
@@ -49,10 +49,11 @@
 <link rel="dns-prefetch" href="https://whop.com">
 <style>
 :root{
-  --bg:#0B0B0D;--bg-grad:#0E0D10;
-  --panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
-  --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.14);
-  --text:#F6F4F1;--text-2:#A7A39E;--text-3:#6B6862;
+  /* Axel 20/10 : page Tarifs CLAIRE, palette de la LP (index.html, #v2-light-theme) */
+  --bg:#EDF1F4;--bg-grad:#F4F7F9;
+  --panel-1:#FFFFFF;--surface:#FFFFFF;--surface-2:#F1F5F8;--surface-3:#E6ECF1;
+  --border:rgba(16,24,32,.10);--border-2:rgba(16,24,32,.16);
+  --text:#0E1319;--text-2:#59636E;--text-3:#8A939D;
   --accent:#FF5A1F;--accent-2:#FF8042;
   --accent-soft:color-mix(in srgb,var(--accent) 14%,transparent);
   --accent-line:color-mix(in srgb,var(--accent) 32%,transparent);
@@ -65,10 +66,10 @@
   --mono:'JetBrains Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{overflow-x:clip;max-width:100vw;scroll-behavior:smooth}
+html{overflow-x:clip;max-width:100vw;scroll-behavior:smooth;background:var(--bg);color-scheme:light}
 body{
   background:
-    radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.10),transparent 60%),
+    radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.07),transparent 60%),
     radial-gradient(900px 600px at 0% 100%,rgba(154,124,255,.05),transparent 55%),
     var(--bg);
   color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:clip;
@@ -76,7 +77,7 @@ body{
 .mono{font-family:var(--mono)}
 .display{font-family:var(--display);letter-spacing:-.02em;line-height:.98}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3)}
-::selection{background:var(--accent);color:#0B0B0D}
+::selection{background:var(--accent);color:#fff}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 a{color:inherit;text-decoration:none}
 ::-webkit-scrollbar{width:10px}
@@ -92,7 +93,7 @@ a{color:inherit;text-decoration:none}
 .btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
 .pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
-.glass{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));backdrop-filter:blur(12px)}
+.glass{background:rgba(255,255,255,.72);backdrop-filter:blur(12px)}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
 .row{display:flex;align-items:center}
 .col{display:flex;flex-direction:column}
@@ -412,7 +413,8 @@ function _whopPanel(icon,title,text,btnHref,btnLabel){
 function _whopOpenModal(){ var m=document.getElementById('whopCoModal'); if(m) m.style.display='flex'; document.body.style.overflow='hidden'; }
 // Paiement validé : le compte se crée (ou se connecte) avec l'e-mail du paiement → le plan l'attend déjà
 function _whopPaidPanel(){
-  _whopPanel(_WHOP_OK,'Paiement confirmé','Crée ton compte AvatarAds (ou connecte-toi) avec <b style="color:var(--text)">le même e-mail que pour le paiement</b> : ton plan et tes crédits t’y attendent.','/app/','Accéder à mon espace');
+  // Axel 20/10 : le compte est désormais CRÉÉ au paiement (whop-webhook) avec l'e-mail saisi chez Whop → on dit de se connecter avec celui-là
+  _whopPanel(_WHOP_OK,'Paiement confirmé','Ton compte AvatarAds est prêt avec <b style="color:var(--text)">l’e-mail que tu viens de saisir</b> : connecte-toi avec cette adresse (code reçu par e-mail ou Google), ton plan et tes crédits y sont déjà.','/app/','Me connecter');
 }
 function _whopFallback(url){
   _whopDestroy();
@@ -447,7 +449,7 @@ function _whopCheckout(url){
     _whopCo=W.checkout.create({
       plan:pid,
       returnUrl:location.origin+location.pathname+'?whop=retour',
-      appearance:{ theme:{ appearance:'dark', accentColor:'orange', grayColor:'auto' }, classes:{ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' }, 'whop-CheckoutExpressGooglePay':{ display:'none' } } },   // Google Pay masqué (Axel 09/10)
+      appearance:{ theme:{ appearance:'light', accentColor:'orange', grayColor:'auto' }, classes:{ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' }, 'whop-CheckoutExpressGooglePay':{ display:'none' } } },   // Google Pay masqué (Axel 09/10)
       onComplete:function(p){ if(p&&p.result==='payment'&&seq===window._whopSeq) setTimeout(function(){ if(seq===window._whopSeq){ _whopDestroy(); _whopPaidPanel(); } },1800); }
     });
     _whopCo.create('checkout',{
@@ -480,7 +482,7 @@ function closeWhopCheckout(){ window._whopSeq=(window._whopSeq||0)+1; _whopDestr
 
 <style>.whop-spin{width:34px;height:34px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:whopspin .8s linear infinite}@keyframes whopspin{to{transform:rotate(360deg)}}</style>
 <div id="whopCoModal" style="display:none;position:fixed;inset:0;z-index:950;align-items:center;justify-content:center">
-  <div onclick="closeWhopCheckout()" style="position:absolute;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(10px)"></div>
+  <div onclick="closeWhopCheckout()" style="position:absolute;inset:0;background:rgba(14,19,25,.45);backdrop-filter:blur(10px)"></div>
   <div style="position:relative;width:100%;max-width:440px;max-height:94vh;margin:12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 90px rgba(0,0,0,.75)">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex:0 0 auto">
       <div style="font-family:'Montserrat',var(--font),sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:var(--text)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>PAIEMENT SÉCURISÉ · WHOP</div>
