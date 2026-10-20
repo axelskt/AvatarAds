@@ -21,7 +21,8 @@
   "Axel 13/10 (VF-0357) : illustration Omni = un avant / après (médaillon) tiré AU HASARD parmi les 7 assemblages HK-O (Lambo, Porsche intérieur, hélico, Porsche ×2, char, montre) — pool « omni » et demoMedia C-OMNI-01…04 ; H78 → pool omni.",
   "Axel 19/10 (VF-0678) : une démo static ads montre une PUB (affiche) dans le hook, jamais une personne — pub-svr-1…5 et pub-ciao-ugc (photos d'avatar tenant le produit) retirées du pool « pub ». VF-0679 : H80 (« transformer n'importe quel objet ») → avant / après Omni sur « transformer ».",
   "Axel 20/10 (VF-0754 : H23 « comment créer des vidéos IA comme ça » + démo Motion Control, rien dans le hook) : le type « demo » suit maintenant TOUS les modules — motion-control = pool « motion-control » (avant::après, Vidéo/Motion Control 1→1.1 et 2→2.1, jamais celui de la démo C-MC), express = « video-image-ia », démos Claude (C-MCP) = la famille de la démo (Omni, static ads, Express, Images IA ; illus-demo.js). Une démo sans famille montrable (C-CLAUDE) n'est plus proposée avec un hook à illustration « demo ». « p » = probabilité que l'illustration apparaisse (tirée sur le nom de la vidéo) : H90 « flippant » → la démo de la vidéo une fois sur deux.",
-  "Axel 20/10 (VF-0752) : sur H78 les résultats Omni arrivaient trop tard (« meilleure qualité » ≈ 4,2 s) → une 1re paire dès « vidéos IA » (≈ 1 s), puis une 2e sur « meilleure qualité »."
+  "Axel 20/10 (VF-0752) : sur H78 les résultats Omni arrivaient trop tard (« meilleure qualité » ≈ 4,2 s) → une 1re paire dès « vidéos IA » (≈ 1 s), puis une 2e sur « meilleure qualité ».",
+  "Axel 21/10 (VF-0744) : H81 « transformer la voiture… en n'importe quelle voiture » n'avait AUCUNE illustration → paire avant/après Omni dès « transformer »."
  ],
  "pools": {
   "fille": [
@@ -585,6 +586,12 @@
     "in": "flippant",
     "type": "demo",
     "p": 0.5
+   }
+  ],
+  "H81": [
+   {
+    "in": "transformer",
+    "type": "omni"
    }
   ]
  },

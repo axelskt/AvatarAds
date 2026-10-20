@@ -12,7 +12,10 @@
 #     dans le SQL est ÉCHAPPÉE (lit), les numéros d'abord filtrés (VF-0000), et l'adresse remplacée doit être EXACTEMENT
 #     factory-media/stock|final/<ce VF>_<nom>.mp4 AVANT toute requête ou suppression : sinon le post est laissé tel quel
 #     (jamais de SQL glissé dans une adresse, jamais le fichier d'un autre numéro supprimé).
-# usage : python3 usine/lots/refaire.py VF-0316 VF-0322 …
+# usage : python3 usine/lots/refaire.py VF-0316 VF-0322 … [--stock]
+#   --stock (Axel 20/10, nouveau CTA « Claude » A3-11) : refait AUSSI une vidéo validée qui n'est PAS dans le kit mais dans le stock
+#   commun, tant que sa mission BloxAI est encore OUVERTE (aucun diffuseur) : la mission reçoit la nouvelle adresse, relue, puis
+#   l'ancien fichier du stock est supprimé. Mission prise / livrée / illisible → on n'y touche pas.
 import json, os, re, sys, random, subprocess, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from outils import *
@@ -22,8 +25,8 @@ def url_ok(u, vf, dossiers=('stock', 'final')):
     """adresse publique factory-media/<dossier>/<vf>_<nom>.mp4, chaîne brute (ni ? # % \\ ' ni sous-dossier)."""
     return isinstance(u, str) and vf_ok(vf) and '..' not in u and bool(
         re.fullmatch(re.escape(B) + '/(' + '|'.join(dossiers) + ')/' + re.escape(vf) + r'_[A-Za-z0-9._-]+\.mp4', u))
-vfs = []
-for a in sys.argv[1:]:
+vfs = []; STOCK = '--stock' in sys.argv
+for a in [x for x in sys.argv[1:] if x != '--stock']:
     if not vf_ok(a): log('✗', repr(a)[:40], 'argument ignoré : VF-0000 attendu')
     elif a not in vfs: vfs.append(a)
 if not vfs: raise SystemExit('usage : python3 usine/lots/refaire.py VF-0316 VF-0322 …')
@@ -40,7 +43,12 @@ rows = q("select q.template vf, q.brick_combo c, q.technical->'format'->>'texte_
 RETIRES = {'TH13'}
 for r in rows:
     c = r['c']; vf = r['vf']; stamp = time.strftime('%m%d%H%M')
-    if not r['pid']: log('✗', vf, 'plus dans le kit à programmer (déjà programmée ou publiée) : on n’y touche pas'); continue
+    libre = False   # vidéo du stock commun, hors kit, dont la mission BloxAI est encore ouverte (--stock)
+    if not r['pid']:
+        if STOCK and url_ok(r['qu'], vf, ('stock',)):
+            try: libre = bx_pret().get('missions') and bx_missions([vf]).get(vf) == 'open'
+            except RuntimeError: libre = False
+        if not libre: log('✗', vf, 'plus dans le kit à programmer (déjà programmée ou publiée) et pas une mission BloxAI ouverte : on n’y touche pas'); continue
     old = r['pu'] or r['qu']   # vidéo remplacée — vérifiée AVANT tout rendu, requête ou suppression (17/10)
     if not vf_ok(vf) or not url_ok(old, vf):
         log('✗', vf, 'adresse de la vidéo hors de factory-media/stock|final/%s_….mp4 : rien refait, rien supprimé (à vérifier)' % vf); continue
@@ -93,7 +101,8 @@ for r in rows:
     q("begin;delete from factory_fp_frames where video_url=%s;delete from factory_fp where video_url=%s;update factory_qc set video_url=%s, poster_url=%s, "
       "brick_combo=brick_combo||%s::jsonb where template=%s;update factory_posts set video_url=%s, combo=combo||%s::jsonb "
       "where combo->>'vf'=%s and status='todo';commit;" % (lit(old), lit(old), lit(nu), lit(npu), lit(pj), lit(vf), lit(nu), lit(pj), lit(vf)), js=False)
-    ok = q("select count(*) n from factory_posts where combo->>'vf'=%s and status='todo' and video_url=%s;" % (lit(vf), lit(nu)))[0]['n']
+    ok = q(("select count(*) n from factory_qc where template=%s and video_url=%s;" % (lit(vf), lit(nu))) if libre else
+           ("select count(*) n from factory_posts where combo->>'vf'=%s and status='todo' and video_url=%s;" % (lit(vf), lit(nu))))[0]['n']
     if not ok: log('✗', vf, 'base non mise à jour — ancien fichier GARDÉ'); continue
     f = sh(['node', 'usine/fingerprint.mjs', '--sql', '--as', nu, out])
     if f.returncode == 0 and f.stdout.strip(): q(f.stdout, js=False)
@@ -105,6 +114,9 @@ for r in rows:
             elif bx.get('missions'):
                 st = bx_missions([vf]).get(vf); garde = st in ('open', 'assigned', 'done')
                 if st == 'kit': bx_q("update public.missions set video_url=%s, poster_url=%s, updated_at=now() where vf=%s and status='kit';" % (lit(nu), lit(npu), lit(vf)))
+                if libre and st == 'open':   # --stock : mission encore ouverte → nouvelle adresse, RELUE avant de supprimer l'ancien fichier
+                    bx_q("update public.missions set video_url=%s, poster_url=%s, updated_at=now() where vf=%s and status='open';" % (lit(nu), lit(npu), lit(vf)))
+                    garde = not bx_q("select count(*) n from public.missions where vf=%s and status='open' and video_url=%s;" % (lit(vf), lit(nu)))[0]['n']
                 if garde: log('⚠', vf, 'mission BloxAI « %s » : ancien fichier du stock GARDÉ' % st)
         except RuntimeError as e: garde = True; log('⚠', vf, 'BloxAI illisible (%s) : ancien fichier du stock GARDÉ' % str(e)[-80:])
     for d_ in ('/final/', '/stock/'):

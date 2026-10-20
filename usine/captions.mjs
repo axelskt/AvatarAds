@@ -68,7 +68,8 @@ function burn(video, output, words, opts = {}) {
   const LB = choc ? choc.layout : null;
   const fitLogos = b => {
     if (!LB || !(b.style === 'hook' || b.pair) || b.at >= choc.end) return b;
-    const spans = [[250, LB.y - 30], [LB.y + LB.h + 30, 1290]].map(([a, z]) => [a, z, z - a]).sort((p, q) => q[2] - p[2]);
+    // Axel 21/10 (VF-0625) : le texte choc ne doit JAMAIS toucher les cartes du hook → 60 px d'air (30 laissait des cartes collées)
+    const spans = [[250, LB.y - 60], [LB.y + LB.h + 60, 1290]].map(([a, z]) => [a, z, z - a]).sort((p, q) => q[2] - p[2]);
     const [a, z, h] = spans[0], sc = Math.min(1, h / b.H);
     return { ...b, W: Math.round(b.W * sc), H: Math.round(b.H * sc), cy: Math.round((a + z) / 2) };
   };
