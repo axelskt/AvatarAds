@@ -13,7 +13,7 @@
 <title>Tarifs — AvatarAds · Choisis ton plan</title>
 <meta name="description" content="Starter, Pro ou Élite : choisis ton plan AvatarAds. Sans engagement, résiliation en 1 clic. Avatar IA, voix clonée, sous-titres — tout inclus.">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="theme-color" content="#EDF1F4">
+<meta name="theme-color" content="#E3E8ED">
 <meta name="author" content="AvatarAds">
 <link rel="canonical" href="https://avatarads.fr/tarifs.html">
 <meta property="og:title" content="Tarifs — AvatarAds · Choisis ton plan">
@@ -50,8 +50,8 @@
 <style>
 :root{
   /* Axel 20/10 : page Tarifs CLAIRE, palette de la LP (index.html, #v2-light-theme) */
-  --bg:#EDF1F4;--bg-grad:#F4F7F9;
-  --panel-1:#FFFFFF;--surface:#FFFFFF;--surface-2:#F1F5F8;--surface-3:#E6ECF1;
+  --bg:#E3E8ED;--bg-grad:#EAEEF2;   /* Axel 20/10 : « une touche de gris, ça fait trop blanc » */
+  --panel-1:#F7F9FB;--surface:#F7F9FB;--surface-2:#EDF1F5;--surface-3:#DFE5EB;
   --border:rgba(16,24,32,.10);--border-2:rgba(16,24,32,.16);
   --text:#0E1319;--text-2:#59636E;--text-3:#8A939D;
   --accent:#FF5A1F;--accent-2:#FF8042;
@@ -93,7 +93,7 @@ a{color:inherit;text-decoration:none}
 .btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
 .pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
-.glass{background:rgba(255,255,255,.72);backdrop-filter:blur(12px)}
+.glass{background:rgba(237,241,245,.82);backdrop-filter:blur(12px)}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
 .row{display:flex;align-items:center}
 .col{display:flex;flex-direction:column}
@@ -192,11 +192,11 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div id="pricing-grid" class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;max-width:1180px;margin:0 auto"></div>
   <p class="muted" style="max-width:1180px;margin:22px auto 0;text-align:center;font-size:15px;padding:0 20px">Sans engagement. Résiliation en 1 clic.</p>
   <div style="max-width:1180px;margin:6px auto 0;text-align:center;font-size:12px;color:var(--text-3);line-height:1.5;padding:0 20px">
-    <span style="color:var(--accent)">*</span> Estimation moyenne avec le <b style="color:var(--text-2)">Montage&nbsp;IA</b>, qui contient plusieurs plans par vidéo. Le nombre réel dépend de la durée de tes vidéos.
+    <span style="color:var(--accent)">*</span> Estimation moyenne avec le <b style="color:var(--text-2)">Montage&nbsp;IA</b>. Le nombre réel dépend de la durée de tes vidéos.
   </div>
-  <div class="row" style="justify-content:center;gap:22px;margin-top:28px;flex-wrap:wrap">
-    <span class="faint mono" style="font-size:12px">✓ Paiement sécurisé Whop</span>
-    <span class="faint mono" style="font-size:12px">↻ Annulation à tout moment</span>
+  <div class="row" style="justify-content:center;gap:clamp(10px,3vw,22px);margin-top:28px;flex-wrap:nowrap;white-space:nowrap">
+    <span class="faint mono" style="font-size:clamp(10px,2.9vw,12px)">✓ Paiement sécurisé Whop</span>
+    <span class="faint mono" style="font-size:clamp(10px,2.9vw,12px)">↻ Annulation à tout moment</span>
   </div>
   <div class="card" style="max-width:1180px;margin:40px auto 0;padding:26px 30px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap">
     <div style="max-width:680px">
