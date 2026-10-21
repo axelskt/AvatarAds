@@ -580,6 +580,9 @@ function groupLast(ws, tag) {
   if (ws.length - k < 2) k = Math.max(0, ws.length - 3);
   ws.slice(k).forEach(w => { w.g = tag; });
 }
+// Axel 21/10 (« Claude est écrit CLOUD ») : Whisper entend « cloud » / « clode » pour Claude — dans nos vidéos c'est TOUJOURS
+// Claude (aucune vidéo ne parle du cloud) : corrigé dans le hook, la démo et le CTA, ponctuation gardée
+for (const w of [...hookW, ...demoW, ...ctaW]) w.text = w.text.replace(/^(\W*)(cloud|clouds|clode|claud|clod)(\W*)$/i, (m, a, x, z) => a + (x === x.toUpperCase() ? 'CLAUDE' : 'Claude') + z);
 groupLast(hookW, 'g1'); groupLast(demoW, 'g2');
 // Whisper entend « commande » pour « commente » et « cite » pour « SITE » dans les CTA : corrigés (le mot à l'écran doit
 // être celui qu'on demande d'écrire)
