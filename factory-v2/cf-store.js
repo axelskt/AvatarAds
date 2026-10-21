@@ -1462,7 +1462,7 @@
     var part = function (o) { return o && n(o.total) != null ? { omni: n(o.omni) || 0, fond_vert: n(o.fond_vert) || 0, texte_musique: n(o.texte_musique) || 0, total: n(o.total) } : null; };
     if (!d || !part(d.now) || !part(d.all) || !d.prises || n(d.prises.n) == null || n(d.prises.cout_usd) == null) return null;
     var fv = d.fond_vert || {}, tx = Array.isArray(fv.tx_non_branchees) ? fv.tx_non_branchees.filter(function (t) { return /^TX-[A-Z0-9]{2,6}$/.test(t); }) : [];
-    return { now: part(d.now), all: part(d.all), prises: { n: n(d.prises.n), usd: n(d.prises.cout_usd) }, cap: n(d.cap) || 7,
+    return { now: part(d.now), all: part(d.all), gen: part(d.gen), prises: { n: n(d.prises.n), usd: n(d.prises.cout_usd) }, cap: n(d.cap) || 7,
       fvMc: n(fv.motion_control), fvOmni: n(fv.omni), txOff: tx, at: Date.parse(r.computed_at) || null };
   }
   // rythme Instagram (rpc factory_ig_rhythm, 13/10) : { perDay, n, from, to } ; null si illisible ou refusé (repli sur l'objectif)

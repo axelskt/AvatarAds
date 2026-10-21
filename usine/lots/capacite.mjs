@@ -91,11 +91,15 @@ const reacts = B.filter(b => b.kind === 'reaction' && ready(b) && b.meta?.media)
 let f05 = 0
 for (const r of reacts) f05 += Math.min(Math.max(0, 5 - (reactUse[r] || 0)), mdemos.filter(d => !usedF05.has(r + '|' + d) && !(/^R-I-/.test(r) && /IMGIAM/.test(d))).length)
 
+// vidéos déjà générées (validées + en revue, refusées exclues), par format
+const gen = { omni: 0, fond_vert: 0, texte_musique: 0 }
+for (const q of X.qc) { const c = q.c || {}; if (q.s === 'refused') continue
+  if (c.fond_vert) gen.fond_vert += 1; else if (c.format === 'F05') gen.texte_musique += 1; else if (c.voice === 'omni' && !c.voix_off) gen.omni += 1 }
 const now = { omni: omniNow, fond_vert: fv.M + fv.O, texte_musique: f05 }
 const all = { omni: omniAll, fond_vert: fv.M + fv.O, texte_musique: f05 }
 const sum = o => Object.values(o).reduce((a, b) => a + b, 0)
 console.log(JSON.stringify({
-  now: { ...now, total: sum(now) }, all: { ...all, total: sum(all) },
+  now: { ...now, total: sum(now) }, all: { ...all, total: sum(all) }, gen: { ...gen, total: sum(gen) },
   prises: { n: prises, cout_usd: Math.round(coutPrises * MARGE * 100) / 100, prix_s: PRIX_S, marge: MARGE, cta_claude: ctaClaude },
   fond_vert: { motion_control: fv.M, omni: fv.O, tx_restantes: { M: txLeft('M'), O: txLeft('O') }, tx_non_branchees: txNonBranchees },
   par_avatar: parAvatar, photos: photos.length, hooks: hooks.length, paires: { now: pairesNow, all: pairesAll }, cap: CAP

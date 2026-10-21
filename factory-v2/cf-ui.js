@@ -496,7 +496,7 @@
     var Z = PS.data;
     if (Z) {
       if (Z.qc.pending) add('warn', Z.qc.pending + ' ' + plural(Z.qc.pending, 'vidéo') + ' à valider', 'File QC : ouvre la revue pour approuver ou refuser.', { tab: 'prod' });
-      if (Z.qc.unclassified) {   // refus pas encore classés seulement (maquette §13) : « Classer » dans l'onglet Production
+      if (false && Z.qc.unclassified) {   // Axel 21/10 : « supprime les vidéos à classer » → plus d'alerte. refus pas encore classés seulement (maquette §13) : « Classer » dans l'onglet Production
         var lr = Z.qc.lastRefused, nU = Z.qc.unclassified;
         add('warn', nU + ' ' + plural(nU, 'vidéo refusée', 'vidéos refusées') + ' à classer',
           (lr && lr.at ? 'Dernier refus le ' + dmy(new Date(lr.at)) : 'Refus') + (lr && lr.template ? ' · ' + lr.template : '') + ' · raison notée : '
@@ -1494,16 +1494,16 @@
   }
 
   function prodTitleHTML(M) {
-    var Q = M.D && M.D.qc, n = Q ? Q.pending : null, k = Q ? Q.unclassified : 0;
+    var Q = M.D && M.D.qc, n = Q ? Q.pending : null, k = 0;   // Axel 21/10 : plus de « refusées à classer » ici
     var t = M.pending ? '…' : n == null ? '— · file QC illisible' : n ? fInt(n) + ' ' + plural(n, 'vidéo') + ' à valider' : 'Rien à valider';
-    var sub = !Q ? (M.pending ? 'chargement' : M.why) : k ? '' : Q.refused ? 'aucun refus à classer' : 'aucun refus';
+    var sub = !Q ? (M.pending ? 'chargement' : M.why) : '';
     var subH = Q && k ? '<button type="button" class="cf-qcbox-k" data-act="qc-list" data-l="refused">' + esc(fInt(k) + ' ' + plural(k, 'refusée') + ' à classer') + '</button>' : esc(sub);
     // bouton orange toujours présent (maquette) : la revue s'il y a des vidéos à valider, sinon les refus à classer,
     // sinon la file de validation (jamais une revue vide)
     var go = n ? 'data-act="qc-open"' : k ? 'data-act="qc-list" data-l="refused"' : 'data-act="qc-goto"';
     return '<section class="cf-title cf-ptitle"><h1>Production</h1>'
       + '<div class="cf-qcbox' + (n ? ' is-on' : '') + '"><span class="cf-qcbox-ic">' + svg(IC.qc, 18) + '</span>'
-      + '<span class="cf-qcbox-t"><b data-qc-n="' + (n == null ? '' : n) + '">' + esc(t) + '</b><span>' + subH + '</span></span>'
+      + '<span class="cf-qcbox-t"><b data-qc-n="' + (n == null ? '' : n) + '">' + esc(t) + '</b>' + (subH ? '<span>' + subH + '</span>' : '') + '</span>'
       + '<button type="button" class="cf-btn is-acc" ' + go + '>Ouvrir la revue</button></div></section>';
   }
   function prodBannerHTML(M) {
@@ -1552,7 +1552,8 @@
       return '<div class="cf-capmode" data-mode-k="' + k + '"><span class="cf-capmodes-n"><i class="' + cls + '"></i>' + esc(name) + '</span><span class="cf-capmode-v"><b>' + esc(fInt(v)) + '</b></span></div>';
     };
     var modes = '<div class="cf-capmodes">' + row('omni', 'is-omni', 'Omni', U.now.omni) + row('fv', 'is-aa', 'Fond vert', U.now.fond_vert)
-      + row('muet', '', 'Texte + musique', U.now.texte_musique) + '</div>';
+      + row('muet', '', 'Texte + musique', U.now.texte_musique) + '</div>'
+      + (U.gen ? '<div class="cf-capgen"><span>Vidéos générées</span><b>' + esc(fInt(U.gen.total)) + '</b><em>' + esc('Omni ' + fInt(U.gen.omni) + ' · Fond vert ' + fInt(U.gen.fond_vert) + ' · Texte + musique ' + fInt(U.gen.texte_musique)) + '</em></div>' : '');
     var all = '<div class="cf-capall"><div><b>' + esc(fInt(U.all.total)) + '</b><span>avec toutes les briques</span></div>'
       + '<div><b>≈' + NB + esc(fInt(Math.round(U.prises.usd))) + NB + '$</b><span>' + esc(fInt(U.prises.n) + ' ' + plural(U.prises.n, 'prise') + ' à générer') + '</span></div></div>';
     return '<section class="cf-card cf-cap" data-block="cap">' + chead('Vidéos possibles') + gauge + modes + all + '</section>';
@@ -1602,11 +1603,12 @@
     var head = chead('Prévision de stock');
     var D = M.D, d = M.days;
     function tile(k, v, l, s, cls) {
-      return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span><span class="cf-stile-s">' + esc(s) + '</span></div>';
+      return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span>' + (s ? '<span class="cf-stile-s">' + esc(s) + '</span>' : '') + '</div>';
     }
     var wait = M.pending ? '…' : null;
-    var tiles = tile('stock', wait || (!D || M.stock == null ? (M.stockWait ? '…' : '—') : fInt(M.stock)), 'En stock', D ? M.stockSub : M.why, 'is-acc')
-      + tile('days', d.txt, 'Jours de contenu', d.sub, d.v != null && d.v < 2 ? 'is-err' : '');
+    // Axel 21/10 (« trop de texte, fais un truc simple ») : plus de sous-titres explicatifs sous les tuiles
+    var tiles = tile('stock', wait || (!D || M.stock == null ? (M.stockWait ? '…' : '—') : fInt(M.stock)), 'En stock', D ? '' : M.why, 'is-acc')
+      + tile('days', d.txt, 'Jours de contenu', '', d.v != null && d.v < 2 ? 'is-err' : '');
     var need = M.need ? M.need.v : GOAL.perDay.target, pd = M.prodDay;   // 13/10 : rythme Instagram réel (7 j), sinon l'objectif   // besoin = l'objectif de publication (5 / jour)
     var bar = need && pd != null ? Math.min(100, pd / need * 100) : 0;
     var flow = '<div class="cf-sflow"><div class="cf-sflow-l"><span>besoin' + NB + '/' + NB + 'jour · ' + esc(need == null ? '—' : fRate2(need) + ' ' + plural(need, 'vidéo') + (M.need && M.need.real ? ' · moyenne Instagram 7' + NB + 'j' : ' · objectif')) + '</span>'
@@ -1624,11 +1626,11 @@
     var U = D && D.capUsine, capTot = U ? U.all.total : M.cap ? M.cap.total : null;   // 21/10 : capacité réelle si calculée
     var pd2 = capTot != null && need ? capTot / need : null;
     if (U) todo = '<div class="cf-stile cf-stodo" data-s="left"><b>' + esc(fInt(U.prises.n)) + '</b><span class="cf-stile-l">Prises restantes à générer</span>'
-      + '<span class="cf-stile-s">' + esc('hooks Omni pas encore tournés sur les photos actives, pour atteindre ' + fInt(U.all.total) + ' vidéos possibles') + ' · ≈' + NB + esc(fInt(Math.round(U.prises.usd))) + NB + '$</span></div>';
+      + '<span class="cf-stile-s">≈' + NB + esc(fInt(Math.round(U.prises.usd))) + NB + '$</span></div>';
     // objectif (Axel 29/09) : 1 an de contenu d'avance ; au-delà, on produit et on poste (et on recrute des posteurs)
     var mo = pd2 == null ? null : pd2 / 30.4, okY = mo != null && mo >= 12;
     var poss = '<div class="cf-stile" data-s="possible"><b class="' + (mo == null ? 'is-na' : '') + '">' + esc(wait || (pd2 == null ? '—' : fDays(pd2))) + '</b><span class="cf-stile-l">Jours de contenu possibles</span>'
-      + '<span class="cf-stile-s">' + (mo == null ? esc(M.why || '') : esc(fInt(capTot) + ' vidéos possibles ÷ ' + fRate2(need) + ' posts / jour, une fois toutes les briques générées') + '<br>≈' + NB + esc(fDec(mo, 0)) + NB + 'mois · <span class="cf-goal-t ' + (okY ? 'is-ok' : 'is-ko') + '">objectif 12' + NB + 'mois</span>') + '</span></div>';
+      + '<span class="cf-stile-s">' + (mo == null ? esc(M.why || '') : '≈' + NB + esc(fDec(mo, 0)) + NB + 'mois · <span class="cf-goal-t ' + (okY ? 'is-ok' : 'is-ko') + '">objectif 12' + NB + 'mois</span>') + '</span></div>';
     return '<section class="cf-card cf-stock" data-block="stock">' + head + '<div class="cf-stiles is-2">' + tiles + '</div>' + flow
       + '<div class="cf-stiles is-2 cf-stiles-b">' + todo + poss + '</div></section>';
   }
@@ -2617,7 +2619,7 @@
   }
   function bxNetIc(n) { return n === 'instagram' ? IG_GLYPH : svg(n === 'tiktok' ? IC.tiktok : IC.video, 14); }
   function bxTile(k, v, l, s, cls) {
-    return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span><span class="cf-stile-s">' + esc(s) + '</span></div>';
+    return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span>' + (s ? '<span class="cf-stile-s">' + esc(s) + '</span>' : '') + '</div>';
   }
   function bxKpi(k, l, v, s) {
     return '<div class="cf-mkpi" data-k="' + k + '"><span class="cf-mkpi-l">' + esc(l) + '</span><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-mkpi-s">' + esc(s) + '</span></div>';
