@@ -49,7 +49,7 @@ log('%s : %d séries, %d vidéos, à partir de VF-%04d' % (NOM, len(S['series'])
 #    MONTAGE, PLAN, SITE, café… — Axel 18/10 : diversifier les CTA), celui de la photo d'abord, à défaut celui d'une autre photo
 #    du même avatar (Axel 18/10 : « peu importe si le hook et le CTA ne sont pas la même photo »). Rotation sur tout le lot. ──
 rot = {}
-KUSE = {}
+KUSE, LKUSE = {}, {}
 for x in QC:
     c_ = x['c'] or {}
     if x['s'] != 'refused' and c_.get('voice') == 'omni' and c_.get('cta') and c_.get('photo'):
@@ -63,8 +63,9 @@ def cta_for(photo, demo):
     i = rot.get(claude, 0); rot[claude] = i + 1
     # Axel 21/10 (« répartis correctement les CTA ») : le TYPE de CTA le moins utilisé jusqu'ici pour cet avatar (validées + en
     # revue + ce lot), au lieu de repartir du premier de la liste à chaque lot
-    k = min(kinds, key=lambda kk: (KUSE.get((av, kk), 0), kinds.index(kk)))
-    KUSE[(av, k)] = KUSE.get((av, k), 0) + 1
+    # rotation DANS le lot d'abord (LKUSE), l'usage global ne départage qu'ensuite — sinon un CTA tout neuf sortait en boucle
+    k = min(kinds, key=lambda kk: (LKUSE.get((av, kk), 0), KUSE.get((av, kk), 0), kinds.index(kk)))
+    KUSE[(av, k)] = KUSE.get((av, k), 0) + 1; LKUSE[(av, k)] = LKUSE.get((av, k), 0) + 1
     pool = [(k, f) for a, kk, f in omni if kk == k and a == photo] or [(k, f) for a, kk, f in omni if kk == k]
     return pool[(i // len(kinds)) % len(pool)]
 prev_th = [None]
