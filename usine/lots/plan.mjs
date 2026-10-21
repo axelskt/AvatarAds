@@ -100,7 +100,7 @@ if (NVO) {
     if (!tx) continue
     const demo = F.demos.sort((a, b) => (demoUse[a] || 0) - (demoUse[b] || 0))[0]
     if (!demo || !by[demo]) continue
-    const cand = vars.filter(v => COH.pairLevel(by[v.b], by[demo]) === 'ok' && (voUse[v.a + '|' + v.b] || 0) < CAP_HOOK && !voDone.has([v.a, v.b, tx].join('|')) && !V.some(x => x.photo === v.a && x.hook === v.b))
+    const cand = vars.filter(v => COH.pairLevel(by[v.b], by[demo]) === 'ok' && !(PAS_OMNI.has(v.b) && /OMNI/.test(demo)) && (voUse[v.a + '|' + v.b] || 0) < CAP_HOOK && !voDone.has([v.a, v.b, tx].join('|')) && !V.some(x => x.photo === v.a && x.hook === v.b))
       .sort((a, b) => (voUse[a.a + '|' + a.b] || 0) - (voUse[b.a + '|' + b.b] || 0) + (rnd() - 0.5) * 0.8)[0]
     if (!cand) continue
     V.push({ k: 'v', photo: cand.a, hook: cand.b, demo, tx })
