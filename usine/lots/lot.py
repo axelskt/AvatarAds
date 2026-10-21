@@ -88,7 +88,9 @@ VIT_FV = {('A3-10', 'H23'): 1.15, ('A3-11', 'H74'): 1.15}
 def prep(it, tag):
     if it['k'] == 'o':
         photo, hook, demo = it['photo'], it['hook'], it['demo']
-        hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo); hv = None
+        hf = VAR[(photo, hook, 'omni')]; hv = None
+        # CTA imposé (lot manuel, Axel 21/10 : AUTRE-1 n'a que son CTA café) — sinon rotation habituelle
+        cta, cf = (it['cta'], VAR[(photo, it['cta'], 'omni')]) if it.get('cta') else cta_for(photo, demo)
         # Axel 20/10 : H89 = hook « grille qui se multiplie » 7 fois sur 10 (coin ou centre, usine/grille-hook.py), sinon la prise normale
         g = [k for k in ('H89-GRILLE', 'H89-GRILLE-C') if (photo, k, 'omni') in VAR] if hook == 'H89' else []
         if g and random.random() < 0.7: hv = random.choice(g); hf = VAR[(photo, hv, 'omni')]
@@ -168,3 +170,8 @@ for si in range(S['serie'], len(S['series'])):
 with open(os.path.join(WORK, NOM + '-liens.txt'), 'w') as f:
     for x in S['ok']: f.write('%s %s/qc/%s.mp4\n' % (x['vf'], B, x['name']))
 log('FIN %s : %d OK, %d échecs' % (NOM, len(S['ok']), len(S['fail'])))
+# Axel 21/10 : capacité réelle recalculée pour le tableau de bord (factory_capacite) — un échec ne bloque rien
+try:
+    from capacite import recalculer; recalculer()
+except Exception as e: print('capacité non recalculée :', str(e)[:200])
+

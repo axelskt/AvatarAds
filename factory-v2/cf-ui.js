@@ -1519,6 +1519,8 @@
 
   // ── 01 · Capacité de création : vidéos finales générées / possibles (jauge de la maquette) + les 4 nombres par voix ──
   function capHTML(M) {
+    var U = M.D && M.D.capUsine;
+    if (U) return capUsineHTML(U);
     var head = chead('Vidéos possibles', 'avec les briques qu’on a aujourd’hui');
     if (!M.cap) return '<section class="cf-card cf-cap" data-block="cap">' + head + naBody(M) + '</section>';
     var c = M.cap, gen = M.capGen, pct = c.total ? gen / c.total * 100 : null;
@@ -1535,6 +1537,32 @@
         + (d ? '<span class="cf-meta"> · ' + esc(d) + '</span>' : '') + '</span><span class="cf-capmode-v"><b>' + esc(fInt(m.total)) + '</b></span></div>';
     }).join('') + '</div>';
     return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + modes + '</section>';
+  }
+
+  // Axel 21/10 : capacité RÉELLE (usine/lots/capacite.mjs, mêmes règles que les lots : 7 vidéos max par photo × hook, une démo
+  // différente à chaque fois, H85 / H89 sans démo Omni, fond vert 7 par transformation et par voix, H14 jamais en fond vert,
+  // H60 Motion Control seul, texte + musique 5 démos par réaction). Jauge = possibles maintenant / possibles si toutes les
+  // briques sont générées ; dessous, les prises à générer et leur coût estimé.
+  function capUsineHTML(U) {
+    var head = chead('Vidéos possibles', 'avec les règles de l’usine (7 max par photo × hook, démos et transformations)');
+    var pct = U.all.total ? U.now.total / U.all.total * 100 : null, arc = 'M10 62 A50 50 0 0 1 110 62';
+    var gauge = '<div class="cf-gauge"><svg viewBox="0 0 120 68" aria-hidden="true" focusable="false"><path d="' + arc + '" class="cf-gauge-bg"/>'
+      + (pct > 0 ? '<path d="' + arc + '" class="cf-gauge-fg" pathLength="100" stroke-dasharray="' + Math.max(1.5, pct).toFixed(1) + ' 100"/>' : '') + '</svg>'
+      + '<b class="cf-gauge-v">' + esc(fInt(U.now.total)) + '</b></div>'
+      + '<div class="cf-gauge-l">vidéos possibles <b>maintenant</b>, avec les prises déjà générées</div>';
+    var row = function (k, cls, name, desc, v) {
+      return '<div class="cf-capmode" data-mode-k="' + k + '"><span class="cf-capmodes-n"><i class="' + cls + '"></i>' + esc(name)
+        + '<span class="cf-meta"> · ' + esc(desc) + '</span></span><span class="cf-capmode-v"><b>' + esc(fInt(v)) + '</b></span></div>';
+    };
+    var fvDesc = 'avatar détouré devant une transformation' + (U.fvMc != null ? ' (' + fInt(U.fvMc) + ' Motion Control, ' + fInt(U.fvOmni) + ' Omni)' : '');
+    var modes = '<div class="cf-capmodes">' + row('omni', 'is-omni', 'Omni', 'hook parlé + démo + CTA', U.now.omni)
+      + row('fv', 'is-aa', 'Fond vert', fvDesc, U.now.fond_vert)
+      + row('muet', '', 'Texte + musique', 'réaction + texte choc + démo muette', U.now.texte_musique) + '</div>';
+    var all = '<div class="cf-capall"><div class="cf-capall-h"><span>Si toutes les briques sont générées</span><b>' + esc(fInt(U.all.total)) + '</b></div>'
+      + '<div class="cf-capall-s">' + esc(fInt(U.prises.n) + ' ' + plural(U.prises.n, 'prise') + ' Omni à générer (chaque hook sur chaque photo active)') + ' · <b>≈' + NB + esc(fInt(Math.round(U.prises.usd))) + NB + '$</b></div>'
+      + (U.txOff.length ? '<div class="cf-capall-s">' + esc(U.txOff.length + ' transformations en base pas encore branchées au fond vert (' + U.txOff.join(', ') + ') : +' + fInt(U.txOff.length * U.cap) + ' vidéos') + '</div>' : '')
+      + '<div class="cf-capall-s">' + esc('Le fond vert reste limité par les transformations (' + U.cap + ' vidéos chacune) : de nouvelles démos Motion Control et Omni l’agrandissent.') + '</div></div>';
+    return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + modes + all + '</section>';
   }
 
   // ── 01 · Contenu posté : nos reels par mois (publications Instagram déjà chargées) ; BloxAI = missions publiées par les diffuseurs ──
@@ -1600,11 +1628,14 @@
     var sumLeft = left.reduce(function (a, x) { return a + x.r; }, 0);
     var todo = '<div class="cf-stile cf-stodo" data-s="left"><b class="' + (G ? '' : 'is-na') + '">' + esc(G ? fInt(sumLeft) : (wait || '—')) + '</b><span class="cf-stile-l">Briques restantes à générer</span><span class="cf-stile-s">clips parlés pas encore faits (hook, CTA, liaison × chaque photo d’avatar), nécessaires pour monter toutes les vidéos possibles</span>'
       + (G ? (left.length ? '<span class="cf-stodo-l">' + left.map(function (x) { return '<span><span>' + esc(x.t) + '</span><b>' + esc(fInt(x.r)) + '</b></span>'; }).join('') + '</span>' : '<span class="cf-stile-s">tout est généré</span>') : '<span class="cf-stile-s">' + esc(M.why || 'chargement') + '</span>') + '</div>';
-    var pd2 = M.cap && need ? M.cap.total / need : null;
+    var U = D && D.capUsine, capTot = U ? U.all.total : M.cap ? M.cap.total : null;   // 21/10 : capacité réelle si calculée
+    var pd2 = capTot != null && need ? capTot / need : null;
+    if (U) todo = '<div class="cf-stile cf-stodo" data-s="left"><b>' + esc(fInt(U.prises.n)) + '</b><span class="cf-stile-l">Prises restantes à générer</span>'
+      + '<span class="cf-stile-s">' + esc('hooks Omni pas encore tournés sur les photos actives, pour atteindre ' + fInt(U.all.total) + ' vidéos possibles') + ' · ≈' + NB + esc(fInt(Math.round(U.prises.usd))) + NB + '$</span></div>';
     // objectif (Axel 29/09) : 1 an de contenu d'avance ; au-delà, on produit et on poste (et on recrute des posteurs)
     var mo = pd2 == null ? null : pd2 / 30.4, okY = mo != null && mo >= 12;
     var poss = '<div class="cf-stile" data-s="possible"><b class="' + (mo == null ? 'is-na' : '') + '">' + esc(wait || (pd2 == null ? '—' : fDays(pd2))) + '</b><span class="cf-stile-l">Jours de contenu possibles</span>'
-      + '<span class="cf-stile-s">' + (mo == null ? esc(M.why || '') : esc(fInt(M.cap.total) + ' vidéos possibles ÷ ' + fRate2(need) + ' posts / jour, une fois toutes les briques générées') + '<br>≈' + NB + esc(fDec(mo, 0)) + NB + 'mois · <span class="cf-goal-t ' + (okY ? 'is-ok' : 'is-ko') + '">objectif 12' + NB + 'mois</span>') + '</span></div>';
+      + '<span class="cf-stile-s">' + (mo == null ? esc(M.why || '') : esc(fInt(capTot) + ' vidéos possibles ÷ ' + fRate2(need) + ' posts / jour, une fois toutes les briques générées') + '<br>≈' + NB + esc(fDec(mo, 0)) + NB + 'mois · <span class="cf-goal-t ' + (okY ? 'is-ok' : 'is-ko') + '">objectif 12' + NB + 'mois</span>') + '</span></div>';
     return '<section class="cf-card cf-stock" data-block="stock">' + head + '<div class="cf-stiles is-2">' + tiles + '</div>' + flow
       + '<div class="cf-stiles is-2 cf-stiles-b">' + todo + poss + '</div></section>';
   }

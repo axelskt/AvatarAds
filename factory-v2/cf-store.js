@@ -1454,6 +1454,17 @@
     });
     return { vfs: vfs, complete: typeof res.count === 'number' ? res.data.length >= res.count : res.data.length < PROD_MAX, oldest: oldest };
   }
+  // capacité RÉELLE de l'usine (Axel 21/10, table factory_capacite écrite par usine/lots/capacite.py avec les règles des lots) :
+  // { now: {omni, fond_vert, texte_musique, total}, all: {…}, prises: {n, cout_usd}, at } ; null si absente ou illisible
+  function capUsine(res) {
+    var r = res && !res.error ? res.data : null, d = r && r.data;
+    var n = function (x) { return typeof x === 'number' && isFinite(x) && x >= 0 ? x : null; };
+    var part = function (o) { return o && n(o.total) != null ? { omni: n(o.omni) || 0, fond_vert: n(o.fond_vert) || 0, texte_musique: n(o.texte_musique) || 0, total: n(o.total) } : null; };
+    if (!d || !part(d.now) || !part(d.all) || !d.prises || n(d.prises.n) == null || n(d.prises.cout_usd) == null) return null;
+    var fv = d.fond_vert || {}, tx = Array.isArray(fv.tx_non_branchees) ? fv.tx_non_branchees.filter(function (t) { return /^TX-[A-Z0-9]{2,6}$/.test(t); }) : [];
+    return { now: part(d.now), all: part(d.all), prises: { n: n(d.prises.n), usd: n(d.prises.cout_usd) }, cap: n(d.cap) || 7,
+      fvMc: n(fv.motion_control), fvOmni: n(fv.omni), txOff: tx, at: Date.parse(r.computed_at) || null };
+  }
   // rythme Instagram (rpc factory_ig_rhythm, 13/10) : { perDay, n, from, to } ; null si illisible ou refusé (repli sur l'objectif)
   function igRhythm(res) {
     var d = res && !res.error ? res.data : null;
@@ -1535,7 +1546,8 @@
               .order('scheduled_at', { ascending: false }).limit(PROD_MAX);
           }).catch(function (e) { return { error: { message: errText(e) } }; }),
           // 13/10 (Axel) : rythme RÉEL = reels publiés sur Instagram, moyenne des 7 derniers jours complets (rpc factory_ig_rhythm)
-          Promise.resolve().then(function () { return sb.rpc('factory_ig_rhythm'); }).catch(function (e) { return { error: { message: errText(e) } }; })
+          Promise.resolve().then(function () { return sb.rpc('factory_ig_rhythm'); }).catch(function (e) { return { error: { message: errText(e) } }; }),
+          Promise.resolve().then(function () { return sb.from('factory_capacite').select('data,computed_at').eq('id', 'usine').maybeSingle(); }).catch(function (e) { return { error: { message: errText(e) } }; })
         ]);
         var rq = r[2], missing = false;
         if (noClassifiedCol(rq)) {   // migration 20260925210000 pas encore appliquée : tout est lu, « Classer » attend la colonne
@@ -1546,6 +1558,7 @@
         patch = { state: 'ready', kind: null, error: null,
           data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(rq, 'factory_qc'), normStats(r[3]), Date.now(), missing, postedVfs(r[4]), kitTodoOf(r[4]), kitVfsOf(r[4])) };
         patch.data.qc.ig7 = igRhythm(r[5]);
+        patch.data.capUsine = capUsine(r[6]);
       } catch (e) {
         patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
         if (e.kind && e.kind !== 'http' && e.kind !== 'error') patch.data = null;   // réseau ou 500 : chiffres précédents gardés, datés

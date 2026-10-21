@@ -177,5 +177,9 @@ if rm: storage_rm(rm)
 if any(s == 'open' for s in ms.values()):
     r = sh_borne(['python3', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repartir.py'), '--go'], 900)
     print((r.stdout or '') + (r.stderr or '')[-400:])
+# Axel 21/10 : capacité réelle recalculée pour le tableau de bord (factory_capacite) — un échec ne bloque rien
+try:
+    from capacite import recalculer; recalculer()
+except Exception as e: print('capacité non recalculée :', str(e)[:200])
 for v, e in KO: print('✗', v, e)
 sys.exit(1 if KO else 0)
