@@ -443,7 +443,8 @@
       var K = o.em || 1;
       var lines = [];
       for (var si = 0; si < segs.length; si++) { var part = wrap(segs[si], size, (colW - 2 * padX) / K); if (!part) { lines = null; break; } lines = lines.concat(part); }
-      if (!lines || lines.length > 6) return null;
+      // Axel 21/10 (fond vert) : « le texte choc fait 2 lignes maximum, sinon l'écran est trop chargé » → o.maxLines
+      if (!lines || lines.length > Math.min(6, o.maxLines || 6)) return null;
       var tw = 0; lines.forEach(function (l) { tw = Math.max(tw, textEm(l) * size * K); });
       var w = Math.min(colW, Math.ceil(tw * 1.06) + 2 * padX), h = lines.length * (lineH + 2 * padY);
       var x = col.align === 'center' ? Math.round((col.left + col.right) / 2 - w / 2) : col.left;
