@@ -233,15 +233,27 @@
   // Oublie la session locale de la page SANS passer par supabase-js (son verrou peut être celui qui bloque) puis
   // affiche l'écran de connexion.
   function forgetSession(msg) {
-    try { localStorage.removeItem(CF_STORAGE_KEY); localStorage.removeItem(CF_STORAGE_KEY + '-user'); localStorage.removeItem(CF_STORAGE_KEY + '-code-verifier'); } catch (e) { /* stockage indisponible */ }
+    try { localStorage.removeItem('cf-access-ok'); localStorage.removeItem(CF_STORAGE_KEY); localStorage.removeItem(CF_STORAGE_KEY + '-user'); localStorage.removeItem(CF_STORAGE_KEY + '-code-verifier'); } catch (e) { /* stockage indisponible */ }
     gateSeq += 1; CF.user = null; resetData();
     setStatus('auth', msg);
   }
 
   // ── contrôle d'accès : factory_access() (RPC légère dédiée, migration 20260924150000) ──
+  // 21/10 (Axel : « ça fait toujours ça au lieu d'actualiser la page ») : le contrôle d'accès ne sert qu'à afficher « Accès
+  // réservé » — les données restent protégées par la base (RLS owner / developer). Une fois l'accès validé pour ce compte, la
+  // page s'ouvre DIRECTEMENT aux actualisations suivantes (7 jours) et le contrôle repasse en arrière-plan : refusé → « Accès
+  // réservé », session expirée → connexion, serveur lent → rien ne bouge.
+  var ACCESS_KEY = 'cf-access-ok', ACCESS_TTL = 7 * 86400000;
+  function accessCached(uid) {
+    try { var a = JSON.parse(localStorage.getItem(ACCESS_KEY) || 'null'); return !!(a && a.u === uid && Date.now() - a.t < ACCESS_TTL); } catch (e) { return false; }
+  }
+  function accessRemember(uid, ok) {
+    try { if (ok) localStorage.setItem(ACCESS_KEY, JSON.stringify({ u: uid, t: Date.now() })); else localStorage.removeItem(ACCESS_KEY); } catch (e) { /* stockage indisponible */ }
+  }
   function runGate() {
-    var my = ++gateSeq, ep = epoch;
-    setStatus('loading');
+    var my = ++gateSeq, ep = epoch, uid = CF.user && CF.user.id, quick = !!uid && accessCached(uid);
+    if (quick) { setStatus('ready'); loadAccounts(); }
+    else setStatus('loading');
     logNet('rpc factory_access');
     var deadline = function (p, ms) { return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej({ message: 'délai dépassé (' + Math.round(ms / 1000) + ' s)' }); }, ms); })]); };
     return Promise.resolve()
@@ -257,22 +269,27 @@
         var err = res && res.error, d = res && res.data;
         if (err) {
           var code = String(err.code || ''), st = res.status;
-          if (code === '42501' || st === 403) return setStatus('forbidden');
+          if (code === '42501' || st === 403) { accessRemember(uid, false); return setStatus('forbidden'); }
           if (st === 401 || code === 'PGRST301' || code === 'PGRST303') {
+            accessRemember(uid, false);
             CF.user = null;
             resetData();
             return setStatus('auth', 'Session expirée : reconnecte-toi.');
           }
-          return setStatus('error', errText(err));
+          return quick ? undefined : setStatus('error', errText(err));
         }
         if (d && typeof d === 'object' && !Array.isArray(d) && d.error) {
-          return d.error === 'forbidden' ? setStatus('forbidden') : setStatus('error', 'factory_access : ' + String(d.error));
+          if (d.error === 'forbidden') { accessRemember(uid, false); return setStatus('forbidden'); }
+          return quick ? undefined : setStatus('error', 'factory_access : ' + String(d.error));
         }
-        if (d == null) return setStatus('error', 'factory_access : réponse vide');
+        if (d == null) return quick ? undefined : setStatus('error', 'factory_access : réponse vide');
+        accessRemember(uid, true);
+        if (quick) return;   // page déjà ouverte
         setStatus('ready');
         loadAccounts();
       }, function (e) {
         if (my !== gateSeq || ep !== epoch) return;
+        if (quick) return;   // page déjà ouverte : un contrôle lent en arrière-plan ne la referme pas
         var msg = errText(e);
         if (!/délai/.test(msg)) return setStatus('error', msg);
         // 11/10 (Axel : « que ça me demande de me connecter directement ») : session bloquée → on l'oublie et on
