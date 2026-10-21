@@ -53,7 +53,9 @@ function pronunciation(line) {
 // est le plus petit cran kie (4/6/8/10 s) qui tient à ~3 mots/s, et le débit demandé = la phrase remplit tout le clip
 // moins une demi-seconde de fin. L'accélération x1,10 / x1,15 se fait ensuite au dérush, comme avant.
 const nbMots = line => String(line).replace(/[«»"'’.,!?;:…-]/g, ' ').split(/\s+/).filter(Boolean).length;
-export function dureeConseillee(line) { const n = nbMots(line); return [4, 6, 8, 10].find(d => n / 3.0 + 0.7 <= d) || 10; }
+// Axel 21/10 (CTA A6 café, 22 mots en 10 s : « pourquoi t'as mis 10 secondes, fallait mettre moins ») : la phrase était dite en
+// ~6 s et le moteur a redit « je t'envoie le lien » pour remplir → au cran limite, on prend le PLUS COURT (~3,5 mots/s + 0,6 s ; mesuré ~3,9 mots/s)
+export function dureeConseillee(line) { const n = nbMots(line); return [4, 6, 8, 10].find(d => n / 3.5 + 0.6 <= d) || 10; }
 function delivery(line, dur) {
   const n = nbMots(line), rate = Math.max(2.0, Math.min(3.6, n / Math.max(1, dur - 0.6)));
   return `DELIVERY: the line fills the WHOLE clip — about ${rate.toFixed(1)} words per second, so the last word lands about half a second before the end of the ${dur}-second clip; confident, fluid and well articulated like a charismatic content creator, energetic conversational rhythm, every word crisp and clear, no dead air between words.`;
