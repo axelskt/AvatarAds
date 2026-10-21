@@ -86,11 +86,14 @@ def prep(it, tag):
         hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
         h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
         d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
-        out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-vo.mp4'
-        subprocess.run(['python3', 'usine/voix-off-mc.py', h, tx, vis], cwd=REPO, check=True, capture_output=True)
-        cmd = ['node', 'usine/build.mjs', vis, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--avant-apres', '--medaillon', '520,450,405,720',
+        out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-vo.mp4'; hv = out[:-4] + '-voix.mp4'
+        # Axel 21/10 (VF-0854 « il parle trop lentement ») : la voix est accélérée ×1,10 (hauteur gardée) dans ce format
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', h, '-filter_complex', '[0:v]setpts=PTS/1.10[v];[0:a]atempo=1.10[a]', '-map', '[v]', '-map', '[a]',
+                        '-c:v', 'libx264', '-crf', '17', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', hv], check=True)
+        subprocess.run(['python3', 'usine/voix-off-mc.py', hv, tx, vis], cwd=REPO, check=True, capture_output=True)
+        cmd = ['node', 'usine/build.mjs', vis, d, out, 'auto', hv, c, '--voice', 'omni', '--format', 'F03', '--avant-apres', '--medaillon', '520,450,405,720',
                '--subs-style', 'auto', '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
-        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, vo=tx, vis=vis)
+        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, vo=tx, vis=vis, hv=hv)
     react, demo = it['react'], it['demo']
     rm = bricks[react]['meta']; H = float(rm.get('duration_s') or 3)
     r = get(rm['media'], os.path.basename(rm['media'])); d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
@@ -122,7 +125,7 @@ for si in range(S['serie'], len(S['series'])):
                 name, T, zone = publish(j, vf); S['next'] += 1
                 S['ok'].append({'vf': vf, 'name': name, 'serie': si + 1}); log('✓', name, T, zone)
             except Exception as e: log('✗ dépôt', j['it'], e); S['fail'].append({'it': j['it'], 'err': str(e)[:300]})
-            for x_ in (j['out'] + '.log', j.get('vis')):
+            for x_ in (j['out'] + '.log', j.get('vis'), j.get('hv')):
                 try:
                     if x_: os.remove(x_)
                 except OSError: pass

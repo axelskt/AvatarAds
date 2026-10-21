@@ -82,18 +82,28 @@ while (M.length < +nM && g2++ < 200) {
   if (!free.length) { reactUse[r] = 5; continue }
   const d = pick(free, 1)[0]; usedF05.add(r + '|' + d); reactUse[r] = (reactUse[r] || 0) + 1; M.push({ k: 'm', react: r, demo: d })
 }
-// ── Voix off Motion Control (Axel 21/10) : la VOIX d'une prise Omni (hook qui va avec la démo motion control), à l'image le
-//    résultat TX-M en plein écran + l'original en médaillon (usine/voix-off-mc.py), puis C-MC-01 et le CTA ; 7 fois max par
-//    voix (photo × hook) dans CE format, compté à part du plafond des hooks parlés ; paires TX-M01 / M02 / M04 en rotation ──
-const V = [], NVO = +(process.env.VOIX_OFF || 0), MCD = by['C-MC-01']
-if (NVO && MCD) {
-  const voUse = {}; let txi = 0
-  for (const q of X.qc) { const c = q.c || {}; if (c.voix_off) { txi++; if (q.s !== 'refused') voUse[c.photo + '|' + c.hook] = (voUse[c.photo + '|' + c.hook] || 0) + 1 } }
-  const TXS = ['TX-M01', 'TX-M02', 'TX-M04']
-  const cands = vars.filter(v => COH.pairLevel(by[v.b], MCD) === 'ok' && (voUse[v.a + '|' + v.b] || 0) < CAP_HOOK)
-    .sort((a, b) => (voUse[a.a + '|' + a.b] || 0) - (voUse[b.a + '|' + b.b] || 0) + (rnd() - 0.5) * 0.8)
-  const seen = new Set()
-  for (const v of cands) { if (V.length >= NVO) break; const k = v.a + '|' + v.b; if (seen.has(k)) continue; seen.add(k)
-    V.push({ k: 'v', photo: v.a, hook: v.b, demo: 'C-MC-01', tx: TXS[txi++ % TXS.length] }) }
+// ── Voix off (Axel 21/10) : la VOIX d'une prise Omni, à l'image le résultat d'une transformation en plein écran + l'original en
+//    médaillon (usine/voix-off-mc.py), puis la démo du même module et le CTA. Motion Control (TX-M → C-MC-01) et Omni (TX-O →
+//    une démo Omni) en alternance. Plafonds : 7 fois max par VOIX (photo × hook) dans ce format — compté à part des parlées —
+//    et 7 fois max par TRANSFORMATION en plein écran. ──
+const V = [], NVO = +(process.env.VOIX_OFF || 0)
+if (NVO) {
+  const voUse = {}, txUse = {}
+  for (const q of X.qc) { const c = q.c || {}; if (c.voix_off && q.s !== 'refused') { voUse[c.photo + '|' + c.hook] = (voUse[c.photo + '|' + c.hook] || 0) + 1; txUse[c.voix_off] = (txUse[c.voix_off] || 0) + 1 } }
+  const FAMS = [{ tx: ['TX-M01', 'TX-M02', 'TX-M04'], demos: ['C-MC-01'] },
+    { tx: ['TX-O02a', 'TX-O02b', 'TX-O02c', 'TX-O06', 'TX-O10', 'TX-O11', 'TX-O12', 'TX-O12b'], demos: demos.filter(d => /^C-OMNI-/.test(d.id)).map(d => d.id) }]
+  let f = 0, guardV = 0
+  while (V.length < NVO && guardV++ < NVO * 4) {
+    const F = FAMS[f++ % FAMS.length]
+    const tx = F.tx.filter(t => (txUse[t] || 0) < CAP_HOOK).sort((a, b) => (txUse[a] || 0) - (txUse[b] || 0))[0]
+    if (!tx) continue
+    const demo = F.demos.sort((a, b) => (demoUse[a] || 0) - (demoUse[b] || 0))[0]
+    if (!demo || !by[demo]) continue
+    const cand = vars.filter(v => COH.pairLevel(by[v.b], by[demo]) === 'ok' && (voUse[v.a + '|' + v.b] || 0) < CAP_HOOK && !V.some(x => x.photo === v.a && x.hook === v.b))
+      .sort((a, b) => (voUse[a.a + '|' + a.b] || 0) - (voUse[b.a + '|' + b.b] || 0) + (rnd() - 0.5) * 0.8)[0]
+    if (!cand) continue
+    V.push({ k: 'v', photo: cand.a, hook: cand.b, demo, tx })
+    txUse[tx] = (txUse[tx] || 0) + 1; voUse[cand.a + '|' + cand.b] = (voUse[cand.a + '|' + cand.b] || 0) + 1; demoUse[demo] = (demoUse[demo] || 0) + 1
+  }
 }
 console.log(JSON.stringify({ O, M, V }))
