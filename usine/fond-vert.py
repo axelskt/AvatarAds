@@ -22,24 +22,27 @@ try:
     subprocess.run(['python3', os.path.join(HERE, 'voix-off-mc.py'), take, tx, bg, '--med', '600,440,338,600'], check=True, capture_output=True)
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', take, '-vf', 'fps=25', os.path.join(W, '%04d.png')], check=True)
     subprocess.run([BIN] + sorted(glob.glob(os.path.join(W, '[0-9][0-9][0-9][0-9].png'))), check=True, capture_output=True)
-    ease = lambda a, d: "(1-pow(1-min(max((t-%g)/%g\\,0)\\,1)\\,3))" % (a, d)
-    if LARGE:
-        # Axel 21/10 (« plus de mouvement, partout où il y a des traits rouges ») : l'avatar parcourt la zone gauche / centre / bas
-        # sous le médaillon — entrée par la gauche, puis haut-gauche, centre, bas-droite, retour — glissés lissés (smoothstep)
-        K = [(0, -520, 586), (0.35, 30, 586), (0.27 * T, 70, 470), (0.5 * T, 300, 540), (0.75 * T, 470, 586), (T, 150, 520)]
-        def path(i):
-            e = '%d' % K[-1][i]
-            for (t0, *a), (t1, *b) in reversed(list(zip(K, K[1:]))):
-                u = 'min(max((t-%.3f)/%.3f\\,0)\\,1)' % (t0, max(0.05, t1 - t0))
-                e = 'if(lt(t\\,%.3f)\\,%d+%d*(%s*%s*(3-2*%s))\\,%s)' % (t1, a[i - 1], b[i - 1] - a[i - 1], u, u, u, e)
-            return e
-        x, y = path(1), path(2)
-    else:
-        x = "if(lt(t\\,0.35)\\,-520+550*%s\\,30+150*%s)" % (ease(0, 0.35), ease(M, 0.5))
-        y = "1450-h-60*%s" % ease(M, 0.5)
+    # Axel 21/10 (essai 3) : l'avatar est LÀ dès la 1re image (plus d'entrée hors champ), il bouge comme une vraie personne —
+    # dérives lentes, lissées (smootherstep), petit flottement qui s'éteint —, il RÉTRÉCIT en s'approchant du médaillon (jamais
+    # devant lui) et reste IMMOBILE la dernière seconde. Pied ancré à la ligne de la zone sûre (1450) : on anime x, la hauteur
+    # (montée) et la taille. Clés en fraction de la partie animée (T − 1 s) : (fraction, x, montée, échelle).
+    A = max(0.8, T - 1.0)
+    K = [(0, 30, 0, 1.0), (0.35, 110, 70, 0.92), (0.7, 190, 25, 0.80), (1.0, 205, 0, 0.76)] if not LARGE else \
+        [(0, 30, 0, 1.0), (0.25, 90, 90, 0.95), (0.5, 160, 30, 0.84), (0.75, 215, 60, 0.76), (1.0, 200, 0, 0.74)]
+    def path(i):
+        e = '%g' % K[-1][i]
+        for (f0, *a), (f1, *b) in reversed(list(zip(K, K[1:]))):
+            t0, t1 = f0 * A, f1 * A
+            u = 'min(max((t-%.3f)/%.3f\\,0)\\,1)' % (t0, max(0.05, t1 - t0))
+            e = 'if(lt(t\\,%.3f)\\,%g+%g*(%s*%s*%s*(%s*(%s*6-15)+10))\\,%s)' % (t1, a[i - 1], b[i - 1] - a[i - 1], u, u, u, u, u, e)
+        return e
+    S_ = path(3)
+    flot = '*max(0\\,1-t/%.3f)' % A   # le flottement s'éteint avant la dernière seconde
+    x = '%s+6*sin(2.3*t)%s' % (path(1), flot)
+    y = '1450-h-(%s)-7*sin(1.7*t+0.8)%s' % (path(2), flot)
     fc = ("[0:v]fps=25,setsar=1[bg];[2:v]format=gray,boxblur=2:1,geq=lum='lum(X,Y)*min(1,(H-Y)/120)'[m];"
-          "[1:v][m]alphamerge,scale=486:864,tpad=stop_mode=clone:stop_duration=1[av];"
-          "[bg][av]overlay=x='%s':y='%s':eval=frame:shortest=1,format=yuv420p[v]" % (x, y))
+          "[1:v][m]alphamerge,scale=486:864,tpad=stop_mode=clone:stop_duration=1,scale=w='trunc(486*(%s)/2)*2':h=-2:eval=frame[av];"
+          "[bg][av]overlay=x='%s':y='%s':eval=frame:shortest=1,format=yuv420p[v]" % (S_, x, y))
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', bg, '-framerate', '25', '-i', os.path.join(W, '%04d.png'), '-framerate', '25',
                     '-i', os.path.join(W, '%04d-m.png'), '-filter_complex', fc, '-map', '[v]', '-t', '%.2f' % (T + 1), '-an',
                     '-c:v', 'libx264', '-crf', '17', '-pix_fmt', 'yuv420p', '-r', '25', out], check=True)
