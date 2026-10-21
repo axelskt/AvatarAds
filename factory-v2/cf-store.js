@@ -2076,7 +2076,25 @@
       if ((CF.status === 'boot' || CF.status === 'loading') && !opt.signal && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opt = Object.assign({}, opt, { signal: AbortSignal.timeout(15000) });
       return fetch(input, opt).finally(done);
     }
-    var waits = [5000, 8000, 0];   // 0 = dernier essai sans limite (la relance ne crée jamais d'échec de plus)
+    // 21/10 (Axel : « à chaque fois que j'actualise ça fait ça ») : le contrôle d'accès répond en 66 ms côté serveur mais la
+    // 1re requête partait encore dans une connexion morte (rien dans les journaux) → 5 s d'attente à CHAQUE actualisation.
+    // Lectures et RPC de lecture : requête DOUBLÉE au lieu d'attendre — sans réponse à 1,2 s, une 2e part en parallèle sur une
+    // connexion neuve (3e à 4 s), la 1re réponse gagne et les autres sont annulées (appels sans effet, rejouables sans risque).
+    // La session (/auth/v1/…) garde la relance une par une : jamais deux renouvellements du même jeton en même temps.
+    if (!/^\/auth\/v1\//.test(path)) return new Promise(function (res, rej) {
+      var acs = [], timers = [], n = 0, fails = 0, over = false;
+      var launch = function () {
+        if (over) return;
+        var ac = new AbortController(); acs.push(ac); n += 1; if (n > 1) logNet(path + ' doublée (connexion muette)');
+        fetch(input, Object.assign({}, opt, { signal: ac.signal })).then(function (r) {
+          if (over) return; over = true; timers.forEach(clearTimeout); acs.forEach(function (a) { if (a !== ac) a.abort(); }); res(r);
+        }, function (e) {
+          fails += 1; if (over || fails < n || n < 3) return; over = true; timers.forEach(clearTimeout); rej(e);
+        });
+      };
+      launch(); timers.push(setTimeout(launch, 1200), setTimeout(launch, 4000));
+    }).finally(done);
+    var waits = [3000, 6000, 0];   // 0 = dernier essai sans limite (la relance ne crée jamais d'échec de plus)
     var attempt = function (i) {
       var ac = new AbortController(), t = waits[i] ? setTimeout(function () { ac.abort(); }, waits[i]) : null;
       return fetch(input, Object.assign({}, opt, { signal: ac.signal })).then(function (r) { clearTimeout(t); return r; }, function (e) {
