@@ -5955,7 +5955,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-19-0115'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-21-2150'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -12085,12 +12085,16 @@ async function generateImage(){
   const count = _imgSelectedCount || 1;
   const actualCount = count;
   // Débit crédits : low 1 · Standard 3 · Max 5, multiplié par le nombre d'images
-  creditsFlowBegin();  // #122 : remboursable si la génération échoue
-  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()) * actualCount, 'image'))) return;
-
+  // 21/10 (Axel : « ça me met génération en cours et pas l'animation ») : le débit peut mettre du temps (connexion lente
+  // de Safari) et rien ne bougeait à l'écran → 2e clic → « déjà en cours ». Le bouton tourne et se bloque DÈS le clic,
+  // puis revient tel quel si le débit échoue.
   const btn = document.getElementById('imgGenBtn');
   const baseLabel = _imgGenBtnHTML();
+  if(btn.disabled) return;   // déjà lancé (double clic)
   btn.disabled = true; btn.style.opacity = '0.75';
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Préparation…';
+  creditsFlowBegin();  // #122 : remboursable si la génération échoue
+  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()) * actualCount, 'image'))){ btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = baseLabel; return; }
 
   const singleWrap = document.getElementById('imgResult');
   const multiWrap  = document.getElementById('imgResultMulti');
