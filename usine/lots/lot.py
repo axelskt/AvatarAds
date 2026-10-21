@@ -68,6 +68,20 @@ def cta_for(photo, demo):
     KUSE[(av, k)] = KUSE.get((av, k), 0) + 1; LKUSE[(av, k)] = LKUSE.get((av, k), 0) + 1
     pool = [(k, f) for a, kk, f in omni if kk == k and a == photo] or [(k, f) for a, kk, f in omni if kk == k]
     return pool[(i // len(kinds)) % len(pool)]
+# 21/10 : la voix accélérée est un NOUVEAU fichier → build.mjs relançait Whisper (6 en parallèle : whisper-cli plantait sur
+# Metal). Ses mots = ceux, déjà en cache, de la prise d'origine, temps divisés par la vitesse (même clé que build.mjs fileKey).
+WORDS = os.path.join(os.path.dirname(WORK), 'words')
+def file_key(f):
+    import hashlib
+    n = os.path.getsize(f); k = min(n, 4 << 20); h = hashlib.sha1()
+    with open(f, 'rb') as fh:
+        h.update(fh.read(k)); fh.seek(max(0, n - k)); h.update(fh.read(k))
+    h.update(str(n).encode()); return h.hexdigest()[:16]
+def mots_acceleres(src, dst, v):
+    try:
+        w = json.load(open(os.path.join(WORDS, file_key(src) + '.json')))
+        json.dump([dict(x, start=round(x['start'] / v, 3), end=round(x['end'] / v, 3)) for x in w], open(os.path.join(WORDS, file_key(dst) + '.json'), 'w'), ensure_ascii=False)
+    except (OSError, ValueError, KeyError): pass   # pas de mots en cache pour la prise : build.mjs transcrira
 prev_th = [None]
 def prep(it, tag):
     if it['k'] == 'o':
@@ -91,6 +105,7 @@ def prep(it, tag):
         # Axel 21/10 (VF-0854 « il parle trop lentement ») : la voix est accélérée ×1,10 (hauteur gardée) dans ce format
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', h, '-filter_complex', '[0:v]setpts=PTS/1.10[v];[0:a]atempo=1.10[a]', '-map', '[v]', '-map', '[a]',
                         '-c:v', 'libx264', '-crf', '17', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', hv], check=True)
+        mots_acceleres(h, hv, 1.10)
         subprocess.run(['python3', 'usine/voix-off-mc.py', hv, tx, vis], cwd=REPO, check=True, capture_output=True)
         cmd = ['node', 'usine/build.mjs', vis, d, out, 'auto', hv, c, '--voice', 'omni', '--format', 'F03', '--avant-apres', '--medaillon', '520,450,405,720',
                '--subs-style', 'auto', '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
