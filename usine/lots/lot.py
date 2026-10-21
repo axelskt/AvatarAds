@@ -56,7 +56,8 @@ for x in QC:
         KUSE[(c_['photo'].split('-')[0], c_['cta'])] = KUSE.get((c_['photo'].split('-')[0], c_['cta']), 0) + 1
 def cta_for(photo, demo):
     av = photo.split('-')[0]; claude = demo.startswith('C-MCP')
-    omni = [(a, k, f) for (a, k, fm), f in VAR.items() if fm == 'omni' and k.startswith('CTA-') and a.split('-')[0] == av
+    # 21/10 : catégorie AUTRE = une PERSONNE différente par photo → son CTA à elle seulement (jamais celui d'une autre photo)
+    omni = [(a, k, f) for (a, k, fm), f in VAR.items() if fm == 'omni' and k.startswith('CTA-') and a.split('-')[0] == av and (av != 'AUTRE' or a == photo)
             and (bricks.get(k) or {}).get('status') == 'ready' and (k == 'CTA-CLAUDE') == claude]
     kinds = sorted({k for a, k, f in omni})
     if not kinds: raise RuntimeError('aucun CTA pour ' + photo)
