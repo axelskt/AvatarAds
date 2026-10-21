@@ -29,7 +29,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--medaillon', '--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut'];
+const VAL_FLAGS = ['--medaillon', '--medaillon-libre', '--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -621,7 +621,7 @@ if (FMT.hasChoc(format)) {
   // le texte choc se pose SUR le haut du médaillon (il le touche et le recouvre un peu), au lieu d'être repoussé dessous
   const MED = OPT.medaillon ? String(OPT.medaillon).split(',').map(Number) : null;
   const lay = { center: true, em: chocStyle === 'CS11' ? 0.78 : 1, faces: fz.faces, avantApres: avantApres && !MED, sizes: OPT['choc-size'] ? [parseInt(OPT['choc-size'], 10)] : null,
-    reserved: (format.subs !== 'aucun' ? [{ x: 0, y: 1310, w: 1080, h: 200, why: 'bande des sous-titres + 60 px de marge' }] : []).concat(MED ? [{ x: 0, y: 0, w: 1080, h: MED[1] + 12, why: 'voix off : le texte se pose SUR le haut du médaillon (Axel 21/10), jamais au-dessus' }] : []) };   // 11/10 (A3, VF-0109) : à 1370 le texte du milieu se collait aux sous-titres
+    reserved: (format.subs !== 'aucun' ? [{ x: 0, y: 1310, w: 1080, h: 200, why: 'bande des sous-titres + 60 px de marge' }] : []).concat(MED ? [OPT['medaillon-libre'] ? { x: MED[0] - 20, y: MED[1] - 20, w: MED[2] + 40, h: MED[3] + 40, why: 'fond vert : texte choc AU-DESSUS du petit médaillon (Axel 21/10)' } : { x: 0, y: 0, w: 1080, h: MED[1] + 12, why: 'voix off : le texte se pose SUR le haut du médaillon (Axel 21/10), jamais au-dessus' }] : []) };   // 11/10 (A3, VF-0109) : à 1370 le texte du milieu se collait aux sous-titres
   // tirage : d'abord une phrase qui tient LISIBLE (≥ 54 px, Axel 06/10 : 41-48 px trop petit), sinon n'importe laquelle qui tient
   const fitsOk = q => FMT.chocLayout(FMT.chocString(q), lay).level === 'ok';
   // Axel 19/10 (« aucune vidéo avec les logos en texte choc » sur 80) : un texte À LOGOS (TH27, TH36) est lisible par ses logos

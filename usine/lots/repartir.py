@@ -36,7 +36,7 @@ def avatar(c):
     return m.group(1) if m else None
 def account_of(c):
     a = avatar(c)
-    if c.get('voix_off'): return 'leoadsia'   # Axel 21/10 : le format voix off Motion Control part sur @leoadsia
+    if c.get('voix_off') or c.get('fond_vert'): return 'leoadsia'   # Axel 21/10 : voix off et fond vert partent sur @leoadsia
     return 'avataradss' if a == 'A3' else 'ialebd.axel' if a == 'A1' else 'leoadsia'
 def kind(c): return 'm' if c.get('format') == 'F05' else 'o'
 def unit(c): return c.get('reaction') if kind(c) == 'm' else c.get('photo')
@@ -124,7 +124,7 @@ op = bx_q("select vf from missions where status='open' order by vf")
 op = [r['vf'] for r in op if VF_RE.match(r['vf'] or '')]
 inkit = {h['vf'] for h in held} | {r['vf'] for r in q("select combo->>'vf' vf from factory_posts where status in ('todo','scheduled','published') and combo ? 'vf'")}
 # Axel 21/10 : le format voix off Motion Control part sur @leoadsia (pas aux diffuseurs) → toujours repris du stock
-vo = {r['template'] for i in range(0, len(op), 200) for r in q("select template from factory_qc where template in ('%s') and brick_combo ? 'voix_off'" % "','".join(op[i:i + 200]))} if op else set()
+vo = {r['template'] for i in range(0, len(op), 200) for r in q("select template from factory_qc where template in ('%s') and (brick_combo ? 'voix_off' or brick_combo ? 'fond_vert')" % "','".join(op[i:i + 200]))} if op else set()
 take = [vf for vf in op if (vf in vo or vf in op[:max(0, len(op) - BX_RESERVE)]) and vf not in inkit][::-1]
 log('stock BloxAI : %d ouvertes, %d gardées pour les diffuseurs, %d à prendre' % (len(op), len(op) - len(take), len(take)))
 qc = {}

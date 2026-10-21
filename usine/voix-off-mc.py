@@ -11,6 +11,8 @@
 import os, subprocess, sys
 
 voice, tx, out = sys.argv[1], sys.argv[2], sys.argv[3]
+# --med x,y,w,h : autre médaillon (format fond vert, Axel 21/10 : « bien plus petit », 338×600 à (600, 440))
+MEDARG = next((sys.argv[i + 1] for i, x in enumerate(sys.argv) if x == '--med' and i + 1 < len(sys.argv)), None)
 MC, OM = os.path.expanduser('~/Downloads/Vidéo/Motion Control'), os.path.expanduser('~/Downloads/Vidéo/OMNI')
 # 21/10 (Axel : « lance les TX et TX-M ») : même format avec les transformations OMNI — (dossier, avant, après, départ)
 PAIRS = {'TX-M01': (MC, 'VIdéo 1.mp4', 'Vidéo 1.1.mp4', 1.0), 'TX-M02': (MC, 'Vidéo 2.mp4', 'Vidéo 2.1.mp4', 1.0), 'TX-M04': (MC, 'Vidéo 4.mp4', 'Vidéo 4.1.mp4', 0.3),
@@ -22,6 +24,7 @@ CX = {'TX-M01': 0.45}.get(tx, 0.5)   # centre du recadrage plein écran (TX-M01 
 dur = lambda f: float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f], capture_output=True, text=True).stdout)
 D = dur(voice) + 1.0
 R, W, H, X, Y = 28, 405, 720, 520, 450   # 21/10 (Axel) : médaillon 200 px plus bas que les HK → le texte choc tient en haut
+if MEDARG: X, Y, W, H = map(int, MEDARG.split(',')); R = 24
 # coins arrondis : alpha nul hors du rectangle aux coins de rayon R (même masque pour le médaillon et son ombre)
 mask = "a='if(gt(pow(max(0,abs(X-%g)-%g),2)+pow(max(0,abs(Y-%g)-%g),2),%d),0,255)'" % (W / 2, W / 2 - R, H / 2, H / 2 - R, R * R)
 fc = ("[0:v]scale=1134:2016:force_original_aspect_ratio=increase:flags=lanczos,crop=1134:2016:'max(0\\,min(iw-1134\\,iw*%.2f-567))':0,"   # 21/10 : source paysage (TX-M01) ou 3:4 → plein écran d'abord
