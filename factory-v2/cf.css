@@ -1330,11 +1330,10 @@ i.is-gap { background: var(--cf-ink); }
 .cf-cap .cf-capmodes-n { flex-wrap: wrap; row-gap: 0; }
 .cf-cap .cf-capmodes-n .cf-meta { font-weight: 400; font-size: 11px; }
 .cf-cap .cf-capmode-v b { font-size: 15px; }
-.cf-capall { margin-top: 10px; border-top: 1px solid var(--cf-line, rgba(0,0,0,.08)); padding-top: 10px; display: grid; gap: 4px; }
-.cf-capall-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; font-weight: 600; color: var(--cf-ink); }
-.cf-capall-h b { font-size: 18px; font-variant-numeric: tabular-nums; }
-.cf-capall-s { font-family: var(--cf-mono); font-size: 11.5px; color: var(--cf-ink-3); overflow-wrap: anywhere; }
-.cf-capall-s b { color: var(--cf-ink); }
+.cf-capall { margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cf-capall > div { background: var(--cf-tile-2); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cf-capall b { font-size: 18px; font-weight: 700; color: var(--cf-ink); font-variant-numeric: tabular-nums; }
+.cf-capall span { font-size: 12px; color: var(--cf-ink-3); }
 .cf-net-cols > .cf-net-more { grid-column: 1 / -1; justify-self: center; }
 .cf-stiles-b { margin-top: 4px; }
 .cf-stodo { gap: 4px; }

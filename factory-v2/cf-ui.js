@@ -1543,26 +1543,19 @@
   // différente à chaque fois, H85 / H89 sans démo Omni, fond vert 7 par transformation et par voix, H14 jamais en fond vert,
   // H60 Motion Control seul, texte + musique 5 démos par réaction). Jauge = possibles maintenant / possibles si toutes les
   // briques sont générées ; dessous, les prises à générer et leur coût estimé.
-  function capUsineHTML(U) {
-    var head = chead('Vidéos possibles', 'avec les règles de l’usine (7 max par photo × hook, démos et transformations)');
+  function capUsineHTML(U) {   // Axel 21/10 : « un truc clean, avec le moins de texte possible »
     var pct = U.all.total ? U.now.total / U.all.total * 100 : null, arc = 'M10 62 A50 50 0 0 1 110 62';
     var gauge = '<div class="cf-gauge"><svg viewBox="0 0 120 68" aria-hidden="true" focusable="false"><path d="' + arc + '" class="cf-gauge-bg"/>'
       + (pct > 0 ? '<path d="' + arc + '" class="cf-gauge-fg" pathLength="100" stroke-dasharray="' + Math.max(1.5, pct).toFixed(1) + ' 100"/>' : '') + '</svg>'
-      + '<b class="cf-gauge-v">' + esc(fInt(U.now.total)) + '</b></div>'
-      + '<div class="cf-gauge-l">vidéos possibles <b>maintenant</b>, avec les prises déjà générées</div>';
-    var row = function (k, cls, name, desc, v) {
-      return '<div class="cf-capmode" data-mode-k="' + k + '"><span class="cf-capmodes-n"><i class="' + cls + '"></i>' + esc(name)
-        + '<span class="cf-meta"> · ' + esc(desc) + '</span></span><span class="cf-capmode-v"><b>' + esc(fInt(v)) + '</b></span></div>';
+      + '<b class="cf-gauge-v">' + esc(fInt(U.now.total)) + '</b></div><div class="cf-gauge-l">maintenant</div>';
+    var row = function (k, cls, name, v) {
+      return '<div class="cf-capmode" data-mode-k="' + k + '"><span class="cf-capmodes-n"><i class="' + cls + '"></i>' + esc(name) + '</span><span class="cf-capmode-v"><b>' + esc(fInt(v)) + '</b></span></div>';
     };
-    var fvDesc = 'avatar détouré devant une transformation' + (U.fvMc != null ? ' (' + fInt(U.fvMc) + ' Motion Control, ' + fInt(U.fvOmni) + ' Omni)' : '');
-    var modes = '<div class="cf-capmodes">' + row('omni', 'is-omni', 'Omni', 'hook parlé + démo + CTA', U.now.omni)
-      + row('fv', 'is-aa', 'Fond vert', fvDesc, U.now.fond_vert)
-      + row('muet', '', 'Texte + musique', 'réaction + texte choc + démo muette', U.now.texte_musique) + '</div>';
-    var all = '<div class="cf-capall"><div class="cf-capall-h"><span>Si toutes les briques sont générées</span><b>' + esc(fInt(U.all.total)) + '</b></div>'
-      + '<div class="cf-capall-s">' + esc(fInt(U.prises.n) + ' ' + plural(U.prises.n, 'prise') + ' Omni à générer (chaque hook sur chaque photo active)') + ' · <b>≈' + NB + esc(fInt(Math.round(U.prises.usd))) + NB + '$</b></div>'
-      + (U.txOff.length ? '<div class="cf-capall-s">' + esc(U.txOff.length + ' transformations en base pas encore branchées au fond vert (' + U.txOff.join(', ') + ') : +' + fInt(U.txOff.length * U.cap) + ' vidéos') + '</div>' : '')
-      + '<div class="cf-capall-s">' + esc('Le fond vert reste limité par les transformations (' + U.cap + ' vidéos chacune) : de nouvelles démos Motion Control et Omni l’agrandissent.') + '</div></div>';
-    return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + modes + all + '</section>';
+    var modes = '<div class="cf-capmodes">' + row('omni', 'is-omni', 'Omni', U.now.omni) + row('fv', 'is-aa', 'Fond vert', U.now.fond_vert)
+      + row('muet', '', 'Texte + musique', U.now.texte_musique) + '</div>';
+    var all = '<div class="cf-capall"><div><b>' + esc(fInt(U.all.total)) + '</b><span>avec toutes les briques</span></div>'
+      + '<div><b>≈' + NB + esc(fInt(Math.round(U.prises.usd))) + NB + '$</b><span>' + esc(fInt(U.prises.n) + ' ' + plural(U.prises.n, 'prise') + ' à générer') + '</span></div></div>';
+    return '<section class="cf-card cf-cap" data-block="cap">' + chead('Vidéos possibles') + gauge + modes + all + '</section>';
   }
 
   // ── 01 · Contenu posté : nos reels par mois (publications Instagram déjà chargées) ; BloxAI = missions publiées par les diffuseurs ──
