@@ -110,6 +110,16 @@ def prep(it, tag):
         cmd = ['node', 'usine/build.mjs', vis, d, out, 'auto', hv, c, '--voice', 'omni', '--format', 'F03', '--avant-apres', '--medaillon', '520,450,405,720',
                '--subs-style', 'auto', '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
         return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, vo=tx, vis=vis, hv=hv)
+    if it['k'] == 'f':   # Axel 21/10 : FOND VERT (usine/fond-vert.py) — avatar détouré devant la transformation, voix d'origine
+        photo, hook, demo, tx = it['photo'], it['hook'], it['demo'], it['tx']
+        hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
+        h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
+        out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-fv.mp4'
+        subprocess.run(['python3', 'usine/fond-vert.py', h, tx, vis], cwd=REPO, check=True, capture_output=True)
+        cmd = ['node', 'usine/build.mjs', vis, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--avant-apres', '--medaillon', '600,440,338,600',
+               '--medaillon-libre', '1', '--subs-style', 'auto', '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
+        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, fv=tx, vis=vis)
     react, demo = it['react'], it['demo']
     rm = bricks[react]['meta']; H = float(rm.get('duration_s') or 3)
     r = get(rm['media'], os.path.basename(rm['media'])); d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))

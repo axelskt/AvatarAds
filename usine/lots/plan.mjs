@@ -27,7 +27,7 @@ const { illusMismatch } = await import(join(USINE, 'illus-demo.js'))
 const illusOk = (h, d) => !illusMismatch(ILLUS[h], d)
 const usedOmni = new Set(), usedF05 = new Set(), demoUse = {}, hookUse = {}, reactUse = {}
 for (const q of X.qc) { const c = q.c || {}
-  if (c.voice === 'omni' && !c.voix_off) { usedOmni.add([c.photo, c.hook, c.contenu].join('|')); if (q.s !== 'refused') hookUse[c.photo + '|' + c.hook] = (hookUse[c.photo + '|' + c.hook] || 0) + 1 }
+  if (c.voice === 'omni' && !c.voix_off && !c.fond_vert) { usedOmni.add([c.photo, c.hook, c.contenu].join('|')); if (q.s !== 'refused') hookUse[c.photo + '|' + c.hook] = (hookUse[c.photo + '|' + c.hook] || 0) + 1 }
   if (c.format === 'F05') { usedF05.add(c.reaction + '|' + c.contenu); if (q.s !== 'refused') reactUse[c.reaction] = (reactUse[c.reaction] || 0) + 1 }
   if (c.contenu) demoUse[c.contenu] = (demoUse[c.contenu] || 0) + 1 }
 const ready = b => b && b.status === 'ready'
@@ -86,11 +86,13 @@ while (M.length < +nM && g2++ < 200) {
 //    médaillon (usine/voix-off-mc.py), puis la démo du même module et le CTA. Motion Control (TX-M → C-MC-01) et Omni (TX-O →
 //    une démo Omni) en alternance. Plafonds : 7 fois max par VOIX (photo × hook) dans ce format — compté à part des parlées —
 //    et 7 fois max par TRANSFORMATION en plein écran. ──
-const V = [], NVO = +(process.env.VOIX_OFF || 0)
+// Axel 21/10 : le FOND VERT (avatar détouré, usine/fond-vert.py) REMPLACE la voix off — FOND_VERT=n ; mêmes règles et plafonds
+const FV = !!process.env.FOND_VERT, KEYF = FV ? 'fond_vert' : 'voix_off'
+const V = [], NVO = +(process.env.FOND_VERT || process.env.VOIX_OFF || 0)
 if (NVO) {
   const voUse = {}, txUse = {}
   const voDone = new Set()   // jamais deux fois la même voix sur la même transformation
-  for (const q of X.qc) { const c = q.c || {}; if (c.voix_off) voDone.add([c.photo, c.hook, c.voix_off].join('|')); if (c.voix_off && q.s !== 'refused') { voUse[c.photo + '|' + c.hook] = (voUse[c.photo + '|' + c.hook] || 0) + 1; txUse[c.voix_off] = (txUse[c.voix_off] || 0) + 1 } }
+  for (const q of X.qc) { const c = q.c || {}; if (c[KEYF]) voDone.add([c.photo, c.hook, c[KEYF]].join('|')); if (c[KEYF] && q.s !== 'refused') { voUse[c.photo + '|' + c.hook] = (voUse[c.photo + '|' + c.hook] || 0) + 1; txUse[c[KEYF]] = (txUse[c[KEYF]] || 0) + 1 } }
   const FAMS = [{ tx: ['TX-M01', 'TX-M02', 'TX-M04'], demos: ['C-MC-01'] },
     { tx: ['TX-O02a', 'TX-O02b', 'TX-O02c', 'TX-O06', 'TX-O10', 'TX-O11', 'TX-O12', 'TX-O12b'], demos: demos.filter(d => /^C-OMNI-/.test(d.id)).map(d => d.id) }]
   let f = 0, guardV = 0
@@ -103,7 +105,7 @@ if (NVO) {
     const cand = vars.filter(v => COH.pairLevel(by[v.b], by[demo]) === 'ok' && !(PAS_OMNI.has(v.b) && /OMNI/.test(demo)) && (voUse[v.a + '|' + v.b] || 0) < CAP_HOOK && !voDone.has([v.a, v.b, tx].join('|')) && !V.some(x => x.photo === v.a && x.hook === v.b))
       .sort((a, b) => (voUse[a.a + '|' + a.b] || 0) - (voUse[b.a + '|' + b.b] || 0) + (rnd() - 0.5) * 0.8)[0]
     if (!cand) continue
-    V.push({ k: 'v', photo: cand.a, hook: cand.b, demo, tx })
+    V.push({ k: FV ? 'f' : 'v', photo: cand.a, hook: cand.b, demo, tx })
     txUse[tx] = (txUse[tx] || 0) + 1; voUse[cand.a + '|' + cand.b] = (voUse[cand.a + '|' + cand.b] || 0) + 1; demoUse[demo] = (demoUse[demo] || 0) + 1
   }
 }
