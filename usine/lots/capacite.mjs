@@ -58,7 +58,7 @@ const hooks = B.filter(b => isHook(b.id)).map(b => b.id)
 let omniNow = 0, omniAll = 0, prises = 0, coutPrises = 0, pairesNow = 0, pairesAll = 0
 const parAvatar = {}
 for (const { id: p, av } of photos) {
-  if (!avCta.has(av) || (av === 'AUTRE' && !photoCta.has(p))) continue   // pas un seul CTA parlé pour cet avatar (AUTRE : pour cette photo) : aucune vidéo ne peut finir
+  if (!avCta.has(av === 'AUTRE' && !photoCta.has(p) ? 'A4' : av)) continue   // pas un seul CTA parlé (AUTRE sans le sien : CTA de A4, Axel 21/10) : aucune vidéo ne peut finir
   const A = parAvatar[av] = parAvatar[av] || { photos: 0, now: 0, all: 0, prises: 0 }; A.photos += 1
   for (const h of hooks) {
     const v = by[h].meta?.voices; if (Array.isArray(v) && v.length && !v.includes('omni')) continue

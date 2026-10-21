@@ -56,7 +56,9 @@ for x in QC:
         KUSE[(c_['photo'].split('-')[0], c_['cta'])] = KUSE.get((c_['photo'].split('-')[0], c_['cta']), 0) + 1
 def cta_for(photo, demo):
     av = photo.split('-')[0]; claude = demo.startswith('C-MCP')
-    # 21/10 : catégorie AUTRE = une PERSONNE différente par photo → son CTA à elle seulement (jamais celui d'une autre photo)
+    # 21/10 (Axel) : catégorie AUTRE = une personne différente par photo → son propre CTA s'il existe, sinon le CTA d'un
+    # garçon qu'on a déjà : ceux de A4 (avatar du même compte, @leoadsia) — jamais le CTA d'une AUTRE fille
+    if av == 'AUTRE' and not any(fm == 'omni' and k.startswith('CTA-') and a == photo for (a, k, fm) in VAR): av = 'A4'
     omni = [(a, k, f) for (a, k, fm), f in VAR.items() if fm == 'omni' and k.startswith('CTA-') and a.split('-')[0] == av and (av != 'AUTRE' or a == photo)
             and (bricks.get(k) or {}).get('status') == 'ready' and (k == 'CTA-CLAUDE') == claude]
     kinds = sorted({k for a, k, f in omni})
