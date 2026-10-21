@@ -36,6 +36,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .acct .n{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
 .acct .n i{width:10px;height:10px;border-radius:50%;background:var(--c)}
 .acct .m{color:var(--dim);font-size:13px}
+.acct .tt{font-size:13px;font-weight:600;opacity:.85;overflow-wrap:anywhere}
 .bar{height:6px;border-radius:99px;background:var(--soft);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .35s}
 .bulk{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0 4px;padding:12px;border-radius:var(--r);background:var(--card);border:1px solid var(--line)}
@@ -119,7 +120,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   var SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck'; // clé publishable (publique)
   var TZ = 'Europe/Paris';
-  var ACCTS = [{ id: 'avataradss', c: 'var(--acc)' }, { id: 'leoadsia', c: 'var(--a2)' }, { id: 'ialebd.axel', c: 'var(--a3)' }];   // un compte à la fois ; @ialebd.axel = A1 + A2 mélangés (Axel 06/10)
+  var ACCTS = [{ id: 'avataradss', c: 'var(--acc)', tt: ['avatarads', 'ia.axel'] }, { id: 'leoadsia', c: 'var(--a2)', tt: ['ia.axl'] }, { id: 'ialebd.axel', c: 'var(--a3)', tt: ['louisdlmn'] }];   // tt = comptes TikTok qui reprennent les mêmes vidéos (Axel 21/10)   // un compte à la fois ; @ialebd.axel = A1 + A2 mélangés (Axel 06/10)
   var DEMO = /[?&]demo=1\b/.test(location.search);   // aperçu sans base (vérification de l'écran)
 
   var IC = {
@@ -351,7 +352,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   function acctCard(A) {
     var all = mine(A.id), left = todo(A.id).length;
     return '<button type="button" class="acct" style="--c:' + A.c + '" data-act="acct" data-a="' + A.id + '" aria-pressed="' + (S.acct === A.id) + '">'
-      + '<span class="n"><i></i>@' + A.id + '</span><span class="m">' + (all.length - left) + ' / ' + all.length + ' en brouillon · ' + left + ' à préparer</span>'
+      + '<span class="n"><i></i>@' + A.id + '</span>' + (A.tt ? '<span class="tt">TikTok · ' + A.tt.map(function (h) { return '@' + h; }).join(' · ') + '</span>' : '') + '<span class="m">' + (all.length - left) + ' / ' + all.length + ' en brouillon · ' + left + ' à préparer</span>'
       + '<span class="bar"><i style="width:' + (all.length ? Math.round((all.length - left) / all.length * 100) : 0) + '%"></i></span></button>';
   }
 
