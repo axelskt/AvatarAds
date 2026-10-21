@@ -73,7 +73,7 @@ while (O.length < +nO && guard++ < 80) for (const p of photos) {
   }
 }
 // ── Texte + musique : réactions qui ont encore de la place (< 5 démos), les moins utilisées d'abord ──
-const reacts = B.filter(b => b.kind === 'reaction' && ready(b) && b.meta?.media).map(b => b.id)
+const reacts = B.filter(b => b.kind === 'reaction' && ready(b) && b.meta?.media && !b.meta?.parlee).map(b => b.id)   // 21/10 : tête choquée PARLÉE = autre format
 let g2 = 0
 while (M.length < +nM && g2++ < 200) {
   const r = reacts.filter(x => (reactUse[x] || 0) < 5).sort((a, b) => (reactUse[a] || 0) - (reactUse[b] || 0) + (rnd() - 0.5) * 0.8)[0]

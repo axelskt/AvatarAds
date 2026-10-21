@@ -87,7 +87,7 @@ const branchees = new Set([...TX_FV.M, ...TX_FV.O])
 const txNonBranchees = B.filter(b => b.kind === 'transformation' && ready(b) && !branchees.has(b.id)).map(b => b.id)
 
 // ── Texte + musique ──
-const reacts = B.filter(b => b.kind === 'reaction' && ready(b) && b.meta?.media).map(b => b.id)
+const reacts = B.filter(b => b.kind === 'reaction' && ready(b) && b.meta?.media && !b.meta?.parlee).map(b => b.id)   // 21/10 : tête choquée PARLÉE = autre format
 let f05 = 0
 for (const r of reacts) f05 += Math.min(Math.max(0, 5 - (reactUse[r] || 0)), mdemos.filter(d => !usedF05.has(r + '|' + d) && !(/^R-I-/.test(r) && /IMGIAM/.test(d))).length)
 

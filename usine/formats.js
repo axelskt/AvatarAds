@@ -106,7 +106,9 @@
     // Axel 18/10 : variante « cheat code » des logos (réf. TikTok « Claude + Creatify = 🔥 / Cheat code for generating Ads ») :
     // logo Claude (carré orange) + logo AvatarAds = 🔥 sur une ligne, phrase dans un bandeau blanc natif dessous ; vidéos Claude
     // seulement. Rendu spécial (logos:'cheat') : placement chocCheatLayout, dessin dans captions.mjs. Dimensions = la réf. au 1:1.
-    { id: 'TH36', text: 'Cheat code pour générer des pubs', emoji: '🔥', module: 'mcp-claude', logos: 'cheat' }
+    { id: 'TH36', text: 'Cheat code pour générer des pubs', emoji: '🔥', module: 'mcp-claude', logos: 'cheat' },
+    // Axel 21/10 : réf. @zoey.scrapes « Claude users are living in 2096 » (format réaction choquée parlée), démos Claude seulement
+    { id: 'TH37', text: 'Les utilisateurs de Claude vivent en 2098', emoji: '💀', module: 'mcp-claude' }
   ];
   // Format Insomnie (Axel 12/10) : « Tu essaies de dormir mais tu repenses à… » — banque À PART (factory_bricks TI…,
   // meta.format 'insomnie'), jamais tirée avec les TH ; demos = démos muettes autorisées (sinon générique)
