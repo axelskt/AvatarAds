@@ -18,17 +18,19 @@ PAIRS = {'TX-M01': (MC, 'VIdéo 1.mp4', 'Vidéo 1.1.mp4', 1.0), 'TX-M02': (MC, '
          'TX-O06': (OM, 'vidéo 6.mp4', 'Vidéo 6.1.mp4', 0), 'TX-O10': (OM, 'vidéo 10.mp4', 'vidéo 10.1.mp4', 0), 'TX-O11': (OM, 'vidéo 11.mp4', 'vidéo 11.1.mp4', 0),
          'TX-O12': (OM, 'vidéo 12.mp4', 'vidéo 12.1.mp4', 0), 'TX-O12b': (OM, 'vidéo 12.mp4', 'vidéo 12.2.mp4', 0)}
 src, avant, apres, t0 = PAIRS[tx]
+CX = {'TX-M01': 0.45}.get(tx, 0.5)   # centre du recadrage plein écran (TX-M01 est en paysage : visage à gauche du centre)
 dur = lambda f: float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f], capture_output=True, text=True).stdout)
 D = dur(voice) + 1.0
 R, W, H, X, Y = 28, 405, 720, 520, 450   # 21/10 (Axel) : médaillon 200 px plus bas que les HK → le texte choc tient en haut
 # coins arrondis : alpha nul hors du rectangle aux coins de rayon R (même masque pour le médaillon et son ombre)
 mask = "a='if(gt(pow(max(0,abs(X-%g)-%g),2)+pow(max(0,abs(Y-%g)-%g),2),%d),0,255)'" % (W / 2, W / 2 - R, H / 2, H / 2 - R, R * R)
-fc = ("[0:v]scale=w='trunc(1134-54*(1-pow(1-min(t/0.8\\,1)\\,3)))/2*2':h=-2:eval=frame:flags=lanczos,crop=1080:1920,setsar=1,fps=30[bg];"
+fc = ("[0:v]scale=1134:2016:force_original_aspect_ratio=increase:flags=lanczos,crop=1134:2016:'max(0\\,min(iw-1134\\,iw*%.2f-567))':0,"   # 21/10 : source paysage (TX-M01) ou 3:4 → plein écran d'abord
+      "scale=w='trunc(1134-54*(1-pow(1-min(t/0.8\\,1)\\,3)))/2*2':h=-2:eval=frame:flags=lanczos,crop=1080:1920,setsar=1,fps=30[bg];"
       "[1:v]scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,pad=%d:%d:3:3:color=white@0.92,format=rgba,"
       "geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':%s,fps=30,split[m][m2];"
       "[m2]colorchannelmixer=rr=0:gg=0:bb=0:aa=0.72,pad=%d:%d:60:60:color=black@0,boxblur=24:2[sh];"
       "[bg][sh]overlay=%d:%d[b1];[b1][m]overlay=%d:%d,format=yuv420p[v]"
-      % (W - 6, H - 6, W - 6, H - 6, W, H, mask, W + 120, H + 120, X - 60, Y - 60 + 26, X, Y))
+      % (CX, W - 6, H - 6, W - 6, H - 6, W, H, mask, W + 120, H + 120, X - 60, Y - 60 + 26, X, Y))
 subprocess.run(['ffmpeg', '-v', 'error', '-y', '-stream_loop', '-1', '-ss', '%.2f' % t0, '-i', os.path.join(src, apres),
                 '-stream_loop', '-1', '-ss', '%.2f' % t0, '-i', os.path.join(src, avant), '-filter_complex', fc, '-map', '[v]',
                 '-t', '%.2f' % D, '-an', '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', '-r', '30', out], check=True)
