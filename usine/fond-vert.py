@@ -8,6 +8,11 @@
 import glob, os, shutil, subprocess, sys, tempfile
 
 take, tx, out = sys.argv[1], sys.argv[2], sys.argv[3]
+arg = lambda k, d: next((type(d)(sys.argv[i + 1]) for i, x in enumerate(sys.argv) if x == k and i + 1 < len(sys.argv)), d)
+# Axel 21/10 : avatar entre 35 et 45 % (tiré par vidéo, stable sur le nom de sortie), bas à 1560 (validé, VF-0906)
+import zlib
+TAILLE = arg('--taille', round(0.35 + (zlib.crc32(os.path.basename(out).encode()) % 1000) / 1000 * 0.10, 3))
+BAS = arg('--bas', 1560)
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIN = os.path.join(os.path.expanduser('~/Downloads/Creative Factory/cache'), 'bin', 'person-mask')
 if not os.path.exists(BIN):
@@ -24,11 +29,12 @@ try:
     # Axel 21/10 (version retenue) : l'avatar est LÀ dès la 1re image (en bas à gauche), puis UN petit déplacement à mi-hook
     # (vers la droite et vers le haut, 0,5 s, lissé) — pas de grand parcours ; ensuite il reste fixe jusqu'à la fin.
     ease = lambda a, d: "(1-pow(1-min(max((t-%g)/%g\\,0)\\,1)\\,3))" % (a, d)
-    x = "30+120*%s" % ease(M, 0.5)
-    y = "1450-h-60*%s" % ease(M, 0.5)
+    k_ = TAILLE / 0.45; AW, AH = int(1080 * TAILLE) // 2 * 2, int(1920 * TAILLE) // 2 * 2
+    x = "30+%d*%s" % (120 * k_, ease(M, 0.5))
+    y = "%d-h-%d*%s" % (BAS, 60 * k_, ease(M, 0.5))
     fc = ("[0:v]fps=25,setsar=1[bg];[2:v]format=gray,boxblur=2:1,geq=lum='lum(X,Y)*min(1,(H-Y)/120)'[m];"
-          "[1:v][m]alphamerge,scale=486:864,tpad=stop_mode=clone:stop_duration=1[av];"
-          "[bg][av]overlay=x='%s':y='%s':eval=frame:shortest=1,format=yuv420p[v]" % (x, y))
+          "[1:v][m]alphamerge,scale=%d:%d,tpad=stop_mode=clone:stop_duration=1[av];"
+          "[bg][av]overlay=x='%s':y='%s':eval=frame:shortest=1,format=yuv420p[v]" % (AW, AH, x, y))
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', bg, '-framerate', '25', '-i', os.path.join(W, '%04d.png'), '-framerate', '25',
                     '-i', os.path.join(W, '%04d-m.png'), '-filter_complex', fc, '-map', '[v]', '-t', '%.2f' % (T + 1), '-an',
                     '-c:v', 'libx264', '-crf', '17', '-pix_fmt', 'yuv420p', '-r', '25', out], check=True)
