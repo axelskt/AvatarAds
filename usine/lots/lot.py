@@ -83,6 +83,8 @@ def mots_acceleres(src, dst, v):
         json.dump([dict(x, start=round(x['start'] / v, 3), end=round(x['end'] / v, 3)) for x in w], open(os.path.join(WORDS, file_key(dst) + '.json'), 'w'), ensure_ascii=False)
     except (OSError, ValueError, KeyError): pass   # pas de mots en cache pour la prise : build.mjs transcrira
 prev_th = [None]
+# Axel 21/10 (revue fond vert : « il parle trop lentement ») : prises accélérées EN PLUS de leur ×1,10 dans le format fond vert
+VIT_FV = {('A3-10', 'H23'): 1.15, ('A3-11', 'H74'): 1.15}
 def prep(it, tag):
     if it['k'] == 'o':
         photo, hook, demo = it['photo'], it['hook'], it['demo']
@@ -116,10 +118,16 @@ def prep(it, tag):
         h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
         d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
         out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-fv.mp4'
+        v_ = VIT_FV.get((photo, hook))
+        if v_:   # prise trop lente dans ce format : accélérée en plus (hauteur gardée), mots repris du cache
+            hv = out[:-4] + '-voix.mp4'
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', h, '-filter_complex', '[0:v]setpts=PTS/%g[v];[0:a]atempo=%g[a]' % (v_, v_), '-map', '[v]', '-map', '[a]',
+                            '-c:v', 'libx264', '-crf', '17', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', hv], check=True)
+            mots_acceleres(h, hv, v_); h = hv
         subprocess.run(['python3', 'usine/fond-vert.py', h, tx, vis], cwd=REPO, check=True, capture_output=True)
         cmd = ['node', 'usine/build.mjs', vis, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--avant-apres', '--medaillon', '600,440,338,600',
                '--medaillon-libre', '1', '--subs-style', 'auto', '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
-        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, fv=tx, vis=vis)
+        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, fv=tx, vis=vis, hv=h if v_ else None)
     react, demo = it['react'], it['demo']
     rm = bricks[react]['meta']; H = float(rm.get('duration_s') or 3)
     r = get(rm['media'], os.path.basename(rm['media'])); d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))

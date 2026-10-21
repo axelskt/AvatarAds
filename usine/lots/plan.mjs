@@ -95,6 +95,8 @@ if (NVO) {
   for (const q of X.qc) { const c = q.c || {}; if (c[KEYF]) voDone.add([c.photo, c.hook, c[KEYF]].join('|')); if (c[KEYF] && q.s !== 'refused') { voUse[c.photo + '|' + c.hook] = (voUse[c.photo + '|' + c.hook] || 0) + 1; txUse[c[KEYF]] = (txUse[c[KEYF]] || 0) + 1 } }
   const FAMS = [{ tx: ['TX-M01', 'TX-M02', 'TX-M04'], demos: ['C-MC-01'] },
     { tx: ['TX-O02a', 'TX-O02b', 'TX-O02c', 'TX-O06', 'TX-O10', 'TX-O11', 'TX-O12', 'TX-O12b'], demos: demos.filter(d => /^C-OMNI-/.test(d.id)).map(d => d.id) }]
+  // Axel 21/10 (revue fond vert) : H14 ne colle ni au Motion Control ni à Omni → jamais dans ce format ; H60 = Motion Control seul
+  const FV_PAS = new Set(['H14']), FV_MC_SEUL = new Set(['H60'])
   let f = 0, guardV = 0
   while (V.length < NVO && guardV++ < NVO * 4) {
     const F = FAMS[f++ % FAMS.length]
@@ -102,7 +104,7 @@ if (NVO) {
     if (!tx) continue
     const demo = F.demos.sort((a, b) => (demoUse[a] || 0) - (demoUse[b] || 0))[0]
     if (!demo || !by[demo]) continue
-    const cand = vars.filter(v => COH.pairLevel(by[v.b], by[demo]) === 'ok' && !(PAS_OMNI.has(v.b) && /OMNI/.test(demo)) && (voUse[v.a + '|' + v.b] || 0) < CAP_HOOK && !voDone.has([v.a, v.b, tx].join('|')) && !V.some(x => x.photo === v.a && x.hook === v.b))
+    const cand = vars.filter(v => COH.pairLevel(by[v.b], by[demo]) === 'ok' && !(PAS_OMNI.has(v.b) && /OMNI/.test(demo)) && !FV_PAS.has(v.b) && !(FV_MC_SEUL.has(v.b) && !/^TX-M/.test(tx)) && (voUse[v.a + '|' + v.b] || 0) < CAP_HOOK && !voDone.has([v.a, v.b, tx].join('|')) && !V.some(x => x.photo === v.a && x.hook === v.b))
       .sort((a, b) => (voUse[a.a + '|' + a.b] || 0) - (voUse[b.a + '|' + b.b] || 0) + (rnd() - 0.5) * 0.8)[0]
     if (!cand) continue
     V.push({ k: FV ? 'f' : 'v', photo: cand.a, hook: cand.b, demo, tx })

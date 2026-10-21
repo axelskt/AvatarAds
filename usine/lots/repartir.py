@@ -126,7 +126,10 @@ op = [r['vf'] for r in op if VF_RE.match(r['vf'] or '')]
 inkit = {h['vf'] for h in held} | {r['vf'] for r in q("select combo->>'vf' vf from factory_posts where status in ('todo','scheduled','published') and combo ? 'vf'")}
 # Axel 21/10 : le format voix off Motion Control part sur @leoadsia (pas aux diffuseurs) → toujours repris du stock
 vo = {r['template'] for i in range(0, len(op), 200) for r in q("select template from factory_qc where template in ('%s') and (brick_combo ? 'voix_off' or brick_combo ? 'fond_vert')" % "','".join(op[i:i + 200]))} if op else set()
-take = [vf for vf in op if (vf in vo or vf in op[:max(0, len(op) - BX_RESERVE)]) and vf not in inkit][::-1]
+# 21/10 : la réserve des diffuseurs se compte HORS fond vert / voix off (sinon ces vidéos, les plus récentes, la remplissaient et
+# les diffuseurs ne gardaient plus rien)
+nvo = [vf for vf in op if vf not in vo]
+take = [vf for vf in op if (vf in vo or vf in nvo[:max(0, len(nvo) - BX_RESERVE)]) and vf not in inkit][::-1]
 log('stock BloxAI : %d ouvertes, %d gardées pour les diffuseurs, %d à prendre' % (len(op), len(op) - len(take), len(take)))
 qc = {}
 for i in range(0, len(take), 200):
