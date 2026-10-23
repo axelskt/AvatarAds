@@ -7,6 +7,8 @@ export class FakeDB {
   t: Record<string, Row[]> = {}
   rpcs: Record<string, (a: any) => any> = {}
   log: string[] = []
+  tokens: Record<string, any> = {}
+  mdp: Record<string, boolean> = {}
   rows(name: string) { return (this.t[name] ||= []) }
 }
 const UNIQUE: Record<string, string> = { webhook_events: 'event_id', referral_earnings: 'dedupe_key' }
@@ -17,6 +19,7 @@ class Q {
   eq(c: string, v: any) { this.f.push((r) => String(path(r, c)) === String(v)); return this }
   gte(c: string, v: any) { this.f.push((r) => path(r, c) != null && String(path(r, c)) >= String(v)); return this }
   lte(c: string, v: any) { this.f.push((r) => path(r, c) != null && String(path(r, c)) <= String(v)); return this }
+  like(c: string, pat: string) { const re = new RegExp('^' + pat.split('%').map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$'); this.f.push((r) => re.test(String(path(r, c) ?? ''))); return this }
   in(c: string, a: any[]) { this.f.push((r) => a.map(String).includes(String(path(r, c)))); return this }
   order() { return this }
   limit(n: number) { this.lim = n; return this }
@@ -51,7 +54,14 @@ export function createClient(_u: string, _k: string, _o?: unknown) {
   return {
     from: (name: string) => new Q(db, name),
     rpc: async (name: string, args: any) => ({ data: db.rpcs[name] ? db.rpcs[name](args) : null, error: null }),
-    auth: { admin: { createUser: async ({ email }: { email: string }) => {
+    auth: {
+      getUser: async (tok: string) => ({ data: { user: db.tokens?.[tok] ?? null }, error: null }),
+      admin: {
+      generateLink: async ({ email }: { email: string }) => { db.log.push('lien ' + email); return { data: { properties: { hashed_token: 'th_' + email } }, error: null } },
+      updateUserById: async (id: string, attrs: any) => { db.log.push('maj ' + id + ' ' + JSON.stringify(attrs));
+        const g = db.rows('password_change_grants').find((r) => r.user_id === id); if (g) { db.t.password_change_grants = db.rows('password_change_grants').filter((r) => r !== g); db.mdp = { ...(db.mdp || {}), [id]: true } }
+        return { data: {}, error: null } },
+      createUser: async ({ email }: { email: string }) => {
       if (db.rows('profiles').some((p) => p.email === email)) return { data: null, error: { message: 'already registered' } }
       const id = `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`
       const pa = db.rows('pending_activations').find((r) => r.email.toLowerCase() === email.toLowerCase())

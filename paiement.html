@@ -88,6 +88,14 @@ input,select{font-family:inherit;color:inherit}
 .done{text-align:center;padding:40px 0 10px}
 .done-ic{width:56px;height:56px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;background:#EAF7F1;border:1.5px solid #A6DEC4}
 .done .cta{max-width:340px;margin:26px auto 0}
+.pw{max-width:340px;margin:22px auto 0;text-align:left}
+.pw label{display:block;font-size:13.5px;color:var(--text-2);margin:14px 0 6px}
+.pw input{width:100%;height:52px;border-radius:999px;border:1px solid var(--line);background:var(--field);padding:0 20px;font-size:16px;outline:none}
+.pw input:focus{border-color:#C9CED4}
+.pw-hint{font-size:13px;min-height:18px;margin-top:8px;color:var(--text-2)}
+.pw-hint.ko{color:#C2410C}.pw-hint.ok{color:#15803D}
+.pw-later{display:block;margin:16px auto 0;font-size:14px;color:var(--text-2);text-decoration:underline;text-underline-offset:3px}
+.done-wait{width:26px;height:26px;margin:22px auto 0;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 .cta{width:100%;height:58px;border-radius:999px;background:linear-gradient(180deg,#FFD43B,#FFC107);color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-size:18px;font-weight:500;margin-top:8px;transition:.15s;text-decoration:none}
 .cta:hover{filter:brightness(1.05);color:#1A1300}
 .cta .ar{display:flex;align-items:center;gap:18px}.cta .ar::before{content:"";width:1px;height:24px;background:rgba(26,19,0,.25)}
@@ -256,6 +264,8 @@ function appearance(lock){return {theme:{appearance:"light",accentColor:"orange"
   classes:{"whop-CheckoutSeller":HIDE,"whop-CheckoutSellerLogo":HIDE,"whop-CheckoutItem":HIDE,"whop-CheckoutItemHeadline":HIDE,"whop-CheckoutItemDescription":HIDE,
     "whop-CheckoutCartItems":HIDE,"whop-CheckoutTotal":HIDE,"whop-CheckoutPriceContext":HIDE,
     "whop-CheckoutDetails":HIDE,"whop-CheckoutDetailsToggle":HIDE,"whop-CheckoutSummary":HIDE,
+    // après le paiement, notre page prend la main (connexion au compte AvatarAds) : pas d'écran Whop « réclamer l'achat »
+    "whop-CheckoutCompleted":HIDE,"whop-CheckoutAwaitClaim":HIDE,"whop-CheckoutClaimOffer":HIDE,
     "whop-CheckoutExpressGooglePay":HIDE,"whop-CheckoutExpressPayPal":HIDE,"whop-CheckoutExpressDivider":{color:"#5B626B",fontSize:"12.5px"},
     "whop-EmailInput":Object.assign({},FIELD,lock?{backgroundColor:"#EEF1F4"}:{}),"whop-CardField":{borderRadius:"16px",backgroundColor:"#F6F7F8"},
     // adresse : bloc groupé de Whop (des pilules débordaient de son cadre) → seulement le fond gris, comme la carte
@@ -269,31 +279,116 @@ function mountWhop(){
   const seq=++_seq; destroyAll();
   const box=$("co"), items=panier().map(plan=>({plan,quantity:1}));
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>';
-  const acc=compte(), meta=acc?{metadata:{aa_user_id:acc.id,aa_page:"paiement"}}:{metadata:{aa_page:"paiement"}};
+  const acc=compte(), meta={metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{}),
+    returnUrl:location.origin+location.pathname+location.search};   // étape bancaire hors page (3D Secure) → retour ici
   whopReady().then(W=>{
     if(seq!==_seq) return;
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
     // en tête du module quand l'appareil le propose
-    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq) paid(); },1200); }},
+    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:()=>{ if(seq===_seq) veiller(true); }},
       meta,S.promo?{promoCode:S.promo.code}:{}));
     let ready=false;
     _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
-      onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove();},
+      onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove(); veiller(false);},
       onError:e=>{ if(!ready&&seq===_seq) fallback(box,items[0].plan); else console.warn("[whop]",e&&(e.code||e.message)); }
     })).mount(box.querySelector(".whop-mount"));
   }).catch(()=>{ if(seq===_seq) fallback(box,items[0].plan); });
 }
-/* ── Après le paiement : la confirmation ─────────────────────────────────────────────────────────────────────── */
-function paid(){ destroyAll(); window.scrollTo({top:0,behavior:"smooth"}); finish(); }
-function finish(){
-  S.step=3; $("flow").hidden=true; $("reassure").hidden=true;
-  const acc=compte(), d=$("done"); d.hidden=false;
-  d.innerHTML=`<div class="done"><div class="done-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1FB386" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
-   <div class="step-h">Paiement confirmé</div>
-   <p class="step-p">${acc?`Ton plan et tes crédits arrivent sur ton compte <b style="color:var(--text)">${esc(acc.email)}</b>.`:`Ton compte AvatarAds est prêt avec <b style="color:var(--text)">l'adresse e-mail que tu viens de saisir</b> : connecte-toi avec elle.`}</p>
-   <a class="cta" href="/app/"><span>Ouvrir mon espace</span><span class="ar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></div>`;
-  if(acc) setTimeout(()=>{ location.href="/app/"; },3500);
+/* ── Après le paiement (Axel 23/10, test réel sur iPhone) ─────────────────────────────────────────────────────────────
+   On ne dépend plus de l'événement de fin du module Whop : le paiement porte un identifiant de cet onglet (aa_nonce) et la
+   page demande au serveur (paiement-compte) s'il est arrivé. Acheteur sans session et compte NEUF → connecté directement,
+   puis 1er mot de passe (deux champs) ; compte déjà utilisé → « connecte-toi » ; acheteur déjà connecté → son espace. */
+const SB_URL="https://guvwgiejzkiodghywpwj.supabase.co", SB_KEY="sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck", SB_SESSION="sb-guvwgiejzkiodghywpwj-auth-token";
+const NONCE=(()=>{ const neuf=()=>{ try{ return crypto.randomUUID() }catch(_){ const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=b[6]&15|64; b[8]=b[8]&63|128;
+    const h=[...b].map(x=>x.toString(16).padStart(2,"0")).join(""); return h.slice(0,8)+"-"+h.slice(8,12)+"-"+h.slice(12,16)+"-"+h.slice(16,20)+"-"+h.slice(20) } };
+  try{ let n=sessionStorage.getItem("aa_pay_nonce"); if(!n){ n=neuf(); sessionStorage.setItem("aa_pay_nonce",n); } return n }catch(_){ return neuf() } })();
+const appel=(corps,jeton)=>fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},jeton?{Authorization:"Bearer "+jeton}:{}),body:JSON.stringify(corps)}).then(r=>r.json());
+let _veille=0,_veilleFin=0,_paye=false;
+// module affiché : vérification toutes les 4 s (30 min) ; fin du module ou retour de la banque : vérification immédiate
+function veiller(vite){ if(_paye) return; _veilleFin=Date.now()+30*60e3; if(!_veille) _veille=setInterval(verifier,4000); if(vite) verifier(); }
+async function verifier(){
+  if(_paye) return;
+  if(Date.now()>_veilleFin){ clearInterval(_veille); _veille=0; return; }
+  let r=null; try{ r=await appel({action:"etat",nonce:NONCE}); }catch(_){ return; }
+  if(_paye||!r||!r.paid||r.compte==="attente") return;   // « attente » : le webhook crée encore le compte
+  _paye=true; clearInterval(_veille); _veille=0; apresPaiement(r);
 }
+function ecran(html){ S.step=3; $("flow").hidden=true; $("reassure").hidden=true; $("mPlan").style.display="none"; const d=$("done"); d.hidden=false; d.innerHTML=html; window.scrollTo({top:0,behavior:"smooth"}); }
+const OK_IC='<div class="done-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1FB386" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
+const FLECHE='<span class="ar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+// session écrite là où l'app la lit (clé standard de supabase-js, comme connexion.html) puis relue
+function garderSession(j){ try{ if(!j.expires_at&&j.expires_in) j.expires_at=Math.floor(Date.now()/1000)+Number(j.expires_in);
+  localStorage.setItem(SB_SESSION,JSON.stringify(j)); localStorage.setItem("aa_login_at",String(Date.now())); return !!localStorage.getItem(SB_SESSION); }catch(_){ return false } }
+async function apresPaiement(r){
+  destroyAll();
+  const acc=compte();
+  if(acc||r.compte==="connecte") return finish();
+  if(r.compte==="nouveau"){
+    ecran(`<div class="done">${OK_IC}<div class="step-h">Paiement confirmé</div><p class="step-p">Ouverture de ton compte…</p><div class="done-wait"></div></div>`);
+    try{
+      const c=await appel({action:"connexion",nonce:NONCE});
+      if(c&&c.token_hash){
+        const v=await fetch(SB_URL+"/auth/v1/verify",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({type:"magiclink",token_hash:c.token_hash})});
+        const j=await v.json();
+        if(v.ok&&j.access_token&&j.refresh_token&&garderSession(j)) return motDePasse(c.email||(j.user&&j.user.email)||"");
+      }
+    }catch(_){}
+  }
+  aConnecter(r.email);
+}
+// compte déjà utilisé (ou connexion automatique impossible) : on dit avec quelle adresse se connecter
+function aConnecter(email){
+  ecran(`<div class="done">${OK_IC}<div class="step-h">Paiement confirmé</div>
+   <p class="step-p">Ton plan est actif sur ton compte AvatarAds${email?` <b style="color:var(--text)">${esc(email)}</b>`:""}. Connecte-toi avec cette adresse pour l'ouvrir.</p>
+   <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a></div>`);
+}
+// 1er mot de passe (deux champs) : le compte vient d'être créé par l'achat, l'acheteur y est déjà connecté
+function motDePasse(email){
+  ecran(`<div class="done">${OK_IC}<div class="step-h">Bienvenue sur AvatarAds</div>
+   <p class="step-p">Ton plan est actif et tu es connecté${email?` avec <b style="color:var(--text)">${esc(email)}</b>`:""}. Crée ton mot de passe pour te reconnecter facilement.</p>
+   <form class="pw" id="pwForm" autocomplete="on">
+    <input type="email" name="username" autocomplete="username" value="${esc(email)}" hidden>
+    <label for="pw1">Mot de passe</label><input id="pw1" type="password" autocomplete="new-password" placeholder="8 caractères minimum" required>
+    <label for="pw2">Confirme le mot de passe</label><input id="pw2" type="password" autocomplete="new-password" placeholder="Retape-le" required>
+    <div class="pw-hint" id="pwHint"></div>
+    <button class="cta" type="submit" id="pwBtn" style="max-width:none;margin-top:14px"><span>Créer mon mot de passe</span>${FLECHE}</button>
+   </form>
+   <a class="pw-later" href="/app/">Plus tard, ouvrir mon espace</a></div>`);
+  const a=$("pw1"), b=$("pw2"), h=$("pwHint");
+  const verif=()=>{ h.className="pw-hint"; if(!a.value&&!b.value){ h.textContent=""; return false }
+    if(a.value.length<8){ h.textContent="8 caractères minimum"; return false }
+    if(!b.value){ h.textContent="Retape-le pour confirmer"; return false }
+    if(a.value!==b.value){ h.textContent="Les deux mots de passe ne correspondent pas"; h.className="pw-hint ko"; return false }
+    h.textContent="Les deux correspondent"; h.className="pw-hint ok"; return true };
+  a.oninput=verif; b.oninput=verif;
+  $("pwForm").onsubmit=async e=>{
+    e.preventDefault(); if(!verif()){ if(!h.textContent){ h.textContent="8 caractères minimum"; } h.className="pw-hint ko"; return; }
+    if(new TextEncoder().encode(a.value).length>72){ h.textContent="72 caractères maximum"; h.className="pw-hint ko"; return; }
+    const btn=$("pwBtn"); btn.disabled=true; btn.querySelector("span").textContent="Enregistrement…";
+    let s=null; try{ s=JSON.parse(localStorage.getItem(SB_SESSION)||"null") }catch(_){}
+    let j=null; try{ j=await appel({action:"mot_de_passe",password:a.value},s&&s.access_token); }catch(_){}
+    if(!j||!j.ok){
+      btn.disabled=false; btn.querySelector("span").textContent="Créer mon mot de passe"; h.className="pw-hint ko";
+      h.textContent=j&&j.error==="weak_password"?"Mot de passe trop simple : mélange lettres, chiffres et symboles.":j&&j.error==="password_too_long"?"72 caractères maximum"
+        :j&&j.error==="refuse"?"Crée ton mot de passe depuis Mon compte, dans ton espace.":"Enregistrement impossible pour le moment, réessaie.";
+      return;
+    }
+    // le serveur d'authentification ferme les sessions au changement de mot de passe : reconnexion avec le nouveau
+    try{ const t=await fetch(SB_URL+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({email:j.email,password:a.value})});
+      const tj=await t.json(); if(t.ok&&tj.access_token) garderSession(tj); else return location.replace("/connexion.html"); }catch(_){ return location.replace("/connexion.html"); }
+    location.replace("/app/");
+  };
+  setTimeout(()=>{ try{ a.focus() }catch(_){} },300);
+}
+function finish(){
+  const acc=compte();
+  ecran(`<div class="done">${OK_IC}<div class="step-h">Paiement confirmé</div>
+   <p class="step-p">${acc?`Ton plan et tes crédits arrivent sur ton compte <b style="color:var(--text)">${esc(acc.email)}</b>.`:"Ton plan est actif sur ton compte AvatarAds."}</p>
+   <a class="cta" href="/app/"><span>Ouvrir mon espace</span>${FLECHE}</a></div>`);
+  if(acc) setTimeout(()=>{ location.href="/app/"; },2500);
+}
+// retour d'une étape bancaire hors page (returnUrl) : le paiement est peut-être déjà passé
+if(qs.get("status")==="succeeded"||qs.get("payment")) veiller(true);
 r(); mountWhop();
 </script>
 </body>

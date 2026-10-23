@@ -7,3 +7,7 @@ Bancs de test de la page de paiement et de whop-webhook (23/10/2026). Aucun appe
 2) Page de paiement : copier page-combos.html à la racine du dépôt, servir la racine (preview avatarads-root, port 8793),
    ouvrir /page-combos.html, attendre ~1 min, lire window.__res (54 combinaisons : plan Whop, total, module Whop chargé).
    Supprimer la copie ensuite. Le tableau W reprend les prix Whop : le tenir à jour.
+
+3) Connexion après achat (supabase/functions/paiement-compte, base factice) :
+   cd tools/tests-whop-webhook && deno run --allow-env --allow-read --allow-net --import-map=import_map.json test-paiement-compte.ts
+   → « 16/16 vérifications OK » : compte neuf seulement, une connexion par paiement, 1er mot de passe seulement.

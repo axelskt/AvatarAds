@@ -5304,8 +5304,8 @@ setTimeout(function(){
     <!-- Abonnement & Déconnexion -->
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-ghost" onclick="changeSubscription();closeAccountSettings()" style="width:100%;justify-content:flex-start"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> Changer mon abonnement</button>
-      <button id="accountPanelCancelBtn" class="btn btn-ghost" onclick="cancelSubscription()" style="display:none;width:100%;justify-content:flex-start;white-space:normal;text-align:left;line-height:1.4">⏸ Annuler l'abonnement</button>
-      <button class="btn" onclick="authLogout()" style="width:100%;justify-content:flex-start;background:rgba(255,70,70,.1);border:1px solid rgba(255,70,70,.25);color:#FF6B6B">⎋ Se déconnecter</button>
+      <button id="accountPanelCancelBtn" class="btn btn-ghost" onclick="cancelSubscription()" style="display:none;width:100%;justify-content:flex-start;white-space:normal;text-align:left;line-height:1.4"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg> Annuler l'abonnement</button>
+      <button class="btn" onclick="authLogout()" style="width:100%;justify-content:flex-start;background:rgba(255,70,70,.1);border:1px solid rgba(255,70,70,.25);color:#FF6B6B"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg> Se déconnecter</button>
       <!-- RGPD (Axel 28/09) : suppression définitive du compte par son titulaire (edge function delete-account) -->
       <button class="btn btn-quiet" onclick="openDeleteAccount()" style="width:100%;justify-content:center;font-size:12px;color:var(--text-3);background:none;border:none;padding:6px">Supprimer mon compte</button>
     </div>
@@ -5955,7 +5955,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-23-1840'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-23-2010'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -7976,7 +7976,7 @@ function cancelSubscription(){
   window._retReason = '';
   const dt = document.getElementById('retDetail'); if(dt) dt.value = '';
   document.querySelectorAll('#retReasons button').forEach(b => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg3)'; });
-  const n1 = document.getElementById('retNext1'); if(n1){ n1.disabled = true; n1.style.opacity = '.5'; }
+  const n1 = document.getElementById('retNext1'); if(n1) _retNextStyle(n1, false);
   // l'offre bonus ne s'affiche que si elle n'a jamais été utilisée
   const offer = document.getElementById('retOfferBonus');
   if(offer) offer.style.display = currentMember.retention_bonus_used ? 'none' : 'block';
@@ -8003,7 +8003,15 @@ function _retPick(btn){
   window._retReason = btn.getAttribute('data-reason') || '';
   document.querySelectorAll('#retReasons button').forEach(b => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg3)'; });
   btn.style.borderColor = 'var(--accent-line)'; btn.style.background = 'var(--accent-soft)';
-  const n1 = document.getElementById('retNext1'); if(n1){ n1.disabled = false; n1.style.opacity = '1'; }
+  const n1 = document.getElementById('retNext1'); if(n1) _retNextStyle(n1, true);
+}
+// Axel 23/10 : « Continuer » passe en orange (bouton principal) dès qu'une raison est choisie, gris tant qu'il n'y en a pas
+function _retNextStyle(n1, on){
+  n1.disabled = !on;
+  n1.style.opacity = on ? '1' : '.5';
+  n1.style.background = on ? 'linear-gradient(180deg,var(--accent-2),var(--accent))' : 'var(--bg4)';
+  n1.style.border = on ? 'none' : '1px solid var(--border)';
+  n1.style.color = on ? '#fff' : 'var(--text3)';
 }
 function _retToStep2(){ if(!window._retReason) return; _retShow(2); }
 function _retToStep3(){ _retShow(3); }
@@ -8035,11 +8043,17 @@ async function _retDoCancel(){
     const out = await res.json().catch(() => ({}));
     if(!res.ok){ toast('' + (out.error || 'Erreur — réessaie ou contacte le support')); return; }
     currentMember.whop_cancel_at_period_end = true;
-    // Le membre GARDE ses crédits du mois déjà payé jusqu'à la fin de période (rien n'est retiré ici).
+    // 23/10 (Axel) : comme l'annonce la confirmation, whop-cancel retire les crédits DU PLAN tout de suite ; ceux achetés
+    // en pack restent. Le plan reste actif jusqu'à la fin de la période déjà payée.
+    if(typeof out.kept === 'number'){
+      currentMember.credits_remaining = out.kept;
+      currentMember.bought_credits = out.kept;
+      const el = document.getElementById('memberCredits'); if(el) el.textContent = secsToDisplay(out.kept);
+    }
     _updateQuotaDisplay();
     _syncCancelBtn();
     closeRetention();
-    toast('✓ Abonnement annulé — ton plan et tes crédits restent actifs jusqu\'à la fin de la période déjà payée');
+    toast('Abonnement annulé : les crédits du plan sont retirés' + (out.kept > 0 ? ', tes ' + out.kept + ' crédits achetés restent' : '') + '. Ton plan reste actif jusqu\'à la fin de la période déjà payée.');
   }catch(e){
     toast('Erreur réseau — réessaie');
   }finally{
@@ -9457,14 +9471,14 @@ function _syncCancelBtn(){
       card.style.cssText = 'width:100%;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;margin-top:4px';
       card.innerHTML = '<div style="font-size:13px;font-weight:800;margin-bottom:4px">Tu as changé d\'avis ?</div>'
         + '<div style="font-size:11.5px;color:var(--text3);line-height:1.55;margin-bottom:10px">Ton abonnement s\'arrête à la fin de la période déjà payée. Redémarre-le en un clic pour continuer sans interruption — tes crédits mensuels reviennent au prochain renouvellement.</div>'
-        + '<button id="accountReactivateBtn" onclick="reactivateSubscription()" class="btn" style="width:100%;justify-content:center;background:var(--text);color:var(--bg);font-weight:800;padding:11px">→ Redémarrer mon abonnement</button>';
+        + '<button id="accountReactivateBtn" onclick="reactivateSubscription()" class="btn" style="width:100%;justify-content:center;background:var(--text);color:var(--bg);font-weight:800;padding:11px">Redémarrer mon abonnement</button>';
       b.parentNode.insertBefore(card, b.nextSibling);
     }
     card.style.display = 'block';
   } else {
     if(card) card.style.display = 'none';
     b.style.display = paid ? '' : 'none'; // '' → inline-flex de la classe .btn
-    b.innerHTML = '<span style="font-size:15px">⏸</span> Annuler l\'abonnement';
+    b.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg> Annuler l\'abonnement';   // icône dessinée (jamais d'émoji dans l'UI)
     b.style.opacity = ''; b.style.pointerEvents = '';
   }
 }
@@ -43681,6 +43695,10 @@ function edBandDrag(ov,track,e,mode){
   /* Paramètres avancés Motion : VRAI plein écran AU-DESSUS de la topbar (350) et de la barre du bas (400)
      → la croix (haut-droite) et « Terminé » (bas) sont visibles, et le scroll interne fonctionne (Axel 04/09) */
   #mcAdvModal{padding:0 !important;align-items:stretch !important;z-index:600 !important;backdrop-filter:none !important}
+  /* Mon compte (Axel 23/10, iPhone) : la carte centrée à 88vh laissait des bandes sombres sur les côtés et des vides en haut
+     et en bas (barres flottantes de Safari) → vrai plein écran, défilement interne, marge basse sous la barre de Safari */
+  #accountOverlay{padding:0 !important;align-items:stretch !important;z-index:600 !important}
+  #accountOverlay > .card{width:100% !important;max-width:none !important;max-height:100dvh !important;height:100dvh;border-radius:0 !important;border:none !important;box-shadow:none !important;overflow-y:auto !important;overscroll-behavior:contain;padding:calc(18px + env(safe-area-inset-top)) 18px calc(96px + env(safe-area-inset-bottom)) !important}
   #mcAdvCard{width:100% !important;max-height:100dvh !important;height:100dvh;border-radius:0 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:calc(16px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom)) !important}
   /* les sliders gardent leur glissé horizontal, le reste de la carte défile verticalement sans blocage */
   #mcAdvCard input[type=range]{touch-action:pan-x}

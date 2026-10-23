@@ -644,7 +644,7 @@ serve(async (req) => {
               const rc = await fetch(`https://api.whop.com/api/v1/memberships/${oldMemberId}/cancel`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cancellation_mode: 'at_period_end' }),
+                body: JSON.stringify({ cancel_at_period_end: true }),   // 23/10 : paramètre API v1 (cancellation_mode était ignoré → annulation immédiate)
               })
               console.log(rc.ok
                 ? `🔁 Ancien abonnement ${oldMemberId} annulé automatiquement (remplacé par ${newMemberId})`
