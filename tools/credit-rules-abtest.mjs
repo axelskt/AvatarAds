@@ -1,10 +1,11 @@
-// A/B test v2 — reproduit le code déployé + la NOUVELLE règle « achetés dépensés EN PREMIER »
+// A/B test v3 — reproduit le code déployé : crédits du PLAN dépensés en premier, ACHETÉS ensuite (Axel 23/10,
+// inverse la règle du 03/09). Même formule que spend_credits (migration 20261023150000_credits_plan_dabord).
 const boughtLeft = (p) => Math.min(p.bought_credits || 0, p.credits_remaining || 0);
-// spend_credits : achetés d'abord, puis le plan ; l'opération mémorise la part achetée (bought_part)
+// spend_credits : plan d'abord, puis les achetés ; l'opération mémorise la part achetée (bought_part)
 function spend(p, n) {
   if ((p.credits_remaining||0) < n) return { p, ok:false };
-  const bought_part = Math.min(p.bought_credits||0, n);
-  return { p: { ...p, credits_remaining: p.credits_remaining - n, bought_credits: Math.max(0, (p.bought_credits||0) - n) }, ok:true, op:{ amount:n, bought_part } };
+  const bought_part = Math.min(n, Math.max(0, (p.bought_credits||0) - (p.credits_remaining - n)));
+  return { p: { ...p, credits_remaining: p.credits_remaining - n, bought_credits: Math.max(0, (p.bought_credits||0) - bought_part) }, ok:true, op:{ amount:n, bought_part } };
 }
 // refund_credits : rend le montant ET la part achetée
 function refund(p, op) { return { ...p, credits_remaining: p.credits_remaining + op.amount, bought_credits: (p.bought_credits||0) + op.bought_part }; }
@@ -13,15 +14,15 @@ function deactivate(p) { const k = boughtLeft(p); return { ...p, plan:'free', cr
 const line = (t, v) => console.log('  ' + t.padEnd(58) + '→ ' + v);
 const fmt = p => `${p.credits_remaining} (plan ${p.credits_remaining - p.bought_credits} + achetés ${p.bought_credits})`;
 
-console.log('\n=== A) ACHETÉS DÉPENSÉS EN PREMIER (Pro 550 + pack 300) ===');
+console.log('\n=== A) PLAN DÉPENSÉ EN PREMIER (Pro 550 + pack 300) ===');
 let p = { plan:'pro', credits_remaining:850, bought_credits:300 };
 line('Départ', fmt(p));
-let r = spend(p, 100); p = r.p; line('Dépense 100', fmt(p) + '   ← les 100 sortent des ACHETÉS');
-r = spend(p, 250); p = r.p; line('Dépense 250', fmt(p) + '   ← 200 achetés + 50 du plan');
-r = spend(p, 200); p = r.p; line('Dépense 200', fmt(p) + '   ← tout sur le plan (plus d\'achetés)');
+let r = spend(p, 100); p = r.p; line('Dépense 100', fmt(p) + '   ← les 100 sortent du PLAN');
+r = spend(p, 250); p = r.p; line('Dépense 250', fmt(p) + '   ← 250 du plan');
+r = spend(p, 300); p = r.p; line('Dépense 300', fmt(p) + '   ← 200 du plan (épuisé) + 100 achetés');
 console.log('\n=== B) REMBOURSEMENT (génération ratée) — rend aussi la part achetée ===');
 let q = { plan:'pro', credits_remaining:850, bought_credits:300 };
-let sp = spend(q, 350); line('Dépense 350 (300 achetés + 50 plan)', fmt(sp.p));
+let sp = spend(q, 650); line('Dépense 650 (550 plan + 100 achetés)', fmt(sp.p));
 let back = refund(sp.p, sp.op); line('Remboursement de l\'opération', fmt(back) + '   ← identique au départ');
 console.log('\n=== C) RENOUVELLEMENT après consommation (report plafonné 2×) ===');
 let c = { plan:'pro', credits_remaining:120, bought_credits:0 };
