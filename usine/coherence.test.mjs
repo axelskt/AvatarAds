@@ -40,7 +40,7 @@ const OLD_HK = { 'HK-M01-02': ['TX-M01', 'TX-M02'], 'HK-M01-04': ['TX-M01', 'TX-
 // Jeu de test FIGÉ sur les hooks du 26/09 (les attentes de capacité en dépendent) : les hooks ajoutés le 28/09 (H59,
 // H78-H86) sont dans la matrice mais pas dans cette bibliothèque de test.
 const NEW_2809 = new Set(['H59', 'H78', 'H79', 'H80', 'H81', 'H82', 'H83', 'H84', 'H85', 'H86']);
-const NEW_1810 = new Set(['H87', 'H88', 'H89', 'H90', 'H91']);   // H90-H91 : 20/10   // ajoutés à la matrice le 18/10 (Axel), hors bibliothèque de test aussi
+const NEW_1810 = new Set(['H87', 'H88', 'H89', 'H90', 'H91', 'H92']);   // H90-H91 : 20/10 ; H92 : 23/10   // ajoutés à la matrice le 18/10 (Axel), hors bibliothèque de test aussi
 const HOOKS_2609 = Object.keys(MX).filter(h => h !== 'H74v2' && !NEW_2809.has(h) && !NEW_1810.has(h));
 function library(o) {
   o = o || {};
@@ -66,13 +66,14 @@ const seq = (...xs) => { let i = 0; return () => xs[Math.min(i++, xs.length - 1)
 // ── matrice ──
 C.setPhotosPerAvatar(1);   // tests historiques : 1 photo par avatar (le test « photos par avatar » passe à 3)
 
-test('matrice : 58 hooks (H74v2 tel quel ; + H59, H78-H86 le 28/09 ; + H87-H89 le 18/10 ; + H90-H91 le 20/10), « L33/L35 » = L33, 445 paires (validées par Axel)', () => {
-  assert.equal(Object.keys(MX).length, 58);
+test('matrice : 59 hooks (H74v2 tel quel ; + H59, H78-H86 le 28/09 ; + H87-H89 le 18/10 ; + H90-H91 le 20/10 ; + H92 le 23/10), « L33/L35 » = L33, 451 paires (validées par Axel)', () => {
+  assert.equal(Object.keys(MX).length, 59);
   assert.ok(Array.isArray(MX.H74v2));
   assert.deepEqual([...MX.H32], ['L16', 'L32', 'L34']);
   assert.ok(MX.H14.includes('L33') && !Object.values(MX).some(ls => ls.includes('L33/L35')));
-  assert.equal(Object.values(MX).reduce((a, ls) => a + ls.length, 0), 445);
+  assert.equal(Object.values(MX).reduce((a, ls) => a + ls.length, 0), 451);
   assert.deepEqual([...MX.H88], ['L15', 'L16', 'L19', 'L32', 'L34', 'L48', 'L58']);   // Axel 18/10
+  assert.deepEqual([...MX.H92], ['L15', 'L16', 'L19', 'L32', 'L48', 'L58']);   // Axel 23/10
   assert.equal(HOOKS_2609.reduce((a, h) => a + MX[h].length, 0) + MX.H74v2.length, 332);   // matrice du 26/09 inchangée
   assert.ok(Object.isFrozen(MX) && Object.isFrozen(MX.H12));
 });

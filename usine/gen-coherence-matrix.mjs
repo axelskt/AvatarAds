@@ -59,6 +59,7 @@ export const hooks = [
  ['89',"Je ne sais pas comment c'est légal mais je fais plus de 100 réels Instagram par heure comme ça."],
  ['90',"Ouahhh ça commence vraiment à devenir flippant là ce qu'on peut faire."],
  ['91',"Je suis pas censé en parler mais là c'est vraiment trop une dinguerie ce qui se passe."],
+ ['92',"Claude vient juste de tuer les agences marketing, tu peux maintenant le connecter pour qu'il crée des vidéos en automatique."],
 ];
 // Génériques : liste des ❌ (tout le reste = ✅). Spécifiques : liste des ✅.
 const L12_ok = new Set(['12','13','14','21','60','73','59']);        // SPÉCIFIQUE influenceur/avatar
@@ -75,7 +76,8 @@ const L58_ok = new Set(['16','17','18','20','24','40','48','58','60','68','69','
 const L70_ok = new Set(['12','13','14','15','16','19','20','21','23','24','25','30','36','40','48','58','60','63','64','68','69','70','72','73','75','76','77','59','78','79','83','84','85','86']); // GÉNÉRIQUE sans montrer ton visage
 // L69 ABANDONNÉE (trop niche) · L72 ABANDONNÉE
 // Validations EXPLICITES d'Axel (28/09) : pour ces hooks, la liste fait foi (L33 = colonne « L33/L35 »), elle remplace les ensembles ci-dessus.
-const VALIDATED = {'90':['L15','L16','L19','L28','L32','L48','L58','L70'],'91':['L15','L16','L19','L28','L32','L48','L58','L70'],   // Axel 20/10 : génériques + L58, L28, L32
+const VALIDATED = {'92':['L15','L16','L19','L32','L48','L58'],   // Axel 23/10
+  '90':['L15','L16','L19','L28','L32','L48','L58','L70'],'91':['L15','L16','L19','L28','L32','L48','L58','L70'],   // Axel 20/10 : génériques + L58, L28, L32
   '59':['L19','L48','L70','L58'],'78':['L12','L15','L16','L19','L48','L58','L70'],'84':['L12','L15','L16','L19','L48','L58','L70'],'79':['L12','L15','L16','L19','L28','L30','L32','L34','L48','L58','L70'],'80':['L15','L16','L19','L48','L70'],'81':['L15','L16','L19','L48','L70'],'82':['L15','L16','L19','L48','L70'],'83':['L12','L16','L19','L48','L58','L70'],'85':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],'86':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],'87':['L15','L16','L19','L28','L32','L34','L48','L58','L70'],'88':['L15','L16','L19','L32','L34','L48','L58'],'89':['L12','L15','L16','L34','L48','L58','L70']};   // 87-89 : Axel 18/10
 const vOk = (hid, col) => VALIDATED[hid] ? VALIDATED[hid].includes(col === 'L33/L35' ? 'L33' : col) : null;
 export const LIAISONS = [

@@ -82,8 +82,9 @@ Chaque vidéo = 2 formats : `hook+contenu+CTA` (court) et `hook+liaison+contenu+
 | **H89** · Je ne sais pas comment c'est légal mais je fais plus de 100 réels Instagram par heure comme ça. | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | **H90** · Ouahhh ça commence vraiment à devenir flippant là ce qu'on peut faire. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **H91** · Je suis pas censé en parler mais là c'est vraiment trop une dinguerie ce qui se passe. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H92** · Claude vient juste de tuer les agences marketing, tu peux maintenant le connecter pour qu'il crée des vidéos en automatique. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
 
-**✅ par liaison** — L12 13 · L15 51 · L16 53 · L19 56 · L28 25 · L30 30 · L32 41 · L33/L35 27 · L34 33 · L48 47 · L58 28 · L70 41 (sur 58 hooks)
+**✅ par liaison** — L12 13 · L15 52 · L16 54 · L19 57 · L28 25 · L30 30 · L32 42 · L33/L35 27 · L34 33 · L48 48 · L58 29 · L70 41 (sur 59 hooks)
 
 > **Analyse cohérence : 12 liaisons validées** (L33=L35 ; L69 & L72 abandonnées).
 > **Étape suivante** : ranger chaque hook dans une ou plusieurs FAMILLES (multi-famille possible) + analyse « pourquoi telle famille et pas telle autre » (générique ≠ 100% des hooks).
