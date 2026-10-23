@@ -29,7 +29,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--medaillon', '--medaillon-libre', '--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut'];
+const VAL_FLAGS = ['--medaillon', '--medaillon-libre', '--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut', '--split'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -101,6 +101,12 @@ const demoBrick = OPT.demo && Array.isArray(bricks) ? bricks.find(b => b && b.id
 const demoRef = demoBrick || OPT.demo || '';   // brique (module = meta.module sinon sujet) ou nom de module ; vide = inconnu
 const tx = OPT.tx ? OPT.tx.split(',').map(x => x.trim()).filter(Boolean) : FMT.txOfHook(basename(hook), Array.isArray(bricks) ? bricks : null);
 const avantApres = OPT['no-avant-apres'] ? false : OPT['avant-apres'] ? true : FMT.isAvantApres(basename(hook));
+// Axel 23/10 : SPLIT — le hook arrive DÉJÀ habillé par usine/split-hook.py (2 résultats « Hook démo » en haut, avatar en bas).
+// --split A:4.08 (d'autres résultats prennent le relais à 4,08 s) ou B:4.08 (l'avatar repasse en plein écran à 4,08 s) :
+// ni zoom, ni tremblement, ni phrase choc, ni illustration sur ce hook ; ses sous-titres en boîtes mono à la jonction (880 px),
+// puis en bas du plein écran (1250 px) après la bascule de la version B.
+const SPLIT = (() => { const m = /^([AB]):(\d+(?:\.\d+)?)$/.exec(String(OPT.split || '')); return m ? { mode: m[1], sw: +m[2] } : null; })();
+if (OPT.split && !SPLIT) { console.error('--split attend A:<s> ou B:<s> (ex. B:4.08)'); process.exit(2); }
 let format;
 // Statut des formats dans Production : avant le 07/10, seul « auto » le lisait — F03 par défaut ou un format demandé
 // était rendu même retiré (formats.test.mjs, cas « tous retirés »). Sans base lisible (ni --bricks ni clé) : tous tirables.
@@ -423,7 +429,7 @@ if (OPT['hook-broll']) {
 //    démo). --illus "fichier|entrée|sortie;fichier|entrée" = liste à la main. Toutes : grande carte qui entre par la droite
 //    et repart par la gauche (style 'hook'), woosh à l'entrée, glissé à la sortie.
 const illusLog = [];
-if (OPT.illus) {
+if (OPT.illus && !SPLIT) {   // split : les résultats sont déjà en haut de l'écran
   const BANK = readJson(join(HERE, 'illustrations.json'), 'illustrations.json');
   // Axel 15/10 (VF-0489 / VF-0503) : l'illustration du hook doit montrer ce que la démo montre (Omni, static ads, Images IA…)
   if (OPT.illus === 'auto' && hookId && demoBrick && !avantApres) {
@@ -529,7 +535,7 @@ if (cta) { inputs.push('-i', cta); iCta=n++; }
 
 // démo prolongée sur sa dernière image : le glissement vers le CTA se fait APRÈS la fin de la démo, jamais sur ses mots
 // hook : léger zoom avant continu (1,00 → 1,07) pour le rendre plus vivant (Axel 29/09)
-let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1${avantApres ? '' : ',' + AV_TREAT}[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
+let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,${SPLIT ? 'scale=1080:1920' : `scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920`},setsar=1${avantApres || SPLIT ? '' : ',' + AV_TREAT}[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : vfix(hookId || idFromFile(hookVoice)) + VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,atrim=0:${(L2 + TS).toFixed(3)},afade=t=out:st=${L2.toFixed(3)}:d=${TS},adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
@@ -605,13 +611,28 @@ if (ctaW.length > 1) {
   }
   ctaW.slice(a0, a1 + 1).forEach(w => { w.g = 'g3'; });
 }
+if (SPLIT) {   // 2-3 mots par boîte (≤ 18 lettres), coupure à la ponctuation et à la bascule ; jamais un groupe à cheval
+  let k = 0, n = 0, len = 0;
+  hookW.forEach((w, i) => {
+    const t = String(w.text || '').trim(), prev = hookW[i - 1];
+    const cut = i > 0 && (n >= 3 || len + t.length > 18 || /[.!?,;:…]$/.test(String(prev.text || '').trim()) || (prev.start < SPLIT.sw && w.start >= SPLIT.sw));
+    if (cut) { k++; n = 0; len = 0; }
+    w.g = 'sp' + k; w.sp = SPLIT.mode === 'B' && w.start >= SPLIT.sw ? 1250 : 880; n++; len += t.length + 1;
+  });
+  // un groupe ne finit jamais sur un petit mot (« C'EST DÉJÀ UNE » | « DINGUERIE ») : il passe au groupe suivant du même côté
+  const PETIT = /^(un|une|le|la|les|l|de|des|du|d|à|a|au|aux|et|en|ce|ces|ta|ton|tes|mon|ma|mes|sa|son|ses|ton|tu|je|il|on|pour|par|sur|avec|qui|que)$/;
+  for (let i = hookW.length - 2; i >= 0; i--) {
+    const w = hookW[i], nx = hookW[i + 1];
+    if (w.g !== nx.g && w.sp === nx.sp && hookW.filter(x => x.g === w.g).length >= 2 && PETIT.test(bare(w.text))) w.g = nx.g;
+  }
+}
 allWords.push(...hookW, ...demoW, ...ctaW);
 const wj = join(work, 'allWords.json'); writeFileSync(wj, JSON.stringify(allWords));
 // format : phrase choc (placée hors visage, zone sûre) + style des sous-titres
 const capOpts = { subs: format.subs, style: OPT['subs-style'] || 'contour', broll: brollEvents.map(e => ({ file: e.file, pair: e.pair || undefined, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image, style: e.style || 'card' })) };
 const sidecar = { format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
-if (FMT.hasChoc(format)) {
+if (FMT.hasChoc(format) && !SPLIT) {
   const firstIll = brollEvents.filter(e => e.style === 'hook').map(e => e.at).sort((a, b) => a - b)[0];
   // Axel 12/10 : le texte choc reste TOUT le hook (plus coupé à la 1re illustration : elle passe au centre, la phrase est en haut)
   const end = FMT.chocEnd(format, durH, total); void firstIll;

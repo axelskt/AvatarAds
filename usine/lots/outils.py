@@ -85,7 +85,7 @@ def publish(j, vf):
     """vidéo rendue → qc/ + ligne factory_qc 'pending' + empreinte ; renvoie (nom, durée, zone du texte choc)."""
     fj = json.load(open(j['out'] + '.format.json'))
     if j['kind'] == 'o':
-        name = '%s_%s_%s_%s_%s_%s_%s_%s_%s' % (vf, j['photo'], j['hook'], j['demo'], j['cta'], fj.get('musique') or 'M00', fj.get('sous_titre'), fj.get('texte_choc'), fj.get('style_choc'))
+        name = '%s_%s_%s_%s_%s_%s_%s_%s_%s' % (vf, j['photo'], j['hook'], j['demo'], j['cta'], fj.get('musique') or 'M00', fj.get('sous_titre'), fj.get('texte_choc') or ('SPLIT' if j.get('split') else None), fj.get('style_choc') or j.get('split'))
     else:
         name = '%s_F05_%s_%s_%s_%s_%s' % (vf, j['react'], j['demo'], j['music'], j['th'], j['cs'])
     final = os.path.join(OUT, name + '.mp4'); os.replace(j['out'], final); os.replace(j['out'] + '.format.json', final + '.format.json')
@@ -102,6 +102,8 @@ def publish(j, vf):
         if j.get('hf_var'): row['brick_combo']['hook_variant'] = j['hf_var']   # 20/10 : H89-GRILLE / H89-GRILLE-C
         if j.get('vo'): row['brick_combo']['voix_off'] = j['vo']   # 21/10 : format voix off Motion Control (TX-M…)
         if j.get('fv'): row['brick_combo']['fond_vert'] = j['fv']   # 21/10 : format fond vert (avatar détouré devant TX-…)
+        if j.get('split'):   # 23/10 : format split (A / B) et résultats « Hook démo » montrés en haut
+            row['brick_combo']['split'] = j['split']; row['brick_combo']['hook_demos'] = j.get('hd') or []
     else:
         poster = final[:-4] + '-poster.jpg'
         sh(['ffmpeg', '-v', 'error', '-y', '-ss', '1.5', '-i', final, '-vframes', '1', '-vf', 'scale=540:-1', poster])

@@ -111,4 +111,25 @@ if (NVO) {
     txUse[tx] = (txUse[tx] || 0) + 1; voUse[cand.a + '|' + cand.b] = (voUse[cand.a + '|' + cand.b] || 0) + 1; demoUse[demo] = (demoUse[demo] || 0) + 1
   }
 }
-console.log(JSON.stringify({ O, M, V }))
+// ── Split (Axel 23/10) : SPLIT=n vidéos au hook en écran partagé (usine/split-hook.py) — 2 résultats « Hook démo » en haut,
+//    l'avatar en bas. Règle Hook démo : SEULEMENT devant une démo Express (module express, ou démo Claude qui génère une vidéo
+//    Express : features express). Les deux versions validées tournent une fois sur deux (A : d'autres résultats prennent le
+//    relais ; B : l'avatar repasse en plein écran), en continuant le compte des lots précédents. Mêmes règles que les parlées
+//    (photo × hook × démo jamais refaite, plafond CAP_HOOK par photo × hook, démo Claude seulement avec un CTA-CLAUDE). ──
+const S = [], NSP = +(process.env.SPLIT || 0)
+if (NSP) {
+  const isExp = d => d.meta?.module === 'express' || (Array.isArray(d.meta?.features) && d.meta.features.includes('express'))
+  const expDemos = demos.filter(isExp), base = X.qc.filter(q => (q.c || {}).split).length
+  let g3 = 0
+  while (S.length < NSP && g3++ < 80) for (const p of photos) {
+    if (S.length >= NSP) break
+    const hs = [...new Set(vars.filter(v => v.a === p).map(v => v.b))].filter(h => (hookUse[p + '|' + h] || 0) < CAP_HOOK).sort((a, b) => (hookUse[p + '|' + a] || 0) - (hookUse[p + '|' + b] || 0) + (rnd() - 0.5) * 0.5)
+    for (const h of hs) {
+      const free = expDemos.filter(d => COH.pairLevel(by[h], d) === 'ok' && illusOk(h, d) && !usedOmni.has([p, h, d.id].join('|')) && (avClaude.has(p.split('-')[0]) || !/^C-MCP/.test(d.id))).map(d => d.id)
+      if (!free.length) continue
+      const d = pick(free, 1)[0]; usedOmni.add([p, h, d].join('|')); hookUse[p + '|' + h] = (hookUse[p + '|' + h] || 0) + 1
+      S.push({ k: 's', photo: p, hook: h, demo: d, mode: (base + S.length) % 2 ? 'B' : 'A' }); break
+    }
+  }
+}
+console.log(JSON.stringify({ O, M, V, S }))

@@ -33,7 +33,7 @@ if not S:
             for k in sorted(g, key=lambda k: -len(g[k])):
                 if g[k]: out.append(g[k].pop(0))
         return out
-    O = spread(P['O'] + P.get('V', []), lambda x: x['photo']); M = spread(P['M'], lambda x: x['react']); seq = []   # 21/10 : + voix off (VOIX_OFF=n)
+    O = spread(P['O'] + P.get('V', []) + P.get('S', []), lambda x: x['photo']); M = spread(P['M'], lambda x: x['react']); seq = []   # 21/10 : + voix off (VOIX_OFF=n)
     while O or M:
         if M: seq.append(M.pop(0))
         if O: seq.append(O.pop(0))
@@ -103,6 +103,22 @@ def prep(it, tag):
         cmd = ['node', 'usine/build.mjs', h, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--illus', 'auto', '--subs-style', 'auto',
                '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
         return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, hf_var=hv)
+    if it['k'] == 's':   # Axel 23/10 : SPLIT (usine/split-hook.py) — 2 résultats « Hook démo » en haut, l'avatar en bas, démo Express
+        photo, hook, demo, mode = it['photo'], it['hook'], it['demo'], it.get('mode', 'B')
+        hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
+        h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
+        out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-split.mp4'
+        hds = sorted(x for x, b in bricks.items() if b.get('kind') == 'hook-demo' and b.get('status') == 'ready' and (b.get('meta') or {}).get('media'))
+        hd = random.sample(hds, min(6, len(hds)))   # 3 paires au plus (version A : relais)
+        res = {get(bricks[x]['meta']['media'], os.path.basename(bricks[x]['meta']['media'])): x for x in hd}
+        subprocess.run(['python3', 'usine/split-hook.py', h, vis, '--mode', mode, '--res', ','.join(res)], cwd=REPO, check=True, capture_output=True)
+        info = json.load(open(vis[:-4] + '.json')); sw = info['switch'] if info['switch'] else dur(h) + 1
+        by_name = {os.path.basename(f): x for f, x in res.items()}
+        used = [by_name.get(p_[k_]) for p_ in info['pairs'] for k_ in ('a', 'b')]
+        cmd = ['node', 'usine/build.mjs', vis, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--split', '%s:%.3f' % (mode, sw),
+               '--subs-style', 'auto', '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
+        return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, split=mode, hd=used, vis=vis, visj=vis[:-4] + '.json')
     if it['k'] == 'v':   # Axel 21/10 : voix off Motion Control (usine/voix-off-mc.py), même photo / hook / CTA qu'une parlée
         photo, hook, demo, tx = it['photo'], it['hook'], it['demo'], it['tx']
         hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
@@ -164,7 +180,7 @@ for si in range(S['serie'], len(S['series'])):
                 name, T, zone = publish(j, vf); S['next'] += 1
                 S['ok'].append({'vf': vf, 'name': name, 'serie': si + 1}); log('✓', name, T, zone)
             except Exception as e: log('✗ dépôt', j['it'], e); S['fail'].append({'it': j['it'], 'err': str(e)[:300]})
-            for x_ in (j['out'] + '.log', j.get('vis'), j.get('hv')):
+            for x_ in (j['out'] + '.log', j.get('vis'), j.get('hv'), j.get('visj')):
                 try:
                     if x_: os.remove(x_)
                 except OSError: pass

@@ -95,7 +95,7 @@ function burn(video, output, words, opts = {}) {
   // fusion « avatar »+« ads » puis fix marque
   { const merged=[]; for(let i=0;i<words.length;i++){ const w=words[i], n=words[i+1];
       if(n && /^a?v?atar$/.test(bareOf(w.text)) && /^(hat|had|ad|rad|hads|aad)/.test(bareOf(n.text))){
-        merged.push({ text:(/fr/.test(bareOf(n.text))||/\.fr/i.test(n.text))?'avatarads.fr':'avatarads', start:w.start, end:n.end }); i++;
+        merged.push({ ...w, text:(/fr/.test(bareOf(n.text))||/\.fr/i.test(n.text))?'avatarads.fr':'avatarads', start:w.start, end:n.end }); i++;
       } else merged.push(w);
     } words = merged.map(w=>({ ...w, text:brandFix(w.text) })); }
   // captions continues (pas de trou) + lead, bornées à la vidéo
@@ -114,7 +114,7 @@ function burn(video, output, words, opts = {}) {
       // 11/10 : un « ou » isolé (« Écris « site » en commentaire ») devient vide une fois nettoyé → case vide dans les
       // styles en pastilles (S05) ; on ne garde que les mots qui ont du texte
       const vis = grp.map(x => ({ t: clean(x.text), s: Math.max(0, x.start - LEAD) })).filter(x => x.t);
-      if (vis.length) caps.push({ grp: vis, t: vis.map(x => x.t).join(' '), s, e });
+      if (vis.length) caps.push({ grp: vis, t: vis.map(x => x.t).join(' '), s, e, sp: w.sp || null });
       i = j; continue;
     }
     const next = words[i + 1], s = Math.max(0, w.start - LEAD);
@@ -144,6 +144,8 @@ function burn(video, output, words, opts = {}) {
   const box = ['S03', 'S05', 'S07', 'S21'].includes(sid);
   const stCls = 'st-' + sid;
   const clipsHtml = caps.map((c,i)=>{
+    // split (Axel 23/10) : la phrase du groupe d'un bloc, en boîte mono, centrée sur la hauteur c.sp (jonction ou bas)
+    if (c.sp) return `<div class="cap clip spl" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}" style="top:${Math.round(c.sp - 56)}px"><span>${c.t}</span></div>`;
     if (c.grp && box) return `<div class="cap clip grp bx" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">`
       + c.grp.map((x, k) => `<span class="gw" id="c${i}w${k}">${x.t}</span>`).join(' ') + `</div>`;
     if (box && !c.grp) return `<div class="cap clip bx" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}"><span class="bw">${c.t}</span></div>`;
@@ -153,7 +155,7 @@ function burn(video, output, words, opts = {}) {
     const st = big ? ` style="font-size:${FMT.bigCapSize(c.t, 800, 68, 44)}px"` : '';   // 800 = largeur de la zone sûre ; 68 px au plus (Axel 18/10)
     return `<div class="${cls}" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}"${st}>${c.t}</div>`;
   }).join('\n      ');
-  const anim = caps.map((c,i)=> c.grp
+  const anim = caps.map((c,i)=> c.sp ? `tl.set('#c${i}',{autoAlpha:1}, ${c.s.toFixed(3)});` : c.grp
     // groupe (Axel 29/09) : les mots arrivent UN PAR UN quand ils sont dits, chacun monte du bas et se pose, et la phrase
     // se construit ; elle reste entière jusqu'au mot suivant le groupe
     ? `tl.set('#c${i}',{autoAlpha:1}, ${c.s.toFixed(3)});`
@@ -259,6 +261,10 @@ function burn(video, output, words, opts = {}) {
    -webkit-text-stroke:6px #000;paint-order:stroke fill;
    text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;line-height:1}
  /* gros sous-titres colorés : même bande basse, mot fort en jaune */
+ /* split (Axel 23/10) : boîte mono sombre à la jonction des deux moitiés, posée d'un bloc (pas d'entrée animée) */
+ #root .cap.spl{left:0;width:1080px;bottom:auto;height:112px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',ui-monospace,monospace;
+   font-weight:500;font-size:62px;letter-spacing:0;color:#fff;-webkit-text-stroke:0;text-shadow:none;text-transform:uppercase}
+ #root .cap.spl>span{display:inline-block;background:rgba(17,17,17,.93);border:2px solid rgba(255,255,255,.16);border-radius:10px;padding:16px 30px 14px;line-height:1.1}
  .cap.big{bottom:450px;font-size:68px;-webkit-text-stroke:7px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
  /* groupe de sous-titres (moments clés) : la phrase en bloc sur 2-3 lignes, chaque mot s'allume quand il est dit */
  .broll{position:absolute;z-index:4;object-fit:cover;border-radius:34px;border:5px solid #fff;box-shadow:0 22px 60px rgba(0,0,0,.45);background:transparent}
@@ -363,8 +369,9 @@ function burn(video, output, words, opts = {}) {
    // sont à scale 0,82 ou décalées), police réduite au besoin pour ce sous-titre seulement ; tout de suite puis polices prêtes
    (function(){ const fit=()=>document.querySelectorAll('.cap').forEach(c=>{ if(!c.dataset.fs) c.dataset.fs=parseFloat(getComputedStyle(c).fontSize);
        const fs=+c.dataset.fs; c.style.fontSize=fs+'px';
-       const w=c.classList.contains('grp') ? Math.max(0, ...Array.from(c.querySelectorAll('.gw'), s=>s.offsetWidth)) : c.scrollWidth;
-       if(w>800) c.style.fontSize=(fs*800/w).toFixed(1)+'px'; });
+       const spl=c.classList.contains('spl'), lim=spl ? 960 : 800;
+       const w=spl ? c.firstElementChild.offsetWidth : c.classList.contains('grp') ? Math.max(0, ...Array.from(c.querySelectorAll('.gw'), s=>s.offsetWidth)) : c.scrollWidth;
+       if(w>lim) c.style.fontSize=(fs*lim/w).toFixed(1)+'px'; });
      fit(); if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); })();
    const tl = gsap.timeline({ paused:true });
    ${chocAnim}
