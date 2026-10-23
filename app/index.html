@@ -5955,7 +5955,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-23-1715'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-23-1840'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -8470,8 +8470,15 @@ window._whopEmbedComplete = function(){
   toast('Paiement reçu — activation en cours…');
   _whopWatchPayment(1200); // vérifications rapprochées le temps que le webhook crédite
 };
+// Axel 23/10 : les ABONNEMENTS se paient sur la page de paiement (paiement.html : pack remisé, upgrade, rendu prioritaire,
+// code promo, Apple Pay + carte ; même compte via la session du navigateur → metadata aa_user_id) ; les packs restent ici
+const _WHOP_PAGE_PAIEMENT = {
+  plan_YKcdyPT6RRQSi:'starter', plan_g4BVtDmk6hgjQ:'pro', plan_w8lh5zpEJFOQR:'elite', plan_pZmWh1dVdmIWT:'elite60', plan_63PGeG3MesbJR:'elite90',
+  plan_cNydK89X39PLE:'starter&bill=y', plan_P7WIywSa6YrxT:'pro&bill=y', plan_OvRwm5CW3xcNh:'elite&bill=y', plan_uWTkJDl1GvxNR:'elite60&bill=y', plan_x2kDWR6ur2W5E:'elite90&bill=y',
+};
 function _whopCheckout(url){
   const pid = _whopPlanId(url);
+  if(pid && _WHOP_PAGE_PAIEMENT[pid]){ location.href = '/paiement.html?plan=' + _WHOP_PAGE_PAIEMENT[pid]; return; }
   const body = document.getElementById('whopCoBody');
   // pas d'ID de plan reconnu OU conteneur absent → page de paiement Whop
   if(!pid || !body){ if(url) window.open(_whopHostedUrl(url), '_blank', 'noopener'); return; }

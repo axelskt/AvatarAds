@@ -241,6 +241,9 @@ const CHECKOUT={
   elite60:{ m:'https://whop.com/checkout/plan_pZmWh1dVdmIWT', a:'https://whop.com/checkout/plan_uWTkJDl1GvxNR' },
   elite90:{ m:'https://whop.com/checkout/plan_63PGeG3MesbJR', a:'https://whop.com/checkout/plan_x2kDWR6ur2W5E' },
 };
+// Axel 23/10 : les abonnements se paient sur la page de paiement (paiement.html : options pack / upgrade / rendu prioritaire,
+// Apple Pay + carte) ; CHECKOUT ne sert plus qu'au repli si la page manquait d'un palier
+function payUrl(id){ return '/paiement.html?plan='+encodeURIComponent(id)+(isAnnual?'&bill=y':''); }
 function perDay(p){ return (parseFloat(String(p).replace(',','.'))/30).toFixed(2).replace('.',','); }
 var eliteSlider=0;
 const ELITE_TIERS=[
@@ -314,7 +317,7 @@ function renderPricing(){
     var strike = isAnnual ? (tier ? tier.price : (pl.annualStrike||'')) : (pl.strike||'');   // annuel : on barre le prix mensuel
     var note='soit '+perDay(price)+'\u20ac/jour'+(isAnnual?' \u00b7 facturé annuellement':'')+' \u00b7 sans engagement';
     var checkoutId=tier?tier.checkoutId:pl.id;
-    var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
+    var checkoutUrl=CHECKOUT[checkoutId]?payUrl(checkoutId):'https://whop.com/avatarads/';
     var borderColor=pop?'var(--accent)':(elite?'rgba(154,124,255,.35)':'var(--border)');
     var bg=pop?'radial-gradient(500px 220px at 50% 0,rgba(255,90,31,.10),var(--surface))':(elite?'radial-gradient(500px 220px at 50% 0,rgba(154,124,255,.08),var(--surface))':'var(--surface)');
     var shadow=pop?'0 0 0 3px var(--accent-soft),0 40px 70px -34px var(--accent-glow)':'none';
@@ -342,7 +345,7 @@ function renderPricing(){
       +'<span'+(elite?' id="lpElitePrice"':'')+' class="display" style="font-size:42px;font-weight:800">'+price+'€</span>'
       +'<span class="faint" style="font-size:15px">/mois</span></div>'
       +'<div'+(elite?' id="lpEliteNote"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+(isAnnual?'var(--green)':'var(--text-3)')+'">'+note+'</div>'
-      +'<a'+(elite?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" onmouseenter="_whopPrewarm(this.href)" onclick="_whopCheckout(this.href);return false" target="_blank" rel="noopener" class="'+ctaCls+'" style="'+ctaStyle+'margin-top:18px">'+ctaLabel+'</a>'
+      +'<a'+(elite?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" class="'+ctaCls+'" style="'+ctaStyle+'margin-top:18px">'+ctaLabel+'</a>'
       +feats
       +'</div>';
   }
@@ -360,7 +363,7 @@ function setEliteSlider(idx){
   var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';
   var strk=document.getElementById('lpEliteStrike'); if(strk){ if(isAnnual){ strk.textContent=tier.price+'\u20ac'; strk.style.display=''; } else strk.style.display='none'; }
   var note=document.getElementById('lpEliteNote'); if(note) note.textContent='soit '+perDay(isAnnual?tier.annual:tier.price)+'\u20ac/jour'+(isAnnual?' \u00b7 facturé annuellement':'')+' \u00b7 sans engagement';
-  var cta=document.getElementById('lpEliteCta'); if(cta){ cta.href=(CHECKOUT[tier.checkoutId]&&CHECKOUT[tier.checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/'; }
+  var cta=document.getElementById('lpEliteCta'); if(cta){ cta.href=CHECKOUT[tier.checkoutId]?payUrl(tier.checkoutId):'https://whop.com/avatarads/'; }
 }
 renderPricing();
 function toggleAnnual(){
