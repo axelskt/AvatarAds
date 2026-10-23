@@ -3,7 +3,7 @@
 import { FakeDB } from './fake-supabase.ts'
 const RAW = 'secret-de-test-0123456789abcdef'
 Deno.env.set('SUPABASE_URL', 'https://test.local'); Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', 'x')
-Deno.env.set('WHOP_WEBHOOK_SECRET', 'whsec_' + btoa(RAW)); Deno.env.set('WHOP_PRIO_PLANS', 'plan_5mcgIdN0ZTlCG')
+Deno.env.set('WHOP_WEBHOOK_SECRET', 'whsec_' + btoa(RAW)); Deno.env.set('WHOP_PRIO_PLANS', 'plan_5mcgIdN0ZTlCG,plan_2KlnrycFeoXMT,plan_oPv9MNE8701Tt')
 for (const k of ['RESEND_API_KEY', 'WHOP_API_KEY', 'WHOP_UPSELL_PACKS']) Deno.env.delete(k)
 let logs: string[] = []
 const keep = console.log
@@ -97,6 +97,16 @@ for (const ordre of ['prio-dabord', 'variante-dabord']) {
   ok(`prio (${ordre}) : son paiement ne touche ni plan ni crédits`, prof(e)?.credits_remaining === c && prof(e)?.plan === 'pro')
   await send(fin('plan_5mcgIdN0ZTlCG', 'mem_prio', e))
   ok(`prio (${ordre}) : résiliation → retiré, abonnement intact`, prof(e)?.rendu_prioritaire === false && prof(e)?.plan === 'pro' && prof(e)?.credits_remaining === c)
+}
+
+// Rendu prioritaire ANNUEL (plan à part pour Elite 60 / 90 annuels, même réglage 3D Secure)
+for (const [prio, abo, plan, cr] of [['plan_2KlnrycFeoXMT', 'plan_QF7HXCR81yXRy', 'pro', 550 + 50 + 300], ['plan_oPv9MNE8701Tt', 'plan_tAKWwP8U88eTT', 'elite', 2200 + 75 + 600]] as [string, string, string, number][]) {
+  reset(); const e = (prio + '@test.fr').toLowerCase()
+  await send(act(prio, 'mem_prio', e)); await send(act(abo, 'mem_abo', e))
+  const p = prof(e)
+  ok(`prio annuel ${prio} : prioritaire + plan + pack`, p?.rendu_prioritaire === true && p?.plan === plan && p?.credits_remaining === cr && p?.whop_member_id === 'mem_abo', JSON.stringify(p))
+  await send(fin(prio, 'mem_prio', e))
+  ok(`prio annuel ${prio} : résiliation → retiré, abonnement intact`, prof(e)?.rendu_prioritaire === false && prof(e)?.plan === plan)
 }
 
 // Non-régression : abonnement normal sans pack (sans compte), et Pack M seul (avec compte)

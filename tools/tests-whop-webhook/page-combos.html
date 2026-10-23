@@ -13,9 +13,9 @@ const W={
  plan_NcMairMUEz3ST:[14.99,249.99,"starter","S","y"],plan_iATzKyUuANyfI:[14.99,449.99,"pro","S","y"],plan_QF7HXCR81yXRy:[27.99,449.99,"pro","M","y"],
  plan_5RTUZOJ3sGCXd:[27.99,799.99,"elite","M","y"],plan_QaAyO2Msc11Xk:[59.99,799.99,"elite","L","y"],plan_tAKWwP8U88eTT:[59.99,1439.88,"elite60","L","y"],
  plan_xzr5jL4TCAlWf:[59.99,1895.88,"elite90","L","y"]};
-const PRIO="plan_5mcgIdN0ZTlCG", NEXT={starter:"pro",pro:"elite",elite:"elite60",elite60:"elite90"}, PK={starter:"S",pro:"M",elite:"L",elite60:"L",elite90:"L"};
+const PRIO={m:["plan_5mcgIdN0ZTlCG",5],y:["plan_2KlnrycFeoXMT",60],y3ds:["plan_oPv9MNE8701Tt",60]}, NEXT={starter:"pro",pro:"elite",elite:"elite60",elite60:"elite90"}, PK={starter:"S",pro:"M",elite:"L",elite60:"L",elite90:"L"};
 const PRIX={S:[14.99,19.99],M:[27.99,34.99],L:[59.99,74.99]};
-const combos=[]; for(const b of Object.keys(PK)) for(const bill of ["m","y"]) for(const up of NEXT[b]?[0,1]:[0]) for(const pk of [0,1]) for(const pr of bill==="m"?[0,1]:[0]) combos.push({b,bill,up,pk,pr});
+const combos=[]; for(const b of Object.keys(PK)) for(const bill of ["m","y"]) for(const up of NEXT[b]?[0,1]:[0]) for(const pk of [0,1]) for(const pr of [0,1]) combos.push({b,bill,up,pk,pr});
 const eur=t=>parseFloat(String(t).replace(/[^\d,]/g,"").replace(",","."));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 window.__res=[]; window.__fini=false;
@@ -26,7 +26,7 @@ window.__res=[]; window.__fini=false;
   const w=f.contentWindow, d=f.contentDocument, clic=id=>{const e=d.querySelector(`[data-id="${id}"]`); if(e) e.click(); return !!e};
   await sleep(300);
   const ids=[...d.querySelectorAll("#opts .addon")].map(a=>a.dataset.id).join(",");
-  const attenduIds=[NEXT[c.b]?"upgrade":"","credits",c.bill==="m"?"prio":""].filter(Boolean).join(",");
+  const attenduIds=[NEXT[c.b]?"upgrade":"","credits","prio"].filter(Boolean).join(",");
   const err=[];
   if(ids!==attenduIds) err.push(`options ${ids} ≠ ${attenduIds}`);
   const pkTxt=d.querySelector('[data-id="credits"] .price')?.textContent||"";
@@ -35,9 +35,9 @@ window.__res=[]; window.__fini=false;
   const plan=w.planWhop(), key=w.cartKey(), wt=W[plan], tier=c.up?NEXT[c.b]:c.b;
   if(!wt) err.push("plan inconnu "+plan);
   else { if(wt[2]!==tier) err.push(`palier ${wt[2]} ≠ ${tier}`); if(wt[3]!==(c.pk?PK[c.b]:"")) err.push(`pack ${wt[3]||"aucun"} ≠ ${c.pk?PK[c.b]:"aucun"}`); if(wt[4]!==c.bill) err.push("rythme "+wt[4]); }
-  if((key.split("|")[1]===PRIO)!==!!c.pr) err.push("prio dans le panier ≠ case");
+  const pq=c.bill==="y"&&(tier==="elite60"||tier==="elite90")?PRIO.y3ds:PRIO[c.bill]; if((key.split("|")[1]||"")!==(c.pr?pq[0]:"")) err.push("prio dans le panier ≠ case");
   const du=eur(d.querySelector("#rPlan .due span:last-child").textContent), duM=eur(d.querySelector("#mSum .due span:last-child").textContent);
-  const attendu=wt?Math.round((wt[0]+wt[1]+(c.pr?5:0))*100)/100:NaN;
+  const attendu=wt?Math.round((wt[0]+wt[1]+(c.pr?PRIO[c.bill][1]:0))*100)/100:NaN;
   if(Math.abs(du-attendu)>0.001||Math.abs(duM-attendu)>0.001) err.push(`total ${du} / mobile ${duM} ≠ Whop ${attendu}`);
   // module Whop : prêt (pas de fallback) en 20 s max
   let etat="attente"; for(let k=0;k<80;k++){ await sleep(250); const box=d.getElementById("co");

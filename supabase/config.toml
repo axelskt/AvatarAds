@@ -6,6 +6,7 @@
 #   - lemonsqueezy-webhook : idem, signature interne
 #   - email-unsub    : lien cliqué depuis un e-mail (token propre dans l'URL)
 #   - auth-otp       : PRÉ-authentification (l'utilisateur n'a pas encore de session)
+#   - whop-quote     : devis Whop de la page de paiement (acheteur parfois sans compte ; plans en liste blanche, débit IP)
 # ⚠️ Sans ces entrées, un simple `functions deploy` remet verify_jwt=true et CASSE
 # ces fonctions en silence (vécu le 27/07/2026 sur mcp).
 
@@ -49,6 +50,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.whop-webhook]
+verify_jwt = false
+
+[functions.whop-quote]
 verify_jwt = false
 
 [functions.lemonsqueezy-webhook]

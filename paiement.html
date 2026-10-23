@@ -25,7 +25,6 @@ input,select{font-family:inherit;color:inherit}
 .col-r{padding:56px 28px;display:flex;justify-content:center;background:#fff;min-width:0}
 .inner{width:100%;max-width:520px;min-width:0}
 .sec{margin-bottom:36px}
-.quick{display:grid;grid-template-columns:1fr;gap:12px}
 .addon{display:flex;align-items:center;gap:16px;padding:20px 22px;border:1px solid var(--line);border-radius:16px;margin-bottom:12px;cursor:pointer;transition:.15s}
 .addon.on{border-color:var(--accent);background:#FFF7F3}
 .addon-t{font-size:17px;font-weight:500}
@@ -65,12 +64,19 @@ input,select{font-family:inherit;color:inherit}
 /* petits téléphones (375 px) : le libellé touchait le montant dans la maquette */
 .due{gap:12px}@media(max-width:400px){.due{font-size:23px}}
 .mob-sum{display:none}
-.or-sep{display:flex;align-items:center;gap:12px;margin:-6px 0 18px;color:var(--text-2);font-size:12.5px;white-space:nowrap}
-.or-sep::before,.or-sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.promo-link{font-size:15px;color:var(--text-2);text-decoration:underline;text-underline-offset:3px;padding:12px 0}
+.promo-link:hover{color:var(--text)}
+.promo-box{display:flex;gap:10px;padding:8px 0}
+.promo-box input{flex:1;min-width:0;height:48px;border-radius:999px;border:1px solid var(--line);background:var(--field);padding:0 18px;font-size:16px;outline:none}
+.promo-box input:focus{border-color:#C9CED4}
+.promo-box button{height:48px;padding:0 22px;border-radius:999px;background:var(--dark);color:#fff;font-size:15px;font-weight:500;white-space:nowrap}
+.promo-box button:disabled{opacity:.6;cursor:default}
+.promo-err{font-size:13.5px;color:#C2410C;line-height:1.45;padding:2px 0 8px}
+.promo-on span:last-child{color:#15803D}
+.promo-x{margin-left:10px;font-size:13px;color:var(--text-2);text-decoration:underline;text-underline-offset:2px}
 /* ── ajouts du branchement Whop (hors maquette) ── */
 [hidden]{display:none!important}
 /* Apple Pay : replié tant que Whop n'a pas rendu de portefeuille (pas « hidden » : un bloc masqué mesure 0 et ne s'ouvrirait jamais) */
-.xp-off{height:0;overflow:hidden;margin:0!important}
 .whop{position:relative;min-height:420px}
 .whop-wait{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-2);font-size:14px;text-align:center;padding:0 24px}
 .whop-wait i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
@@ -110,8 +116,6 @@ input,select{font-family:inherit;color:inherit}
    <div class="sec" id="opts"></div>
    <!-- téléphone : le récapitulatif passe AVANT le paiement (le bouton de paiement est dans le module Whop) -->
    <div class="mob-sum" id="mSum"></div>
-   <div class="sec xp-off" id="xpWrap"><div class="quick"><div id="xp"></div></div></div>
-   <div class="or-sep" id="orSep" hidden><span>Ou payez d'une autre manière</span></div>
    <div class="sec"><div class="whop" id="co"></div></div>
   </div>
   <div id="done" hidden></div>
@@ -142,14 +146,20 @@ const VAR={
  elite:{M:{m:"plan_wn7ZntgBemFL0",y:"plan_5RTUZOJ3sGCXd"},L:{m:"plan_i7ubxuFfVHQ5k",y:"plan_QaAyO2Msc11Xk"}},
  elite60:{L:{m:"plan_th1REeLIfRP50",y:"plan_tAKWwP8U88eTT"}},
  elite90:{L:{m:"plan_xN9BOWCvFUWXp",y:"plan_xzr5jL4TCAlWf"}}};
-// Rendu prioritaire 5 €/mois : abonnement Whop mensuel à part (webhook : secret WHOP_PRIO_PLANS), payé AVEC l'abonnement
-// mensuel (même paiement) ; pas proposé en annuel.
-const PRIO={p:5,plan:"plan_5mcgIdN0ZTlCG"};
+// Rendu prioritaire : abonnement Whop à part (webhook : secret WHOP_PRIO_PLANS), payé AVEC l'abonnement dans le même
+// paiement. Whop exige, pour tous les articles d'un paiement, la même période (→ un plan mensuel 5 € et un annuel 60 €) et le
+// même réglage 3D Secure (Elite 60 / 90 annuels l'imposent → leur propre plan annuel, y3ds).
+const PRIO={m:{p:5,plan:"plan_5mcgIdN0ZTlCG"},y:{p:60,plan:"plan_2KlnrycFeoXMT"},y3ds:{p:60,plan:"plan_oPv9MNE8701Tt"}};
+// Code promo saisi dans NOTRE récapitulatif (Axel 23/10) : Whop chiffre le panier remisé (fonction whop-quote → devis Whop),
+// puis le code est passé au module de paiement (promoCode) — Whop reste seul juge du prix encaissé.
+const QUOTE_URL="https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/whop-quote";
 const qs=new URLSearchParams(location.search);
 const base0=PLANS[qs.get("plan")]?qs.get("plan"):"pro";
-const S={plan:base0,base:base0,bill:qs.get("bill")==="y"?"y":"m",add:{},step:1};
+const S={plan:base0,base:base0,bill:qs.get("bill")==="y"?"y":"m",add:{},step:1,promo:null,promoOpen:false,promoBusy:false,promoErr:"",promoDraft:""};
 // plan Whop payé : la variante « palier + pack » si le pack est coché, sinon l'abonnement seul
 function planWhop(){const v=S.add.credits&&(VAR[S.plan]||{})[PLANS[S.base].pack];return v?v[S.bill]:PLANS[S.plan].pid[S.bill]}
+function prioWhop(){return !S.add.prio?"":(S.bill==="y"&&(S.plan==="elite60"||S.plan==="elite90")?PRIO.y3ds:PRIO[S.bill]).plan}
+const panier=()=>[planWhop(),prioWhop()].filter(Boolean);
 const eur=n=>{const v=Math.round(n*100)/100;return (v%1?v.toFixed(2):String(v)).replace(".",",")+"€"};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -160,7 +170,7 @@ function ADDONS_FOR(){
     list.push({id:"upgrade",t:"Passer en "+up.n,d:up.d,p:diff,unit:S.bill==="y"?" / an":" / mois",up:nx});}
   const pk=PACKS[PLANS[S.base].pack];
   if((VAR[S.plan]||{})[PLANS[S.base].pack]) list.push({id:"credits",t:pk.n,d:"+"+pk.c+" crédits, sans expiration.",p:pk.p,was:pk.was});
-  if(PRIO.plan&&S.bill==="m") list.push({id:"prio",t:"Rendu prioritaire",d:"Tes vidéos passent en tête de file.",p:PRIO.p,unit:" / mois"});
+  list.push({id:"prio",t:"Rendu prioritaire",d:"Tes vidéos passent en tête de file.",p:PRIO[S.bill].p,unit:S.bill==="y"?" / an":" / mois"});
   return list;
 }
 function total(){const p=PLANS[S.plan];let t=S.bill==="y"?p.y:p.m;ADDONS_FOR().forEach(a=>{if(S.add[a.id]&&!a.up)t+=a.p});return t}
@@ -174,14 +184,20 @@ function planCard(){const p=PLANS[S.plan],price=S.bill==="y"?p.y:p.m,y=S.bill===
   <span class="up-t"><b>${y?`Tu économises ${eur(p.m*12-p.y)} cette année`:`Économise ${eur(p.m*12-p.y)} en payant annuellement`}</b><small>${y?`<s>${eur(p.m*12)}</s> → ${eur(p.y)} / an · ${yearDeal(p)}`:`Soit ${eur(p.y/12)} / mois au lieu de ${eur(p.m)}`}</small></span>
   <span class="sw ${y?"on":""}"><span></span></span>
  </button>`}
+function promoHTML(){
+  if(S.promo) return `<div class="sum-row promo-on"><span>Code ${esc(S.promo.code)}<button type="button" class="promo-x" data-act="promo-del">Retirer</button></span><span>−${eur(S.promo.discount)}</span></div>`;
+  if(!S.promoOpen) return `<button type="button" class="promo-link" data-act="promo-open">Ajouter un code promo</button>`;
+  return `<form class="promo-box" data-promo><input name="code" maxlength="40" placeholder="Code promo" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(S.promoDraft)}"><button type="submit"${S.promoBusy?" disabled":""}>${S.promoBusy?"Vérification…":"Appliquer"}</button></form>${S.promoErr?`<div class="promo-err">${esc(S.promoErr)}</div>`:""}`;
+}
 function summary(){const p=PLANS[S.plan];return `<div class="sum">
  <div class="sum-row"><span>AvatarAds ${p.n}</span><span>${eur(S.bill==="y"?p.y:p.m)} / ${S.bill==="y"?"an":"mois"}</span></div>
  ${ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>`<div class="sum-row"><span>${a.t}</span><span>${eur(a.p)}${a.unit||""}</span></div>`).join("")}
- <div class="due"><span>À payer aujourd'hui</span><span>${eur(total())}</span></div></div>`}
+ ${promoHTML()}
+ <div class="due"><span>À payer aujourd'hui</span><span>${eur(S.promo?S.promo.total:total())}</span></div></div>`}
 const chk='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 function optsHTML(){return ADDONS_FOR().map(a=>`<div class="addon ${S.add[a.id]?"on":""}" data-act="opt" data-id="${a.id}" role="checkbox" aria-checked="${!!S.add[a.id]}" tabindex="0">
     <div style="flex:1;min-width:0"><div class="addon-t">${a.t}</div><div class="addon-d">${a.d}</div></div>
-    <span class="pill">${a.up?"Upgrade":a.unit?"Mensuel":"Ponctuel"}</span><span class="price">${a.was?`<s style="font-size:13px;font-weight:500;color:var(--text-2);margin-right:6px">${eur(a.was)}</s>`:""}${a.up?"+":""}${eur(a.p)}<small style="font-size:12px;font-weight:500;color:var(--text-2)">${a.unit||""}</small></span><span class="box ${S.add[a.id]?"on":""}">${S.add[a.id]?chk:""}</span></div>`).join("")}
+    <span class="pill">${a.up?"Upgrade":a.unit?(S.bill==="y"?"Annuel":"Mensuel"):"Ponctuel"}</span><span class="price">${a.was?`<s style="font-size:13px;font-weight:500;color:var(--text-2);margin-right:6px">${eur(a.was)}</s>`:""}${a.up?"+":""}${eur(a.p)}<small style="font-size:12px;font-weight:500;color:var(--text-2)">${a.unit||""}</small></span><span class="box ${S.add[a.id]?"on":""}">${S.add[a.id]?chk:""}</span></div>`).join("")}
 // rendu par blocs : le module Whop n'est JAMAIS reconstruit par un clic qui ne change pas ce qu'on paie (README, piège 2)
 function r(){
   $("rPlan").innerHTML=planCard()+summary();
@@ -189,17 +205,36 @@ function r(){
   $("mSum").innerHTML=summary();
   $("opts").innerHTML=optsHTML();
 }
-// ce que paie le paiement : le plan (mensuel ou annuel, avec ou sans pack) + le rendu prioritaire en mensuel
-function cartKey(){return [planWhop(),S.add.prio&&S.bill==="m"&&PRIO.plan?PRIO.plan:""].join("|")}
+// ce que paie le paiement : le plan (mensuel ou annuel, avec ou sans pack) + le rendu prioritaire, et le code promo
+function cartKey(){return [...panier(),S.promo?S.promo.code:""].join("|")}
+// devis Whop du panier avec ce code ; succès → code appliqué et module remonté avec lui, échec → message sous le champ
+async function appliquerPromo(code){
+  code=String(code||"").trim(); S.promoDraft=code; S.promoErr="";
+  if(!/^[A-Za-z0-9_-]{1,40}$/.test(code)){S.promoErr="Entre un code promo valide.";r();return}
+  S.promoBusy=true; S.promoOpen=true; S.promo=null; r();
+  const cle=panier().join("|"); let res=null;
+  try{ const q=await fetch(QUOTE_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plans:panier(),promo:code})}); res=await q.json(); }catch(_){}
+  if(cle!==panier().join("|")) return;   // le panier a changé pendant le devis : le nouveau devis fait foi
+  S.promoBusy=false;
+  if(res&&res.ok){S.promo={code:res.code,discount:res.discount,total:res.total}; S.promoOpen=false; S.promoDraft="";}
+  else S.promoErr=(res&&res.message)||"Vérification impossible pour le moment, réessaie.";
+  r(); mountWhop();
+}
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]"); if(!b||S.step!==1) return;
-  const before=cartKey();
-  if(b.dataset.act==="bill"){S.bill=S.bill==="y"?"m":"y"; if(S.bill==="y") delete S.add.prio;}
-  if(b.dataset.act==="opt"){const id=b.dataset.id;
+  const act=b.dataset.act;
+  if(act==="promo-open"){S.promoOpen=true; r(); const z=(b.closest("#mSum")?$("mSum"):$("rPlan")).querySelector("[data-promo] input"); if(z) z.focus(); return;}
+  if(act==="promo-del"){S.promo=null; S.promoErr=""; r(); mountWhop(); return;}
+  const before=cartKey(), code=S.promo&&S.promo.code;
+  if(act==="bill") S.bill=S.bill==="y"?"m":"y";
+  if(act==="opt"){const id=b.dataset.id;
     if(id==="upgrade"){S.plan=S.plan===S.base?NEXT[S.base]:S.base;S.add.upgrade=S.plan!==S.base;}
     else S.add[id]=!S.add[id];}
+  if(code&&cartKey()!==before){appliquerPromo(code);return}   // panier changé : la remise est recalculée par Whop
   r(); if(cartKey()!==before) mountWhop();
 });
+document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-promo]")) S.promoDraft=e.target.value;});
+document.addEventListener("submit",e=>{const f=e.target.closest("[data-promo]"); if(!f) return; e.preventDefault(); if(!S.promoBusy) appliquerPromo(f.elements.code.value);});
 document.addEventListener("keydown",e=>{const b=e.target.closest&&e.target.closest('[data-act="opt"]'); if(b&&(e.key===" "||e.key==="Enter")){e.preventDefault();b.click();}});
 $("back").addEventListener("click",()=>{ if(history.length>1&&document.referrer) history.back(); else location.href="/tarifs.html"; });
 
@@ -210,43 +245,41 @@ let _wp=null; const whopReady=()=>_wp||(_wp=new Promise((ok,ko)=>{ if(window.Who
 // compte AvatarAds connecté (même origine que /app) : e-mail repris et verrouillé chez Whop + identifiant pour le webhook
 function compte(){try{const s=JSON.parse(localStorage.getItem("sb-guvwgiejzkiodghywpwj-auth-token")||"null"),u=s&&(s.user||(s.currentSession&&s.currentSession.user));
   if(u&&u.id&&u.email) return {id:String(u.id),email:String(u.email)};}catch(_){} return null}
-// apparence au plus près de la maquette : champs en pilule sur fond --field, bouton jaune en pilule, récapitulatif de Whop masqué
-// (le nôtre fait foi) SAUF « Code promo & détails » (Axel : garder le code promo de Whop), boutons express masqués dans le
-// module (Apple Pay a son élément au-dessus)
+// apparence au plus près de la maquette : champs en pilule sur fond --field, bouton jaune en pilule, récapitulatif ET « Code
+// promo & détails » de Whop masqués (Axel 23/10 : le code promo se saisit dans notre récapitulatif, plus de grand vide), Apple
+// Pay affiché DANS le module, en tête (Axel : les mentions Whop une seule fois — un élément Apple Pay séparé ajoute les
+// siennes, impossibles à masquer)
 const HIDE={display:"none"};
 const FIELD={height:"54px",borderRadius:"999px",backgroundColor:"#F6F7F8",fontSize:"16px"};
 function appearance(lock){return {theme:{appearance:"light",accentColor:"orange",grayColor:"slate"},
   classes:{"whop-CheckoutSeller":HIDE,"whop-CheckoutSellerLogo":HIDE,"whop-CheckoutItem":HIDE,"whop-CheckoutItemHeadline":HIDE,"whop-CheckoutItemDescription":HIDE,
-    "whop-CheckoutCartItems":HIDE,"whop-CheckoutTotal":HIDE,"whop-CheckoutPriceContext":HIDE,"whop-CheckoutExpress":HIDE,
+    "whop-CheckoutCartItems":HIDE,"whop-CheckoutTotal":HIDE,"whop-CheckoutPriceContext":HIDE,
+    "whop-CheckoutDetails":HIDE,"whop-CheckoutDetailsToggle":HIDE,"whop-CheckoutSummary":HIDE,
+    "whop-CheckoutExpressGooglePay":HIDE,"whop-CheckoutExpressPayPal":HIDE,"whop-CheckoutExpressDivider":{color:"#5B626B",fontSize:"12.5px"},
     "whop-EmailInput":Object.assign({},FIELD,lock?{backgroundColor:"#EEF1F4"}:{}),"whop-CardField":{borderRadius:"16px",backgroundColor:"#F6F7F8"},
     // adresse : bloc groupé de Whop (des pilules débordaient de son cadre) → seulement le fond gris, comme la carte
     "whop-AddressFieldInput":{backgroundColor:"#F6F7F8"},"whop-AddressFieldSelect":{backgroundColor:"#F6F7F8"},
     "whop-CheckoutPayButton":{backgroundColor:"#FFC107",color:"#1A1300",borderRadius:"999px",height:"58px",fontSize:"18px",fontWeight:"500",boxShadow:"0 14px 30px -14px rgba(255,180,0,.75)"}}}}
-let _co=null,_xp=null,_seq=0;
-function destroyAll(){[_co,_xp].forEach(h=>{try{h&&h.destroy()}catch(_){}}); _co=_xp=null;}
+let _co=null,_seq=0;
+function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null;}
 function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span></div>`}
 function fallback(el,plan){el.innerHTML=`<div class="whop-wait" style="position:static;padding:30px 0"><span>Le module de paiement ne s'affiche pas.</span><a href="https://whop.com/checkout/${esc(plan)}" target="_blank" rel="noopener">Payer sur la page sécurisée Whop</a></div>`}
 function mountWhop(){
   const seq=++_seq; destroyAll();
-  const box=$("co"), items=[{plan:planWhop(),quantity:1}]; if(S.bill==="m"&&S.add.prio&&PRIO.plan) items.push({plan:PRIO.plan,quantity:1});
+  const box=$("co"), items=panier().map(plan=>({plan,quantity:1}));
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>';
-  $("xpWrap").classList.add("xp-off"); $("orSep").hidden=true; $("xp").innerHTML="";
   const acc=compte(), meta=acc?{metadata:{aa_user_id:acc.id,aa_page:"paiement"}}:{metadata:{aa_page:"paiement"}};
   whopReady().then(W=>{
     if(seq!==_seq) return;
-    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq) paid(); },1200); }},meta));
+    // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
+    // en tête du module quand l'appareil le propose
+    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq) paid(); },1200); }},
+      meta,S.promo?{promoCode:S.promo.code}:{}));
     let ready=false;
     _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
       onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove();},
       onError:e=>{ if(!ready&&seq===_seq) fallback(box,items[0].plan); else console.warn("[whop]",e&&(e.code||e.message)); }
     })).mount(box.querySelector(".whop-mount"));
-    // Apple Pay au-dessus (maquette) : élément séparé, AFFICHÉ seulement s'il rend un portefeuille ; Axel 23/10 : Apple Pay et
-    // carte bancaire SEULEMENT (Google Pay et PayPal masqués) ; mentions Whop (conditions + « Propulsé par Whop ») gardées UNE
-    // fois, sous le bouton du module de paiement, pas en double sous Apple Pay
-    _xp=W.checkout.create(Object.assign({items,appearance:{theme:{appearance:"light"},classes:{"whop-CheckoutExpressGooglePay":HIDE,"whop-CheckoutExpressPayPal":HIDE,"whop-CheckoutTerms":HIDE}},onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq) paid(); },1200); }},meta));
-    const xm=$("xp"); _xp.create("expressCheckout",{onReady:()=>{
-      const show=()=>{ const ok=xm.getBoundingClientRect().height>=20; $("xpWrap").classList.toggle("xp-off",!ok); $("orSep").hidden=!ok; };
-      show(); try{ new ResizeObserver(show).observe(xm); }catch(_){ setTimeout(show,800); } }}).mount(xm);
   }).catch(()=>{ if(seq===_seq) fallback(box,items[0].plan); });
 }
 /* ── Après le paiement : la confirmation ─────────────────────────────────────────────────────────────────────── */
