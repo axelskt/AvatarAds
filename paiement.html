@@ -69,6 +69,8 @@ input,select{font-family:inherit;color:inherit}
 .or-sep::before,.or-sep::after{content:"";flex:1;height:1px;background:var(--line)}
 /* ── ajouts du branchement Whop (hors maquette) ── */
 [hidden]{display:none!important}
+/* Apple Pay : replié tant que Whop n'a pas rendu de portefeuille (pas « hidden » : un bloc masqué mesure 0 et ne s'ouvrirait jamais) */
+.xp-off{height:0;overflow:hidden;margin:0!important}
 .whop{position:relative;min-height:420px}
 .whop-wait{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-2);font-size:14px;text-align:center;padding:0 24px}
 .whop-wait i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
@@ -109,15 +111,13 @@ input,select{font-family:inherit;color:inherit}
    <div class="sec" id="opts"></div>
    <!-- téléphone : le récapitulatif passe AVANT le paiement (le bouton de paiement est dans le module Whop) -->
    <div class="mob-sum" id="mSum"></div>
-   <div class="sec" id="xpWrap" hidden><div class="quick"><div id="xp"></div></div></div>
+   <div class="sec xp-off" id="xpWrap"><div class="quick"><div id="xp"></div></div></div>
    <div class="or-sep" id="orSep" hidden><span>Ou payez d'une autre manière</span></div>
    <div class="sec"><div class="whop" id="co"></div></div>
   </div>
   <div id="step2" hidden></div>
   <div id="done" hidden></div>
   <div id="reassure">
-   <div class="sep">Sans frais cachés. Résiliable à tout moment.</div>
-   <p class="legal">En payant, tu acceptes les <a href="/cgv.html" target="_blank" rel="noopener">Conditions générales</a> d'AvatarAds et tu as lu la <a href="/confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a>.</p>
    <div class="sep" style="margin-top:26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg> Tes informations sont chiffrées et sécurisées</div>
    <div class="trust">Noté 4,9/5 par +50K créateurs <span class="stars">★★★★★</span></div>
   </div>
@@ -202,10 +202,13 @@ let _wp=null; const whopReady=()=>_wp||(_wp=new Promise((ok,ko)=>{ if(window.Who
 function compte(){try{const s=JSON.parse(localStorage.getItem("sb-guvwgiejzkiodghywpwj-auth-token")||"null"),u=s&&(s.user||(s.currentSession&&s.currentSession.user));
   if(u&&u.id&&u.email) return {id:String(u.id),email:String(u.email)};}catch(_){} return null}
 // apparence au plus près de la maquette : champs en pilule sur fond --field, bouton jaune en pilule, récapitulatif de Whop masqué
-// (le nôtre fait foi), boutons express masqués dans le module (Apple Pay a son élément au-dessus)
+// (le nôtre fait foi) SAUF « Code promo & détails » (Axel : garder le code promo de Whop), boutons express masqués dans le
+// module (Apple Pay a son élément au-dessus)
+const HIDE={display:"none"};
 const FIELD={height:"54px",borderRadius:"999px",backgroundColor:"#F6F7F8",fontSize:"16px"};
 function appearance(lock){return {theme:{appearance:"light",accentColor:"orange",grayColor:"slate"},
-  classes:{"whop-CheckoutSummary":{display:"none"},"whop-CheckoutExpress":{display:"none"},
+  classes:{"whop-CheckoutSeller":HIDE,"whop-CheckoutSellerLogo":HIDE,"whop-CheckoutItem":HIDE,"whop-CheckoutItemHeadline":HIDE,"whop-CheckoutItemDescription":HIDE,
+    "whop-CheckoutCartItems":HIDE,"whop-CheckoutTotal":HIDE,"whop-CheckoutPriceContext":HIDE,"whop-CheckoutExpress":HIDE,
     "whop-EmailInput":Object.assign({},FIELD,lock?{backgroundColor:"#EEF1F4"}:{}),"whop-CardField":{borderRadius:"16px",backgroundColor:"#F6F7F8"},
     // adresse : bloc groupé de Whop (des pilules débordaient de son cadre) → seulement le fond gris, comme la carte
     "whop-AddressFieldInput":{backgroundColor:"#F6F7F8"},"whop-AddressFieldSelect":{backgroundColor:"#F6F7F8"},
@@ -218,7 +221,7 @@ function mountWhop(){
   const seq=++_seq; destroyAll();
   const box=$("co"), items=[{plan:PLANS[S.plan].pid[S.bill],quantity:1}]; if(S.bill==="m"&&S.add.prio&&PRIO.plan) items.push({plan:PRIO.plan,quantity:1});
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>';
-  $("xpWrap").hidden=true; $("orSep").hidden=true; $("xp").innerHTML="";
+  $("xpWrap").classList.add("xp-off"); $("orSep").hidden=true; $("xp").innerHTML="";
   const acc=compte(), meta=acc?{metadata:{aa_user_id:acc.id,aa_page:"paiement"}}:{metadata:{aa_page:"paiement"}};
   whopReady().then(W=>{
     if(seq!==_seq) return;
@@ -228,10 +231,11 @@ function mountWhop(){
       onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove();},
       onError:e=>{ if(!ready&&seq===_seq) fallback(box,items[0].plan); else console.warn("[whop]",e&&(e.code||e.message)); }
     })).mount(box.querySelector(".whop-mount"));
-    // Apple Pay / Google Pay au-dessus (maquette) : élément séparé, AFFICHÉ seulement s'il rend un portefeuille
-    _xp=W.checkout.create(Object.assign({items,appearance:{theme:{appearance:"light"},classes:{"whop-CheckoutExpressGooglePay":{display:"none"}}},onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq) paid(); },1200); }},meta));
+    // Apple Pay au-dessus (maquette) : élément séparé, AFFICHÉ seulement s'il rend un portefeuille ; Axel 23/10 : Apple Pay et
+    // carte bancaire SEULEMENT (Google Pay et PayPal masqués)
+    _xp=W.checkout.create(Object.assign({items,appearance:{theme:{appearance:"light"},classes:{"whop-CheckoutExpressGooglePay":HIDE,"whop-CheckoutExpressPayPal":HIDE}},onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq) paid(); },1200); }},meta));
     const xm=$("xp"); _xp.create("expressCheckout",{onReady:()=>{
-      const show=()=>{ const h=xm.getBoundingClientRect().height; $("xpWrap").hidden=h<20; $("orSep").hidden=h<20; };
+      const show=()=>{ const ok=xm.getBoundingClientRect().height>=20; $("xpWrap").classList.toggle("xp-off",!ok); $("orSep").hidden=!ok; };
       show(); try{ new ResizeObserver(show).observe(xm); }catch(_){ setTimeout(show,800); } }}).mount(xm);
   }).catch(()=>{ if(seq===_seq) fallback(box,items[0].plan); });
 }
