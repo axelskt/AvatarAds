@@ -1538,17 +1538,39 @@ video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; wi
 .cf-alert-list { margin: 4px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .cf-alert-list li { font-size: 12px; color: var(--cf-ink-3); overflow-wrap: anywhere; }
 
-/* 24/10 · Production › Formats : un classement par réseau (même barre que les briques) + pastilles « pas encore publié » */
-.cf-fmt-list { display: flex; flex-direction: column; gap: 14px; }
-.cf-fmt-r { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 5px 10px; align-items: center; }
-.cf-fmt-r .cf-mrank { color: var(--cf-mute-2); font-family: var(--cf-mono); font-size: 12px; }
+/* 24/10 · Production › Formats : classement par réseau (Tout / Instagram / TikTok), nom + description de ce qu'on voit,
+   « vues / vidéo » (médiane), puis les formats pas encore publiés ; fenêtre « Voir l'exemple » */
+.cf-fmt { gap: 16px; }
+.cf-fmt-leg { font-family: var(--cf-mono); font-size: 10.5px; color: var(--cf-mute); margin-top: -4px; }
+.cf-fmt-list { display: flex; flex-direction: column; gap: 18px; }
+.cf-fmt-r { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 6px 12px; align-items: start; }
+.cf-fmt-r .cf-mrank { color: var(--cf-mute-2); font-family: var(--cf-mono); font-size: 12px; padding-top: 2px; }
 .cf-fmt-r .cf-mrank.is-acc { color: var(--cf-accent-ink); font-weight: 700; }
-.cf-fmt-n { font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cf-fmt-v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.cf-fmt-t { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cf-fmt-n { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.cf-fmt-n > b { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.cf-fmt-n .cf-pill { font-size: 10px; padding: 2px 8px; }
+.cf-fmt-d { font-size: 12.5px; line-height: 1.45; color: var(--cf-ink-3); overflow-wrap: anywhere; }
+.cf-fmt-v { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }
+.cf-fmt-v > b { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cf-fmt-v > span { font-family: var(--cf-mono); font-size: 9.5px; color: var(--cf-mute); }
 .cf-fmt-r .cf-pbar { grid-column: 2 / 4; height: 8px; }
-.cf-fmt-s { grid-column: 2 / 4; font-family: var(--cf-mono); font-size: 10.5px; color: #7d756b; overflow-wrap: anywhere; }
-.cf-fmt-r.is-off .cf-fmt-n, .cf-fmt-r.is-off .cf-fmt-v { color: var(--cf-ink-3); }
-.cf-fmt-wait { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--cf-line); padding-top: 14px; }
-.cf-fmt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.cf-fmt-chips .cf-chip { font-family: var(--cf-sans); font-size: 12px; padding: 4px 9px; }
-.cf-fmt-chips .cf-chip b { font-family: var(--cf-mono); color: var(--cf-accent-ink); }
+.cf-fmt-m { grid-column: 2 / 4; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px;
+  font-family: var(--cf-mono); font-size: 10.5px; color: #7d756b; overflow-wrap: anywhere; }
+.cf-fmt-ex { font: inherit; font-family: var(--cf-sans); font-size: 12.5px; font-weight: 600; color: var(--cf-accent-ink); background: none; border: 0;
+  padding: 2px 0; cursor: pointer; white-space: nowrap; }
+.cf-fmt-ex::after { content: ' ›'; }
+.cf-fmt-ex:hover { text-decoration: underline; }
+.cf-fmt-ex:focus-visible { outline: 2px solid #ff6b35; outline-offset: 2px; border-radius: 4px; }
+.cf-fmt-r.is-off .cf-fmt-n > b, .cf-fmt-r.is-off .cf-fmt-v > b { color: var(--cf-ink-3); }
+.cf-fmt-wait { display: flex; flex-direction: column; gap: 14px; border-top: 1px solid var(--cf-line); padding-top: 16px; }
+.cf-fmt-r.is-wait .cf-mrank { display: none; }
+.cf-fmt-r.is-wait { grid-template-columns: minmax(0, 1fr); }
+.cf-fmt-r.is-wait > div:empty { display: none; }
+.cf-fmt-r.is-wait .cf-fmt-m { grid-column: 1 / -1; }
+.cf-fmt-sheet { gap: 12px; }
+.cf-fmt-sheet .cf-fmt-d { padding-right: 40px; }
+.cf-fmt-cap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-family: var(--cf-mono); font-size: 11px; color: var(--cf-ink-3); }
+.cf-fmt-cap a { font-family: var(--cf-sans); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.cf-fmt-none { background: var(--cf-tile); border-radius: 12px; padding: 18px; font-size: 13px; color: var(--cf-ink-3); text-align: center; }
+@media (max-width: 639px) { .cf-fmt-m { flex-direction: column; align-items: flex-start; } }
