@@ -1245,7 +1245,8 @@
   // 'format' (F01…, usine/formats.js) : variante de présentation testée, pas une brique de la vidéo ; hors des tuiles de la
   // Bibliothèque, ouvert depuis les cartes de performance (onglet Formats)
   // 'texte-choc' (TH01…, Axel 27/09) : phrases de la réaction muette du format Texte + musique
-  var BRICK_KINDS = ['hook', 'liaison', 'cta', 'contenu', 'transformation', 'avatar', 'musique', 'sous-titre', 'format', 'texte-choc', 'style-choc', 'reaction'];   // style-choc : styles du texte choc CSxx (01/10) ; reaction : têtes choquées (07/10)
+  // 'hook-demo' (HD-01…, Axel 23/10) : résultats générés (personnes IA, produits) à montrer DANS le hook (split, illustration)
+  var BRICK_KINDS = ['hook', 'liaison', 'cta', 'contenu', 'transformation', 'avatar', 'musique', 'sous-titre', 'format', 'texte-choc', 'style-choc', 'reaction', 'hook-demo'];   // style-choc : styles du texte choc CSxx (01/10) ; reaction : têtes choquées (07/10)
   var BRICK_SEL = ['id', 'kind', 'subject', 'label', 'status', 'created_at', 'updated_at',
     'm_subjects:meta->compatible_subjects', 'm_modules:meta->modules', 'm_alias:meta->>alias_of', 'm_module:meta->>module',
     'm_variant:meta->>variant', 'm_media:meta->>media', 'm_media_type:meta->>media_type', 'm_keyword:meta->>keyword',

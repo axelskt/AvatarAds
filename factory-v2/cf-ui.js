@@ -733,7 +733,7 @@
   // Production : lit prodModel(), LE modèle de l'onglet Production (vidéos à générer, jours de contenu : mêmes chiffres).
   var KIND_PL = { hook: ['hook', 'hooks'], liaison: ['liaison', 'liaisons'], cta: ['CTA', 'CTA'], contenu: ['contenu', 'contenus'],
     transformation: ['transformation', 'transformations'], avatar: ['avatar', 'avatars'], musique: ['musique', 'musiques'],
-    'sous-titre': ['style de sous-titres', 'styles de sous-titres'], 'texte-choc': ['texte choc', 'textes choc'], 'style-choc': ['style de texte choc', 'styles de texte choc'], autre: ['autre', 'autres'] };
+    'sous-titre': ['style de sous-titres', 'styles de sous-titres'], 'texte-choc': ['texte choc', 'textes choc'], 'style-choc': ['style de texte choc', 'styles de texte choc'], 'hook-demo': ['hook démo', 'hooks démo'], autre: ['autre', 'autres'] };
   function homeProdCard() {
     var M = prodModel(), D = M.D;
     function na(k, label, o) { return M.pending ? hstat(k, '…', label, 'chargement', o) : hstat(k, '—', label, M.why, o); }
@@ -1280,6 +1280,7 @@
     { k: 'texte-choc', t: 'Texte choc', ic: 'zap', sub: 'phrases choc · Texte + musique' },   // Axel 27/09 (TH01…)
     { k: 'style-choc', t: 'Style texte choc', ic: 'subs', sub: 'styles tirés au hasard' },   // Axel 01/10 (CS01…)
     { k: 'reaction', t: 'Tête choquée', ic: 'user', sub: 'réactions muettes · Texte + musique' },   // Axel 07/10 (R-F1…, Omni Flash 3 s)
+    { k: 'hook-demo', t: 'Hook démo', ic: 'demo', sub: 'résultats à montrer dans le hook' },   // Axel 23/10 (HD-01…)
     { k: 'insomnie', t: 'Insomnie', ic: 'user', sub: 'n’arrive pas à dormir · Texte + musique' },   // Axel 12/10 (R-I-…, 4 s, au lit yeux fermés)
     { k: 'texte-insomnie', t: 'Texte insomnie', ic: 'zap', sub: '« Tu essaies de dormir mais tu repenses à… »' }   // Axel 12/10 (TI01…), jamais mélangé aux TH
   ];
@@ -2251,6 +2252,7 @@
     else if (b.kind === 'reaction' && m.format === 'insomnie') tag = 'Au lit, yeux fermés · ' + (m.duration || 4) + ' s';
     else if (b.kind === 'reaction') tag = (m.engine === 'video-reelle' ? 'Vidéo réelle' : m.engine === 'veo-lite' || /veo/i.test(b.label || '') ? 'Veo Lite (test)' : 'Omni Flash') + ' · ' + (m.duration || 3) + ' s';   // 13/10 : durée réelle (R-LIT = 4 s)
     else if (b.kind === 'transformation') tag = subjName(b.subject || '?');
+    else if (b.kind === 'hook-demo') tag = [m.mediaType === 'video' ? 'vidéo' : '', m.duration ? String(Math.round(m.duration * 10) / 10).replace('.', ',') + ' s' : ''].filter(Boolean).join(' · ');
     else if (b.kind === 'avatar') { var np = avPhotos(b).length; tag = np + ' ' + plural(np, 'photo'); }
     if (isProposal(b)) tag = 'proposition';
     else if (b.status !== 'ready') tag = stFr(b.status) + (tag ? ' · ' + tag : '');
@@ -5012,7 +5014,7 @@
     $('cfModalBody').scrollTop = 0;
     var t = $('cfModalTitle'); if (t) { t.tabIndex = -1; t.focus(); }
   }
-  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook', 'texte-choc': 'Texte choc', 'style-choc': 'Style de texte choc', reaction: 'Tête choquée' };
+  var SHEET_KIND = { 'hook-demo': 'Hook démo', hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook', 'texte-choc': 'Texte choc', 'style-choc': 'Style de texte choc', reaction: 'Tête choquée' };
   function fMmss(v) { var t = Math.round(v); return p2(Math.floor(t / 60)) + ':' + p2(t % 60); }
   var PLAY_P = 'M7 4l13 8-13 8z', PAUSE_P = 'M6 4h4v16H6zM14 4h4v16h-4z';
   function glyph(p, s) { return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="' + p + '"/></svg>'; }
@@ -5069,7 +5071,7 @@
     var asrc = mediaSrc(b.audio);
     // colonne de gauche (200 px, maquette) selon le type ; la musique a son lecteur pleine largeur au-dessus
     var top = '', media = null, chocUseLine = '';
-    if (b.kind === 'contenu' || b.kind === 'reaction') {   // réaction (07/10) : même lecteur que la démo
+    if (b.kind === 'contenu' || b.kind === 'reaction' || b.kind === 'hook-demo') {   // réaction (07/10), hook démo (23/10) : même lecteur que la démo
       var vpo = fb && (mediaSrc(fb.poster) || mediaSrc(fb.image));   // affiche si la brique en a une, sinon 1re image (13/10)
       media = fb && mediaSrc(fb.video) ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(vpo ? mediaSrc(fb.video) : vFirst(mediaSrc(fb.video))) + '"' + (vpo ? ' poster="' + esc(vpo) + '"' : '') + '></video><span class="cf-vmsg">vidéo illisible</span></div>'
         : ph('démo · ' + b.id) + miss('vidéo de démo');
