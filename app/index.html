@@ -5106,15 +5106,11 @@ setTimeout(function(){
       <button class="btn btn-quiet" onclick="closeAccountSettings()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
 
-    <!-- ① Profil -->
-    <div class="eyebrow" style="margin-bottom:16px">① Profil</div>
+    <!-- Nom du compte (Axel 23/10 : plus de rubriques « Profil » / « Connexion », plus de téléphone, et l'adresse n'est
+         plus répétée : elle est sous le titre). Le téléphone déjà enregistré n'est jamais effacé (voir _accountAutoSave). -->
     <div style="margin-bottom:16px">
-      <div class="setup-label" style="margin-bottom:8px">Prénom affiché</div>
-      <input class="field" type="text" id="accountFirstName" placeholder="Ton prénom" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
-    </div>
-    <div style="margin-bottom:18px">
-      <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone</div>
-      <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
+      <div class="setup-label" style="margin-bottom:8px">Nom du compte</div>
+      <input class="field" type="text" id="accountFirstName" placeholder="Ton nom" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
     </div>
     <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin:0;min-height:0;transition:margin .15s"></div>
 
@@ -5237,16 +5233,9 @@ setTimeout(function(){
       </div>
     </div>
 
-    <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
-
-    <!-- ② Connexion (Axel 23/10) : l'adresse et deux boutons simples ; adresse et mot de passe se changent dans une fenêtre
-         à part, avec code (changement d'adresse : code à l'adresse actuelle puis à la nouvelle, edge auth-otp). -->
-    <div class="eyebrow" style="margin-bottom:16px">② Connexion</div>
-    <div style="margin-bottom:12px">
-      <div class="setup-label" style="margin-bottom:8px">Adresse e-mail</div>
-      <div id="accountCurrentEmail" class="field" style="font-weight:600;overflow-wrap:anywhere">—</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:26px">
+    <!-- Deux boutons simples (Axel 23/10) : adresse et mot de passe se changent dans une fenêtre à part, avec code
+         (changement d'adresse : code à l'adresse actuelle puis à la nouvelle, edge auth-otp). -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin:6px 0 26px">
       <button onclick="openEmailModal()" class="btn btn-ghost" style="width:100%;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Changer d'e-mail</button>
       <button onclick="openPwdModal(true)" class="btn btn-ghost" style="width:100%;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Changer de mot de passe</button>
     </div>
@@ -6007,7 +5996,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-0200'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-0300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -7292,13 +7281,16 @@ function _accountAutoSave(now){
   _accountSaveT = setTimeout(async function(){
     if(!currentMember) return;
     const firstName=(document.getElementById('accountFirstName')?.value||'').trim();
-    const phone=(document.getElementById('accountPhone')?.value||'').trim();
-    const updates={ phone: phone || null };
+    const phoneInp=document.getElementById('accountPhone');   // champ retiré le 23/10 : ne jamais effacer le numéro gardé
+    const phone=phoneInp ? phoneInp.value.trim() : null;
+    const updates={};
+    if(phoneInp) updates.phone = phone || null;
     if(firstName) updates.first_name=firstName;
+    if(!Object.keys(updates).length){ _accountSaveHint(''); return; }
     const { error } = await sb.from('profiles').update(updates).eq('id', currentMember.id);
     if(error){ _accountSaveHint('⚠ non enregistré'); return; }
     if(firstName){ currentMember.first_name=firstName; const n=document.getElementById('memberName'); if(n) n.textContent=firstName; }
-    currentMember.phone = phone || null;
+    if(phoneInp) currentMember.phone = phone || null;
     _accountSaveHint('✓ enregistré');
     setTimeout(()=>_accountSaveHint(''), 1800);
   }, now ? 0 : 700);
@@ -9571,15 +9563,17 @@ async function reactivateSubscription(){
 async function saveAccountProfile(){
   if(!currentMember){ toast('Non connecté'); return; }
   const firstName = (document.getElementById('accountFirstName')?.value||'').trim();
-  const phone     = (document.getElementById('accountPhone')?.value||'').trim();
+  const phoneInp  = document.getElementById('accountPhone');   // champ retiré le 23/10 : ne jamais effacer le numéro gardé
+  const phone     = phoneInp ? phoneInp.value.trim() : null;
   const updates = {};
   if(firstName) updates.first_name = firstName;
-  updates.phone = phone || null;
+  if(phoneInp) updates.phone = phone || null;
+  if(!Object.keys(updates).length) return;
   const { error } = await sb.from('profiles').update(updates).eq('id', currentMember.id);
   if(error){ toast('' + _frAuthErr(error)); return; }
   // Mettre à jour le cache local
   if(firstName){ currentMember.first_name = firstName; document.getElementById('memberName').textContent = firstName; }
-  currentMember.phone = phone || null;
+  if(phoneInp) currentMember.phone = phone || null;
   toast('Profil mis à jour');
 }
 
