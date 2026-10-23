@@ -13,13 +13,17 @@ export class FakeDB {
 }
 const UNIQUE: Record<string, string> = { webhook_events: 'event_id', referral_earnings: 'dedupe_key' }
 class Q {
-  f: ((r: Row) => boolean)[] = []; op = 'select'; p: any = null; key = ''; lim = 0
+  f: ((r: Row) => boolean)[] = []; op = 'select'; p: any = null; key = ''; lim = 0; ret = false
   constructor(public db: FakeDB, public name: string) {}
-  select() { return this }
+  select() { if (this.op !== 'select') this.ret = true; return this }   // après insert/update/delete : renvoie les lignes
   eq(c: string, v: any) { this.f.push((r) => String(path(r, c)) === String(v)); return this }
   gte(c: string, v: any) { this.f.push((r) => path(r, c) != null && String(path(r, c)) >= String(v)); return this }
   lte(c: string, v: any) { this.f.push((r) => path(r, c) != null && String(path(r, c)) <= String(v)); return this }
   like(c: string, pat: string) { const re = new RegExp('^' + pat.split('%').map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$'); this.f.push((r) => re.test(String(path(r, c) ?? ''))); return this }
+  gt(c: string, v: any) { this.f.push((r) => path(r, c) != null && String(path(r, c)) > String(v)); return this }
+  lt(c: string, v: any) { this.f.push((r) => path(r, c) != null && String(path(r, c)) < String(v)); return this }
+  is(c: string, v: any) { this.f.push((r) => v === null ? path(r, c) == null : path(r, c) === v); return this }
+  not(c: string, op: string, v: any) { this.f.push((r) => op === 'is' && v === null ? path(r, c) != null : String(path(r, c)) !== String(v)); return this }
   in(c: string, a: any[]) { this.f.push((r) => a.map(String).includes(String(path(r, c)))); return this }
   order() { return this }
   limit(n: number) { this.lim = n; return this }
@@ -30,12 +34,13 @@ class Q {
   run(): { data: any; error: any } {
     const rows = this.db.rows(this.name), hit = () => rows.filter((r) => this.f.every((f) => f(r)))
     if (this.op === 'select') { let d = hit(); if (this.lim) d = d.slice(0, this.lim); return { data: clone(d), error: null } }
-    if (this.op === 'update') { for (const r of hit()) Object.assign(r, clone(this.p)); this.db.log.push(`update ${this.name} ${JSON.stringify(this.p)}`); return { data: null, error: null } }
-    if (this.op === 'delete') { const h = new Set(hit()); this.db.t[this.name] = rows.filter((r) => !h.has(r)); return { data: null, error: null } }
+    if (this.op === 'update') { const h = hit(); for (const r of h) Object.assign(r, clone(this.p)); this.db.log.push(`update ${this.name} ${JSON.stringify(this.p)}`); return { data: this.ret ? clone(h) : null, error: null } }
+    if (this.op === 'delete') { const hh = hit(), h = new Set(hh); this.db.t[this.name] = rows.filter((r) => !h.has(r)); return { data: this.ret ? clone(hh) : null, error: null } }
     if (this.op === 'insert') {
       const u = UNIQUE[this.name]
       if (u && this.p[u] != null && rows.some((r) => r[u] === this.p[u])) return { data: null, error: { code: '23505', message: 'duplicate' } }
-      rows.push({ received_at: new Date().toISOString(), created_at: new Date().toISOString(), ...clone(this.p) }); return { data: null, error: null }
+      const row = { id: crypto.randomUUID(), received_at: new Date().toISOString(), created_at: new Date().toISOString(), ...clone(this.p) }
+      rows.push(row); return { data: this.ret ? [clone(row)] : null, error: null }
     }
     if (this.op === 'upsert') {
       const ex = rows.find((r) => r[this.key] === this.p[this.key])

@@ -172,6 +172,13 @@ function emailChangeCodeEmail(code: string): string {
       <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Ce code expire dans ${CODE_TTL_MIN} minutes et ne peut être utilisé qu'une fois.<br>Si tu n'es pas à l'origine de cette demande, ignore simplement cet e-mail : rien ne change sur ton compte.</div>`)
 }
 
+// Axel 23/10 : 1re étape d'un changement d'adresse = code envoyé à l'adresse ACTUELLE (preuve que c'est bien le titulaire).
+function emailChangeOldCodeEmail(code: string, newEmailMasked: string): string {
+  return mailLayout('Confirme le changement de ton adresse', `<div style="font-size:15px;color:#44403c;line-height:1.65">Une demande de changement de l'adresse de connexion de ton compte AvatarAds vers <b>${esc(newEmailMasked)}</b> vient d'être faite. Entre ce code dans Mon compte pour confirmer que c'est bien toi :</div>
+      <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:20px 8px;margin-top:20px;text-align:center;white-space:nowrap;font-size:30px;font-weight:800;letter-spacing:8px;color:#111;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${code}</div>
+      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Ce code expire dans ${CODE_TTL_MIN} minutes et ne peut être utilisé qu'une fois.<br>Si tu n'es pas à l'origine de cette demande, ne donne ce code à personne : sans lui, ton adresse ne peut pas être changée. Écris-nous à <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a> si tu as un doute.</div>`)
+}
+
 // Audit 04/10 (CC-1) : lien « Ce n'est pas moi » (vide = journal indisponible : l'e-mail d'avant, sans lien).
 function emailChangedNotice(newEmailMasked: string, lienAnnulation = ''): string {
   const lien = lienAnnulation
@@ -232,6 +239,8 @@ async function targetTaken(sb: SupabaseClient, userId: string, email: string): P
 
 // Hash lié au compte ET à l'adresse cible : un code ne vaut que pour ce couple (et jamais pour une connexion).
 const changeHash = (userId: string, newEmail: string, code: string) => hashCode(`chg:${userId}:${newEmail}`, code)
+const oldChangeHash = (userId: string, newEmail: string, code: string) => hashCode(`chg-old:${userId}:${newEmail}`, code)
+const OLD_PROOF_MIN = 30   // après le code de l'adresse actuelle, 30 min pour valider la nouvelle
 
 async function emailChange(req: Request, body: Record<string, string>, action: string): Promise<Response> {
   const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
@@ -243,9 +252,56 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
   if (newEmail === user.email) return json(409, { error: 'email_taken', same: true })
   const purgeOld = () => sb.from('email_change_codes').delete().lt('created_at', new Date(Date.now() - 86_400_000).toISOString())
 
-  // ── ENVOI D'UN CODE À LA NOUVELLE ADRESSE ──
+  // Axel 23/10 : DEUX codes. 1) email_change_send → code à l'adresse ACTUELLE (preuve que c'est le titulaire, pas une
+  // simple session) ; 2) email_change_verify_old → code juste, puis code à la NOUVELLE adresse (preuve qu'elle lui
+  // appartient) ; 3) email_change_verify → changement. email_change_send_new renvoie le 2e code (preuve 1 de < 30 min).
+  const verifPlafonds = async (): Promise<Response | null> => {
+    const vip = realIp(req)
+    if (!(await rateHit(`emailchg:verify:user:${user.id}`, 600, 12))) return json(400, { error: 'too_many_attempts' })
+    if (vip && !(await rateHit(`emailchg:verify:ip:${await rk('ip:' + vip)}`, 600, 40))) return json(400, { error: 'too_many_attempts' })
+    return null
+  }
+  // dernier code vivant de l'étape, pour CETTE adresse cible, essai consommé atomiquement puis comparé
+  const verifierCode = async (etape: 'ancienne' | 'nouvelle', code: string): Promise<{ ok: true, id: string } | { ok: false, res: Response }> => {
+    const nowIso = new Date().toISOString()
+    const { data: row, error: rowErr } = await sb.from('email_change_codes').select('id, new_email, code_hash')
+      .eq('user_id', user.id).eq('etape', etape).is('used_at', null).gt('expires_at', nowIso)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (rowErr) return { ok: false, res: json(500, { error: 'server_error' }) }
+    if (!row || row.new_email !== newEmail) return { ok: false, res: json(400, { error: 'expired' }) }
+    const { data: att, error: attErr } = await sb.rpc('email_change_take_attempt', { p_id: row.id, p_user: user.id, p_max: MAX_ATTEMPTS })
+    if (attErr) return { ok: false, res: json(500, { error: 'server_error' }) }
+    if (att === null || att === undefined) {
+      await sb.from('email_change_codes').delete().eq('id', row.id)
+      return { ok: false, res: json(400, { error: 'too_many_attempts' }) }
+    }
+    const attendu = etape === 'ancienne' ? await oldChangeHash(user.id, newEmail, code) : await changeHash(user.id, newEmail, code)
+    if (!timingSafeEqual(String(row.code_hash), attendu)) {
+      const left = MAX_ATTEMPTS - Number(att)
+      if (left <= 0) { await sb.from('email_change_codes').delete().eq('id', row.id); return { ok: false, res: json(400, { error: 'too_many_attempts' }) } }
+      return { ok: false, res: json(400, { error: 'wrong_code', remaining: left }) }
+    }
+    return { ok: true, id: String(row.id) }
+  }
+  // code de la 2e étape, à la NOUVELLE adresse (un seul vivant)
+  const envoyerNouvelle = async (): Promise<Response> => {
+    if (!(await rateHit(`emailchg:send:to:${await rk('e:' + newEmail)}`, 3600, CHG_MAX_PER_DEST_H))) return json(429, { error: 'too_many_codes' })
+    await sb.from('email_change_codes').delete().eq('user_id', user.id).eq('etape', 'nouvelle').is('used_at', null)
+    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000))
+    const { data: ins, error: insErr } = await sb.from('email_change_codes').insert({
+      user_id: user.id, new_email: newEmail, etape: 'nouvelle', code_hash: await changeHash(user.id, newEmail, code),
+      expires_at: new Date(Date.now() + CODE_TTL_MIN * 60_000).toISOString(),
+    }).select('id').single()
+    if (insErr || !ins) return json(500, { error: 'server_error' })
+    const sent = await sendMail(newEmail, `${code} — confirme ta nouvelle adresse AvatarAds`, emailChangeCodeEmail(code))
+    if (!sent) { await sb.from('email_change_codes').delete().eq('id', ins.id); return json(502, { error: 'send_failed' }) }
+    return json(200, { ok: true, etape: 'nouvelle' })
+  }
+
+  // ── 1) CODE À L'ADRESSE ACTUELLE ──
   if (action === 'email_change_send') {
     if (!RESEND_API_KEY) return json(503, { error: 'email_unavailable' })
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(user.email) || user.email.length > 254) return json(400, { error: 'invalid_email' })
 
     // Cooldown 30 s par compte (dérivé du dernier code, comme la connexion).
     const hourAgo = new Date(Date.now() - 3600_000).toISOString()
@@ -256,31 +312,64 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
       if (waitS > 0) return json(429, { error: 'cooldown', wait: waitS })
     }
     // Plafonds horaires sur rate_events, comptés AVANT le test « adresse déjà prise » : un compte ne peut pas sonder
-    // l'existence d'adresses à volonté (5 / h). Puis plafond par adresse cible (pas de bombardement d'une boîte).
+    // l'existence d'adresses à volonté (5 / h). Puis plafond par adresse destinataire (pas de bombardement d'une boîte).
     const ip = realIp(req)
     if (!(await rateHit(`emailchg:send:user:${user.id}`, 3600, CHG_MAX_PER_USER_H))) return json(429, { error: 'too_many_codes' })
     if (ip && !(await rateHit(`emailchg:send:ip:${await rk('ip:' + ip)}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })   // Audit 04/10 (CC-4) : empreintes
     const taken = await targetTaken(sb, user.id, newEmail)
     if (taken === null) return json(500, { error: 'server_error' })
     if (taken) return json(409, { error: 'email_taken' })
-    if (!(await rateHit(`emailchg:send:to:${await rk('e:' + newEmail)}`, 3600, CHG_MAX_PER_DEST_H))) return json(429, { error: 'too_many_codes' })
+    if (!(await rateHit(`emailchg:send:to:${await rk('e:' + user.email)}`, 3600, CHG_MAX_PER_DEST_H))) return json(429, { error: 'too_many_codes' })
 
-    // Un seul code vivant par compte : les précédents (non utilisés) sont supprimés.
+    // Un seul parcours vivant par compte : les codes précédents (non utilisés, des deux étapes) sont supprimés.
     await sb.from('email_change_codes').delete().eq('user_id', user.id).is('used_at', null)
     const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000))
     const { data: ins, error: insErr } = await sb.from('email_change_codes').insert({
-      user_id: user.id, new_email: newEmail, code_hash: await changeHash(user.id, newEmail, code),
+      user_id: user.id, new_email: newEmail, etape: 'ancienne', code_hash: await oldChangeHash(user.id, newEmail, code),
       expires_at: new Date(Date.now() + CODE_TTL_MIN * 60_000).toISOString(),
     }).select('id').single()
     if (insErr || !ins) return json(500, { error: 'server_error' })
 
-    const sent = await sendMail(newEmail, `${code} — confirme ta nouvelle adresse AvatarAds`, emailChangeCodeEmail(code))
+    const sent = await sendMail(user.email, `${code} — confirme le changement de ton adresse AvatarAds`, emailChangeOldCodeEmail(code, maskEmail(newEmail)))
     if (!sent) {
       await sb.from('email_change_codes').delete().eq('id', ins.id)
       return json(502, { error: 'send_failed' })
     }
     try { await purgeOld() } catch { /* ménage best-effort */ }
-    return json(200, { ok: true })
+    return json(200, { ok: true, etape: 'ancienne', to: maskEmail(user.email) })
+  }
+
+  // ── 2) CODE DE L'ADRESSE ACTUELLE VÉRIFIÉ → CODE À LA NOUVELLE ──
+  if (action === 'email_change_verify_old') {
+    const code = String(body.code ?? '').trim()
+    if (!/^\d{6}$/.test(code)) return json(400, { error: 'wrong_code' })
+    if (!RESEND_API_KEY) return json(503, { error: 'email_unavailable' })
+    const plafond = await verifPlafonds(); if (plafond) return plafond
+    const v = await verifierCode('ancienne', code)
+    if (!v.ok) return v.res
+    const taken = await targetTaken(sb, user.id, newEmail)
+    if (taken === null) return json(500, { error: 'server_error' })
+    if (taken) return json(409, { error: 'email_taken' })
+    const { data: used } = await sb.from('email_change_codes').update({ used_at: new Date().toISOString() }).eq('id', v.id).is('used_at', null).select('id')
+    if (!used || !used.length) return json(400, { error: 'expired' })
+    return await envoyerNouvelle()
+  }
+
+  // ── 2 bis) RENVOI DU CODE DE LA NOUVELLE ADRESSE (preuve de l'adresse actuelle faite il y a moins de 30 min) ──
+  if (action === 'email_change_send_new') {
+    if (!RESEND_API_KEY) return json(503, { error: 'email_unavailable' })
+    const depuis = new Date(Date.now() - OLD_PROOF_MIN * 60_000).toISOString()
+    const { data: preuve } = await sb.from('email_change_codes').select('id').eq('user_id', user.id).eq('etape', 'ancienne')
+      .eq('new_email', newEmail).not('used_at', 'is', null).gt('used_at', depuis).limit(1)
+    if (!preuve || !preuve.length) return json(400, { error: 'expired' })
+    const { data: recent } = await sb.from('email_change_codes').select('created_at').eq('user_id', user.id).eq('etape', 'nouvelle')
+      .order('created_at', { ascending: false }).limit(1)
+    if (recent && recent.length) {
+      const waitS = Math.ceil((new Date(recent[0].created_at).getTime() + COOLDOWN_S * 1000 - Date.now()) / 1000)
+      if (waitS > 0) return json(429, { error: 'cooldown', wait: waitS })
+    }
+    if (!(await rateHit(`emailchg:send:user:${user.id}`, 3600, CHG_MAX_PER_USER_H))) return json(429, { error: 'too_many_codes' })
+    return await envoyerNouvelle()
   }
 
   // ── VÉRIFICATION DU CODE PUIS CHANGEMENT D'ADRESSE ──
@@ -293,8 +382,9 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
   if (vip && !(await rateHit(`emailchg:verify:ip:${await rk('ip:' + vip)}`, 600, 40))) return json(400, { error: 'too_many_attempts' })
 
   const nowIso = new Date().toISOString()
+  // Axel 23/10 : seul un code envoyé à la NOUVELLE adresse (donc après la preuve à l'adresse actuelle) change l'adresse
   const { data: row, error: rowErr } = await sb.from('email_change_codes').select('id, new_email, code_hash')
-    .eq('user_id', user.id).is('used_at', null).gt('expires_at', nowIso)
+    .eq('user_id', user.id).eq('etape', 'nouvelle').is('used_at', null).gt('expires_at', nowIso)
     .order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (rowErr) return json(500, { error: 'server_error' })
   // Le code vivant doit viser CETTE adresse (un code demandé pour une autre adresse ne vaut rien ici).
@@ -609,7 +699,7 @@ serve(async (req) => {
   const action = body.action
   // Audit 02/10 : changement d'adresse (contrat C1) — aiguillé AVANT la validation de `email` (ces actions portent
   // `new_email` + une session) ; send / verify ci-dessous restent strictement inchangés.
-  if (action === 'email_change_send' || action === 'email_change_verify') return await emailChange(req, body, action)
+  if (action === 'email_change_send' || action === 'email_change_verify_old' || action === 'email_change_send_new' || action === 'email_change_verify') return await emailChange(req, body, action)
   // Audit 02/10 (P3) : changement de mot de passe (session exigée, aucun `email` dans la requête : l'adresse est celle du compte).
   if (action === 'password_change_send' || action === 'password_change_verify') return await passwordChange(req, body, action)
   // Audit 04/10 (CC-1) : lien « Ce n'est pas moi » (aucune session : la preuve est le jeton reçu à l'ancienne adresse).

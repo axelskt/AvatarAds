@@ -5113,7 +5113,7 @@ setTimeout(function(){
       <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone</div>
       <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
       <div class="setup-label" style="margin:18px 0 6px">Mot de passe</div>
-      <button onclick="openPwdModal()" class="btn btn-ghost" style="width:100%"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Définir ou changer mon mot de passe</button>
+      <button onclick="openPwdModal(true)" class="btn btn-ghost" style="width:100%"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Définir ou changer mon mot de passe</button>
     </div>
     <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin:0;min-height:0;transition:margin .15s"></div>
 
@@ -5222,7 +5222,7 @@ setTimeout(function(){
         <div class="setup-label" style="margin-bottom:8px">Nouvel email</div>
         <input class="field" type="email" id="accountNewEmail" placeholder="nouveau@email.com" autocomplete="email" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')saveAccountEmail()">
       </div>
-      <p style="font-size:12px;color:var(--text-3);margin:0 0 18px;line-height:1.6">Un code à 6 chiffres sera envoyé à la <b style="color:var(--text-2)">nouvelle adresse</b>. L'ancien email reste actif jusqu'à la saisie du code.</p>
+      <p style="font-size:12px;color:var(--text-3);margin:0 0 18px;line-height:1.6">Un code à 6 chiffres sera envoyé à ton <b style="color:var(--text-2)">adresse actuelle</b> pour confirmer que c'est bien toi, puis un second code à la nouvelle adresse pour vérifier qu'elle t'appartient. L'adresse actuelle reste active jusqu'à la fin.</p>
       <button id="emailChgSendBtn" class="btn btn-ghost" onclick="saveAccountEmail()" style="width:100%;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Recevoir un code par e-mail</button>
     </div>
     <div id="emailChgStep2" style="display:none">
@@ -5996,7 +5996,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-23-2245'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-0030'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -9572,11 +9572,22 @@ async function saveAccountProfile(){
   toast('Profil mis à jour');
 }
 
-// ── Changement d'adresse e-mail (Audit 02/10, contrat C1) ──
-// Étape 1 : saveAccountEmail() → auth-otp { action:'email_change_send', new_email } envoie un code à la NOUVELLE adresse.
-// Étape 2 : verifyAccountEmailCode() → { action:'email_change_verify', new_email, code } change l'adresse côté serveur,
-// puis refreshSession() pour que le jeton porte la nouvelle adresse. Session exigée (Bearer), plus de sb.auth.updateUser({email}).
-let _emailChg = null;          // { email } pendant l'étape code
+// ── Changement d'adresse e-mail (Audit 02/10, contrat C1 ; Axel 23/10 : deux codes) ──
+// 1) saveAccountEmail() → auth-otp { action:'email_change_send', new_email } : code à l'adresse ACTUELLE (c'est bien toi).
+// 2) verifyAccountEmailCode() → { action:'email_change_verify_old' } : code juste → code à la NOUVELLE adresse ;
+//    puis { action:'email_change_verify' } change l'adresse côté serveur, et refreshSession() pour que le jeton porte la
+//    nouvelle adresse. Session exigée (Bearer), plus de sb.auth.updateUser({email}).
+let _emailChg = null;          // { email, etape:'ancienne'|'nouvelle' } pendant les étapes code
+const _EMAIL_CHG_FLECHE = ' <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>';
+function _emailChgEtape(etape){
+  _emailChg.etape = etape;
+  const sub = document.getElementById('emailChgSub'), btn = document.getElementById('emailChgVerifyBtn');
+  if(sub) sub.innerHTML = etape === 'ancienne'
+    ? '<b style="color:var(--text-2)">Étape 1 sur 2</b> · code envoyé à ton adresse actuelle <b style="color:var(--text-2)">' + _escH(String((currentMember && currentMember.email) || '')) + '</b> pour confirmer que c\'est bien toi. Regarde aussi les spams, il est valable 10 minutes.'
+    : '<b style="color:var(--text-2)">Étape 2 sur 2</b> · code envoyé à la nouvelle adresse <b style="color:var(--text-2)">' + _escH(_emailChg.email) + '</b> pour vérifier qu\'elle t\'appartient. Regarde aussi les spams.';
+  if(btn) btn.innerHTML = (etape === 'ancienne' ? 'Valider' : 'Valider la nouvelle adresse') + _EMAIL_CHG_FLECHE;
+  const c = document.getElementById('emailChgCode'); if(c) c.value = '';
+}
 let _emailChgTimer = null;
 const _EMAIL_CHG_ERRORS = {
   invalid_email:     'Adresse email invalide.',
@@ -9657,10 +9668,8 @@ async function saveAccountEmail(){
   try{
     const res = await _emailChgCall({ action:'email_change_send', new_email: newEmail });
     if(res.error){ _emailChgMsg(_emailChgErr(res)); return; }
-    _emailChg = { email: newEmail };
-    const sub = document.getElementById('emailChgSub');
-    if(sub) sub.innerHTML = 'Code envoyé à <b style="color:var(--text-2)">' + _escH(newEmail) + '</b> — regarde aussi les spams. Il est valable 10 minutes.';
-    const c = document.getElementById('emailChgCode'); if(c) c.value = '';
+    _emailChg = { email: newEmail, etape: 'ancienne' };
+    _emailChgEtape('ancienne');
     _emailChgStep(2);
     _emailChgCooldown(30);
     setTimeout(function(){ try{ document.getElementById('emailChgCode').focus(); }catch(_){} }, 80);
@@ -9671,13 +9680,16 @@ async function saveAccountEmail(){
 async function emailChgResend(){
   if(!_emailChg) return;
   _emailChgMsg('');
-  const res = await _emailChgCall({ action:'email_change_send', new_email: _emailChg.email });
+  const nouvelle = _emailChg.etape === 'nouvelle';
+  const res = await _emailChgCall({ action: nouvelle ? 'email_change_send_new' : 'email_change_send', new_email: _emailChg.email });
   if(res.error){
+    // preuve de l'adresse actuelle trop ancienne (30 min) : on repart de l'étape 1
+    if(nouvelle && res.error === 'expired'){ emailChgBack(); _emailChgMsg('Trop de temps écoulé : recommence, un nouveau code part à ton adresse actuelle.'); return; }
     _emailChgMsg(_emailChgErr(res));
     if(res.error === 'cooldown' && res.wait) _emailChgCooldown(res.wait);
     return;
   }
-  toast('Nouveau code envoyé à ' + _emailChg.email);
+  toast('Nouveau code envoyé à ' + (nouvelle ? _emailChg.email : 'ton adresse actuelle'));
   _emailChgCooldown(30);
 }
 function emailChgBack(){
@@ -9694,9 +9706,25 @@ async function verifyAccountEmailCode(){
   const code = (inp?.value||'').trim();
   if(!/^\d{6}$/.test(code)){ _emailChgMsg('Entre le code à 6 chiffres reçu par e-mail.'); return; }
   _emailChgMsg('');
-  const label = btn.innerHTML;
+  let label = btn.innerHTML;
   btn.disabled = true; btn.textContent = 'Vérification…';
   try{
+    // étape 1 : code de l'adresse actuelle → le serveur envoie le 2e code à la nouvelle adresse
+    if(_emailChg.etape === 'ancienne'){
+      const r1 = await _emailChgCall({ action:'email_change_verify_old', new_email: _emailChg.email, code });
+      if(r1.error){
+        _emailChgMsg(_emailChgErr(r1));
+        if(r1.error === 'email_taken'){ emailChgBack(); _emailChgMsg(_emailChgErr(r1)); return; }
+        if(r1.error === 'expired' || r1.error === 'too_many_attempts'){ if(inp) inp.value = ''; }
+        else if(inp){ try{ inp.select(); }catch(_){} }
+        return;
+      }
+      _emailChgEtape('nouvelle');
+      label = btn.innerHTML;
+      _emailChgCooldown(30);
+      setTimeout(function(){ try{ document.getElementById('emailChgCode').focus(); }catch(_){} }, 80);
+      return;
+    }
     const res = await _emailChgCall({ action:'email_change_verify', new_email: _emailChg.email, code });
     if(res.error){
       _emailChgMsg(_emailChgErr(res));
