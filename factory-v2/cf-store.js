@@ -42,6 +42,9 @@
  *   CF.bx      onglet BloxAI (16/10, ex-TrackAds ; Axel : « un seul stock pour tout le monde ») : edge bloxai?action=stats
  *              (proxy owner vers la fonction factory du projet BloxAI, payload bx_factory_stats) → { state, loading, at, data,
  *              error, kind } ; relu au plus toutes les 5 min (cache serveur 60 s), tout de suite après une action
+ *   CF.fmt     onglet Production (24/10, Axel : « noter tous les formats et avoir la data dessus ») : RPC factory_format_stats
+ *              → une ligne par format du catalogue factory_formats (publiés IG à J+2, TikTok, approuvées, stock), même ceux
+ *              jamais publiés ; cache 15 min comme le reste
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
  *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { dmRange } période Auto-DM ;
  *                     { home: { ig, dm } } tout ce que lit l'Accueil ; { prod } l'onglet Production ; { force } ignore les 15 min
@@ -127,6 +130,7 @@
     tk: newSlot(),
     boot: { t0: Date.now(), step: 'démarrage', stepAt: Date.now(), net: null },   // 07/10 : étape du démarrage (écran d'accès)
     tts: newSlot(),   // 07/10 : stats TikTok (tiktok-auth?action=stats) — @, abonnés, likes, vues de chaque vidéo
+    fmt: newSlot(),   // 24/10 : catalogue des formats + leurs stats (RPC factory_format_stats)
     bx: newSlot(),    // 16/10 : BloxAI (stock commun, missions, diffuseurs, versements) — edge bloxai?action=stats
     oauth: null,
     tkOauth: null,
@@ -151,6 +155,7 @@
     loadDm: loadDm,
     loadProd: loadProd,
     loadProviders: loadProviders,
+    loadFormats: loadFormats,
     loadYt: loadYt,
     loadTk: loadTk,
     loadTts: loadTts,
@@ -206,7 +211,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
-  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.tts = newSlot(); CF.bx = newSlot(); CF.oauth = null; CF.tkOauth = null; CF.ttsOauth = null; }
+  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.tts = newSlot(); CF.bx = newSlot(); CF.fmt = newSlot(); CF.oauth = null; CF.tkOauth = null; CF.ttsOauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -1685,6 +1690,32 @@
     return p;
   }
 
+  // 24/10 : catalogue des formats + stats (factory_format_stats, réservée propriétaire / développeur)
+  function loadFormats(opts) {
+    var force = !!(opts && opts.force), S = CF.fmt;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    if (inflight.fmt) return inflight.fmt;
+    if (!force && isFresh(S)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      var patch;
+      try {
+        var r = await sb.rpc('factory_format_stats');
+        if (r.error) patch = { state: 'error', kind: 'rpc', error: 'factory_format_stats : ' + errText(r.error) };
+        else patch = { state: 'ready', kind: null, error: null, data: { fetchedAt: Date.now(), list: r.data || [] } };
+      } catch (e) { patch = { state: 'error', kind: 'http', error: 'factory_format_stats : ' + errText(e) }; }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.fmt === p) delete inflight.fmt;
+      emit('fmt');
+      return S;
+    })();
+    inflight.fmt = p;
+    emit('fmt');
+    return p;
+  }
+
   // ── préchargement : une fois la fenêtre affichée prête, les autres se chargent UNE par UNE en arrière-plan →
   //    passer de 30 j à 7 j ou à All time devient instantané (cache 15 min comme le reste) ──
   var pre = { on: false, queue: [], ep: -1 };
@@ -1744,7 +1775,7 @@
     if (opts.home) tasks.push(loadInsights(opts.home.ig, { force: !!opts.force }), loadMedia({ force: !!opts.force }), loadDm(opts.home.dm, { force: !!opts.force }),
       loadProd({ force: !!opts.force }), loadProviders({ force: !!opts.force }));
     // onglet Production : notre base + le rythme de publication (reels par jour sur 30 j, mêmes cases que l'Accueil)
-    if (opts.prod) tasks.push(loadProd({ force: !!opts.force }), loadInsights('30j', { force: !!opts.force }), loadMedia({ force: !!opts.force }));
+    if (opts.prod) tasks.push(loadProd({ force: !!opts.force }), loadInsights('30j', { force: !!opts.force }), loadMedia({ force: !!opts.force }), loadFormats({ force: !!opts.force }));
     // Audit 02/10 : comptes TikTok (Accueil) ; relus d'office au retour sur la page dans les 15 min d'une connexion lancée
     // (téléphone : la connexion TikTok s'ouvre dans un autre onglet)
     // 07/10 (Axel) : plus de section « Comptes TikTok » sur l'Accueil (brouillons abandonnés) → relue seulement sur demande

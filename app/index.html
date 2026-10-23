@@ -96,6 +96,9 @@ try{
 /* Ma marque (Axel 09/10) : MÊME fond que « Mon compte » — un seul voile. La modale vit dans l'overlay du compte : leurs deux
    voiles sombres s'empilaient (fond presque noir). Pendant Ma marque, le voile du compte s'efface et seul celui de Ma marque
    (identique : rgba(5,5,7,.7) + flou 6 px) reste ; sans backdrop-filter sur le parent, son flou voit bien l'app. */
+/* Fenêtres posées sur « Mon compte » (mot de passe, adresse) : voile flou CLAIR, le compte est déjà voilé dessous (Axel 23/10) */
+.aa-voile{display:none;position:fixed;inset:0;z-index:9900;place-items:center;padding:20px;background:rgba(5,5,7,.28);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+:root[data-theme="light"] .aa-voile{background:rgba(246,246,248,.45)}
 #accountOverlay.aa-sous-verre{ background:transparent !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important }
 /* Switch de thème INSTANTANÉ : le temps du basculement on coupe TOUTES les transitions.
    Sans ça, ~190 éléments en transition:all animent en même temps background/bordure/gradient/
@@ -5112,8 +5115,6 @@ setTimeout(function(){
     <div style="margin-bottom:18px">
       <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone</div>
       <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
-      <div class="setup-label" style="margin:18px 0 6px">Mot de passe</div>
-      <button onclick="openPwdModal(true)" class="btn btn-ghost" style="width:100%"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Définir ou changer mon mot de passe</button>
     </div>
     <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin:0;min-height:0;transition:margin .15s"></div>
 
@@ -5174,7 +5175,7 @@ setTimeout(function(){
     <!-- 🔐 Modale changement de mot de passe. Audit 02/10 (P3) : la preuve d'identité est faite CÔTÉ SERVEUR — code à 6 chiffres
          envoyé à l'adresse du compte (edge auth-otp → Resend), puis code + nouveau mot de passe (double saisie) vérifiés et posés
          par le serveur. Plus d'ancien mot de passe relu côté client ni de sb.auth.updateUser({ password }). -->
-    <div id="pwdModal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(8,4,2,.82);backdrop-filter:blur(6px);place-items:center;padding:20px">
+    <div id="pwdModal" class="aa-voile" onclick="if(event.target===this)closePwdModal()">
       <div class="card" style="width:min(400px,100%);max-height:calc(100dvh - 40px);overflow-y:auto;padding:22px;text-align:left">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
           <div class="display" style="font-size:18px;font-weight:800">Mot de passe</div>
@@ -5207,24 +5208,19 @@ setTimeout(function(){
       </div>
     </div>
 
-    <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
-
-    <!-- ② Email -->
-    <div class="eyebrow" style="margin-bottom:16px">② Adresse email de connexion</div>
-    <div style="margin-bottom:16px">
-      <div class="setup-label" style="margin-bottom:8px">Email actuel</div>
-      <div id="accountCurrentEmail" class="field" style="font-weight:600">—</div>
-    </div>
-    <!-- Audit 02/10 (contrat C1) : changement d'adresse en 2 étapes par CODE e-mail (edge auth-otp → Resend), mêmes
-         composants que l'écran de code de connexion. L'ancien lien Supabase (updateUser) n'arrivait plus : aucun SMTP. -->
-    <div id="emailChgStep1">
-      <div style="margin-bottom:10px">
-        <div class="setup-label" style="margin-bottom:8px">Nouvel email</div>
-        <input class="field" type="email" id="accountNewEmail" placeholder="nouveau@email.com" autocomplete="email" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')saveAccountEmail()">
-      </div>
-      <p style="font-size:12px;color:var(--text-3);margin:0 0 18px;line-height:1.6">Un code à 6 chiffres sera envoyé à ton <b style="color:var(--text-2)">adresse actuelle</b> pour confirmer que c'est bien toi, puis un second code à la nouvelle adresse pour vérifier qu'elle t'appartient. L'adresse actuelle reste active jusqu'à la fin.</p>
-      <button id="emailChgSendBtn" class="btn btn-ghost" onclick="saveAccountEmail()" style="width:100%;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Recevoir un code par e-mail</button>
-    </div>
+    <!-- Fenêtre « Adresse e-mail » (Axel 23/10) : nouvelle adresse → code à l'adresse actuelle → code à la nouvelle. -->
+    <div id="emailModal" class="aa-voile" onclick="if(event.target===this)closeEmailModal()">
+      <div class="card" style="width:min(400px,100%);max-height:calc(100dvh - 40px);overflow-y:auto;padding:22px;text-align:left">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div class="display" style="font-size:18px;font-weight:800">Adresse e-mail</div>
+          <button class="btn btn-quiet" onclick="closeEmailModal()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <p class="faint" style="font-size:11.5px;line-height:1.5;margin-bottom:16px;overflow-wrap:anywhere">Adresse actuelle : <b id="emailModalCur" style="color:var(--text-2)">—</b></p>
+        <div id="emailChgStep1">
+          <div class="setup-label" style="margin-bottom:8px">Nouvel e-mail</div>
+          <input class="field" type="email" id="accountNewEmail" placeholder="nouveau@email.com" autocomplete="email" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')saveAccountEmail()">
+          <button id="emailChgSendBtn" class="btn btn-primary" onclick="saveAccountEmail()" style="width:100%;margin-top:14px;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Recevoir le code</button>
+        </div>
     <div id="emailChgStep2" style="display:none">
       <p id="emailChgSub" style="font-size:12px;color:var(--text-3);margin:0 0 14px;line-height:1.6"></p>
       <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Code à 6 chiffres</div>
@@ -5238,7 +5234,22 @@ setTimeout(function(){
       </div>
     </div>
     <div id="emailChgMsg" style="display:none;font-size:12px;margin-top:12px;padding:10px 12px;border-radius:var(--r-sm);line-height:1.5"></div>
-    <div style="height:26px"></div>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
+
+    <!-- ② Connexion (Axel 23/10) : l'adresse et deux boutons simples ; adresse et mot de passe se changent dans une fenêtre
+         à part, avec code (changement d'adresse : code à l'adresse actuelle puis à la nouvelle, edge auth-otp). -->
+    <div class="eyebrow" style="margin-bottom:16px">② Connexion</div>
+    <div style="margin-bottom:12px">
+      <div class="setup-label" style="margin-bottom:8px">Adresse e-mail</div>
+      <div id="accountCurrentEmail" class="field" style="font-weight:600;overflow-wrap:anywhere">—</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:26px">
+      <button onclick="openEmailModal()" class="btn btn-ghost" style="width:100%;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Changer d'e-mail</button>
+      <button onclick="openPwdModal(true)" class="btn btn-ghost" style="width:100%;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Changer de mot de passe</button>
+    </div>
 
     <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
 
@@ -5996,7 +6007,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-0030'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-0200'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -9623,6 +9634,15 @@ function _emailChgStep(n){
   if(s1) s1.style.display = n === 1 ? 'block' : 'none';
   if(s2) s2.style.display = n === 2 ? 'block' : 'none';
 }
+function openEmailModal(){
+  const m = document.getElementById('emailModal'); if(!m) return;
+  _emailChgReset();
+  const cur = document.getElementById('emailModalCur'); if(cur) cur.textContent = (currentMember && currentMember.email) || '—';
+  const inp = document.getElementById('accountNewEmail'); if(inp) inp.value = '';
+  m.style.display = 'grid';
+  setTimeout(function(){ try{ inp.focus(); }catch(_){} }, 80);
+}
+function closeEmailModal(){ clearInterval(_emailChgTimer); const m = document.getElementById('emailModal'); if(m) m.style.display = 'none'; }
 function _emailChgReset(){
   clearInterval(_emailChgTimer); _emailChg = null;
   const c = document.getElementById('emailChgCode'); if(c) c.value = '';
@@ -9742,8 +9762,8 @@ async function verifyAccountEmailCode(){
     try{ updateAccountMenu(currentMember); }catch(_){}
     const ne = document.getElementById('accountNewEmail'); if(ne) ne.value = '';
     _emailChgReset();
-    _emailChgMsg('Adresse mise à jour : ' + email + '. Utilise-la désormais pour te connecter.', true);
-    toast('Adresse email mise à jour');
+    closeEmailModal();
+    toast('Adresse mise à jour : ' + email + '. Utilise-la désormais pour te connecter.');
   } finally {
     btn.disabled = false; btn.innerHTML = label;
   }

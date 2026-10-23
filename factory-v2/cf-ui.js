@@ -240,7 +240,7 @@
     // Auto-DM : période, séries masquées, filtre / recherche des leads, listes dépliées
     dmRange: '30j', dmHidden: {}, dmFilter: 'all', dmQuery: '', dmAllLeads: false, dmAllPosts: false,
     // Production : liste QC dépliée, types des sélecteurs, onglet interne des briques, recherche, écritures « Classer » en cours
-    prodList: null, perfKind: 'hook', perfKindLow: 'hook', freshKind: 'hook', brTab: 'lib', libKind: null, libQuery: '', recFilter: 'all', recAll: false, qcBusy: {}, qcMsg: null,
+    prodList: null, fmtNet: 'ig', perfKind: 'hook', perfKindLow: 'hook', freshKind: 'hook', brTab: 'lib', libKind: null, libQuery: '', recFilter: 'all', recAll: false, qcBusy: {}, qcMsg: null,
     // Pipeline (Fabrication) : étape ouverte ('gen' | 'ready'), tuile / avatar / module choisis, période de la courbe des montages
     pipeStage: null, pipeVar: null, pipeAv: null, pipeMod: null, pipePer: '7j',
     // BloxAI (16/10, ex-TrackAds) : tri du classement, listes dépliées, actions en cours (clé → 1), dernier message
@@ -1468,6 +1468,7 @@
     if (CF.status !== 'ready') return;
     CF.loadAccounts();
     CF.loadProd();
+    CF.loadFormats();   // 24/10 : catalogue des formats + leurs stats
     CF.loadBx();   // 16/10 : stock = missions « open » du stock commun BloxAI + kit à programmer
     CF.loadInsights(HOME_RANGE);   // rythme de publication : mêmes cases que l'Accueil (cache 15 min)
     CF.loadMedia();
@@ -1490,7 +1491,8 @@
       + phead('02', 'Fabrication', '')
       + pipeHTML(M) + qcFileHTML(M)
       + '<div class="cf-prow2 is-b">' + perfCardHTML('top') + perfCardHTML('low') + '</div>'
-      + phead('03', 'Briques', 'bibliothèque · assemblages · fraîcheur')
+      + phead('03', 'Formats', 'tous les formats · vues par format · stock') + fmtHTML()
+      + phead('04', 'Briques', 'bibliothèque · assemblages · fraîcheur')
       + bricksTabHTML(M) + '</div>';
   }
 
@@ -2118,6 +2120,45 @@
       + chead(title, best ? 'vues totales des vidéos qui les utilisent' : 'à remplacer ou retravailler')
       + perfSeg('perf-kind', k, best ? 'top' : 'low', kinds) + body
       + '<div class="cf-pfoot">vues totales / publications · ≈ vues moyennes</div></section>';
+  }
+
+  // ── 03 · Formats (24/10, Axel : « noter tous les formats qu'on a et avoir la data dessus », puis « clean, fluide,
+  //    simple efficace ») : UN classement par réseau (médiane des vues par vidéo, meilleur en haut, barre comme les briques),
+  //    les formats jamais publiés sur ce réseau en pastilles avec leur stock. Instagram : vues à J+2 (un post d'hier et un
+  //    post d'il y a 3 semaines se comparent) ; TikTok : vues actuelles. Source : RPC factory_format_stats (CF.fmt).
+  function fmtHTML() {
+    var S = CF.fmt, L = S.data && S.data.list, ig = ui.fmtNet !== 'tt';
+    var head = chead('Formats', 'vues médianes par vidéo')
+      + '<div class="cf-seg cf-pseg" role="group" aria-label="Réseau">' + [['ig', 'Instagram'], ['tt', 'TikTok']].map(function (x) {
+        var on = (x[0] === 'ig') === ig;
+        return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="fmt-net" data-k="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>';
+      }).join('') + '</div>';
+    if (!L) return '<section class="cf-card cf-fmt" data-block="formats">' + head
+      + (S.state === 'error' ? emptyLine('—', S.error) : spin('Chargement des formats…')) + '</section>';
+    var n = function (f) { return ig ? f.ig_posts : f.tt_posts; };
+    var med = function (f) { var v = ig ? f.ig_med_j2 : f.tt_med; return v == null ? null : Number(v); };
+    var on = L.filter(function (f) { return n(f) > 0; })
+      .sort(function (a, b) { return (med(b) == null ? -1 : med(b)) - (med(a) == null ? -1 : med(a)) || n(b) - n(a); });
+    var off = L.filter(function (f) { return !n(f); });
+    var mx = Math.max.apply(null, on.map(function (f) { return med(f) || 0; }).concat([1]));
+    var rows = on.length ? '<div class="cf-fmt-list">' + on.map(function (f, i) {
+      var v = med(f), k = n(f), mxv = ig ? f.ig_max : f.tt_max;
+      var sub = fInt(k) + ' ' + plural(k, ig ? 'post' : 'vidéo') + (mxv != null && k > 1 ? ' · max ' + fInt(mxv) : '')
+        + (v == null ? ' · trop récent' : '') + (f.en_stock ? ' · ' + fInt(f.en_stock) + ' en stock' : '') + (f.statut === 'arrete' ? ' · arrêté' : '');
+      return '<div class="cf-fmt-r' + (f.statut === 'arrete' ? ' is-off' : '') + '" title="' + esc(f.id + ' · ' + (f.description || '')) + '">'
+        + '<span class="cf-mrank' + (i === 0 && v != null ? ' is-acc' : '') + '">' + (i + 1) + '</span>'
+        + '<span class="cf-fmt-n">' + esc(f.nom) + '</span>'
+        + '<b class="cf-fmt-v">' + (v == null ? '—' : esc(fInt(v))) + '</b>'
+        + '<span class="cf-pbar' + (i === 0 ? '' : ' is-low') + '"><i style="width:' + (v == null ? 0 : Math.max(3, v / mx * 100)).toFixed(1) + '%"></i></span>'
+        + '<span class="cf-fmt-s">' + esc(sub) + '</span></div>';
+    }).join('') + '</div>' : emptyLine('—', 'aucun format publié sur ' + (ig ? 'Instagram' : 'TikTok'));
+    var wait = off.length ? '<div class="cf-fmt-wait"><div class="cf-over">Pas encore sur ' + (ig ? 'Instagram' : 'TikTok') + '</div><div class="cf-fmt-chips">'
+      + off.map(function (f) {
+        return '<span class="cf-chip' + (f.en_stock ? '' : ' is-muted') + '" title="' + esc(f.id + ' · ' + (f.description || '')) + '">' + esc(f.nom)
+          + (f.en_stock ? ' <b>' + esc(fInt(f.en_stock)) + '</b>' : '') + '</span>';
+      }).join('') + '</div></div>' : '';
+    return '<section class="cf-card cf-fmt" data-block="formats">' + head + rows + wait
+      + '<div class="cf-pfoot">' + (ig ? 'vues 2 jours après la publication' : 'vues actuelles') + ' · chiffre en gras = en stock, prêt à poster</div></section>';
   }
 
   // Vidéos d'une brique par FORMAT (Axel 27/09) : brique parlée → Audio d'Axel + Voix native Omni ; texte choc → Texte +
@@ -5380,6 +5421,7 @@
           if (fromTitle) { var qf = $('cfQcFile'); if (qf && qf.scrollIntoView) qf.scrollIntoView({ block: 'start' }); }
         }
       }
+      else if (act === 'fmt-net') { ui.fmtNet = el.getAttribute('data-k') === 'tt' ? 'tt' : 'ig'; render(); }
       else if (act === 'perf-kind') { if (perfKinds().some(function (x) { return x[0] === el.getAttribute('data-k'); })) { if (el.getAttribute('data-side') === 'low') ui.perfKindLow = el.getAttribute('data-k'); else ui.perfKind = el.getAttribute('data-k'); render(); } }
       else if (act === 'rec-filter') { if (['all', 'done', 'in_progress', 'pending', 'other', 'retired'].indexOf(el.getAttribute('data-k')) >= 0) { ui.recFilter = el.getAttribute('data-k'); render(); } }
       else if (act === 'asm-open') openAsm(el.getAttribute('data-rid'), el);

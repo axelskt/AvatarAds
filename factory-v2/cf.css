@@ -1537,3 +1537,18 @@ video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; wi
 /* 18/10 (round 7, R7-6) : détail d'une alerte de l'Accueil (alertes e-mail de BloxAI non envoyées) */
 .cf-alert-list { margin: 4px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .cf-alert-list li { font-size: 12px; color: var(--cf-ink-3); overflow-wrap: anywhere; }
+
+/* 24/10 · Production › Formats : un classement par réseau (même barre que les briques) + pastilles « pas encore publié » */
+.cf-fmt-list { display: flex; flex-direction: column; gap: 14px; }
+.cf-fmt-r { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 5px 10px; align-items: center; }
+.cf-fmt-r .cf-mrank { color: var(--cf-mute-2); font-family: var(--cf-mono); font-size: 12px; }
+.cf-fmt-r .cf-mrank.is-acc { color: var(--cf-accent-ink); font-weight: 700; }
+.cf-fmt-n { font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cf-fmt-v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.cf-fmt-r .cf-pbar { grid-column: 2 / 4; height: 8px; }
+.cf-fmt-s { grid-column: 2 / 4; font-family: var(--cf-mono); font-size: 10.5px; color: #7d756b; overflow-wrap: anywhere; }
+.cf-fmt-r.is-off .cf-fmt-n, .cf-fmt-r.is-off .cf-fmt-v { color: var(--cf-ink-3); }
+.cf-fmt-wait { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--cf-line); padding-top: 14px; }
+.cf-fmt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cf-fmt-chips .cf-chip { font-family: var(--cf-sans); font-size: 12px; padding: 4px 9px; }
+.cf-fmt-chips .cf-chip b { font-family: var(--cf-mono); color: var(--cf-accent-ink); }
