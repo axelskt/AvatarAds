@@ -472,6 +472,11 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
   -webkit-mask-image:linear-gradient(to right,transparent 0,#000 12%,#000 88%,transparent 100%),linear-gradient(to top,transparent 0,rgba(0,0,0,.4) 22%,#000 36%,#000 100%);
   mask-image:linear-gradient(to right,transparent 0,#000 12%,#000 88%,transparent 100%),linear-gradient(to top,transparent 0,rgba(0,0,0,.4) 22%,#000 36%,#000 100%);
   -webkit-mask-composite:source-in;mask-composite:intersect}
+/* iOS « Économie d'énergie » (Axel 23/10) : jamais le gros bouton play de Safari sur une vidéo de la page (lecture refusée) */
+video::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}
+video::-webkit-media-controls-overlay-play-button{display:none!important}
+video::-webkit-media-controls{display:none!important}
+.v2hero-img{pointer-events:none}
 @media(max-width:768px){
   /* MOBILE = hero CINÉMA façon Qoves (en mieux) : vidéo PLEIN CADRE avec le visage dégagé en haut (headroom),
      DÉGRADÉ SOMBRE pleine largeur en bas (sur ::after du média, pas sur le texte → pas de marges), texte BLANC posé dessus,
@@ -1494,12 +1499,26 @@ revealScan();
   function healthy(){ return !v.paused && v.readyState>2 && (Date.now()-lastProg)<1500; }   // l'image bouge VRAIMENT
   function tryPlay(force){   // play() rejeté (décodeurs pris, économie d'énergie) = repris par le chien de garde
     var now=Date.now(); if(!force && now-lastTry<600) return; lastTry=now;
-    v.muted=true; try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){}
+    v.muted=true; try{ var p=v.play(); if(p&&p.catch) p.catch(function(e){ if(e&&e.name==='NotAllowedError') enImage(); }); }catch(_){}
   }
+  // Économie d'énergie iOS (Axel 23/10) : Safari refuse TOUTE lecture automatique (play() → NotAllowedError) et montrait son
+  // bouton play (masqué en CSS). La même vidéo passe alors dans une <img> par-dessus : WebKit anime un MP4 en image comme un
+  // GIF, hors règle de lecture automatique. Ailleurs (Chrome…) l'image ne se charge pas et rien ne change. Dès que la vraie
+  // vidéo joue (1er toucher), l'image est retirée.
+  var img=null;
+  function enImage(){
+    var ua=navigator.userAgent;
+    if(img || !/AppleWebKit/.test(ua) || /Chrome\/|Chromium|Android/.test(ua)) return;
+    img=new Image(); img.className='v2hero-vid v2hero-img'; img.alt=''; img.setAttribute('aria-hidden','true');
+    img.onload=function(){ if(img && !img.parentNode && !healthy() && v.parentNode) v.parentNode.insertBefore(img, v.nextSibling); };
+    img.onerror=function(){ img=null; };
+    img.src=SRC;
+  }
+  function sansImage(){ if(img && img.parentNode) img.parentNode.removeChild(img); }
   function stop(){ if(iv){ clearInterval(iv); iv=0; } }
   function bind(el){
     function on(ev,fn){ el.addEventListener(ev,function(){ if(el===v) fn(); }); }
-    on('timeupdate',function(){ if(el.currentTime!==lastCT){ lastCT=el.currentTime; lastProg=Date.now(); } });
+    on('timeupdate',function(){ if(el.currentTime!==lastCT){ lastCT=el.currentTime; lastProg=Date.now(); if(!el.paused) sansImage(); } });
     on('progress',function(){ lastNet=Date.now(); });
     ['loadedmetadata','loadeddata','canplay','pause','waiting','stalled','suspend','emptied','error'].forEach(function(ev){ on(ev,function(){ arm(false); }); });
   }
