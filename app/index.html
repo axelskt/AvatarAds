@@ -5955,7 +5955,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-21-2150'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-23-0930'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -5984,7 +5984,19 @@ function _aaFetch(input, init){
   };
   return essai(0);
 }
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: _aaFetch } });
+// 23/10 (Axel : « Préparation… » sans animation, connexion bloquée « tous les jours ») : supabase-js prend par défaut un verrou
+// navigator.locks PARTAGÉ par tous les onglets avatarads.fr ; un onglet de l'app que Safari a gelé en arrière-plan le garde
+// et CHAQUE appel de cet onglet-ci (lecture de session avant un débit, une génération…) attend sans fin, sans qu'aucune
+// requête ne parte. Même remède que la page de connexion et Creative Factory : verrou propre à la page (file en mémoire),
+// 5 s au plus derrière l'opération précédente. Le jeton de rafraîchissement supporte deux onglets proches (fenêtre de
+// réutilisation de Supabase).
+let _aaLockChain = Promise.resolve();
+function _aaPageLock(name, acquireTimeout, fn){
+  const run = Promise.race([_aaLockChain, new Promise(function(ok){ setTimeout(ok, 5000); })]).then(function(){ return fn(); });
+  _aaLockChain = run.catch(function(){});
+  return run;
+}
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: _aaPageLock }, global: { fetch: _aaFetch } });
 // 19/10 (Axel : « il y a un slider pour aller à droite ou à gauche ») : rien ne débordait — Safari était ZOOMÉ au pincement du
 // trackpad (tout ~3 % plus grand que sur un autre onglet, même fenêtre) : la page devient déplaçable de gauche à droite avec
 // une barre. L'app est une interface à taille fixe (viewport maximum-scale=1) : sur ordinateur, le pincement Safari est bloqué.
@@ -12093,8 +12105,34 @@ async function generateImage(){
   if(btn.disabled) return;   // déjà lancé (double clic)
   btn.disabled = true; btn.style.opacity = '0.75';
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Préparation…';
+  // 23/10 (Axel : « Préparation… » mais pas l'animation, surtout avec plusieurs images) : les cases de chargement s'affichent
+  // AUSSI dès le clic (elles n'apparaissaient qu'après le débit) ; remises comme avant si le débit échoue
+  const _ldS = document.getElementById('imgResult'), _ldM = document.getElementById('imgResultMulti'), _ldG = document.getElementById('imgMultiGrid'), _ldO = document.getElementById('imgLoadingOverlay');
+  const _ldPrev = { s: _ldS ? _ldS.style.display : '', m: _ldM ? _ldM.style.display : '', o: _ldO ? _ldO.style.display : '', g: _ldG ? _ldG.innerHTML : '' };
+  try {
+    if(actualCount > 1 && _ldS && _ldM && _ldG){
+      _ldS.style.display = 'none'; _ldM.style.display = 'block'; if(_ldO) _ldO.style.display = 'none'; _imgIdleShow(false);
+      const _sz = _imgSelectedFormat;
+      _ldG.style.gridTemplateColumns = 'repeat(' + (actualCount===2?2:3) + ',1fr)';
+      _ldG.innerHTML = '';
+      for(let i=0;i<actualCount;i++){
+        const ph = document.createElement('div'); ph.id = '_imgMultiSlot'+i;
+        ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(_sz==='1024x1792'?'9/16':_sz==='1792x1024'?'3/2':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
+        ph.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>';
+        _ldG.appendChild(ph);
+      }
+    } else if(_ldS && _ldO){
+      if(_ldM) _ldM.style.display = 'none';
+      if(_ldS.style.display === 'none'){ _ldS.style.display = 'block'; const _o = document.getElementById('imgOutput'); if(_o) _o.style.display = 'none'; }
+      _ldO.style.display = 'flex'; _imgIdleShow(false);
+    }
+  } catch(_) {}
   creditsFlowBegin();  // #122 : remboursable si la génération échoue
-  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()) * actualCount, 'image'))){ btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = baseLabel; return; }
+  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()) * actualCount, 'image'))){
+    btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = baseLabel;
+    try { if(_ldS) _ldS.style.display = _ldPrev.s; if(_ldM) _ldM.style.display = _ldPrev.m; if(_ldO) _ldO.style.display = _ldPrev.o; if(_ldG) _ldG.innerHTML = _ldPrev.g; _imgIdleShow(true); } catch(_) {}
+    return;
+  }
 
   const singleWrap = document.getElementById('imgResult');
   const multiWrap  = document.getElementById('imgResultMulti');
