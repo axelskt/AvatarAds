@@ -728,8 +728,10 @@ serve(async (req) => {
         return json(409, { error: 'email_recently_changed', message: "Cette adresse vient d'être retirée d'un compte AvatarAds. Si tu n'as pas fait ce changement, ouvre le lien « Ce n'est pas moi » reçu par e-mail à cette adresse ; sinon, écris-nous à bonjour@avatarads.fr." })
       }
       const firstName = (body.firstName || '').trim().slice(0, 60)
+      // aa_origine = 'serveur' : seule marque qu'un /signup ne peut pas poser (app_metadata) — le trigger différé
+      // block_email_signup_hors_serveur refuse tout compte e-mail qui ne la porte pas (migration 23/10)
       const { error: cuErr } = await sb.auth.admin.createUser({
-        email, email_confirm: true, user_metadata: { first_name: firstName },
+        email, email_confirm: true, user_metadata: { first_name: firstName }, app_metadata: { aa_origine: 'serveur' },
       })
       // "already registered" = user auth existant sans profil → on continue
       if (cuErr && !/already|exists/i.test(cuErr.message)) return json(500, { error: 'server_error' })

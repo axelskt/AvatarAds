@@ -280,8 +280,10 @@ function mountWhop(){
   if(S.packSeul&&!compte()){ box.innerHTML=`<div class="pack-login"><p class="step-p">Les crédits du pack s'ajoutent à ton compte AvatarAds : connecte-toi d'abord, puis reprends le pack depuis ton espace.</p>
    <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a></div>`; return; }
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>'; garderPanier();
-  const acc=compte(), meta={metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{}),
-    returnUrl:location.origin+location.pathname+location.search};   // étape bancaire hors page (3D Secure) → retour ici
+  // PAS de returnUrl (Axel 23/10, achat test iPhone) : avec une adresse de retour, Whop renvoie l'onglet à la fin du
+  // paiement et fait d'abord passer l'acheteur sans compte Whop par son écran « entrez le code » sur whop.com. Sans elle,
+  // l'acheteur reste ici (comme dans l'app) : la veille (aa_nonce) l'emmène sur « Paiement confirmé ».
+  const acc=compte(), meta={metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{})};
   whopReady().then(W=>{
     if(seq!==_seq) return;
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche

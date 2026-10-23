@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-pdWwTsR6b8wdFSZIs3R4zrps44Lnks4lf49ESqM9aok='; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-0yg7VPN9IVKagAK2xZNyCHvN+ZB/JYFq2thPIylYmjU='; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Paiement confirmé — AvatarAds</title>
 <link rel="icon" href="/assets/avatarads-logo-96.png">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -136,7 +136,9 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const lire=k=>{ try{ return sessionStorage.getItem(k) }catch(_){ return null } };
 const FLECHE='<span class="ar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
 // identifiant joint au paiement par la page de paiement (même onglet) + panier payé, tel qu'affiché au moment de payer
-const NONCE=lire("aa_pay_ok");
+// (aa_pay_nonce : arrivée ici sans passer par la bascule de la page de paiement, ex. retour depuis whop.com)
+const NONCE=lire("aa_pay_ok")||lire("aa_pay_nonce");
+try{ if(NONCE&&!lire("aa_pay_ok")){ sessionStorage.setItem("aa_pay_ok",NONCE); sessionStorage.removeItem("aa_pay_nonce"); } }catch(_){}
 let PANIER=(()=>{ try{ return JSON.parse(lire("aa_pay_order")||"null") }catch(_){ return null } })();
 function compte(){try{const s=JSON.parse(localStorage.getItem(SB_SESSION)||"null"),u=s&&(s.user||(s.currentSession&&s.currentSession.user));
   if(u&&u.id&&u.email) return {id:String(u.id),email:String(u.email)};}catch(_){} return null}

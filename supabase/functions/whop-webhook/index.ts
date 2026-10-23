@@ -425,7 +425,8 @@ const PLAN_LABEL: Record<string, string> = { starter: 'Starter', pro: 'Pro', eli
 // Sans mot de passe (block_password_signup). Compte déjà existant / adresse bloquée : null, l'achat reste en attente.
 async function ensureAccount(sb: any, email: string): Promise<string | null> {
   try {
-    const { data, error } = await sb.auth.admin.createUser({ email, email_confirm: true })
+    // marque serveur (app_metadata, impossible à poser via /signup) : sans elle la base refuse le compte (23/10)
+    const { data, error } = await sb.auth.admin.createUser({ email, email_confirm: true, app_metadata: { aa_origine: 'serveur' } })
     if (error) { console.warn(`ℹ️ Compte non créé pour ${email} : ${error.message}`); return null }
     console.log(`👤 Compte AvatarAds créé automatiquement pour ${email} (achat sans compte)`)
     return data?.user?.id ?? null
