@@ -34,7 +34,7 @@ const imgP = stmt(/const imgPrompt = prompt \+ ', ' \+ styleMeta\.prompt[^\n]*;/
 // Depuis le 04/10 (extensions Veo), l'app assemble le prompt par PASSE (_mkAnim) ; le MCP rejoue la passe unique (seg null).
 const anim = stmt(/const _mkAnim = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage _mkAnim') + '\n  const animPrompt = _mkAnim(prompt, null)';
 const wrap = stmt(/const _omniPrompt = _EXP_FRENCH \+ _EXP_PIXEL_LOCK \+ _EXP_PRODUCT_VIDEO_LOCK \+ "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
-for (const k of ['_expSelfieCue()', '_expEnvLock(pr)', '_expSpeechLock(pr, seg)', '_EXP_TEXLOCK_OMNI', '_EXP_PRODUCTLOCK']) if (!anim.includes(k)) throw new Error('assemblage : ' + k + ' absent');
+for (const k of ['_expSelfieCue()', '_expEnvLock(pr)', '_expSpeechLock(pr, seg', '_EXP_TEXLOCK_OMNI', '_EXP_PRODUCTLOCK']) if (!anim.includes(k)) throw new Error('assemblage : ' + k + ' absent');
 // ── Omni (édition vidéo par prompt) et Motion Control : MÊMES prompts que l'app (Axel 02/10, outils MCP edit_video / motion_control)
 const omniFn = fn('_omniBuildPrompt');
 const omniLogo = stmt(/const _OMNI_LOGO_FIDELITY = (true|false);/, 'kill-switch _OMNI_LOGO_FIDELITY');
@@ -50,8 +50,9 @@ ${FNS.join('\n')}
 ${LOCKS.map(k => `const ${k} = ${JSON.stringify(cst(k))}`).join('\n')}
 const styleMeta = { prompt: ${JSON.stringify(ugcStyle())} }
 // Omni Flash image → vidéo (photo de départ) : assemblage Express + enveloppe « CLEAN SHOT » de _expOmniImageToVideo.
-export function expressOmniPrompt(prompt: string): string {
-  window._expVeoModel = 'omni'; const _isOmni = true
+// dur (23/10) : durée du clip en secondes → débit de parole calculé (PACING) comme dans l'app ; sans elle, pas de débit imposé.
+export function expressOmniPrompt(prompt: string, dur?: number): string {
+  window._expVeoModel = 'omni'; const _isOmni = true; const _dur = dur || null
   ${anim}
   return (function (prompt) { ${wrap} return _omniPrompt })(animPrompt)
 }
@@ -83,8 +84,8 @@ export function motionControlPrompt(o: { instruction?: string; camFollow?: boole
   return (_mcMotion + _mcId).slice(0, 2400)
 }
 // Veo 3.1 Lite (sans photo) : même assemblage Express que l'app, moteur Veo (verrou de fin de parole compris).
-export function expressVeoPrompt(prompt: string): string {
-  window._expVeoModel = 'lite'; const _isOmni = false
+export function expressVeoPrompt(prompt: string, dur?: number): string {
+  window._expVeoModel = 'lite'; const _isOmni = false; const _dur = dur || null
   ${anim}
   return animPrompt
 }

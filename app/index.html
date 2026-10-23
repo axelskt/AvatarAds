@@ -5955,7 +5955,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-23-0930'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-23-1300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -34759,7 +34759,7 @@ const _EXP_IDLOCK = '. IMPORTANT: keep the EXACT same person throughout the ENTI
 // Anti-lévitation (Axel 08/09) : un produit tenu en main le RESTE toute la vidéo (jamais lâché, jamais flottant).
 const _EXP_HOLDLOCK = '. If the person is holding a product or object, they keep it FIRMLY gripped in the hand for the ENTIRE video and ACTIVELY PRESENT it to the camera while speaking — raising it toward the lens, angling and turning it to show it off, gesturing with it and drawing attention to it, keeping it clearly visible and engaging with it dynamically: the hand never releases it, the object never leaves the hand, never floats, hovers, levitates, is dropped, set down or disappears — it stays physically held with believable weight and constant hand contact from the first frame to the last.';
 // Débit vocal rapide + dynamique (Axel 08/09) : les hooks UGC qui marchent sont PUNCHY, pas mous/lents.
-const _EXP_ENERGYLOCK = '. DELIVERY: the person speaks FAST, punchy and high-energy — a quick, lively, dynamic, upbeat tempo like a confident social-media hook; no slow, flat, dragging or monotone speech and NO dead pauses or silent gaps; expressive, animated hands and face, engaged and enthusiastic from start to finish, keeping the pace tight the whole time.';
+const _EXP_ENERGYLOCK = '. DELIVERY: the person speaks with a punchy, high-energy, lively and dynamic intonation like a confident social-media hook, at the pace given in PACING; no flat, dragging or monotone speech and NO dead pauses or silent gaps; expressive, animated hands and face, engaged and enthusiastic from start to finish, keeping the pace tight the whole time.';
 // Verrou PRODUIT (Axel 12/09 : « dans la vidéo l'objet se déforme »). Le produit/objet montré doit rester
 // STRICTEMENT identique à l'image de référence uploadée : forme, texture, matière, couleurs, logos — aucune déformation ni transformation.
 const _EXP_PRODUCTLOCK = '. PRODUCT FIDELITY (CRITICAL): if a product, object or item is shown, it must stay STRICTLY IDENTICAL to the uploaded reference image — the exact same shape, silhouette, proportions, geometry, materials, surface texture and finish, colors, patterns, logos, branding, labels and any text on it. Do NOT deform, warp, morph, melt, bend, stretch, squash, reshape, redesign, restyle, regenerate, re-texture, swap or transform the product in any way, and do NOT change its size, its details or any writing on it; keep every detail photographically faithful to the source image in EVERY frame. Only the person and the camera may move — the product itself never changes, distorts or transforms from the first frame to the last.';
@@ -34803,7 +34803,7 @@ function _expCommentKeyword(line){
   m=t.match(/(?<![\p{L}])([A-ZÀ-Ÿ][A-ZÀ-Ÿ0-9]{1,})(?![\p{L}])/u);   // placeholder tout en majuscules (SITE)
   return m ? m[1] : '';
 }
-function _expSpeechLock(p, seg){
+function _expSpeechLock(p, seg, durs){
   if(seg && seg.mute) return '. VOICE: she says NOTHING in this part — no new word, no sound from her mouth; natural silent continuation, mouth closed, small natural movements and expressions.';
   const line=_expQuotedLine(p);
   const kw=_expCommentKeyword(line);
@@ -34817,8 +34817,12 @@ function _expSpeechLock(p, seg){
     + ' FLUENT, CONTINUOUS DELIVERY: the words flow into each other like a real creator talking — NO unnecessary pause, NO dead air, NO hesitation and NO silent gap between words or between sentences; only the briefest natural breath where the punctuation truly needs one.'
     // Axel 12/10 : « l'avatar arrive brut » → arrivée pleine d'émotion, parle avec les mains, émotion qui évolue (réf. créateur face caméra).
     + ((!seg || !seg.i) ? ' ENTRANCE: the clip opens already in motion, never on a frozen face — she leans slightly toward the camera with raised eyebrows, wide expressive eyes and an excited half-smile, as if she just discovered something incredible and can not wait to tell it.' : '')
-    + ' HANDS: she talks a lot with her hands (both hands if the phone is propped up, otherwise her free hand), visible in frame at chest height — open palm toward the camera, counting on fingers, pointing at the lens, framing an idea, a quick emphatic gesture on key words; the hands keep moving naturally, never frozen.'
-    + ' HAND CHOREOGRAPHY, one clear gesture per idea: a light forward fist on the first strong word, then hands opening wide palms out, then hands cupped as if holding the idea, then hands reaching toward the camera palms up, then a last emphatic two-hand gesture toward the camera ON the very last word; the hands keep talking until the final second and never drop, rest or freeze before the clip ends.'
+    // Axel 23/10 (vidéos clientes : une 3e main qui apparaît à droite, le savon qui disparaît puis se dédouble) : les gestes
+    // « à deux mains » étaient demandés alors qu'en selfie une main tient le téléphone et l'autre le produit → le moteur
+    // inventait une main ou lâchait le produit. Gestes faits par la main LIBRE seulement, anatomie et produit verrouillés.
+    + ' HANDS: if she is holding a product, the hand holding it keeps it FIRMLY gripped the whole time — it never opens, never lets go, never passes it to the other hand — and only moves to PRESENT it (raising it toward the lens, tilting it, pointing at it with a finger of the same hand); all other gestures are made by her FREE hand only. If she holds nothing, she talks with her free hand(s) at chest height — open palm toward the camera, counting on fingers, pointing at the lens, a quick emphatic gesture on key words. The hands keep moving naturally, never frozen.'
+    + ' ANATOMY (CRITICAL): she has exactly TWO arms and TWO hands in total. In a handheld selfie one of them holds the phone OFF-CAMERA, so AT MOST ONE other hand is ever visible in frame: no hand appears from the edge of the frame, no third hand, no extra arm, no floating or disembodied hand, no extra fingers. Any product exists exactly ONCE: it is never duplicated (never two of it), never vanishes, fades, shrinks or teleports, and never leaves the hand that holds it.'
+    + ' GESTURE PROGRESSION (free hand only, never the hand holding a product): a light forward fist on the first strong word, then an open palm toward the camera, then pointing at the lens on the punchline; the gestures continue until the final second and never drop or freeze before the clip ends.'
     + ' EMOTION ARC: laughing squint at the start, then a warm open expression, a big genuine smile, a wide grin and star-struck excitement on the punchline. VERY expressive face (big eyebrow raises, eyes widening, smiles that reach the eyes) and a LOT of head movement like an animated storyteller (the head tilts clearly from one side to the other, bobs with the rhythm, dips the chin and closes the eyes for a beat on an emphasized word then lifts back up, leans in then back; the shoulders follow). Big theatrical head expressions: a few words said with the EYES CLOSED and the head tilted down as if savoring them, then the head snaps back up with wide eyes; chin up on a bold claim; a pursed-lips smirk with one eyebrow raised; an open-mouthed « ooh » face on the surprising part.'
     + ' EMOTION: strong, readable emotion that evolves with the sentence — surprise and excitement, then conviction, a knowing smile or a raised eyebrow on the punchline; animated face, head nods and small head tilts. Confident, well-articulated delivery like a charismatic content creator at a FAST, brisk pace (never slow or drawn out), every word crisp and clear.'
     + (line ? ' THE ONLY WORDS SPOKEN IN THE ENTIRE CLIP, VERBATIM AND IN THIS LANGUAGE: « '+lineSpoken+' ».' : ' The person says ONLY the requested line, verbatim.')
@@ -34831,6 +34835,13 @@ function _expSpeechLock(p, seg){
     // une seule prise propre, chaque mot ET chaque groupe de mots dit une seule fois — jamais une phrase reprise
     + ' ONE CLEAN TAKE (absolute priority over every gesture and expression): the line is said exactly ONCE, from the first word to the last, each word and each group of words exactly once and in order — no repeated word, no repeated phrase, no repeated part of the sentence, no false start, no restart, no going back to re-say something after a pause, a gesture or a head move. If the line is finished before the end of the clip, she stops talking and keeps smiling silently — she never repeats words to fill the time.'
     + ' Nothing is said before the line (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame.'
+    // Axel 23/10 (test : phrase finie puis « la détente ! » improvisé, produit sorti du cadre pendant le silence) : le DERNIER
+    // mot est nommé (un repère concret tient mieux qu'un interdit général) et le produit reste dans le cadre jusqu'au bout
+    + (() => { const w = (line || '').replace(/[«»"“”.,!?;:…]+$/g, '').trim().split(/\s+/).pop(); return w ? ' THE LAST WORD SHE SAYS IS « ' + w + ' »: after « ' + w + ' » she says NOTHING else — no extra word, no exclamation, no comment, no laugh — her mouth stays closed until the end.' : ''; })()
+    + ' If she is holding a product, during the silent end she keeps it held up IN FRAME, clearly visible next to her face, until the very last frame — it never drops out of frame.'
+    // Axel 23/10 (répétitions en fin de vidéo) : la cause = le TEMPS EN TROP (phrase courte dans un clip long, dite vite) —
+    // déjà constatée sur l'usine. Le débit demandé fait remplir le clip par la phrase, moins une demi-seconde de fin.
+    + (() => { if(!line || !durs) return ''; const n = line.replace(/[«»"'’.,!?;:…-]/g, ' ').split(/\s+/).filter(Boolean).length; const last = !seg || seg.i >= seg.n-1; const rate = Math.max(1.8, Math.min(3.6, n / Math.max(1, durs - (last ? 0.6 : 0.1)))); return ' PACING: the line fills the WHOLE ' + durs + '-second clip — about ' + rate.toFixed(1) + ' words per second' + (last ? ', so the last word lands about half a second before the end' : '') + '; a natural, lively rhythm, never rushed and never stretched, with no word ever repeated to fill time.'; })()
     + ((seg && seg.i < seg.n-1) ? ' PACING: this is NOT the end of what she says — she delivers these words at a natural pace that fills the whole clip and keeps the flow going at the end (at most a short natural breath): no closing pause, no long silence, no wrap-up.'
       : _noEnd ? '' : ' CRITICAL ENDING: she must COMPLETE the whole sentence and land its final word BEFORE the clip ends (never cut off mid-word); pace the delivery so the last word finishes with about half a second to spare, then she STOPS talking, closes her mouth and holds a natural still, silent expression until the very end. The last ~0.5 second contains ABSOLUTELY no speech, no extra word, no filler and no trailing mouth movement or sound — total silence with a closed mouth.');
 }
@@ -35390,7 +35401,7 @@ async function _expressCreateOne(o){
       + ((seg && seg.i > 0) ? 'CONTINUATION OF THE PREVIOUS CLIP: this extends the SAME continuous take seamlessly from its last frame — same person, same face, same outfit, same place, same light, same framing and camera; no cut, no restart, no new greeting; she simply carries on in the same voice and tone. ' : '')
       + ((pr + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
       + _expEnvLock(pr)
-      + (window._expVoice==='native' ? _expSpeechLock(pr, seg) : '')
+      + (window._expVoice==='native' ? _expSpeechLock(pr, seg, seg ? (seg.i ? 7 : 8) : _dur) : '')
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + ((_isOmni && (window._expStyle==='realiste' || window._expStyle==='ugc')) ? _EXP_TEXLOCK_OMNI : '')   // Omni i2v : verrou 1:1 renforcé (photo = 1re frame, on anime, on ne redessine pas)
       + _EXP_IDLOCK + _EXP_HOLDLOCK + _EXP_ENERGYLOCK + _EXP_PRODUCTLOCK

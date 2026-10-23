@@ -2608,9 +2608,9 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt), genImage: genStart ? augmenterPortrait(expressImagePrompt(prompt)) : undefined })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt, duration), genImage: genStart ? augmenterPortrait(expressImagePrompt(prompt)) : undefined })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
-    prompt: expressVeoPrompt(prompt), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
+    prompt: expressVeoPrompt(prompt, duration), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
   return {
     content: [{ type: 'text', text: `🎬 Vidéo lancée (${duration} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 1 à 3 min), avec le bouton Télécharger. NE rappelle PAS check_video — le widget suit la génération et affiche la vidéo tout seul. Dis juste à l'utilisateur que la vidéo apparaît dans la carte.` }],
@@ -5547,7 +5547,7 @@ serve(async (req) => {
           .eq('id', jobId).eq('status', 'pending').select('id')
         if (!tookP || !tookP.length) return json(409, { error: 'not_pending' })
         runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: '', aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
-          prompt: expressOmniPrompt(String(params.prompt || '')), genImage: augmenterPortrait(expressImagePrompt(String(params.prompt || ''))), productRef: refP })
+          prompt: expressOmniPrompt(String(params.prompt || ''), durV), genImage: augmenterPortrait(expressImagePrompt(String(params.prompt || ''))), productRef: refP })
         return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
       }
       const mV = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
@@ -5570,7 +5570,7 @@ serve(async (req) => {
         .eq('id', jobId).eq('status', 'pending').select('id')
       if (!tookV || !tookV.length) return json(409, { error: 'not_pending' })
       runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: urlV, aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
-        prompt: expressOmniPrompt(String(params.prompt || '')) })
+        prompt: expressOmniPrompt(String(params.prompt || ''), durV) })
       return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
     }
     const pArgs = (params.args || {}) as Record<string, unknown>
