@@ -135,7 +135,7 @@ const NEXT={starter:"pro",pro:"elite",elite:"elite60",elite60:"elite90"};   // A
 // abonnement + achat ponctuel dans un panier, donc chaque palier a une VARIANTE Whop dont le 1er paiement inclut le pack
 // (initial_price = prix du pack), puis le prix normal. VAR[palier][pack] = {m: mensuel, y: annuel}. Le webhook verse les
 // crédits du pack une seule fois, à l'activation (whop-webhook, VARIANTES).
-const PACKS={S:{n:"Pack crédits S",c:120,p:14.99,was:19.99},M:{n:"Pack crédits M",c:300,p:29.99,was:39.99},L:{n:"Pack crédits L",c:600,p:59.99,was:74.99}};
+const PACKS={S:{n:"Pack crédits S",c:120,p:14.99,was:19.99},M:{n:"Pack crédits M",c:300,p:27.99,was:34.99},L:{n:"Pack crédits L",c:600,p:59.99,was:74.99}};
 const VAR={
  starter:{S:{m:"plan_blQtyUh90R2wP",y:"plan_NcMairMUEz3ST"}},
  pro:{S:{m:"plan_hE8bkwTPoTkrj",y:"plan_iATzKyUuANyfI"},M:{m:"plan_0iHH0kY3uoJpo",y:"plan_QF7HXCR81yXRy"}},
@@ -241,8 +241,9 @@ function mountWhop(){
       onError:e=>{ if(!ready&&seq===_seq) fallback(box,items[0].plan); else console.warn("[whop]",e&&(e.code||e.message)); }
     })).mount(box.querySelector(".whop-mount"));
     // Apple Pay au-dessus (maquette) : élément séparé, AFFICHÉ seulement s'il rend un portefeuille ; Axel 23/10 : Apple Pay et
-    // carte bancaire SEULEMENT (Google Pay et PayPal masqués)
-    _xp=W.checkout.create(Object.assign({items,appearance:{theme:{appearance:"light"},classes:{"whop-CheckoutExpressGooglePay":HIDE,"whop-CheckoutExpressPayPal":HIDE}},onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq) paid(); },1200); }},meta));
+    // carte bancaire SEULEMENT (Google Pay et PayPal masqués) ; mentions Whop (conditions + « Propulsé par Whop ») gardées UNE
+    // fois, sous le bouton du module de paiement, pas en double sous Apple Pay
+    _xp=W.checkout.create(Object.assign({items,appearance:{theme:{appearance:"light"},classes:{"whop-CheckoutExpressGooglePay":HIDE,"whop-CheckoutExpressPayPal":HIDE,"whop-CheckoutTerms":HIDE}},onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq) paid(); },1200); }},meta));
     const xm=$("xp"); _xp.create("expressCheckout",{onReady:()=>{
       const show=()=>{ const ok=xm.getBoundingClientRect().height>=20; $("xpWrap").classList.toggle("xp-off",!ok); $("orSep").hidden=!ok; };
       show(); try{ new ResizeObserver(show).observe(xm); }catch(_){ setTimeout(show,800); } }}).mount(xm);

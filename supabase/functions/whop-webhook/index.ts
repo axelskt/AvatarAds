@@ -37,7 +37,7 @@ const FIRST_SUB_BONUS: Record<string, number> = { starter: 25, pro: 50, elite: 7
 const PLAN_PRICE_CENTS: Record<string, number> = {
   plan_YKcdyPT6RRQSi: 2999, plan_g4BVtDmk6hgjQ: 4999, plan_w8lh5zpEJFOQR: 8999, plan_pZmWh1dVdmIWT: 15899, plan_63PGeG3MesbJR: 22499,
   plan_cNydK89X39PLE: 24999, plan_P7WIywSa6YrxT: 44999, plan_OvRwm5CW3xcNh: 79999, plan_uWTkJDl1GvxNR: 143988, plan_x2kDWR6ur2W5E: 189588,
-  plan_hR0u4VHoeszbu: 1999, plan_GLoKHMqZtNbLK: 3999, plan_iRh99E5F2g4XU: 7499,
+  plan_hR0u4VHoeszbu: 1999, plan_GLoKHMqZtNbLK: 3499, plan_iRh99E5F2g4XU: 7499,
 }
 const REFERRAL_RATE = 0.30
 // Audit 02/10 (PAY-4) : plans ANNUELS (bloc « Annuel » de SUB_MAP) — leur PLAN_PRICE_CENTS est le prix de l'ANNÉE.
@@ -52,15 +52,15 @@ const ANNUAL_PLAN_IDS = new Set(['plan_cNydK89X39PLE', 'plan_P7WIywSa6YrxT', 'pl
 const VARIANTES: [string, string, number, number][] = [
   ['plan_blQtyUh90R2wP', 'plan_YKcdyPT6RRQSi', 120, 1499],  // Starter  + S
   ['plan_hE8bkwTPoTkrj', 'plan_g4BVtDmk6hgjQ', 120, 1499],  // Pro      + S (passage Starter → Pro)
-  ['plan_0iHH0kY3uoJpo', 'plan_g4BVtDmk6hgjQ', 300, 2999],  // Pro      + M
-  ['plan_wn7ZntgBemFL0', 'plan_w8lh5zpEJFOQR', 300, 2999],  // Élite30  + M (passage Pro → Élite)
+  ['plan_0iHH0kY3uoJpo', 'plan_g4BVtDmk6hgjQ', 300, 2799],  // Pro      + M
+  ['plan_wn7ZntgBemFL0', 'plan_w8lh5zpEJFOQR', 300, 2799],  // Élite30  + M (passage Pro → Élite)
   ['plan_i7ubxuFfVHQ5k', 'plan_w8lh5zpEJFOQR', 600, 5999],  // Élite30  + L
   ['plan_th1REeLIfRP50', 'plan_pZmWh1dVdmIWT', 600, 5999],  // Élite60  + L
   ['plan_xN9BOWCvFUWXp', 'plan_63PGeG3MesbJR', 600, 5999],  // Élite90  + L
   ['plan_NcMairMUEz3ST', 'plan_cNydK89X39PLE', 120, 1499],  // annuels
   ['plan_iATzKyUuANyfI', 'plan_P7WIywSa6YrxT', 120, 1499],
-  ['plan_QF7HXCR81yXRy', 'plan_P7WIywSa6YrxT', 300, 2999],
-  ['plan_5RTUZOJ3sGCXd', 'plan_OvRwm5CW3xcNh', 300, 2999],
+  ['plan_QF7HXCR81yXRy', 'plan_P7WIywSa6YrxT', 300, 2799],
+  ['plan_5RTUZOJ3sGCXd', 'plan_OvRwm5CW3xcNh', 300, 2799],
   ['plan_QaAyO2Msc11Xk', 'plan_OvRwm5CW3xcNh', 600, 5999],
   ['plan_tAKWwP8U88eTT', 'plan_uWTkJDl1GvxNR', 600, 5999],
   ['plan_xzr5jL4TCAlWf', 'plan_x2kDWR6ur2W5E', 600, 5999],
@@ -357,7 +357,7 @@ const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
   // Packs revus 31/08 (Axel) — Flash 9,99€ supprimé ; nouveaux produits Whop S/M/L
   // (anciens plan_w0DMfzGzEdmYF / plan_xgsRkGzvSgUkf / plan_EVUzCdQ1H1EdL supprimés côté Whop)
   'plan_hR0u4VHoeszbu': { credits: 120 },  // Pack S  19,99€
-  'plan_GLoKHMqZtNbLK': { credits: 300 },  // Pack M  39,99€ (le plus populaire)
+  'plan_GLoKHMqZtNbLK': { credits: 300 },  // Pack M  34,99€ (le plus populaire ; Axel 23/10, ex-39,99)
   'plan_iRh99E5F2g4XU': { credits: 600 },  // Pack L  74,99€
 }
 // 23/10 (Axel) : « Rendu prioritaire » 5 €/mois — abonnement À PART (secret WHOP_PRIO_PLANS = « plan_x[,plan_y] »)
