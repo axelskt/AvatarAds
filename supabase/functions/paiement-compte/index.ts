@@ -7,7 +7,10 @@ import { rateHit, realIp } from '../_shared/guard.ts'
 // page d'accueil. Désormais la page joint à son paiement un identifiant aléatoire (metadata aa_nonce, gardé dans l'onglet)
 // et interroge cette fonction :
 //   POST { action:'etat', nonce }       → { paid:false } tant que l'activation n'est pas arrivée (whop-webhook),
-//                                          puis { paid:true, compte:'connecte'|'nouveau'|'existant'|'attente', email }
+//                                          puis { paid:true, compte:'connecte'|'nouveau'|'existant'|'attente', email,
+//                                          mdp, google, recu } — mdp : le compte a un mot de passe ; google : il se connecte
+//                                          par Google ; recu : n° de commande, moyen de paiement, 4 derniers chiffres et
+//                                          montant ENCAISSÉ (événement payment.succeeded, arrive quelques secondes après)
 //   POST { action:'connexion', nonce }  → compte NEUF seulement (créé il y a < 24 h, jamais connecté, sans mot de passe) :
 //                                          jeton de connexion à usage unique (lien magique, un seul par paiement)
 //   POST { action:'mot_de_passe', password } + Bearer de la session obtenue ainsi → 1er mot de passe du compte (même
@@ -45,23 +48,28 @@ serve(async (req) => {
 
   const depuis = new Date(Date.now() - FENETRE_MS).toISOString()
   const { data: evs, error } = await sb.from('webhook_events').select('body')
-    .eq('body->data->metadata->>aa_nonce', nonce).gte('received_at', depuis).order('received_at', { ascending: false }).limit(10)
+    .eq('body->data->metadata->>aa_nonce', nonce).gte('received_at', depuis).order('received_at', { ascending: false }).limit(20)
   if (error) { console.error('paiement-compte journal :', error.message); return json({ ok: false, error: 'db' }, 500) }
   const act = (evs || []).find((e: any) => /membership[._](went[._]valid|activated)/.test(String(e?.body?.action ?? e?.body?.event ?? e?.body?.type ?? '').toLowerCase()))
   if (!act) return json({ ok: true, paid: false })
 
   const d = act.body?.data ?? {}
+  const recu = recuDe(evs || [], String(d.id ?? ''))
   // acheteur déjà connecté sur la page (identifiant de compte joint au paiement) : il a sa session, rien à ouvrir
-  if (/^[0-9a-f-]{36}$/i.test(String(d.metadata?.aa_user_id ?? ''))) return json({ ok: true, paid: true, compte: 'connecte' })
+  const uid = String(d.metadata?.aa_user_id ?? '')
+  if (/^[0-9a-f-]{36}$/i.test(uid)) {
+    const { data: rows } = await sb.rpc('paiement_compte_etat', { p_user: uid })
+    return json({ ok: true, paid: true, compte: 'connecte', recu, ...acces(Array.isArray(rows) ? rows[0] : null) })
+  }
   const email = String(d.user?.email ?? d.member?.user?.email ?? d.customer?.email ?? d.email ?? '').toLowerCase().trim()
-  if (!email) return json({ ok: true, paid: true, compte: 'attente' })
+  if (!email) return json({ ok: true, paid: true, compte: 'attente', recu })
   const { data: rows, error: e2 } = await sb.rpc('paiement_compte_etat', { p_email: email })
   if (e2) { console.error('paiement-compte état :', e2.message); return json({ ok: false, error: 'db' }, 500) }
   const u: any = Array.isArray(rows) ? rows[0] : null
-  if (!u) return json({ ok: true, paid: true, compte: 'attente', email: masque(email) })   // le webhook crée le compte
+  if (!u) return json({ ok: true, paid: true, compte: 'attente', email: masque(email), recu })   // le webhook crée le compte
   const neuf = !u.a_mot_de_passe && !u.last_sign_in_at && Date.now() - Date.parse(u.created_at) < NEUF_MS
-  if (!neuf) return json({ ok: true, paid: true, compte: 'existant', email: masque(email) })
-  if (action !== 'connexion') return json({ ok: true, paid: true, compte: 'nouveau', email: masque(email) })
+  if (!neuf) return json({ ok: true, paid: true, compte: 'existant', email: masque(email), recu, ...acces(u) })
+  if (action !== 'connexion') return json({ ok: true, paid: true, compte: 'nouveau', email: masque(email), recu, ...acces(u) })
 
   // une seule connexion par paiement : verrou = ligne du journal (index unique sur event_id, comme les verrous du webhook)
   const { error: lkErr } = await sb.from('webhook_events').insert({ event_id: verrou(nonce), body: { action: 'audit.paiement_compte', data: { user: u.id } } })
@@ -74,8 +82,36 @@ serve(async (req) => {
     return json({ ok: false, error: 'link' }, 500)
   }
   console.log(`🔑 Connexion après achat pour ${masque(email)}`)
-  return json({ ok: true, paid: true, compte: 'nouveau', email, token_hash: tokenHash })
+  return json({ ok: true, paid: true, compte: 'nouveau', email, token_hash: tokenHash, recu, ...acces(u) })
 })
+
+// mot de passe posé ? connexion Google ? (« Ouvrir mon espace » ne propose un mot de passe qu'à un compte qui n'a ni l'un ni l'autre)
+const acces = (u: any) => u ? { mdp: !!u.a_mot_de_passe, google: Array.isArray(u.fournisseurs) && u.fournisseurs.includes('google') } : {}
+
+// Reçu de la page « Paiement confirmé » : n° de commande Whop (paiement, sinon abonnement), moyen de paiement, 4 derniers
+// chiffres, montant encaissé (somme des paiements distincts de ce passage en caisse) et date
+function recuDe(evs: any[], membre: string) {
+  const vus = new Set<string>()
+  let total = 0, p: any = null
+  for (const e of evs) {
+    if (!/payment[._]succeeded/.test(String(e?.body?.action ?? e?.body?.event ?? e?.body?.type ?? '').toLowerCase())) continue
+    const d = e.body?.data ?? {}, id = String(d.id ?? '')
+    if (!id || vus.has(id)) continue
+    vus.add(id); total += Number(d.total) || 0
+    if (!p) p = d
+  }
+  if (!p) return { commande: membre.slice(0, 40) || null }
+  const type = [p.payment_method_type, p.payment_method?.payment_method_type, p.payment_instrument?.payment_method_type,
+    p.payment_instrument?.display_name].map((x) => String(x ?? '').toLowerCase()).join(' ')
+  const last4 = String(p.card_last4 ?? p.payment_method?.card?.last4 ?? p.payment_instrument?.card?.last4 ?? '').replace(/\D/g, '').slice(-4)
+  return {
+    commande: String(p.id).slice(0, 40),
+    methode: /apple/.test(type) ? 'Apple Pay' : /google/.test(type) ? 'Google Pay' : 'Carte bancaire',
+    last4: last4 || null,
+    total: Math.round(total * 100) / 100,
+    date: p.paid_at ?? p.created_at ?? null,
+  }
+}
 
 // 1er mot de passe d'un compte ouvert par ce chemin (verrou de connexion présent, compte neuf, aucun mot de passe)
 async function motDePasse(req: Request, b: any, sb: any): Promise<Response> {

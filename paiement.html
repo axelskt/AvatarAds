@@ -82,24 +82,10 @@ input,select{font-family:inherit;color:inherit}
 .whop-wait i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .whop-mount{position:relative;z-index:1}
+.whop-wait.fin{z-index:2;background:#fff}   /* fin du module : on attend la confirmation serveur par-dessus son cadre */
 .legal{font-size:13.5px;color:var(--text-2);text-align:center;line-height:1.55;margin:-8px 0 0}
-.step-h{font-family:"Bricolage Grotesque";font-size:26px;font-weight:600;margin-bottom:8px}
 .step-p{font-size:15px;color:var(--text-2);line-height:1.55;margin-bottom:22px}
-.done{text-align:center;padding:40px 0 10px}
-.done-ic{width:56px;height:56px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;background:#EAF7F1;border:1.5px solid #A6DEC4}
-.done .cta{max-width:340px;margin:26px auto 0}
 .pack-login{padding:6px 0 4px}.pack-login .cta{margin-top:18px}
-.sum.paid{margin-top:0;padding-top:0;border-top:none}
-.sum-h{font-family:"Bricolage Grotesque";font-size:22px;font-weight:600;margin-bottom:6px}
-.confettis{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
-.pw{max-width:340px;margin:22px auto 0;text-align:left}
-.pw label{display:block;font-size:13.5px;color:var(--text-2);margin:14px 0 6px}
-.pw input{width:100%;height:52px;border-radius:999px;border:1px solid var(--line);background:var(--field);padding:0 20px;font-size:16px;outline:none}
-.pw input:focus{border-color:#C9CED4}
-.pw-hint{font-size:13px;min-height:18px;margin-top:8px;color:var(--text-2)}
-.pw-hint.ko{color:#C2410C}.pw-hint.ok{color:#15803D}
-.pw-later{display:block;margin:16px auto 0;font-size:14px;color:var(--text-2);text-decoration:underline;text-underline-offset:3px}
-.done-wait{width:26px;height:26px;margin:22px auto 0;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 .cta{width:100%;height:58px;border-radius:999px;background:linear-gradient(180deg,#FFD43B,#FFC107);color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-size:18px;font-weight:500;margin-top:8px;transition:.15s;text-decoration:none}
 .cta:hover{filter:brightness(1.05);color:#1A1300}
 .cta .ar{display:flex;align-items:center;gap:18px}.cta .ar::before{content:"";width:1px;height:24px;background:rgba(26,19,0,.25)}
@@ -130,7 +116,6 @@ input,select{font-family:inherit;color:inherit}
    <div class="mob-sum" id="mSum"></div>
    <div class="sec"><div class="whop" id="co"></div></div>
   </div>
-  <div id="done" hidden></div>
   <div id="reassure">
    <div class="sep" style="margin-top:26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg> Tes informations sont chiffrées et sécurisées</div>
    <div class="trust">Noté 4,9/5 par +50K créateurs <span class="stars">★★★★★</span></div>
@@ -170,7 +155,7 @@ const PACK_SEUL={S:{n:"Pack crédits S",c:120,p:19.99,plan:"plan_hR0u4VHoeszbu"}
 const qs=new URLSearchParams(location.search);
 const base0=PLANS[qs.get("plan")]?qs.get("plan"):"pro";
 const S={plan:base0,base:base0,bill:qs.get("bill")==="y"?"y":"m",add:{},step:1,promo:null,promoOpen:false,promoBusy:false,promoErr:"",promoDraft:"",
-  packSeul:PACK_SEUL[String(qs.get("pack")||"").toUpperCase()]?String(qs.get("pack")).toUpperCase():"",paye:false,fete:false};
+  packSeul:PACK_SEUL[String(qs.get("pack")||"").toUpperCase()]?String(qs.get("pack")).toUpperCase():""};
 // plan Whop payé : la variante « palier + pack » si le pack est coché, sinon l'abonnement seul
 function planWhop(){if(S.packSeul) return PACK_SEUL[S.packSeul].plan; const v=S.add.credits&&(VAR[S.plan]||{})[PLANS[S.base].pack];return v?v[S.bill]:PLANS[S.plan].pid[S.bill]}
 function prioWhop(){return S.packSeul||!S.add.prio?"":(S.bill==="y"&&(S.plan==="elite60"||S.plan==="elite90")?PRIO.y3ds:PRIO[S.bill]).plan}
@@ -209,13 +194,12 @@ function promoHTML(){
   if(!S.promoOpen) return `<button type="button" class="promo-link" data-act="promo-open">Ajouter un code promo</button>`;
   return `<form class="promo-box" data-promo><input name="code" maxlength="40" placeholder="Code promo" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(S.promoDraft)}"><button type="submit"${S.promoBusy?" disabled":""}>${S.promoBusy?"Vérification…":"Appliquer"}</button></form>${S.promoErr?`<div class="promo-err">${esc(S.promoErr)}</div>`:""}`;
 }
-// après le paiement : « Ton achat » (sans carte, sans bascule annuelle, sans champ de code promo)
-function summary(){const p=PLANS[S.plan];return `<div class="sum${S.paye?" paid":""}">${S.paye?'<div class="sum-h">Ton achat</div>':""}
+function summary(){const p=PLANS[S.plan];return `<div class="sum">
  ${S.packSeul?`<div class="sum-row"><span>${PACK_SEUL[S.packSeul].n}</span><span>${eur(PACK_SEUL[S.packSeul].p)}</span></div>`
    :`<div class="sum-row"><span>AvatarAds ${p.n}</span><span>${eur(S.bill==="y"?p.y:p.m)} / ${S.bill==="y"?"an":"mois"}</span></div>`}
  ${ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>`<div class="sum-row"><span>${a.t}</span><span>${eur(a.p)}${a.unit||""}</span></div>`).join("")}
- ${S.paye?(S.promo?`<div class="sum-row promo-on"><span>Code ${esc(S.promo.code)}</span><span>−${eur(S.promo.discount)}</span></div>`:""):promoHTML()}
- <div class="due"><span>${S.paye?"Payé aujourd'hui":"À payer aujourd'hui"}</span><span>${eur(S.promo?S.promo.total:total())}</span></div></div>`}
+ ${promoHTML()}
+ <div class="due"><span>À payer aujourd'hui</span><span>${eur(S.promo?S.promo.total:total())}</span></div></div>`}
 const chk='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 function optsHTML(){return ADDONS_FOR().map(a=>`<div class="addon ${S.add[a.id]?"on":""}" data-act="opt" data-id="${a.id}" role="checkbox" aria-checked="${!!S.add[a.id]}" tabindex="0">
     <div style="flex:1;min-width:0"><div class="addon-t">${a.t}</div><div class="addon-d">${a.d}</div></div>
@@ -295,14 +279,15 @@ function mountWhop(){
   // pack seul sans session : les crédits vont sur un compte, on se connecte d'abord (les packs s'achètent depuis l'app)
   if(S.packSeul&&!compte()){ box.innerHTML=`<div class="pack-login"><p class="step-p">Les crédits du pack s'ajoutent à ton compte AvatarAds : connecte-toi d'abord, puis reprends le pack depuis ton espace.</p>
    <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a></div>`; return; }
-  box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>';
+  box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>'; garderPanier();
   const acc=compte(), meta={metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{}),
     returnUrl:location.origin+location.pathname+location.search};   // étape bancaire hors page (3D Secure) → retour ici
   whopReady().then(W=>{
     if(seq!==_seq) return;
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
     // en tête du module quand l'appareil le propose
-    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:()=>{ if(seq===_seq) veiller(true); }},
+    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:()=>{ if(seq!==_seq) return;
+        if(!box.querySelector(".whop-wait")) box.insertAdjacentHTML("afterbegin",waitHTML("Confirmation du paiement…").replace("whop-wait","whop-wait fin")); veiller(true); }},
       meta,S.promo?{promoCode:S.promo.code}:{}));
     let ready=false;
     _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
@@ -312,114 +297,45 @@ function mountWhop(){
   }).catch(()=>{ if(seq===_seq) fallback(box,items[0].plan); });
 }
 /* ── Après le paiement (Axel 23/10, test réel sur iPhone) ─────────────────────────────────────────────────────────────
-   On ne dépend plus de l'événement de fin du module Whop : le paiement porte un identifiant de cet onglet (aa_nonce) et la
-   page demande au serveur (paiement-compte) s'il est arrivé. Acheteur sans session et compte NEUF → connecté directement,
-   puis 1er mot de passe (deux champs) ; compte déjà utilisé → « connecte-toi » ; acheteur déjà connecté → son espace. */
-const SB_URL="https://guvwgiejzkiodghywpwj.supabase.co", SB_KEY="sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck", SB_SESSION="sb-guvwgiejzkiodghywpwj-auth-token";
+   On ne dépend pas de l'événement de fin du module Whop : le paiement porte un identifiant de cet onglet (aa_nonce) et la
+   page demande au serveur (paiement-compte) s'il est arrivé, puis passe la main à la page « Paiement confirmé »
+   (paiement-confirme.html, même identifiant) : reçu, ouverture du compte d'un nouvel acheteur, 1er mot de passe. */
+const SB_URL="https://guvwgiejzkiodghywpwj.supabase.co";
 const NONCE=(()=>{ const neuf=()=>{ try{ return crypto.randomUUID() }catch(_){ const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=b[6]&15|64; b[8]=b[8]&63|128;
     const h=[...b].map(x=>x.toString(16).padStart(2,"0")).join(""); return h.slice(0,8)+"-"+h.slice(8,12)+"-"+h.slice(12,16)+"-"+h.slice(16,20)+"-"+h.slice(20) } };
   try{ let n=sessionStorage.getItem("aa_pay_nonce"); if(!n){ n=neuf(); sessionStorage.setItem("aa_pay_nonce",n); } return n }catch(_){ return neuf() } })();
 const appel=(corps,jeton)=>fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},jeton?{Authorization:"Bearer "+jeton}:{}),body:JSON.stringify(corps)}).then(r=>r.json());
-let _veille=0,_veilleFin=0,_paye=false;
-// module affiché : vérification toutes les 4 s (30 min) ; fin du module ou retour de la banque : vérification immédiate
-function veiller(vite){ if(_paye) return; _veilleFin=Date.now()+30*60e3; if(!_veille) _veille=setInterval(verifier,4000); if(vite) verifier(); }
+let _veille=0,_veilleFin=0,_paye=false,_vite=false;
+// module affiché : vérification toutes les 4 s (30 min) ; fin du module ou retour de la banque : tout de suite puis toutes
+// les 1,5 s (le webhook arrive en quelques secondes)
+function veiller(vite){ if(_paye) return; _veilleFin=Date.now()+30*60e3;
+  if(vite&&!_vite){ _vite=true; clearInterval(_veille); _veille=0; }
+  if(!_veille) _veille=setInterval(verifier,_vite?1500:4000); if(vite) verifier(); }
 async function verifier(){
   if(_paye) return;
   if(Date.now()>_veilleFin){ clearInterval(_veille); _veille=0; return; }
   let r=null; try{ r=await appel({action:"etat",nonce:NONCE}); }catch(_){ return; }
   if(_paye||!r||!r.paid||r.compte==="attente") return;   // « attente » : le webhook crée encore le compte
-  _paye=true; clearInterval(_veille); _veille=0; apresPaiement(r);
+  _paye=true; clearInterval(_veille); _veille=0; apresPaiement();
 }
-function ecran(html){ S.step=3; S.paye=true; $("flow").hidden=true; $("reassure").hidden=true; $("mPlan").style.display="none"; $("rPlan").innerHTML=summary();
-  const d=$("done"); d.hidden=false; d.innerHTML=html; window.scrollTo({top:0,behavior:"smooth"}); if(!S.fete){ S.fete=true; confettis(); } }
-// Confettis (Axel 23/10) : deux salves depuis les bords, ~3 s, aux couleurs de la marque ; rien si « réduire les animations »
-function confettis(){
-  try{ if(matchMedia("(prefers-reduced-motion: reduce)").matches) return; }catch(_){}
-  const c=document.createElement("canvas"); c.className="confettis"; c.setAttribute("aria-hidden","true"); document.body.appendChild(c);
-  const x=c.getContext("2d"), dpr=Math.min(2,window.devicePixelRatio||1), W=c.width=innerWidth*dpr, H=c.height=innerHeight*dpr;
-  const COUL=["#FF5A1F","#FF8042","#FFC107","#FFD43B","#1FB386","#1C252B"], N=innerWidth<600?120:190, P=[];
-  for(let i=0;i<N;i++){ const g=i%2?1:-1, a=(g>0?-60:-120)*Math.PI/180+(Math.random()-.5)*.9, v=(innerWidth<600?11:15)*(.55+Math.random()*.6)*dpr;
-    P.push({x:(g>0?-.02:1.02)*W, y:H*(.62+Math.random()*.12), vx:Math.cos(a)*v, vy:Math.sin(a)*v, w:(6+Math.random()*6)*dpr, h:(9+Math.random()*7)*dpr,
-      r:Math.random()*6.28, vr:(Math.random()-.5)*.3, t:Math.random()*6.28, vt:.08+Math.random()*.12, c:COUL[i%COUL.length]}); }
-  const t0=performance.now(), DUREE=3200;
-  (function f(now){ const e=now-t0; x.clearRect(0,0,W,H); const fond=e>DUREE-900?Math.max(0,(DUREE-e)/900):1;
-    for(const p of P){ p.vy+=.32*dpr; p.vx*=.985; p.vy*=.985; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr; p.t+=p.vt;
-      x.save(); x.globalAlpha=fond; x.translate(p.x,p.y); x.rotate(p.r); x.scale(1,Math.cos(p.t)); x.fillStyle=p.c; x.fillRect(-p.w/2,-p.h/2,p.w,p.h); x.restore(); }
-    if(e<DUREE) requestAnimationFrame(f); else c.remove(); })(t0);
+// panier payé, tel qu'affiché (lignes du reçu de la page « Paiement confirmé ») ; pas réécrit au retour d'une étape bancaire
+// hors page, où les options cochées ne sont plus connues
+const retourBanque=qs.get("status")==="succeeded"||!!qs.get("payment");
+function lignes(){
+  if(S.packSeul){const k=PACK_SEUL[S.packSeul];return [{n:k.n,q:1,p:k.p}]}
+  const p=PLANS[S.plan],y=S.bill==="y";
+  return [{n:"Plan "+p.n+(y?" annuel":""),q:1,p:y?p.y:p.m}].concat(ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>({n:a.t,q:1,p:a.p})));
 }
-const OK_IC='<div class="done-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1FB386" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
+function garderPanier(){ if(retourBanque) return; const acc=compte();
+  try{ sessionStorage.setItem("aa_pay_order",JSON.stringify({lines:lignes(),promo:S.promo?S.promo.code:null,total:S.promo?S.promo.total:total(),email:acc?acc.email:null})); }catch(_){} }
+function apresPaiement(){
+  destroyAll(); $("co").innerHTML=waitHTML("Paiement confirmé…");
+  try{ sessionStorage.setItem("aa_pay_ok",NONCE); sessionStorage.removeItem("aa_pay_nonce");   // un autre achat dans cet onglet aura son identifiant
+    const u=new URLSearchParams(location.search); ["status","payment","receipt_id","state_id"].forEach(k=>u.delete(k));
+    sessionStorage.setItem("aa_pay_from",location.pathname+(u.toString()?"?"+u:"")); }catch(_){}
+  location.replace("/paiement-confirme.html");
+}
 const FLECHE='<span class="ar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
-// session écrite là où l'app la lit (clé standard de supabase-js, comme connexion.html) puis relue
-function garderSession(j){ try{ if(!j.expires_at&&j.expires_in) j.expires_at=Math.floor(Date.now()/1000)+Number(j.expires_in);
-  localStorage.setItem(SB_SESSION,JSON.stringify(j)); localStorage.setItem("aa_login_at",String(Date.now())); return !!localStorage.getItem(SB_SESSION); }catch(_){ return false } }
-async function apresPaiement(r){
-  destroyAll();
-  const acc=compte();
-  if(acc||r.compte==="connecte") return finish();
-  if(r.compte==="nouveau"){
-    ecran(`<div class="done">${OK_IC}<div class="step-h">Paiement confirmé</div><p class="step-p">Ouverture de ton compte…</p><div class="done-wait"></div></div>`);
-    try{
-      const c=await appel({action:"connexion",nonce:NONCE});
-      if(c&&c.token_hash){
-        const v=await fetch(SB_URL+"/auth/v1/verify",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({type:"magiclink",token_hash:c.token_hash})});
-        const j=await v.json();
-        if(v.ok&&j.access_token&&j.refresh_token&&garderSession(j)) return motDePasse(c.email||(j.user&&j.user.email)||"");
-      }
-    }catch(_){}
-  }
-  aConnecter(r.email);
-}
-// compte déjà utilisé (ou connexion automatique impossible) : on dit avec quelle adresse se connecter
-function aConnecter(email){
-  ecran(`<div class="done">${OK_IC}<div class="step-h">Paiement confirmé</div>
-   <p class="step-p">${S.packSeul?"Tes crédits sont ajoutés à":"Ton plan est actif sur"} ton compte AvatarAds${email?` <b style="color:var(--text)">${esc(email)}</b>`:""}. Connecte-toi avec cette adresse pour l'ouvrir.</p>
-   <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a></div>`);
-}
-// 1er mot de passe (deux champs) : le compte vient d'être créé par l'achat, l'acheteur y est déjà connecté
-function motDePasse(email){
-  ecran(`<div class="done">${OK_IC}<div class="step-h">Bienvenue sur AvatarAds</div>
-   <p class="step-p">${S.packSeul?"Tes crédits sont ajoutés":"Ton plan est actif"} et tu es connecté${email?` avec <b style="color:var(--text)">${esc(email)}</b>`:""}. Crée ton mot de passe pour te reconnecter facilement.</p>
-   <form class="pw" id="pwForm" autocomplete="on">
-    <input type="email" name="username" autocomplete="username" value="${esc(email)}" hidden>
-    <label for="pw1">Mot de passe</label><input id="pw1" type="password" autocomplete="new-password" placeholder="8 caractères minimum" required>
-    <label for="pw2">Confirme le mot de passe</label><input id="pw2" type="password" autocomplete="new-password" placeholder="Retape-le" required>
-    <div class="pw-hint" id="pwHint"></div>
-    <button class="cta" type="submit" id="pwBtn" style="max-width:none;margin-top:14px"><span>Créer mon mot de passe</span>${FLECHE}</button>
-   </form>
-   <a class="pw-later" href="/app/">Plus tard, ouvrir mon espace</a></div>`);
-  const a=$("pw1"), b=$("pw2"), h=$("pwHint");
-  const verif=()=>{ h.className="pw-hint"; if(!a.value&&!b.value){ h.textContent=""; return false }
-    if(a.value.length<8){ h.textContent="8 caractères minimum"; return false }
-    if(!b.value){ h.textContent="Retape-le pour confirmer"; return false }
-    if(a.value!==b.value){ h.textContent="Les deux mots de passe ne correspondent pas"; h.className="pw-hint ko"; return false }
-    h.textContent="Les deux correspondent"; h.className="pw-hint ok"; return true };
-  a.oninput=verif; b.oninput=verif;
-  $("pwForm").onsubmit=async e=>{
-    e.preventDefault(); if(!verif()){ if(!h.textContent){ h.textContent="8 caractères minimum"; } h.className="pw-hint ko"; return; }
-    if(new TextEncoder().encode(a.value).length>72){ h.textContent="72 caractères maximum"; h.className="pw-hint ko"; return; }
-    const btn=$("pwBtn"); btn.disabled=true; btn.querySelector("span").textContent="Enregistrement…";
-    let s=null; try{ s=JSON.parse(localStorage.getItem(SB_SESSION)||"null") }catch(_){}
-    let j=null; try{ j=await appel({action:"mot_de_passe",password:a.value},s&&s.access_token); }catch(_){}
-    if(!j||!j.ok){
-      btn.disabled=false; btn.querySelector("span").textContent="Créer mon mot de passe"; h.className="pw-hint ko";
-      h.textContent=j&&j.error==="weak_password"?"Mot de passe trop simple : mélange lettres, chiffres et symboles.":j&&j.error==="password_too_long"?"72 caractères maximum"
-        :j&&j.error==="refuse"?"Crée ton mot de passe depuis Mon compte, dans ton espace.":"Enregistrement impossible pour le moment, réessaie.";
-      return;
-    }
-    // le serveur d'authentification ferme les sessions au changement de mot de passe : reconnexion avec le nouveau
-    try{ const t=await fetch(SB_URL+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({email:j.email,password:a.value})});
-      const tj=await t.json(); if(t.ok&&tj.access_token) garderSession(tj); else return location.replace("/connexion.html"); }catch(_){ return location.replace("/connexion.html"); }
-    location.replace("/app/");
-  };
-  setTimeout(()=>{ try{ a.focus() }catch(_){} },300);
-}
-function finish(){
-  const acc=compte();
-  ecran(`<div class="done">${OK_IC}<div class="step-h">Paiement confirmé</div>
-   <p class="step-p">${acc?`${S.packSeul?"Tes crédits arrivent":"Ton plan et tes crédits arrivent"} sur ton compte <b style="color:var(--text)">${esc(acc.email)}</b>.`:S.packSeul?"Tes crédits sont ajoutés à ton compte AvatarAds.":"Ton plan est actif sur ton compte AvatarAds."}</p>
-   <a class="cta" href="/app/"><span>Ouvrir mon espace</span>${FLECHE}</a></div>`);
-  if(acc) setTimeout(()=>{ location.href="/app/"; },3600);   // après les confettis (3,2 s)
-}
 // retour d'une étape bancaire hors page (returnUrl) : le paiement est peut-être déjà passé
 if(qs.get("status")==="succeeded"||qs.get("payment")) veiller(true);
 r(); mountWhop();

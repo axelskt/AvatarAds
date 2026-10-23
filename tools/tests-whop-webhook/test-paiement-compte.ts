@@ -71,6 +71,29 @@ setup(); activation('pasencore@test.fr')
 r = await call({ action: 'etat', nonce: N })
 ok('compte pas encore créé : attente', r.j.compte === 'attente', JSON.stringify(r.j))
 
+// reçu (événement payment.succeeded, quelques secondes après l'activation) + état du mot de passe
+const paiement = (id: string, total: number, extra: any = {}) => db.rows('webhook_events').push({ event_id: 'msg_' + Math.random(), received_at: new Date().toISOString(), body: { action: 'payment.succeeded', data: { id, total, currency: 'eur', card_last4: '9375', payment_method_type: 'card', paid_at: '2026-10-23T16:36:47.982Z', metadata: { aa_page: 'paiement', aa_nonce: N }, ...extra } } })
+setup(); comptes.moi = { id: '11111111-1111-4111-8111-111111111111', email: 'moi@test.fr', created_at: vieux, last_sign_in_at: vieux, a_mot_de_passe: false, fournisseurs: ['email'] }
+activation('moi@test.fr', { aa_user_id: comptes.moi.id })
+r = await call({ action: 'etat', nonce: N })
+ok('reçu pas encore arrivé : n° d\'abonnement seul', r.j.paid && r.j.recu?.commande === 'mem_1' && r.j.recu.total === undefined, JSON.stringify(r.j))
+ok('connecté sans mot de passe : mdp=false, google=false', r.j.compte === 'connecte' && r.j.mdp === false && r.j.google === false, JSON.stringify(r.j))
+paiement('pay_A', 34.99); paiement('pay_A', 34.99)
+r = await call({ action: 'etat', nonce: N })
+ok('reçu : commande, carte, total (doublon ignoré)', r.j.recu?.commande === 'pay_A' && r.j.recu.last4 === '9375' && r.j.recu.methode === 'Carte bancaire' && r.j.recu.total === 34.99 && !!r.j.recu.date, JSON.stringify(r.j.recu))
+paiement('pay_B', 5, { payment_method_type: 'apple_pay', card_last4: null, payment_method: { card: { last4: '4242' } } })
+r = await call({ action: 'etat', nonce: N })
+ok('deux paiements distincts : total additionné', r.j.recu?.total === 39.99, JSON.stringify(r.j.recu))
+setup(); comptes.g = { id: '22222222-2222-4222-8222-222222222222', email: 'g@test.fr', created_at: vieux, last_sign_in_at: vieux, a_mot_de_passe: false, fournisseurs: ['google'] }
+activation('g@test.fr', { aa_user_id: comptes.g.id }); paiement('pay_C', 19.99, { payment_method_type: 'apple_pay' })
+r = await call({ action: 'etat', nonce: N })
+ok('compte Google : google=true', r.j.google === true && r.j.mdp === false, JSON.stringify(r.j))
+ok('Apple Pay reconnu', r.j.recu?.methode === 'Apple Pay', JSON.stringify(r.j.recu))
+setup(); comptes.vieux = { id: 'u-vieux', email: 'vieux@test.fr', created_at: vieux, last_sign_in_at: vieux, a_mot_de_passe: true, fournisseurs: ['email'] }
+activation('vieux@test.fr')
+r = await call({ action: 'etat', nonce: N })
+ok('compte existant avec mot de passe : mdp=true', r.j.compte === 'existant' && r.j.mdp === true, JSON.stringify(r.j))
+
 const ko = res.filter((x) => !x[1])
 keep(`\n${res.length - ko.length}/${res.length} vérifications OK`)
 if (ko.length) Deno.exit(1)
