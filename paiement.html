@@ -231,6 +231,7 @@ document.addEventListener("click",e=>{
     if(id==="upgrade"){S.plan=S.plan===S.base?NEXT[S.base]:S.base;S.add.upgrade=S.plan!==S.base;}
     else S.add[id]=!S.add[id];}
   if(code&&cartKey()!==before){appliquerPromo(code);return}   // panier changé : la remise est recalculée par Whop
+  if(cartKey()!==before) S.promoErr="";   // un refus de code portait sur l'ancien panier
   r(); if(cartKey()!==before) mountWhop();
 });
 document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-promo]")) S.promoDraft=e.target.value;});
