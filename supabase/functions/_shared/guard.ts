@@ -358,10 +358,24 @@ export function tokenRole(token: string): string {
 // passerelle pendait jusqu'au 504 de 160 s, sans une ligne de journal. La passerelle a DÉJÀ validé la
 // clé (verify_jwt, « minted ») ; on la reconnaît ici par égalité stricte avec celle que Supabase injecte
 // dans CETTE fonction (même source). L'ancien format JWT (moteur Railway) reste reconnu par son rôle.
+// 23/10 (fuite Railway) : TOUTES les clés secrètes du projet sont reconnues, pas seulement celle injectée dans
+// SUPABASE_SERVICE_ROLE_KEY. Supabase les donne à chaque fonction dans SUPABASE_SECRET_KEYS ({ nom: clé }). Le moteur
+// Railway passe sur sa propre clé (nommée « railway ») pour qu'on puisse la révoquer seule, et l'ancienne clé JWT
+// fuitée se coupe en désactivant les « legacy API keys ». Lu à chaque appel : une clé créée ou révoquée compte tout de suite.
+export function clesSecretes(): string[] {
+  const out = new Set<string>()
+  if (SERVICE_KEY.startsWith('sb_secret_')) out.add(SERVICE_KEY)
+  try {
+    const m = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}')
+    for (const v of Object.values(m && typeof m === 'object' ? m : {})) if (typeof v === 'string' && v.startsWith('sb_secret_')) out.add(v)
+  } catch { /* variable absente ou illisible : seule la clé injectée compte */ }
+  return [...out]
+}
 export function estCleService(token: string): boolean {
   if (!token) return false
   if (tokenRole(token) === 'service_role') return true
-  return !!SERVICE_KEY && token.startsWith('sb_secret_') && timingSafeEqual(token, SERVICE_KEY)
+  if (!token.startsWith('sb_secret_')) return false
+  return clesSecretes().some((k) => timingSafeEqual(token, k))
 }
 // Une réponse rendue AVANT d'avoir lu le corps d'une grosse requête (audio de plusieurs Mo) reste pendue
 // chez Supabase jusqu'au 504 — mesuré le 10/10 : 401 en 0,3 s sans corps, pendu avec 2,6 Mo. Annuler le
