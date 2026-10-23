@@ -44,6 +44,38 @@ const REFERRAL_RATE = 0.30
 // Le plafond anti auto-parrainage est ce que le parrain paie PAR MOIS : un plan annuel est ramené à son équivalent
 // mensuel (÷ 12). Les packs (paiement unique) restent tels quels. Synchro avec handle_new_user (migration 03/10).
 const ANNUAL_PLAN_IDS = new Set(['plan_cNydK89X39PLE', 'plan_P7WIywSa6YrxT', 'plan_OvRwm5CW3xcNh', 'plan_uWTkJDl1GvxNR', 'plan_x2kDWR6ur2W5E'])
+// 23/10 (Axel) : VARIANTES « abonnement + pack remisé » de la page de paiement (paiement.html), en UN seul paiement (Whop
+// refuse abonnement + achat ponctuel dans le même panier). Plan Whop « renewal » dont initial_price = prix du pack : 1er
+// paiement = pack + 1re période, puis le prix normal. Même palier et mêmes crédits que l'abonnement de base ; les crédits
+// du pack sont versés UNE fois, à l'activation, comme des crédits achetés (bought_credits : jamais plafonnés, gardés à la
+// résiliation). [variante, abonnement de base, crédits du pack, prix du pack en centimes]
+const VARIANTES: [string, string, number, number][] = [
+  ['plan_blQtyUh90R2wP', 'plan_YKcdyPT6RRQSi', 120, 1499],  // Starter  + S
+  ['plan_hE8bkwTPoTkrj', 'plan_g4BVtDmk6hgjQ', 120, 1499],  // Pro      + S (passage Starter → Pro)
+  ['plan_0iHH0kY3uoJpo', 'plan_g4BVtDmk6hgjQ', 300, 2999],  // Pro      + M
+  ['plan_wn7ZntgBemFL0', 'plan_w8lh5zpEJFOQR', 300, 2999],  // Élite30  + M (passage Pro → Élite)
+  ['plan_i7ubxuFfVHQ5k', 'plan_w8lh5zpEJFOQR', 600, 5999],  // Élite30  + L
+  ['plan_th1REeLIfRP50', 'plan_pZmWh1dVdmIWT', 600, 5999],  // Élite60  + L
+  ['plan_xN9BOWCvFUWXp', 'plan_63PGeG3MesbJR', 600, 5999],  // Élite90  + L
+  ['plan_NcMairMUEz3ST', 'plan_cNydK89X39PLE', 120, 1499],  // annuels
+  ['plan_iATzKyUuANyfI', 'plan_P7WIywSa6YrxT', 120, 1499],
+  ['plan_QF7HXCR81yXRy', 'plan_P7WIywSa6YrxT', 300, 2999],
+  ['plan_5RTUZOJ3sGCXd', 'plan_OvRwm5CW3xcNh', 300, 2999],
+  ['plan_QaAyO2Msc11Xk', 'plan_OvRwm5CW3xcNh', 600, 5999],
+  ['plan_tAKWwP8U88eTT', 'plan_uWTkJDl1GvxNR', 600, 5999],
+  ['plan_xzr5jL4TCAlWf', 'plan_x2kDWR6ur2W5E', 600, 5999],
+]
+const VARIANT_PACK: Record<string, number> = {}   // variante → crédits du pack (versés à l'activation)
+const RENEW_CENTS: Record<string, number> = {}    // variante → prix d'un renouvellement (sans le pack)
+for (const [id, base, packCredits, packCents] of VARIANTES) {
+  SUB_MAP[id] = { ...SUB_MAP[base] }
+  VARIANT_PACK[id] = packCredits
+  RENEW_CENTS[id] = PLAN_PRICE_CENTS[base]
+  PLAN_PRICE_CENTS[id] = PLAN_PRICE_CENTS[base] + packCents   // 1er paiement = le plus gros paiement possible
+  if (ANNUAL_PLAN_IDS.has(base)) ANNUAL_PLAN_IDS.add(id)
+}
+// prix d'un paiement d'abonnement : un renouvellement de variante ne repaie pas le pack
+const prixPaiement = (planId: string, renouvellement: boolean) => (renouvellement ? RENEW_CENTS[planId] : undefined) ?? PLAN_PRICE_CENTS[planId] ?? 0
 const monthlyCents = (cents: number, planId: string) => ANNUAL_PLAN_IDS.has(planId) ? Math.round(cents / 12) : cents
 // Prix mensuel (centimes) du plan du PARRAIN par tier — sert de plafond économique anti auto-parrainage ASYMÉTRIQUE
 // (audit 14/09) : si la commission (30% du plan DU FILLEUL) dépasse ce que le parrain paie lui-même, c'est le signal
@@ -103,10 +135,11 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     // le champ manque (une vente SANS promo = prix plein ; les ventes AVEC promo sont déjà écartées plus haut).
     const _payStr = String(data?.initial_price_paid ?? '').trim()
     const _pay = parseFloat(_payStr.replace(/[^0-9.]/g, ''))
-    let amountCents = _payStr !== '' && Number.isFinite(_pay) ? Math.round(_pay * 100) : (PLAN_PRICE_CENTS[planId] ?? 0)
+    const _renouv = label === 'renouvellement'
+    let amountCents = _payStr !== '' && Number.isFinite(_pay) ? Math.round(_pay * 100) : prixPaiement(planId, _renouv)
     // Garde-fou (audit 14/09) : JAMAIS plus que le prix plein du plan. Protège d'un parse de locale à virgule
     // (« €1 439,88 » → strip → 143988 → gonflé ×100). Le montant vient d'un payload SIGNÉ, mais on borne par sûreté.
-    const _cap = PLAN_PRICE_CENTS[planId] ?? 0
+    const _cap = prixPaiement(planId, _renouv)
     if (_cap > 0 && amountCents > _cap) { console.warn(`⚠️ parrainage : montant parsé ${amountCents} > prix plan ${_cap} (${_payStr}) → plafonné`); amountCents = _cap }
     if (!amountCents) { console.log(`ℹ️ parrainage : payé 0/inconnu (${_payStr || '—'}) pour ${planId} → pas de commission`); return }
     const commission = Math.round(amountCents * REFERRAL_RATE)
@@ -122,7 +155,7 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     // et c'est ce montant qui est en jeu (cas fermé le 15/09 : filleul Pro annuel 135 € > parrain Élite30 89,99 €).
     const refPlanId = String(refProf?.whop_plan_id || '')
     const refPlanCap = (PLAN_PRICE_CENTS[refPlanId] !== undefined
-      ? monthlyCents(PLAN_PRICE_CENTS[refPlanId], refPlanId)
+      ? monthlyCents(prixPaiement(refPlanId, true), refPlanId)
       : REFERRER_PLAN_CAP[String(refProf?.plan || '').toLowerCase()]) ?? 0
     // Relecture 25/09 : seul auth-otp enregistre l'IP d'inscription → un filleul inscrit par Google n'en a pas et la garde
     // same-IP ci-dessus ne peut rien vérifier (2e compte Google = 30 % sans signal) → commission en REVUE owner.
@@ -326,13 +359,6 @@ const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
   'plan_hR0u4VHoeszbu': { credits: 120 },  // Pack S  19,99€
   'plan_GLoKHMqZtNbLK': { credits: 300 },  // Pack M  39,99€ (le plus populaire)
   'plan_iRh99E5F2g4XU': { credits: 600 },  // Pack L  74,99€
-}
-// 23/10 (Axel) : packs à PRIX RÉDUIT proposés seulement sur la page de paiement (paiement.html), payés juste après
-// l'abonnement. Leurs liens Whop se donnent par le secret WHOP_UPSELL_PACKS = « plan_a:120:1499,plan_b:300:2999,… »
-// (plan:crédits:prix en centimes) — sans redéploiement. Même traitement qu'un pack (crédits achetés, sans expiration).
-for (const kv of String(Deno.env.get('WHOP_UPSELL_PACKS') || '').split(',')) {
-  const [k, c, cents] = kv.split(':').map((x) => x.trim())
-  if (/^plan_[A-Za-z0-9]+$/.test(k) && +c > 0 && !PACK_MAP[k]) { PACK_MAP[k] = { credits: Math.round(+c) }; if (+cents > 0) PLAN_PRICE_CENTS[k] = Math.round(+cents) }
 }
 // 23/10 (Axel) : « Rendu prioritaire » 5 €/mois — abonnement À PART (secret WHOP_PRIO_PLANS = « plan_x[,plan_y] »)
 const PRIO_PLANS = new Set(String(Deno.env.get('WHOP_PRIO_PLANS') || '').split(',').map((x) => x.trim()).filter((x) => /^plan_[A-Za-z0-9]+$/.test(x)))
@@ -599,7 +625,12 @@ serve(async (req) => {
       return new Response('OK', { status: 200 })
     }
 
-    const profile = await findProfile()
+    let profile = await findProfile()
+    // 23/10 : variante « abonnement + pack » achetée sans compte → compte créé D'ABORD, pour que le pack arrive sur le
+    // profil comme crédits achetés (une ligne en attente ne sait pas les distinguer des crédits du plan). Échec → repli
+    // sur la ligne en attente ci-dessous, pack compris.
+    const packVar = VARIANT_PACK[planId] || 0
+    if (sub && !profile && packVar) { await ensureAccount(sb, email); profile = await findProfile() }
 
     if (sub) {
       if (profile) {
@@ -626,10 +657,12 @@ serve(async (req) => {
         // 🌞 Bonus premier abonnement (une seule fois par compte)
         const bonus = profile.first_sub_bonus_used ? 0 : (FIRST_SUB_BONUS[sub.plan] ?? 0)
         const keep = boughtLeft(profile) // les crédits achetés en pack survivent au changement de plan
+        // pack d'une variante : une seule fois par abonnement (une 2e activation du même abonnement ne le reverse pas)
+        const packAdd = packVar && !(newMemberId && oldMemberId && String(oldMemberId) === String(newMemberId)) ? packVar : 0
         const { error } = await sb.from('profiles').update({
           plan:              sub.plan,
-          credits_remaining: sub.credits + bonus + keep,
-          bought_credits:    keep,
+          credits_remaining: sub.credits + bonus + keep + packAdd,
+          bought_credits:    keep + packAdd,
           credits_total:     sub.credits,
           whop_member_id:    data.id ?? null,
           whop_plan_id:      planId,
@@ -640,8 +673,8 @@ serve(async (req) => {
         if (error) { console.error('❌ Update profil:', error); return await failDb() }
         await markIgLeadPaid(sb, profile.id, sub.plan, profile.plan)   // plan AVANT cette mise à jour (lu par findProfile)
         await creditReferral(sb, profile.id, email, planId, data, 'abonnement')
-        console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''}${keep ? ' +' + keep + ' achetés reportés' : ''})`)
-        await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: sub.credits + bonus + keep })
+        console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''}${keep ? ' +' + keep + ' achetés reportés' : ''}${packAdd ? ' +' + packAdd + ' pack' : ''})`)
+        await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: sub.credits + bonus + keep + packAdd })
       } else {
         // Audit 06/09 : l'upsert écrasait un pending EXISTANT → un pack acheté AVANT l'abonnement (sans compte)
         // était perdu. On préserve les crédits d'un pack (pending plan=free) et les crédits image en attente.
@@ -650,7 +683,7 @@ serve(async (req) => {
         const carryImg  = paS?.img_credits || 0
         const { error } = await sb.from('pending_activations').upsert({
           email, product: 'avatarads', plan: sub.plan,
-          credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + carryPack,
+          credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + carryPack + packVar,
           img_credits: carryImg,
           whop_member_id: data.id ?? null, whop_plan_id: planId, paid_at: new Date().toISOString(),
         }, { onConflict: 'email' })
@@ -660,9 +693,9 @@ serve(async (req) => {
         if (newId) {
           await markIgLeadPaid(sb, newId, sub.plan, 'free')
           await creditReferral(sb, newId, email, planId, data, 'abonnement')
-          await sendWelcomeEmail(sb, { userId: newId, email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + carryPack })
+          await sendWelcomeEmail(sb, { userId: newId, email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + carryPack + packVar })
         } else {
-          await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0), pending: true })
+          await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + packVar, pending: true })
         }
       }
     } else if (pack) {

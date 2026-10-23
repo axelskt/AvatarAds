@@ -10,7 +10,7 @@
      La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
      est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
      app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-mu4qFf/CmKtvPfNPZ+Lh6hXDaCpqN/BhjelUuleIOkQ=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-iCrfz3yeW1L3N4TjITBfBA1Wv+fOYn5iyrwdpRSaN9w=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -147,6 +147,24 @@ function _pageLock(name, acquireTimeout, fn) {
 }
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: _pageLock } });
 const AUTH_OTP_FN = SUPABASE_URL + "/functions/v1/auth-otp";
+/* 23/10 (Axel : « bloqué ~10 s sur Connexion…, ça marche au 2e clic ») : journaux Supabase → ni la requête du 1er clic ni
+   sa jumelle de 2,5 s ne sont jamais arrivées ; celle du 2e clic, si. Supabase répond en HTTP/3 (connexion UDP) : après une
+   minute sans échange (page de connexion ouverte pendant qu'on cherche son mot de passe), la connexion meurt sans bruit,
+   Safari la croit vivante et y envoie TOUTES les requêtes jusqu'à s'en apercevoir. Parade : la garder vivante tant que la
+   page est affichée — un petit appel au chargement, au retour sur l'onglet, à la saisie, puis toutes les 20 s. Sans clé
+   d'API (refusé à l'entrée, sans toucher au serveur d'authentification) : seule la connexion compte. */
+let _pingAt = 0;
+function garderConnexion(force) {
+  if (document.hidden || !force && Date.now() - _pingAt < 15000) return;
+  _pingAt = Date.now();
+  try {fetch(SUPABASE_URL + "/auth/v1/health", { mode: "no-cors", cache: "no-store" }).catch(() => {});} catch (_) {}
+}
+garderConnexion(true);
+setInterval(() => garderConnexion(true), 20000);
+document.addEventListener("visibilitychange", () => garderConnexion(true));
+window.addEventListener("pageshow", () => garderConnexion(true));
+window.addEventListener("focus", () => garderConnexion(false));
+document.addEventListener("focusin", (e) => {if (e.target && e.target.tagName === "INPUT") garderConnexion(false);});
 /* 15/10 (Axel : bouton figé sur « Connexion… », Safari / navigation privée) : TOUT appel réseau de la page est borné, corps de
    la réponse compris. AbortController (AbortSignal.timeout n'existe pas avant Safari 16) + course contre un minuteur, au cas
    où la requête n'honorerait pas l'annulation. Rejette sur délai dépassé, erreur réseau ou réponse illisible (page HTML 502). */
@@ -355,25 +373,28 @@ function Login({ go }) {
       // 19/10 (Axel : « le bouton reste sur Connexion… », un 2e clic marchait) : journaux Supabase → la 1re requête n'était JAMAIS
       // arrivée (Safari l'avait mise sur une connexion morte). Coupée à 6 s puis relancée seule une fois (connexion neuve), 10 s.
       // 23/10 (Axel : « bloqué sur Connexion… tous les jours, j'ai spammé le bouton et ça a marché ») : au lieu d'attendre 6 s
-      // la 1re requête, une 2e part EN PARALLÈLE au bout de 2,5 s (connexion neuve) — ou tout de suite si la 1re échoue ;
-      // la 1re réponse gagne. Deux connexions réussies = deux sessions valides, sans effet : seule la 1re est gardée.
+      // la 1re requête, d'autres partent EN PARALLÈLE (2,5 s, 6 s, 10 s — tout de suite si celles en cours ont échoué) ; la
+      // 1re réponse gagne. Plusieurs connexions réussies = plusieurs sessions valides, sans effet : seule la 1re est gardée.
+      // 23/10 (bis) : deux essais ne suffisaient pas quand la connexion était déjà morte (voir garderConnexion) — ils
+      // partaient tous les deux dedans ; les essais de 6 et 10 s arrivent une fois que Safari l'a remplacée.
       const tryOnce = () => fetchJson(SUPABASE_URL + "/auth/v1/token?grant_type=password", { method: "POST",
-        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: e, password: pwV }) }, 12000);
+        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: e, password: pwV }) }, 10000);
       let x;
       try {
         x = await new Promise((ok, ko) => {
-          let fini = false, lances = 0, echecs = 0, t = 0;
+          const DEPARTS = [0, 2500, 6000, 10000];
+          let fini = false, lances = 0, echecs = 0;
+          const minuteurs = [];
           const lance = () => {
-            if (fini || lances >= 2) return;
+            if (fini || lances >= DEPARTS.length) return;
             lances++;
-            tryOnce().then((v) => {if (!fini) {fini = true;clearTimeout(t);ok(v);}}, (er) => {
+            tryOnce().then((v) => {if (!fini) {fini = true;minuteurs.forEach(clearTimeout);ok(v);}}, (er) => {
               echecs++;
               if (fini) return;
-              if (lances < 2) {clearTimeout(t);lance();} else if (echecs >= 2) {fini = true;ko(er);}
+              if (echecs >= DEPARTS.length) {fini = true;ko(er);} else if (echecs >= lances) lance();
             });
           };
-          lance();
-          t = setTimeout(lance, 2500);
+          DEPARTS.forEach((d) => minuteurs.push(setTimeout(lance, d)));
         });
       } catch (_) {setErr("Le serveur ne répond pas. Vérifie ta connexion internet et réessaie.");return;}
       const j = x.j, code = String(j.error_code || j.error || "");

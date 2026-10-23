@@ -79,7 +79,6 @@ input,select{font-family:inherit;color:inherit}
 .legal{font-size:13.5px;color:var(--text-2);text-align:center;line-height:1.55;margin:-8px 0 0}
 .step-h{font-family:"Bricolage Grotesque";font-size:26px;font-weight:600;margin-bottom:8px}
 .step-p{font-size:15px;color:var(--text-2);line-height:1.55;margin-bottom:22px}
-.step-skip{display:block;margin:18px auto 0;font-size:14px;color:var(--text-2);text-decoration:underline}
 .done{text-align:center;padding:40px 0 10px}
 .done-ic{width:56px;height:56px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;background:#EAF7F1;border:1.5px solid #A6DEC4}
 .done .cta{max-width:340px;margin:26px auto 0}
@@ -115,7 +114,6 @@ input,select{font-family:inherit;color:inherit}
    <div class="or-sep" id="orSep" hidden><span>Ou payez d'une autre manière</span></div>
    <div class="sec"><div class="whop" id="co"></div></div>
   </div>
-  <div id="step2" hidden></div>
   <div id="done" hidden></div>
   <div id="reassure">
    <div class="sep" style="margin-top:26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg> Tes informations sont chiffrées et sécurisées</div>
@@ -133,14 +131,25 @@ const PLANS={
  elite60:{n:"Elite 60",m:158.99,y:1439.88,d:"Deux fois plus de crédits : 2 200 par mois.",pid:{m:"plan_pZmWh1dVdmIWT",y:"plan_uWTkJDl1GvxNR"},pack:"L"},
  elite90:{n:"Elite 90",m:224.99,y:1895.88,d:"Trois fois plus de crédits : 3 300 par mois.",pid:{m:"plan_63PGeG3MesbJR",y:"plan_x2kDWR6ur2W5E"},pack:"L"}};
 const NEXT={starter:"pro",pro:"elite",elite:"elite60",elite60:"elite90"};   // Axel 23/10 : Elite → Elite 60 → Elite 90
-// Packs à prix réduit proposés UNIQUEMENT ici (Axel 23/10) — payés juste après l'abonnement (Whop refuse abonnement + ponctuel
-// dans le même paiement). L'option n'apparaît que lorsque le lien Whop du pack est renseigné (plan).
-const PACKS={S:{n:"Pack crédits S",c:120,p:14.99,was:19.99,plan:null},M:{n:"Pack crédits M",c:300,p:29.99,was:39.99,plan:null},L:{n:"Pack crédits L",c:600,p:59.99,was:74.99,plan:null}};
-// Rendu prioritaire 5 €/mois : abonnement Whop mensuel, payé AVEC l'abonnement mensuel (même paiement) ; pas proposé en annuel.
-const PRIO={p:5,plan:null};
+// Packs à prix réduit proposés UNIQUEMENT ici (Axel 23/10), payés dans le MÊME paiement que l'abonnement : Whop refuse
+// abonnement + achat ponctuel dans un panier, donc chaque palier a une VARIANTE Whop dont le 1er paiement inclut le pack
+// (initial_price = prix du pack), puis le prix normal. VAR[palier][pack] = {m: mensuel, y: annuel}. Le webhook verse les
+// crédits du pack une seule fois, à l'activation (whop-webhook, VARIANTES).
+const PACKS={S:{n:"Pack crédits S",c:120,p:14.99,was:19.99},M:{n:"Pack crédits M",c:300,p:29.99,was:39.99},L:{n:"Pack crédits L",c:600,p:59.99,was:74.99}};
+const VAR={
+ starter:{S:{m:"plan_blQtyUh90R2wP",y:"plan_NcMairMUEz3ST"}},
+ pro:{S:{m:"plan_hE8bkwTPoTkrj",y:"plan_iATzKyUuANyfI"},M:{m:"plan_0iHH0kY3uoJpo",y:"plan_QF7HXCR81yXRy"}},
+ elite:{M:{m:"plan_wn7ZntgBemFL0",y:"plan_5RTUZOJ3sGCXd"},L:{m:"plan_i7ubxuFfVHQ5k",y:"plan_QaAyO2Msc11Xk"}},
+ elite60:{L:{m:"plan_th1REeLIfRP50",y:"plan_tAKWwP8U88eTT"}},
+ elite90:{L:{m:"plan_xN9BOWCvFUWXp",y:"plan_xzr5jL4TCAlWf"}}};
+// Rendu prioritaire 5 €/mois : abonnement Whop mensuel à part (webhook : secret WHOP_PRIO_PLANS), payé AVEC l'abonnement
+// mensuel (même paiement) ; pas proposé en annuel.
+const PRIO={p:5,plan:"plan_5mcgIdN0ZTlCG"};
 const qs=new URLSearchParams(location.search);
 const base0=PLANS[qs.get("plan")]?qs.get("plan"):"pro";
 const S={plan:base0,base:base0,bill:qs.get("bill")==="y"?"y":"m",add:{},step:1};
+// plan Whop payé : la variante « palier + pack » si le pack est coché, sinon l'abonnement seul
+function planWhop(){const v=S.add.credits&&(VAR[S.plan]||{})[PLANS[S.base].pack];return v?v[S.bill]:PLANS[S.plan].pid[S.bill]}
 const eur=n=>{const v=Math.round(n*100)/100;return (v%1?v.toFixed(2):String(v)).replace(".",",")+"€"};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -150,7 +159,7 @@ function ADDONS_FOR(){
   if(nx){const cur=PLANS[S.base],up=PLANS[nx],diff=S.bill==="y"?up.y-cur.y:up.m-cur.m;
     list.push({id:"upgrade",t:"Passer en "+up.n,d:up.d,p:diff,unit:S.bill==="y"?" / an":" / mois",up:nx});}
   const pk=PACKS[PLANS[S.base].pack];
-  if(pk.plan) list.push({id:"credits",t:pk.n,d:"+"+pk.c+" crédits, sans expiration.",p:pk.p,was:pk.was});
+  if((VAR[S.plan]||{})[PLANS[S.base].pack]) list.push({id:"credits",t:pk.n,d:"+"+pk.c+" crédits, sans expiration.",p:pk.p,was:pk.was});
   if(PRIO.plan&&S.bill==="m") list.push({id:"prio",t:"Rendu prioritaire",d:"Tes vidéos passent en tête de file.",p:PRIO.p,unit:" / mois"});
   return list;
 }
@@ -180,8 +189,8 @@ function r(){
   $("mSum").innerHTML=summary();
   $("opts").innerHTML=optsHTML();
 }
-// ce que paie le 1er paiement : le plan (mensuel ou annuel) + le rendu prioritaire en mensuel
-function cartKey(){return [PLANS[S.plan].pid[S.bill],S.add.prio&&S.bill==="m"&&PRIO.plan?PRIO.plan:""].join("|")}
+// ce que paie le paiement : le plan (mensuel ou annuel, avec ou sans pack) + le rendu prioritaire en mensuel
+function cartKey(){return [planWhop(),S.add.prio&&S.bill==="m"&&PRIO.plan?PRIO.plan:""].join("|")}
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]"); if(!b||S.step!==1) return;
   const before=cartKey();
@@ -219,7 +228,7 @@ function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span></di
 function fallback(el,plan){el.innerHTML=`<div class="whop-wait" style="position:static;padding:30px 0"><span>Le module de paiement ne s'affiche pas.</span><a href="https://whop.com/checkout/${esc(plan)}" target="_blank" rel="noopener">Payer sur la page sécurisée Whop</a></div>`}
 function mountWhop(){
   const seq=++_seq; destroyAll();
-  const box=$("co"), items=[{plan:PLANS[S.plan].pid[S.bill],quantity:1}]; if(S.bill==="m"&&S.add.prio&&PRIO.plan) items.push({plan:PRIO.plan,quantity:1});
+  const box=$("co"), items=[{plan:planWhop(),quantity:1}]; if(S.bill==="m"&&S.add.prio&&PRIO.plan) items.push({plan:PRIO.plan,quantity:1});
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>';
   $("xpWrap").classList.add("xp-off"); $("orSep").hidden=true; $("xp").innerHTML="";
   const acc=compte(), meta=acc?{metadata:{aa_user_id:acc.id,aa_page:"paiement"}}:{metadata:{aa_page:"paiement"}};
@@ -239,32 +248,10 @@ function mountWhop(){
       show(); try{ new ResizeObserver(show).observe(xm); }catch(_){ setTimeout(show,800); } }}).mount(xm);
   }).catch(()=>{ if(seq===_seq) fallback(box,items[0].plan); });
 }
-/* ── Après le 1er paiement : le pack (2e paiement, s'il est coché), puis la confirmation ─────────────────────────── */
-function paid(){
-  destroyAll(); window.scrollTo({top:0,behavior:"smooth"});
-  const pk=PACKS[PLANS[S.base].pack];
-  if(S.add.credits&&pk.plan&&S.step===1){ S.step=2; return packStep(pk); }
-  finish();
-}
-function packStep(pk){
-  $("flow").hidden=true; const st=$("step2"); st.hidden=false;
-  const acc=compte();
-  st.innerHTML=`<div class="sec"><div class="step-h">Dernière étape : ton ${esc(pk.n)}</div>
-   <p class="step-p">Ton abonnement est payé. Il reste ton pack : <b style="color:var(--text)">+${pk.c} crédits</b> à <b style="color:var(--text)">${eur(pk.p)}</b> au lieu de ${eur(pk.was)}, sans expiration.${acc?"":" Utilise <b style=\"color:var(--text)\">la même adresse e-mail</b> que pour ton abonnement."}</p>
-   <div class="whop" id="co2">${waitHTML("Chargement du paiement…")}<div class="whop-mount"></div></div>
-   <button type="button" class="step-skip" id="skip">Continuer sans le pack</button></div>`;
-  $("skip").onclick=()=>{ destroyAll(); finish(); };
-  const seq=++_seq, box=$("co2");
-  whopReady().then(W=>{
-    if(seq!==_seq) return;
-    _co=W.checkout.create(Object.assign({plan:pk.plan,appearance:appearance(!!acc),onComplete:p=>{ if(p&&p.result==="payment"&&seq===_seq) setTimeout(()=>{ if(seq===_seq){ destroyAll(); finish(); } },1200); }},acc?{metadata:{aa_user_id:acc.id,aa_page:"paiement-pack"}}:{metadata:{aa_page:"paiement-pack"}}));
-    let ready=false;
-    _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove();},
-      onError:e=>{ if(!ready&&seq===_seq) fallback(box,pk.plan); }})).mount(box.querySelector(".whop-mount"));
-  }).catch(()=>{ if(seq===_seq) fallback(box,pk.plan); });
-}
+/* ── Après le paiement : la confirmation ─────────────────────────────────────────────────────────────────────── */
+function paid(){ destroyAll(); window.scrollTo({top:0,behavior:"smooth"}); finish(); }
 function finish(){
-  S.step=3; $("flow").hidden=true; $("step2").hidden=true; $("reassure").hidden=true;
+  S.step=3; $("flow").hidden=true; $("reassure").hidden=true;
   const acc=compte(), d=$("done"); d.hidden=false;
   d.innerHTML=`<div class="done"><div class="done-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1FB386" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
    <div class="step-h">Paiement confirmé</div>
