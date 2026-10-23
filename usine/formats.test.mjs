@@ -50,10 +50,10 @@ test('chocEnd : fixe = 3 s bornées à la vidéo ; hook = durée du hook ; sans 
 });
 
 // ── banque de phrases choc ──
-test('banque : 36 phrases TH01…TH36, modules connus, TH13 exige TX-O02a', () => {
-  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 36 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
+test('banque : 37 phrases TH01…TH37, modules connus, TH13 exige TX-O02a', () => {
+  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 37 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
   F.TEXTES_CHOC.forEach(p => assert.ok(['generique', 'mcp-claude', 'omni', 'montage-ia', 'scotch'].includes(p.module), p.id));   // scotch = TH35 (15/10)
-  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH29', 'TH30', 'TH31', 'TH32', 'TH35', 'TH36']);
+  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH29', 'TH30', 'TH31', 'TH32', 'TH35', 'TH36', 'TH37']);
   // TH36 (Axel 18/10) : bloc « cheat code » (logos Claude + AvatarAds = 🔥, bandeau dessous) aux mesures de la réf.
   const C = F.chocLayout(F.chocString(F.textChoc('TH36')), { faces: [] });
   assert.equal(C.logos, 'cheat'); assert.equal(C.logo, 208); assert.equal(C.size, 41); assert.equal(C.boxH, 86); assert.equal(C.y, 300);   // 18/10 : sous les onglets (y 300) → échelle 0,9 pour rester au-dessus des icônes assert.ok(C.x >= 0 && C.x + C.w <= 1080);
@@ -71,7 +71,7 @@ test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.
   const md = readFileSync(BANK, 'utf8'), sec = md.split(/^## /m).find(x => /^VALIDÉES/.test(x));
   assert.ok(sec, 'section VALIDÉES');
   const lines = sec.split('\n').filter(l => /^TH\d{2} /.test(l));
-  assert.equal(lines.length, 36);
+  assert.equal(lines.length, 37);   // + TH37 (Claude 2098, Axel 21/10)
   lines.forEach(l => {
     const m = /^(TH\d{2}) (.+?)\s{2,}\((.+)\)\s*$/.exec(l);
     assert.ok(m, l);
