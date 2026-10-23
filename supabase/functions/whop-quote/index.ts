@@ -17,6 +17,8 @@ const PLANS = new Set([
   'plan_tAKWwP8U88eTT', 'plan_xzr5jL4TCAlWf',
   // rendu prioritaire (mensuel, annuel, annuel 3D Secure pour Elite 60 / 90)
   'plan_5mcgIdN0ZTlCG', 'plan_2KlnrycFeoXMT', 'plan_oPv9MNE8701Tt',
+  // packs seuls (?pack=S|M|L)
+  'plan_hR0u4VHoeszbu', 'plan_GLoKHMqZtNbLK', 'plan_iRh99E5F2g4XU',
 ])
 const CORS = {
   'Access-Control-Allow-Origin': '*',

@@ -55,7 +55,7 @@ input,select{font-family:inherit;color:inherit}
 .plan-t span{opacity:.62}
 .plan-b{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;position:relative;z-index:1;gap:8px 16px}
 .plan-p{font-family:"Hanken Grotesk";font-size:clamp(34px,3.4vw,44px);font-weight:400;letter-spacing:-.02em;line-height:1;white-space:nowrap}
-.plan-p small{font-size:15px;font-weight:400;opacity:.8;letter-spacing:0}
+.plan-p small{font-size:15px;font-weight:400;opacity:.8;letter-spacing:0}.plan-p small.uniq{margin-left:8px}
 .plan-n{font-size:13.5px;opacity:.85}
 .sum{margin-top:44px;padding-top:30px;border-top:1px solid var(--line)}
 .sum-row{display:flex;justify-content:space-between;font-size:16px;padding:12px 0}
@@ -88,6 +88,10 @@ input,select{font-family:inherit;color:inherit}
 .done{text-align:center;padding:40px 0 10px}
 .done-ic{width:56px;height:56px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;background:#EAF7F1;border:1.5px solid #A6DEC4}
 .done .cta{max-width:340px;margin:26px auto 0}
+.pack-login{padding:6px 0 4px}.pack-login .cta{margin-top:18px}
+.sum.paid{margin-top:0;padding-top:0;border-top:none}
+.sum-h{font-family:"Bricolage Grotesque";font-size:22px;font-weight:600;margin-bottom:6px}
+.confettis{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
 .pw{max-width:340px;margin:22px auto 0;text-align:left}
 .pw label{display:block;font-size:13.5px;color:var(--text-2);margin:14px 0 6px}
 .pw input{width:100%;height:52px;border-radius:999px;border:1px solid var(--line);background:var(--field);padding:0 20px;font-size:16px;outline:none}
@@ -161,18 +165,22 @@ const PRIO={m:{p:5,plan:"plan_5mcgIdN0ZTlCG"},y:{p:60,plan:"plan_2KlnrycFeoXMT"}
 // Code promo saisi dans NOTRE récapitulatif (Axel 23/10) : Whop chiffre le panier remisé (fonction whop-quote → devis Whop),
 // puis le code est passé au module de paiement (promoCode) — Whop reste seul juge du prix encaissé.
 const QUOTE_URL="https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/whop-quote";
+// Pack seul (?pack=S|M|L, depuis l'app « Recharger des crédits ») : paiement unique au prix normal, sans options
+const PACK_SEUL={S:{n:"Pack crédits S",c:120,p:19.99,plan:"plan_hR0u4VHoeszbu"},M:{n:"Pack crédits M",c:300,p:34.99,plan:"plan_GLoKHMqZtNbLK"},L:{n:"Pack crédits L",c:600,p:74.99,plan:"plan_iRh99E5F2g4XU"}};
 const qs=new URLSearchParams(location.search);
 const base0=PLANS[qs.get("plan")]?qs.get("plan"):"pro";
-const S={plan:base0,base:base0,bill:qs.get("bill")==="y"?"y":"m",add:{},step:1,promo:null,promoOpen:false,promoBusy:false,promoErr:"",promoDraft:""};
+const S={plan:base0,base:base0,bill:qs.get("bill")==="y"?"y":"m",add:{},step:1,promo:null,promoOpen:false,promoBusy:false,promoErr:"",promoDraft:"",
+  packSeul:PACK_SEUL[String(qs.get("pack")||"").toUpperCase()]?String(qs.get("pack")).toUpperCase():"",paye:false,fete:false};
 // plan Whop payé : la variante « palier + pack » si le pack est coché, sinon l'abonnement seul
-function planWhop(){const v=S.add.credits&&(VAR[S.plan]||{})[PLANS[S.base].pack];return v?v[S.bill]:PLANS[S.plan].pid[S.bill]}
-function prioWhop(){return !S.add.prio?"":(S.bill==="y"&&(S.plan==="elite60"||S.plan==="elite90")?PRIO.y3ds:PRIO[S.bill]).plan}
+function planWhop(){if(S.packSeul) return PACK_SEUL[S.packSeul].plan; const v=S.add.credits&&(VAR[S.plan]||{})[PLANS[S.base].pack];return v?v[S.bill]:PLANS[S.plan].pid[S.bill]}
+function prioWhop(){return S.packSeul||!S.add.prio?"":(S.bill==="y"&&(S.plan==="elite60"||S.plan==="elite90")?PRIO.y3ds:PRIO[S.bill]).plan}
 const panier=()=>[planWhop(),prioWhop()].filter(Boolean);
 const eur=n=>{const v=Math.round(n*100)/100;return (v%1?v.toFixed(2):String(v)).replace(".",",")+"€"};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function ADDONS_FOR(){
+  if(S.packSeul) return [];
   const list=[], nx=S.plan!==S.base?S.plan:NEXT[S.base];
   if(nx){const cur=PLANS[S.base],up=PLANS[nx],diff=S.bill==="y"?up.y-cur.y:up.m-cur.m;
     list.push({id:"upgrade",t:"Passer en "+up.n,d:up.d,p:diff,unit:S.bill==="y"?" / an":" / mois",up:nx});}
@@ -181,10 +189,14 @@ function ADDONS_FOR(){
   list.push({id:"prio",t:"Rendu prioritaire",d:"Tes vidéos passent en tête de file.",p:PRIO[S.bill].p,unit:S.bill==="y"?" / an":" / mois"});
   return list;
 }
-function total(){const p=PLANS[S.plan];let t=S.bill==="y"?p.y:p.m;ADDONS_FOR().forEach(a=>{if(S.add[a.id]&&!a.up)t+=a.p});return t}
+function total(){if(S.packSeul) return PACK_SEUL[S.packSeul].p; const p=PLANS[S.plan];let t=S.bill==="y"?p.y:p.m;ADDONS_FOR().forEach(a=>{if(S.add[a.id]&&!a.up)t+=a.p});return t}
 // Axel 23/10 : l'économie réelle de chaque plan (« 3 mois offerts » quand l'année vaut 9 mois, sinon « −X % »)
 function yearDeal(p){const mois=p.y/p.m;return Math.abs(mois-9)<=0.15?"3 mois offerts":"−"+Math.round((1-p.y/(p.m*12))*100)+" %"}
-function planCard(){const p=PLANS[S.plan],price=S.bill==="y"?p.y:p.m,y=S.bill==="y";return `
+function planCard(){
+  if(S.packSeul){const k=PACK_SEUL[S.packSeul];return `
+ <div class="plan"><div class="plan-top"><div class="plan-t">AvatarAds<br><span>${k.n}</span></div></div>
+ <div class="plan-b"><div class="plan-p">${eur(k.p)}<small class="uniq">paiement unique</small></div><div class="plan-n">+${k.c} crédits ajoutés à ton compte, sans expiration.</div></div></div>`}
+  const p=PLANS[S.plan],price=S.bill==="y"?p.y:p.m,y=S.bill==="y";return `
  <div class="plan"><div class="plan-top"><div class="plan-t">AvatarAds<br><span>${p.n}</span></div></div>
  <div class="plan-b"><div class="plan-p">${eur(price)}<small>/ ${y?"an":"mois"}</small></div><div class="plan-n">Sans frais cachés. Résiliable à tout moment.</div></div></div>
  <button class="upsell ${y?"on":""}" type="button" data-act="bill">
@@ -197,11 +209,13 @@ function promoHTML(){
   if(!S.promoOpen) return `<button type="button" class="promo-link" data-act="promo-open">Ajouter un code promo</button>`;
   return `<form class="promo-box" data-promo><input name="code" maxlength="40" placeholder="Code promo" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(S.promoDraft)}"><button type="submit"${S.promoBusy?" disabled":""}>${S.promoBusy?"Vérification…":"Appliquer"}</button></form>${S.promoErr?`<div class="promo-err">${esc(S.promoErr)}</div>`:""}`;
 }
-function summary(){const p=PLANS[S.plan];return `<div class="sum">
- <div class="sum-row"><span>AvatarAds ${p.n}</span><span>${eur(S.bill==="y"?p.y:p.m)} / ${S.bill==="y"?"an":"mois"}</span></div>
+// après le paiement : « Ton achat » (sans carte, sans bascule annuelle, sans champ de code promo)
+function summary(){const p=PLANS[S.plan];return `<div class="sum${S.paye?" paid":""}">${S.paye?'<div class="sum-h">Ton achat</div>':""}
+ ${S.packSeul?`<div class="sum-row"><span>${PACK_SEUL[S.packSeul].n}</span><span>${eur(PACK_SEUL[S.packSeul].p)}</span></div>`
+   :`<div class="sum-row"><span>AvatarAds ${p.n}</span><span>${eur(S.bill==="y"?p.y:p.m)} / ${S.bill==="y"?"an":"mois"}</span></div>`}
  ${ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>`<div class="sum-row"><span>${a.t}</span><span>${eur(a.p)}${a.unit||""}</span></div>`).join("")}
- ${promoHTML()}
- <div class="due"><span>À payer aujourd'hui</span><span>${eur(S.promo?S.promo.total:total())}</span></div></div>`}
+ ${S.paye?(S.promo?`<div class="sum-row promo-on"><span>Code ${esc(S.promo.code)}</span><span>−${eur(S.promo.discount)}</span></div>`:""):promoHTML()}
+ <div class="due"><span>${S.paye?"Payé aujourd'hui":"À payer aujourd'hui"}</span><span>${eur(S.promo?S.promo.total:total())}</span></div></div>`}
 const chk='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 function optsHTML(){return ADDONS_FOR().map(a=>`<div class="addon ${S.add[a.id]?"on":""}" data-act="opt" data-id="${a.id}" role="checkbox" aria-checked="${!!S.add[a.id]}" tabindex="0">
     <div style="flex:1;min-width:0"><div class="addon-t">${a.t}</div><div class="addon-d">${a.d}</div></div>
@@ -211,7 +225,7 @@ function r(){
   $("rPlan").innerHTML=planCard()+summary();
   $("mPlan").innerHTML=planCard();
   $("mSum").innerHTML=summary();
-  $("opts").innerHTML=optsHTML();
+  $("opts").innerHTML=optsHTML(); $("opts").hidden=!!S.packSeul;
 }
 // ce que paie le paiement : le plan (mensuel ou annuel, avec ou sans pack) + le rendu prioritaire, et le code promo
 function cartKey(){return [...panier(),S.promo?S.promo.code:""].join("|")}
@@ -278,6 +292,9 @@ function fallback(el,plan){el.innerHTML=`<div class="whop-wait" style="position:
 function mountWhop(){
   const seq=++_seq; destroyAll();
   const box=$("co"), items=panier().map(plan=>({plan,quantity:1}));
+  // pack seul sans session : les crédits vont sur un compte, on se connecte d'abord (les packs s'achètent depuis l'app)
+  if(S.packSeul&&!compte()){ box.innerHTML=`<div class="pack-login"><p class="step-p">Les crédits du pack s'ajoutent à ton compte AvatarAds : connecte-toi d'abord, puis reprends le pack depuis ton espace.</p>
+   <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a></div>`; return; }
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>';
   const acc=compte(), meta={metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{}),
     returnUrl:location.origin+location.pathname+location.search};   // étape bancaire hors page (3D Secure) → retour ici
@@ -313,7 +330,23 @@ async function verifier(){
   if(_paye||!r||!r.paid||r.compte==="attente") return;   // « attente » : le webhook crée encore le compte
   _paye=true; clearInterval(_veille); _veille=0; apresPaiement(r);
 }
-function ecran(html){ S.step=3; $("flow").hidden=true; $("reassure").hidden=true; $("mPlan").style.display="none"; const d=$("done"); d.hidden=false; d.innerHTML=html; window.scrollTo({top:0,behavior:"smooth"}); }
+function ecran(html){ S.step=3; S.paye=true; $("flow").hidden=true; $("reassure").hidden=true; $("mPlan").style.display="none"; $("rPlan").innerHTML=summary();
+  const d=$("done"); d.hidden=false; d.innerHTML=html; window.scrollTo({top:0,behavior:"smooth"}); if(!S.fete){ S.fete=true; confettis(); } }
+// Confettis (Axel 23/10) : deux salves depuis les bords, ~3 s, aux couleurs de la marque ; rien si « réduire les animations »
+function confettis(){
+  try{ if(matchMedia("(prefers-reduced-motion: reduce)").matches) return; }catch(_){}
+  const c=document.createElement("canvas"); c.className="confettis"; c.setAttribute("aria-hidden","true"); document.body.appendChild(c);
+  const x=c.getContext("2d"), dpr=Math.min(2,window.devicePixelRatio||1), W=c.width=innerWidth*dpr, H=c.height=innerHeight*dpr;
+  const COUL=["#FF5A1F","#FF8042","#FFC107","#FFD43B","#1FB386","#1C252B"], N=innerWidth<600?120:190, P=[];
+  for(let i=0;i<N;i++){ const g=i%2?1:-1, a=(g>0?-60:-120)*Math.PI/180+(Math.random()-.5)*.9, v=(innerWidth<600?11:15)*(.55+Math.random()*.6)*dpr;
+    P.push({x:(g>0?-.02:1.02)*W, y:H*(.62+Math.random()*.12), vx:Math.cos(a)*v, vy:Math.sin(a)*v, w:(6+Math.random()*6)*dpr, h:(9+Math.random()*7)*dpr,
+      r:Math.random()*6.28, vr:(Math.random()-.5)*.3, t:Math.random()*6.28, vt:.08+Math.random()*.12, c:COUL[i%COUL.length]}); }
+  const t0=performance.now(), DUREE=3200;
+  (function f(now){ const e=now-t0; x.clearRect(0,0,W,H); const fond=e>DUREE-900?Math.max(0,(DUREE-e)/900):1;
+    for(const p of P){ p.vy+=.32*dpr; p.vx*=.985; p.vy*=.985; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr; p.t+=p.vt;
+      x.save(); x.globalAlpha=fond; x.translate(p.x,p.y); x.rotate(p.r); x.scale(1,Math.cos(p.t)); x.fillStyle=p.c; x.fillRect(-p.w/2,-p.h/2,p.w,p.h); x.restore(); }
+    if(e<DUREE) requestAnimationFrame(f); else c.remove(); })(t0);
+}
 const OK_IC='<div class="done-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1FB386" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
 const FLECHE='<span class="ar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
 // session écrite là où l'app la lit (clé standard de supabase-js, comme connexion.html) puis relue
@@ -339,13 +372,13 @@ async function apresPaiement(r){
 // compte déjà utilisé (ou connexion automatique impossible) : on dit avec quelle adresse se connecter
 function aConnecter(email){
   ecran(`<div class="done">${OK_IC}<div class="step-h">Paiement confirmé</div>
-   <p class="step-p">Ton plan est actif sur ton compte AvatarAds${email?` <b style="color:var(--text)">${esc(email)}</b>`:""}. Connecte-toi avec cette adresse pour l'ouvrir.</p>
+   <p class="step-p">${S.packSeul?"Tes crédits sont ajoutés à":"Ton plan est actif sur"} ton compte AvatarAds${email?` <b style="color:var(--text)">${esc(email)}</b>`:""}. Connecte-toi avec cette adresse pour l'ouvrir.</p>
    <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a></div>`);
 }
 // 1er mot de passe (deux champs) : le compte vient d'être créé par l'achat, l'acheteur y est déjà connecté
 function motDePasse(email){
   ecran(`<div class="done">${OK_IC}<div class="step-h">Bienvenue sur AvatarAds</div>
-   <p class="step-p">Ton plan est actif et tu es connecté${email?` avec <b style="color:var(--text)">${esc(email)}</b>`:""}. Crée ton mot de passe pour te reconnecter facilement.</p>
+   <p class="step-p">${S.packSeul?"Tes crédits sont ajoutés":"Ton plan est actif"} et tu es connecté${email?` avec <b style="color:var(--text)">${esc(email)}</b>`:""}. Crée ton mot de passe pour te reconnecter facilement.</p>
    <form class="pw" id="pwForm" autocomplete="on">
     <input type="email" name="username" autocomplete="username" value="${esc(email)}" hidden>
     <label for="pw1">Mot de passe</label><input id="pw1" type="password" autocomplete="new-password" placeholder="8 caractères minimum" required>
@@ -383,9 +416,9 @@ function motDePasse(email){
 function finish(){
   const acc=compte();
   ecran(`<div class="done">${OK_IC}<div class="step-h">Paiement confirmé</div>
-   <p class="step-p">${acc?`Ton plan et tes crédits arrivent sur ton compte <b style="color:var(--text)">${esc(acc.email)}</b>.`:"Ton plan est actif sur ton compte AvatarAds."}</p>
+   <p class="step-p">${acc?`${S.packSeul?"Tes crédits arrivent":"Ton plan et tes crédits arrivent"} sur ton compte <b style="color:var(--text)">${esc(acc.email)}</b>.`:S.packSeul?"Tes crédits sont ajoutés à ton compte AvatarAds.":"Ton plan est actif sur ton compte AvatarAds."}</p>
    <a class="cta" href="/app/"><span>Ouvrir mon espace</span>${FLECHE}</a></div>`);
-  if(acc) setTimeout(()=>{ location.href="/app/"; },2500);
+  if(acc) setTimeout(()=>{ location.href="/app/"; },3600);   // après les confettis (3,2 s)
 }
 // retour d'une étape bancaire hors page (returnUrl) : le paiement est peut-être déjà passé
 if(qs.get("status")==="succeeded"||qs.get("payment")) veiller(true);
