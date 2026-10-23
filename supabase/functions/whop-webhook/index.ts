@@ -327,6 +327,15 @@ const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
   'plan_GLoKHMqZtNbLK': { credits: 300 },  // Pack M  39,99€ (le plus populaire)
   'plan_iRh99E5F2g4XU': { credits: 600 },  // Pack L  74,99€
 }
+// 23/10 (Axel) : packs à PRIX RÉDUIT proposés seulement sur la page de paiement (paiement.html), payés juste après
+// l'abonnement. Leurs liens Whop se donnent par le secret WHOP_UPSELL_PACKS = « plan_a:120:1499,plan_b:300:2999,… »
+// (plan:crédits:prix en centimes) — sans redéploiement. Même traitement qu'un pack (crédits achetés, sans expiration).
+for (const kv of String(Deno.env.get('WHOP_UPSELL_PACKS') || '').split(',')) {
+  const [k, c, cents] = kv.split(':').map((x) => x.trim())
+  if (/^plan_[A-Za-z0-9]+$/.test(k) && +c > 0 && !PACK_MAP[k]) { PACK_MAP[k] = { credits: Math.round(+c) }; if (+cents > 0) PLAN_PRICE_CENTS[k] = Math.round(+cents) }
+}
+// 23/10 (Axel) : « Rendu prioritaire » 5 €/mois — abonnement À PART (secret WHOP_PRIO_PLANS = « plan_x[,plan_y] »)
+const PRIO_PLANS = new Set(String(Deno.env.get('WHOP_PRIO_PLANS') || '').split(',').map((x) => x.trim()).filter((x) => /^plan_[A-Za-z0-9]+$/.test(x)))
 
 // ─── Vérification de signature ───────────────────────────────────
 // Whop V1 = spec « Standard Webhooks » (Svix) :
@@ -539,6 +548,45 @@ serve(async (req) => {
   }
   // Crédits ACHETÉS en pack encore disponibles (les crédits du plan sont consommés en premier)
   const boughtLeft = (p: any) => Math.min(p?.bought_credits || 0, p?.credits_remaining || 0)
+
+  // ─── 23/10 (Axel) : RENDU PRIORITAIRE — il ne touche JAMAIS au plan ni aux crédits. Activation → drapeau
+  //     profiles.rendu_prioritaire (+ abonnement mémorisé) ; résiliation / remboursement → drapeau retiré ; paiements et
+  //     renouvellements → rien. Reconnu par son plan, ou — un paiement ne porte pas toujours le plan, et le renouvellement
+  //     le déduirait alors du PLAN PRINCIPAL du compte (crédits du mois rejoués) — par l'abonnement mémorisé (prio_member_id). ──
+  if (PRIO_PLANS.size) {
+    const pay: any = (data.payment && typeof data.payment === 'object') ? data.payment : {}
+    const pPlan = String(planId || pay.plan?.id || pay.plan_id || '')
+    const pMember = String(memberId || pay.membership_id || pay.membership?.id || '') || null
+    let byMember: any = null
+    if (!PRIO_PLANS.has(pPlan) && pMember) {
+      const { data: pm, error: pmErr } = await sb.from('profiles').select('id, prio_member_id').eq('prio_member_id', pMember).maybeSingle()
+      if (pmErr && pmErr.code !== 'PGRST116') return await failDb()
+      byMember = pm
+    }
+    if (PRIO_PLANS.has(pPlan) || byMember) {
+      if (isActivate) {
+        let profile = await findProfile()
+        if (!profile && email) { await ensureAccount(sb, email); profile = await findProfile() }
+        if (!profile) { console.error('❌ Rendu prioritaire : aucun compte pour', email || pMember); return await failDb() }
+        const { error } = await sb.from('profiles').update({ rendu_prioritaire: true, prio_member_id: data.id ?? memberId ?? null }).eq('id', profile.id)
+        if (error) { console.error('❌ Rendu prioritaire (activation) :', error); return await failDb() }
+        console.log(`⚡ Rendu prioritaire activé pour ${email || profile.id}`)
+      } else if (isDeactivate || isClawback) {
+        const target = byMember || await findProfile()
+        if (target) {
+          const expiring = String(data.id ?? pMember ?? '')
+          const { data: cur } = await sb.from('profiles').select('prio_member_id').eq('id', target.id).maybeSingle()
+          // seulement l'abonnement prioritaire MÉMORISÉ (l'ancien, résilié après un nouvel achat, ne coupe rien)
+          if (!cur?.prio_member_id || !expiring || cur.prio_member_id === expiring) {
+            const { error } = await sb.from('profiles').update({ rendu_prioritaire: false, prio_member_id: null }).eq('id', target.id)
+            if (error) { console.error('❌ Rendu prioritaire (fin) :', error); return await failDb() }
+            console.log(`⚡ Rendu prioritaire retiré (${action})`)
+          }
+        }
+      }
+      return new Response('OK', { status: 200 })
+    }
+  }
 
   // ─── membership.went_valid → abonnement actif OU pack acheté ──
   if (isActivate) {

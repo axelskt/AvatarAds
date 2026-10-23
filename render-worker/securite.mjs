@@ -344,18 +344,21 @@ export async function prochainJob(sb, dernierCompte, prioritaires) {
   // Sonde légère d'abord : file vide → UNE requête (index status), et la logique de file équitable seulement s'il y a du travail.
   const { data: sonde } = await sb.from('render_jobs').select('id').eq('status', 'queued').limit(1)
   if (!Array.isArray(sonde) || !sonde.length) return null
-  const plusAncien = async (prio, autreQue) => {
+  // 3 classes, dans l'ordre : les compositions courtes (retouches…), puis les rendus des comptes au « Rendu prioritaire »
+  // (Axel 23/10, abonnement 5 €/mois : render_jobs.prioritaire, posé à l'insertion d'après le compte), puis tous les autres.
+  const plusAncien = async (classe, autreQue) => {
     let q = sb.from('render_jobs').select('id, user_id').eq('status', 'queued')
-    if (prio) q = q.in('plan->>__compose', prioritaires)
+    if (classe === 'compose') q = q.in('plan->>__compose', prioritaires)
+    if (classe === 'compte') q = q.eq('prioritaire', true)
     if (autreQue) q = q.neq('user_id', autreQue)
     const { data } = await q.order('created_at').limit(1)
     return (Array.isArray(data) && data[0]) || null
   }
-  for (const prio of [true, false]) {
-    const premier = await plusAncien(prio, null)
+  for (const classe of ['compose', 'compte', 'normal']) {
+    const premier = await plusAncien(classe, null)
     if (!premier) continue
     if (!dernierCompte || premier.user_id !== dernierCompte) return premier
-    return (await plusAncien(prio, dernierCompte)) || premier
+    return (await plusAncien(classe, dernierCompte)) || premier
   }
   return null
 }
