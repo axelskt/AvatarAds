@@ -2129,7 +2129,7 @@
   //    « Voir l'exemple » : la vidéo publiée la plus vue dont on a le fichier, sinon le stock, sinon un test (RPC
   //    factory_format_stats, CF.fmt).
   // statut du format (Axel 24/10 : « c'est quoi plus produit / en cours ? ») : dit en clair ce que l'usine en fait
-  var FMT_ST = { actif: ['en fabrication', 'is-ok'], test: ['en test', 'is-warn'], arrete: ['on n’en fait plus', ''] };
+  var FMT_ST = { actif: ['en fabrication', 'is-ok'], test: ['en test', 'is-warn'] };
   var FMT_TOP = 5;   // Axel 24/10 : les 5 premiers, puis « Voir plus »
   var FMT_NETS = [['all', 'Tout'], ['ig', 'Instagram'], ['tt', 'TikTok']];
   var FMT_NET_L = { instagram: 'Instagram', tiktok: 'TikTok' };
@@ -2155,7 +2155,8 @@
       + '<div class="cf-fmt-m"><span class="cf-pill ' + st[1] + '">' + esc(st[0]) + '</span><span>' + esc(meta) + '</span></div></div>';
   }
   function fmtHTML() {
-    var S = CF.fmt, L = S.data && S.data.list, net = fmtNet();
+    // Axel 24/10 : les formats « on n'en fait plus » ne s'affichent plus (pas besoin)
+    var S = CF.fmt, L = S.data && S.data.list && S.data.list.filter(function (f) { return f.statut !== 'arrete'; }), net = fmtNet();
     var seg = '<div class="cf-seg cf-pseg" role="group" aria-label="Réseau">' + FMT_NETS.map(function (x) {
       var on = x[0] === net;
       return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="fmt-net" data-k="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>';
