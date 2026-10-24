@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-NuS+zhq6kKYUpjSdEmpfE36/jDmeyGJ4/wK9tl8IiKc='; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-8hVsgZA90CxDbgB6N9iC/Xog1DjwvQp0NsMcPGC6P3s='; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Paiement confirmé — AvatarAds</title>
 <link rel="icon" href="/assets/avatarads-logo-96.png">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -177,13 +177,15 @@ const APERCU=new URLSearchParams(location.search).get("apercu");
     return afficher();
   }
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(NONCE||"")) return venuDeWhop()?sansSuivi():quitter();
-  // le compte d'un acheteur sans compte et le reçu (paiement Whop) arrivent quelques secondes après l'activation
+  // le compte d'un acheteur sans compte et le reçu (paiement Whop) arrivent quelques secondes après l'activation.
+  // Axel 24/10 (« un petit freeze de 2-3 s ») : la page s'affiche dès que le paiement est validé et le compte prêt ; le reçu
+  // (n° de commande, carte, montant encaissé) se complète ensuite sur le ticket (completerRecu), sans attendre ici.
   for(let i=0;i<14;i++){
     R=await etat()||R;
     const pret=R&&R.paid&&R.compte!=="attente";
-    if(pret&&R.recu&&R.recu.total!=null) break;
-    if((pret||(R&&R.ok&&!R.paid))&&i>=4) break;
-    await pause(1500);
+    if(pret&&(R.recu&&R.recu.total!=null||i>=1)) break;
+    if(R&&R.ok&&!R.paid&&i>=4) break;
+    await pause(pret?700:1200);
   }
   if(R&&R.ok&&!R.paid) return quitter();
   R=R||{};
@@ -194,9 +196,20 @@ const APERCU=new URLSearchParams(location.search).get("apercu");
   EMAIL=EMAIL||((R.compte==="connecte"||AUTO)&&acc?acc.email:"")||R.email||(PANIER&&PANIER.email)||"";
   // polices du ticket chargées AVANT de le mesurer (sinon la hauteur d'impression est fausse de quelques pixels)
   try{ await Promise.race([Promise.all(['800 23px "Bricolage Grotesque"','700 17px "Bricolage Grotesque"','700 30px "Bricolage Grotesque"','400 12px "JetBrains Mono"',
-    '700 13.5px "JetBrains Mono"','400 15.5px "Hanken Grotesk"','600 17px "Hanken Grotesk"'].map(f=>document.fonts.load(f))),pause(2500)]) }catch(_){}
+    '700 13.5px "JetBrains Mono"','400 15.5px "Hanken Grotesk"','600 17px "Hanken Grotesk"'].map(f=>document.fonts.load(f))),pause(900)]) }catch(_){}
   afficher();
+  if(!(R.recu&&R.recu.total!=null)) completerRecu();
 })();
+// reçu arrivé après l'affichage : le ticket est réécrit en place (même hauteur mesurée à nouveau), sans rejouer l'animation
+async function completerRecu(){
+  for(let j=0;j<12;j++){
+    await pause(1500);
+    const r=await etat(); if(!r||!r.recu||r.recu.total==null) continue;
+    R.recu=r.recu; ticket();
+    try{ $("feed").style.setProperty("--h", Math.ceil($("rc").getBoundingClientRect().height) + "px") }catch(_){}
+    return;
+  }
+}
 
 // Achat fait sur la page Whop (lien whop.com) puis renvoyé ici par Whop (« URL de redirection de succès ») : aucun
 // identifiant de cet onglet, donc ni reçu ni ouverture du compte par code. Axel 24/10 : plus de renvoi vers les tarifs —
@@ -220,6 +233,14 @@ function sansSuivi(){
 }
 
 function afficher(){
+  ticket();
+  $("attente").remove(); $("page").hidden=false;
+  // hauteur finale du ticket pour l'animation d'impression
+  const mesurer=()=>$("feed").style.setProperty("--h", Math.ceil($("rc").getBoundingClientRect().height) + "px");
+  mesurer(); play();
+  try{ document.fonts.ready.then(mesurer) }catch(_){}
+}
+function ticket(){
   const rc=R.recu||{}, o=PANIER||{};
   const lines=Array.isArray(o.lines)&&o.lines.length?o.lines:[{n:"AvatarAds",q:1,p:Number(rc.total)||0}];
   const sous=lines.reduce((s,l)=>s+l.p*l.q,0);
@@ -265,11 +286,6 @@ function afficher(){
   <div class="thanks">MERCI !</div>
   <div class="barcode"></div>
   <div class="code">${esc(ref)}</div>`;
-  $("attente").remove(); $("page").hidden=false;
-  // hauteur finale du ticket pour l'animation d'impression
-  const mesurer=()=>$("feed").style.setProperty("--h", Math.ceil($("rc").getBoundingClientRect().height) + "px");
-  mesurer(); play();
-  try{ document.fonts.ready.then(mesurer) }catch(_){}
 }
 
 // confettis

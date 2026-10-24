@@ -78,18 +78,15 @@ input,select{font-family:inherit;color:inherit}
 [hidden]{display:none!important}
 /* Apple Pay : replié tant que Whop n'a pas rendu de portefeuille (pas « hidden » : un bloc masqué mesure 0 et ne s'ouvrirait jamais) */
 .whop{position:relative;min-height:420px}
-.whop:has(> [data-adresse]),.whop:has(> .pack-login){min-height:0}   /* étape adresse / message : pas de place réservée au module (Axel 24/10) */
+.whop:has(> .pack-login){min-height:0}   /* message à la place du module : pas de place réservée (Axel 24/10) */
 .whop-wait{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-2);font-size:14px;text-align:center;padding:0 24px}
 .whop-wait i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .whop-mount{position:relative;z-index:1}
-.whop-wait.fin{z-index:2;background:#fff}   /* fin du module : on attend la confirmation serveur par-dessus son cadre */
+.whop-wait.fin{position:fixed;inset:0;z-index:60;background:rgba(255,255,255,.97);font-size:15.5px}   /* fin du module : attente de la confirmation serveur sur TOUT l'écran (Axel 24/10 : « petit freeze ») */
 .legal{font-size:13.5px;color:var(--text-2);text-align:center;line-height:1.55;margin:-8px 0 0}
 .step-p{font-size:15px;color:var(--text-2);line-height:1.55;margin-bottom:22px}
 .pack-login{padding:6px 0 4px}.pack-login .cta{margin-top:18px}
-.adr-in{width:100%;height:54px;border-radius:999px;border:1px solid var(--line);background:var(--field);padding:0 20px;font-size:16px;outline:none}
-.adr-in:focus{border-color:#C9CED4}
-.adr-alt{display:block;text-align:center;margin-top:6px}
 .cta{width:100%;height:58px;border-radius:999px;background:linear-gradient(180deg,#FFD43B,#FFC107);color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-size:18px;font-weight:500;margin-top:8px;transition:.15s;text-decoration:none}
 .cta:hover{filter:brightness(1.05);color:#1A1300}
 .cta .ar{display:flex;align-items:center;gap:18px}.cta .ar::before{content:"";width:1px;height:24px;background:rgba(26,19,0,.25)}
@@ -108,6 +105,7 @@ input,select{font-family:inherit;color:inherit}
  .mob-sum .sum{margin-top:0;margin-bottom:36px}
 }
 </style>
+<link rel="prefetch" href="/paiement-confirme.html">
 </head>
 <body>
 <div class="top"><button class="back" id="back" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>Retour</button><img class="logo" src="/assets/avatarads-logo.png" alt="AvatarAds"></div>
@@ -247,7 +245,6 @@ document.addEventListener("click",e=>{
   if(act==="promo-del"){++_devis; S.promo=null; S.promoErr=""; S.promoBusy=false; S.promoPending=""; r(); mountWhop(); return;}
   if(act==="retry"){_wp=null; mountWhop(); return;}   // module Whop qui ne s'affichait pas
   if(act==="bas-ok"){S.basOk=S.plan; mountWhop(); return;}   // palier inférieur accepté après l'avertissement
-  if(act==="adr-autre"){S.adresse=""; S.adrErr=""; mountWhop(); return;}   // achat sans session : changer d'adresse
   const before=cartKey(), code=(S.promo&&S.promo.code)||S.promoPending;
   if(act==="bill") S.bill=S.bill==="y"?"m":"y";
   if(act==="opt"){const id=b.dataset.id;
@@ -259,7 +256,6 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-promo]")) S.promoDraft=e.target.value;});
 document.addEventListener("submit",e=>{const f=e.target.closest("[data-promo]"); if(!f) return; e.preventDefault(); if(!S.promoBusy&&S.step===1) appliquerPromo(f.elements.code.value);});
-document.addEventListener("submit",e=>{const f=e.target.closest("[data-adresse]"); if(!f) return; e.preventDefault(); if(S.step===1) verifierAdresse(f.elements.email.value);});
 document.addEventListener("keydown",e=>{const b=e.target.closest&&e.target.closest('[data-act="opt"]'); if(b&&(e.key===" "||e.key==="Enter")){e.preventDefault();b.click();}});
 $("back").addEventListener("click",()=>{ if(history.length>1&&document.referrer) history.back(); else location.href="/tarifs.html"; });
 
@@ -298,8 +294,7 @@ function suspendre(t){ ++_seq; destroyAll(); $("co").innerHTML=waitHTML(t); }
 // paiement partiel
 function fallback(el){
   const items=panier(), acc=compte(), seul=items.length===1&&!S.promo;
-  const adr=acc?acc.email:S.adresse;
-  const url="https://whop.com/checkout/"+encodeURIComponent(items[0])+(adr?"?email="+encodeURIComponent(adr)+"&email.disabled=1":"");
+  const url="https://whop.com/checkout/"+encodeURIComponent(items[0])+(acc?"?email="+encodeURIComponent(acc.email)+"&email.disabled=1":"");
   el.innerHTML=`<div class="whop-wait" style="position:static;padding:30px 0"><span>Le module de paiement ne s'affiche pas (bloqueur de publicités ou connexion lente ?).</span>
    <button type="button" class="promo-link" data-act="retry">Réessayer</button>
    ${seul?`<span>Tu peux aussi payer sur la page sécurisée Whop${acc?" : ton adresse y est reprise, les crédits arrivent sur ton compte.":" : ton compte AvatarAds est créé avec l'adresse saisie là-bas, connecte-toi ensuite avec elle (code par e-mail)."}</span><a href="${esc(url)}" target="_blank" rel="noopener">Payer sur la page sécurisée Whop</a>`
@@ -343,36 +338,6 @@ function garde(){
    <button class="cta" type="button" data-act="bas-ok"><span>J'ai compris, continuer</span>${FLECHE}</button></div>`;
   return "";
 }
-/* ── Abonnement acheté sans être connecté (Axel 24/10 : « l'achat doit juste être refusé et dire qu'il a déjà un plan en
-   cours ») : l'adresse est demandée AVANT le module Whop et vérifiée (paiement-compte, action adresse). Abonnement déjà en
-   cours → refus + connexion (le changement de plan se fait depuis l'espace) ; sinon le module s'ouvre avec CETTE adresse,
-   verrouillée. Vérification impossible (réseau) → on laisse payer : le webhook met de côté un achat douteux. */
-function adresseHTML(){
-  return `<form class="pack-login" data-adresse novalidate><p class="step-p">Entre ton adresse e-mail : ton compte AvatarAds est créé avec elle. Le paiement par carte bancaire ou Apple Pay s'affiche juste après.</p>
-   <input class="adr-in" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="ton@email.com" value="${esc(S.adrDraft||"")}" aria-label="Adresse e-mail">
-   ${S.adrErr?`<div class="promo-err" role="alert">${S.adrErr}</div>`:""}
-   <button class="cta" type="submit"${S.adrBusy?" disabled":""}><span>${S.adrBusy?"Vérification…":"Continuer vers le paiement"}</span>${FLECHE}</button>
-   <a class="promo-link adr-alt" href="/connexion.html">J'ai déjà un compte : me connecter</a></form>`;
-}
-async function verifierAdresse(v){
-  const email=String(v||"").trim().toLowerCase(); S.adrDraft=email;
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ S.adrErr="Entre une adresse e-mail valide."; mountWhop(); return; }
-  if(S.adrBusy) return; S.adrBusy=true; S.adrErr=""; mountWhop();
-  let j=null;
-  try{ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),8000);
-    j=await fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"adresse",email})}).then(x=>x.json());
-    clearTimeout(t); }catch(_){ j=null; }
-  S.adrBusy=false;
-  if(j&&j.ok&&j.abonne){
-    $("co").innerHTML=`<div class="pack-login"><p class="step-p">L'adresse <b>${esc(email)}</b> a déjà un abonnement AvatarAds en cours. Connecte-toi pour changer de plan depuis ton espace.</p>
-     <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a>
-     <button type="button" class="promo-link adr-alt" data-act="adr-autre">Utiliser une autre adresse</button></div>`;
-    return;
-  }
-  if(j&&j.ok===false&&j.error==="rate"){ S.adrErr="Trop d'essais, réessaie dans quelques minutes."; mountWhop(); return; }
-  if(j&&j.ok===false&&j.error==="email"){ S.adrErr="Entre une adresse e-mail valide."; mountWhop(); return; }
-  S.adresse=email; mountWhop();
-}
 function mountWhop(){
   const seq=++_seq; destroyAll();
   const box=$("co"), items=panier().map(plan=>({plan,quantity:1}));
@@ -382,8 +347,6 @@ function mountWhop(){
   if(!_planPret){ box.innerHTML=waitHTML("Chargement du paiement…"); return; }   // plan du compte pas encore lu
   if(S.promoPending){ box.innerHTML=waitHTML("Mise à jour du total…"); return; }   // devis en cours : il remontera le module
   const g=garde(); if(g){ box.innerHTML=g; return; }
-  // abonnement acheté SANS session (Axel 24/10) : l'adresse d'abord, vérifiée côté serveur, puis verrouillée dans le module
-  if(!compte()&&!S.packSeul&&!S.adresse){ box.innerHTML=adresseHTML(); return; }
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>'; garderPanier();
   // PAS de returnUrl (Axel 23/10, achat test iPhone) : avec une adresse de retour, Whop renvoie l'onglet à la fin du
   // paiement et fait d'abord passer l'acheteur sans compte Whop par son écran « entrez le code » sur whop.com. Sans elle,
@@ -393,12 +356,11 @@ function mountWhop(){
     if(seq!==_seq) return;
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
     // en tête du module quand l'appareil le propose
-    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!(acc||S.adresse)),onComplete:()=>{ if(seq!==_seq) return; figer();
+    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:()=>{ if(seq!==_seq) return; figer();
         if(!box.querySelector(".whop-wait")) box.insertAdjacentHTML("afterbegin",waitHTML("Confirmation du paiement…").replace("whop-wait","whop-wait fin")); veiller(true); }},
       meta,S.promo?{promoCode:S.promo.code}:{}));
     let ready=false;
-    const adr=acc?acc.email:S.adresse;   // compte connecté, ou adresse vérifiée à l'étape précédente : verrouillée chez Whop
-    _co.create("checkout",Object.assign(adr?{buyerEmail:adr,lockBuyerEmail:true}:{},{
+    _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
       onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove(); veiller(false);},
       onError:e=>{ if(!ready&&seq===_seq) fallback(box); else console.warn("[whop]",e&&(e.code||e.message)); }
     })).mount(box.querySelector(".whop-mount"));
@@ -430,10 +392,13 @@ const ATTENTE_MS=90e3;   // au-delà, la roue fait place à un message (audit 23
 // module affiché : vérification toutes les 4 s (30 min) ; fin du module ou retour de la banque : tout de suite puis toutes
 // les 1,5 s (le webhook arrive en quelques secondes)
 function veiller(vite){ if(_paye) return; _veilleFin=Date.now()+30*60e3;
-  if(vite&&!_vite){ _vite=true; clearInterval(_veille); _veille=0; if(!_attente) _attente=Date.now(); }
-  if(!_veille) _veille=setInterval(verifier,_vite?1500:4000); if(vite) verifier(); }
+  if(vite&&!_vite){ _vite=true; _viteT0=Date.now(); clearInterval(_veille); _veille=0; if(!_attente) _attente=Date.now(); }
+  if(!_veille) _veille=setInterval(verifier,_vite?800:4000); if(vite) verifier(); }   // après le paiement : toutes les 0,8 s
+let _viteT0=0, _lent=false;
 async function verifier(){
   if(_paye) return;
+  // 0,8 s pendant les 20 premières secondes, puis 2 s (plafond de paiement-compte : 400 appels / 10 min par IP)
+  if(_vite&&!_lent&&_veille&&Date.now()-_viteT0>20e3){ _lent=true; clearInterval(_veille); _veille=setInterval(verifier,2000); }
   if(Date.now()>_veilleFin){ clearInterval(_veille); _veille=0; if(_attente) tarde(_dernier); return; }
   let r=null; try{ r=await appel({action:"etat",nonce:NONCE}); }catch(_){ return; }
   if(_paye||!r) return;
@@ -472,7 +437,7 @@ function lignes(){
   return [{n:"Plan "+p.n+(y?" annuel":""),q:1,p:y?p.y:p.m}].concat(ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>({n:a.t,q:1,p:a.p})));
 }
 function garderPanier(){ if(retourBanque||_fige) return; const acc=compte();
-  try{ sessionStorage.setItem("aa_pay_order",JSON.stringify({lines:lignes(),promo:S.promo?S.promo.code:null,total:S.promo?S.promo.total:total(),email:acc?acc.email:(S.adresse||null)})); }catch(_){} }
+  try{ sessionStorage.setItem("aa_pay_order",JSON.stringify({lines:lignes(),promo:S.promo?S.promo.code:null,total:S.promo?S.promo.total:total(),email:acc?acc.email:null})); }catch(_){} }
 function apresPaiement(){
   destroyAll(); $("co").innerHTML=waitHTML("Paiement confirmé…");
   try{ sessionStorage.setItem("aa_pay_ok",NONCE); sessionStorage.removeItem("aa_pay_nonce");   // un autre achat dans cet onglet aura son identifiant
