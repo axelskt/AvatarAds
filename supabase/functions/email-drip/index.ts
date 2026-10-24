@@ -10,7 +10,8 @@ import { PROSPECTS, LONGUE, CLIENTS, ROTATION, ZERO } from '../_shared/email-v2-
 // répétés ne renvoient jamais deux fois le même e-mail. L'identifiant Resend est ensuite rangé dans
 // email_log.resend_id : c'est la clé des statistiques (email-events reçoit ouvertures / clics / rebonds).
 //   · prospects (plan free) : inscription, H+2, J+1, J+3, J+5, J+7, J+10, J+14, puis une idée toutes les
-//     2 semaines dès J+28 jusqu'à l'abonnement (Black Friday en novembre) ;
+//     2 semaines dès J+28 jusqu'à l'abonnement (Black Friday en novembre) ; abonnés qui résilient et anciens
+//     abonnés : directement l'idée toutes les 2 semaines (Axel 24/10) ;
 //   · clients : première vidéo (J+2 sans création), relance après 7 jours sans création, l'idée de la semaine
 //     (5 fonctionnalités en boucle), 1 e-mail tous les 2 jours au plus. La bienvenue (c0) part de whop-webhook ;
 //   · abonnés à 0 crédit (z0) : 1 par mois au plus, jamais pendant une annulation — activé quand Z0_LIVE = true.
@@ -130,17 +131,17 @@ serve(async (req) => {
     return json({ ok, envoye: ok, raison: ok ? null : 'bienvenue déjà envoyée ou envoi refusé' })
   }
 
-  // ── 1) Prospects : plan free sans aucun achat ──
-  // Un client qui a payé ne reçoit pas la série prospects : les packs one-shot ne changent pas le plan, on exclut
-  // donc toute trace d'achat (whop_member_id posé ou bought_credits > 0). drip_anchor = created_at par défaut ;
-  // le remettre à now() REDÉMARRE la série pour un compte.
+  // ── 1) Prospects : tout compte qui n'est pas (ou plus) un client abonné ──
+  // Axel 24/10 : un abonné qui RÉSILIE quitte les e-mails clients tout de suite (pas à la fin de sa période) et redevient
+  // prospect, comme un ancien abonné (plan free, packs achetés compris — avant : exclu de tout, plus aucun e-mail).
+  // Les anciens clients n'ont pas la série d'accueil (inscription, Omni H+2…) : directement l'idée toutes les 2 semaines
+  // (suite longue), jusqu'au réabonnement. drip_anchor = created_at par défaut ; le remettre à now() REDÉMARRE la série.
   {
     if (budget === 0) console.log(`📬 email-drip: quota du jour atteint (${used}/${DAILY_CAP} sur 24 h) — seul p0 part`)
     const { data: users } = await sb.from('profiles')
-      .select('id, email, first_name, drip_anchor')
-      .eq('plan', 'free').eq('email_optout', false)
-      .is('whop_member_id', null)
-      .or('bought_credits.is.null,bought_credits.eq.0')
+      .select('id, email, first_name, drip_anchor, plan, whop_member_id, bought_credits, whop_cancel_at_period_end')
+      .eq('email_optout', false)
+      .or('plan.eq.free,whop_cancel_at_period_end.eq.true')
       .not('drip_anchor', 'is', null)
       .order('drip_anchor', { ascending: false })
       .limit(2000)
@@ -149,7 +150,8 @@ serve(async (req) => {
     const today = new Date(now)
     for (const u of list) {
       if (sent >= MAX_SENDS) break
-      const age = now - Date.parse(u.drip_anchor)
+      const ancienClient = u.plan !== 'free' || !!u.whop_member_id || (u.bought_credits ?? 0) > 0
+      const age = ancienClient ? Math.max(now - Date.parse(u.drip_anchor), LONG_START) : now - Date.parse(u.drip_anchor)
       const l = last.get(u.id) ?? { at: 0, legacyAt: 0 }
       // Transition : après un e-mail de l'ancienne série, on attend 20 h (jamais deux e-mails le même jour)
       if (now - l.legacyAt < 20 * 3600_000) continue
@@ -170,10 +172,12 @@ serve(async (req) => {
 
   // ── 2) Clients : première vidéo, relance d'inactivité, 0 crédit, l'idée de la semaine ──
   // Point de départ = bienvenue envoyée par whop-webhook (email_log 'welcome'), sinon création du compte.
+  // Abonnés qui ont résilié : exclus (repassés en prospects ci-dessus).
   if (sent < budget) {
     const { data: users } = await sb.from('profiles')
       .select('id, email, first_name, plan, created_at, credits_remaining, whop_cancel_at_period_end')
       .in('plan', ['starter', 'pro', 'elite']).eq('email_optout', false)
+      .eq('whop_cancel_at_period_end', false)
       .limit(2000)
     const list = (users ?? []).filter((u) => u.email)
     const ids = list.map((u) => u.id)
