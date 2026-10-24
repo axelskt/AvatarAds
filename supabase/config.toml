@@ -84,3 +84,6 @@ verify_jwt = false
 # x-cron-key) et par le kit (session propriétaire vérifiée DANS la fonction), donc pas de JWT à la passerelle
 [functions.kit-recharge]
 verify_jwt = false
+
+[functions.purge-decupleur]
+verify_jwt = false
