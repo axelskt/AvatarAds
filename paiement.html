@@ -105,7 +105,8 @@ input,select{font-family:inherit;color:inherit}
 /* « Réduire les animations » (iPhone d'Axel) : la roue tourne quand même, et le texte des étapes avance */
 @media (prefers-reduced-motion:reduce){.pay-run i,.whop-wait i{animation:spin .8s linear infinite!important}.pay-step,.wait-step{animation:pulse 1.6s ease-in-out infinite}}
 @keyframes pulse{50%{opacity:.55}}
-.whop-wait.fin{position:fixed;inset:0;z-index:60;background:rgba(255,255,255,.97);font-size:15.5px}   /* fin du module : attente de la confirmation serveur sur TOUT l'écran (Axel 24/10 : « petit freeze ») */
+.whop-wait.fin{position:fixed;inset:0;z-index:60;background:rgba(255,255,255,.97);font-size:15.5px}
+.whop-wait.apres{z-index:3;background:#fff;font-size:15.5px}   /* après le défi bancaire : Whop traite, rien d'animé chez lui */   /* fin du module : attente de la confirmation serveur sur TOUT l'écran (Axel 24/10 : « petit freeze ») */
 .legal{font-size:13.5px;color:var(--text-2);text-align:center;line-height:1.55;margin:-8px 0 0}
 .step-p{font-size:15px;color:var(--text-2);line-height:1.55;margin-bottom:22px}
 .pack-login{padding:6px 0 4px}.pack-login .cta{margin-top:18px}
@@ -305,8 +306,24 @@ function appearance(lock){return {theme:{appearance:"light",accentColor:"orange"
     // adresse : bloc groupé de Whop (des pilules débordaient de son cadre) → seulement le fond gris, comme la carte
     "whop-AddressFieldInput":{backgroundColor:"#F6F7F8"},"whop-AddressFieldSelect":{backgroundColor:"#F6F7F8"},
     "whop-CheckoutPayButton":{backgroundColor:"#FFC107",color:"#1A1300",borderRadius:"999px",height:"58px",fontSize:"18px",fontWeight:"500",boxShadow:"0 14px 30px -14px rgba(255,180,0,.75)"}}}}
+/* Fin du paiement : le cadre « _controller » du module Whop déplace l'onglet LUI-MÊME (window.open(url,"_top")) vers une
+   destination décidée par le serveur Whop — l'accueil chez nous : 3 achats test d'Axel le 24/10, même avec returnUrl, même
+   avec allowCompletionNavigation:false, même après le réglage « Redirection après paiement » des produits. Le SDK pose
+   lui-même « allow-top-navigation » sur ce cadre : on le retire au moment où il le pose (avant l'insertion dans la page,
+   donc avant son chargement). Le cadre garde tout le reste (scripts, API, fenêtres) ; seul le déplacement de l'onglet lui
+   est refusé → onComplete arrive, notre veille emmène sur « Paiement confirmé ». Le cadre du formulaire (Apple Pay, étape
+   bancaire) n'est pas touché. */
+(function(){
+  const P=HTMLIFrameElement.prototype, sa=P.setAttribute, ctrl=el=>/\/checkout\/_controller\//.test(el.getAttribute("src")||"");
+  P.setAttribute=function(n,v){
+    if(String(n).toLowerCase()==="sandbox"&&ctrl(this)) v=String(v).split(/\s+/).filter(t=>t&&!/^allow-top-navigation/.test(t)).join(" ");
+    return sa.call(this,n,v);
+  };
+  const d=Object.getOwnPropertyDescriptor(P,"src");
+  if(d&&d.set) Object.defineProperty(P,"src",{configurable:true,enumerable:d.enumerable,get:d.get,set(v){ d.set.call(this,v); if(ctrl(this)&&this.hasAttribute("sandbox")) this.setAttribute("sandbox",this.getAttribute("sandbox")); }});
+})();
 let _co=null,_seq=0;
-function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null; jeterVoile();}
+function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null; jeterVoile(); finBanque();}
 function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span><small class="wait-step" aria-live="polite"></small></div>`}
 // étapes affichées sous la roue : on voit que ça avance même quand l'iPhone coupe les animations (Axel 24/10)
 const ETAPES=["Validation bancaire…","Activation de ton accès…","Encore un instant…"];   // courts : tiennent dans le bouton sur iPhone
@@ -332,7 +349,24 @@ function lieuPaiement(){
 function demande(){ _demandeA=Date.now(); const l=lieuPaiement(); clearTimeout(_demandeT);
   if(l) enCours(false,l); else _demandeT=setTimeout(()=>{ if(!_voile) enCours(false,"ap") },800); }   // carte : le paiement part aussitôt
 function lancement(){ clearTimeout(_demandeT);
-  enCours(true,_voile?_voile.lieu:Date.now()-_demandeA<800?"carte":lieuPaiement()||"carte"); veiller(true); }
+  enCours(true,_voile?_voile.lieu:Date.now()-_demandeA<800?"carte":lieuPaiement()||"carte"); veiller(true); veillerBanque(); }
+// Étape bancaire (défi 3DS imposé par le compte Whop) : le défi de la banque remplace le formulaire DANS le module (grand
+// changement de hauteur n° 1 → notre bouton se retire, le défi doit rester utilisable). Quand le défi disparaît (changement
+// n° 2), Whop traite le paiement 1 à 3 s sans rien montrer d'animé (Axel : « freeze ») → « Encore un instant… » couvre le
+// module jusqu'à onComplete. Un 3e changement (formulaire de retour après un refus) rend le module.
+let _banque=null;
+function veillerBanque(){
+  const f=document.querySelector("#co .whop-mount iframe"); if(!f||_banque||!("ResizeObserver" in window)) return;
+  const b={ro:null,t:0,n:0,h:f.getBoundingClientRect().height};
+  b.ro=new ResizeObserver(()=>{ if(_fige||_paye) return finBanque();
+    const h=f.getBoundingClientRect().height; if(Math.abs(h-b.h)<120) return; b.h=h; b.n++;
+    if(b.n===1) jeterVoile(); else if(b.n===2) apresBanque(); else { finBanque(); } });
+  b.ro.observe(f); _banque=b; b.t=setTimeout(finBanque,15*60e3);
+}
+function apresBanque(){ const box=$("co"); if(!box||_fige||_paye||box.querySelector(".whop-wait")) return;
+  box.insertAdjacentHTML("afterbegin",waitHTML("Encore un instant…").replace("whop-wait","whop-wait apres")); }
+function finBanque(){ if(!_banque) return; try{ _banque.ro.disconnect() }catch(_){} clearTimeout(_banque.t); _banque=null;
+  document.querySelectorAll("#co .whop-wait.apres").forEach(e=>e.remove()); }
 function enCours(lance,lieu){
   const box=$("co"), f=box&&box.querySelector(".whop-mount iframe");
   if(!box||!f||_fige) return;
@@ -432,7 +466,7 @@ function mountWhop(){
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
     // en tête du module quand l'appareil le propose
     _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:()=>{ if(seq!==_seq) return; figer();
-        if(!box.querySelector(".whop-wait")) box.insertAdjacentHTML("afterbegin",waitHTML("Paiement accepté, confirmation…").replace("whop-wait","whop-wait fin")); etapes(); veiller(true); }},
+        finBanque(); if(!box.querySelector(".whop-wait")) box.insertAdjacentHTML("afterbegin",waitHTML("Paiement accepté, confirmation…").replace("whop-wait","whop-wait fin")); etapes(); veiller(true); }},
       meta,S.promo?{promoCode:S.promo.code}:{}));
     let ready=false;
     _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
