@@ -2128,7 +2128,9 @@
   //    aujourd'hui), le nom + la description de ce qu'on voit, puis les formats pas encore publiés sur ce réseau.
   //    « Voir l'exemple » : la vidéo publiée la plus vue dont on a le fichier, sinon le stock, sinon un test (RPC
   //    factory_format_stats, CF.fmt).
-  var FMT_ST = { actif: ['en cours', 'is-ok'], test: ['à tester', 'is-warn'], arrete: ['plus produit', ''] };
+  // statut du format (Axel 24/10 : « c'est quoi plus produit / en cours ? ») : dit en clair ce que l'usine en fait
+  var FMT_ST = { actif: ['en fabrication', 'is-ok'], test: ['en test', 'is-warn'], arrete: ['on n’en fait plus', ''] };
+  var FMT_TOP = 5;   // Axel 24/10 : les 5 premiers, puis « Voir plus »
   var FMT_NETS = [['all', 'Tout'], ['ig', 'Instagram'], ['tt', 'TikTok']];
   var FMT_NET_L = { instagram: 'Instagram', tiktok: 'TikTok' };
   var FMT_LINK = /(^|\.)(instagram\.com|tiktok\.com)$/i;
@@ -2144,13 +2146,13 @@
       : 'pas encore publié' + where;
     if (f.en_stock) meta += ' · ' + fInt(f.en_stock) + '\u00a0' + plural(f.en_stock, 'prête', 'prêtes') + ' à poster';
     var ex = fmtHasEx(f) ? '<button type="button" class="cf-fmt-ex" data-act="fmt-ex" data-fid="' + esc(f.id) + '">Voir l’exemple</button>' : '';
+    // Axel 24/10 : plus de description dans la liste (elle reste dans « Voir l'exemple »), le lien à droite du titre
     return '<div class="cf-fmt-r' + (on ? '' : ' is-wait') + (f.statut === 'arrete' ? ' is-off' : '') + '">'
       + (on ? '<span class="cf-mrank' + (i === 0 && v != null ? ' is-acc' : '') + '">' + (i + 1) + '</span>' : '<span class="cf-mrank"></span>')
-      + '<div class="cf-fmt-t"><div class="cf-fmt-n"><b>' + esc(f.nom) + '</b><span class="cf-pill ' + st[1] + '">' + esc(st[0]) + '</span></div>'
-      + '<div class="cf-fmt-d">' + esc(f.description || '') + '</div></div>'
-      + (on ? '<div class="cf-fmt-v"><b>' + (v == null ? '—' : esc(fInt(v))) + '</b><span>vues / vidéo</span></div>' : '<div></div>')
-      + (on ? '<span class="cf-pbar' + (i === 0 ? '' : ' is-low') + '"><i style="width:' + (v == null ? 0 : Math.max(3, v / mx * 100)).toFixed(1) + '%"></i></span>' : '')
-      + '<div class="cf-fmt-m"><span>' + esc(meta) + '</span>' + ex + '</div></div>';
+      + '<div class="cf-fmt-t"><div class="cf-fmt-n"><b>' + esc(f.nom) + '</b>' + ex + '</div></div>'
+      + (on ? '<span class="cf-pbar' + (i === 0 ? '' : ' is-low') + '"><i style="width:' + (v == null ? 0 : Math.max(3, v / mx * 100)).toFixed(1) + '%"></i></span>'
+        + '<div class="cf-fmt-v"><b>' + (v == null ? '—' : esc(fInt(v))) + '</b><span>vues / vidéo</span></div>' : '')
+      + '<div class="cf-fmt-m"><span class="cf-pill ' + st[1] + '">' + esc(st[0]) + '</span><span>' + esc(meta) + '</span></div></div>';
   }
   function fmtHTML() {
     var S = CF.fmt, L = S.data && S.data.list, net = fmtNet();
@@ -2158,7 +2160,6 @@
       var on = x[0] === net;
       return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="fmt-net" data-k="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>';
     }).join('') + '</div>';
-    var legend = '<div class="cf-fmt-leg">Le chiffre = les vues d’une vidéo typique du format : la moitié de ses vidéos fait plus, l’autre moitié moins.</div>';
     if (!L) return '<section class="cf-card cf-fmt" data-block="formats">' + seg
       + (S.state === 'error' ? emptyLine('—', S.error) : spin('Chargement des formats…')) + '</section>';
     var n = function (f) { return net === 'ig' ? f.ig_posts : net === 'tt' ? f.tt_posts : f.all_posts; };
@@ -2168,11 +2169,14 @@
       .sort(function (a, b) { return (med(b) == null ? -1 : med(b)) - (med(a) == null ? -1 : med(a)) || n(b) - n(a); });
     var off = L.filter(function (f) { return !n(f); }).sort(function (a, b) { return (b.en_stock || 0) - (a.en_stock || 0) || a.ordre - b.ordre; });
     var mx = Math.max.apply(null, on.map(function (f) { return med(f) || 0; }).concat([1]));
-    var rows = on.length ? '<div class="cf-fmt-list">' + on.map(function (f, i) { return fmtRowHTML(f, i, n(f), med(f), mxOf(f), mx, net); }).join('') + '</div>'
+    var all = !!ui.fmtAll, shown = all ? on : on.slice(0, FMT_TOP), cache = on.length - shown.length + (all ? 0 : off.length);
+    var rows = on.length ? '<div class="cf-fmt-list">' + shown.map(function (f, i) { return fmtRowHTML(f, i, n(f), med(f), mxOf(f), mx, net); }).join('') + '</div>'
       : emptyLine('—', 'aucun format publié' + (net === 'ig' ? ' sur Instagram' : net === 'tt' ? ' sur TikTok' : ''));
-    var wait = off.length ? '<div class="cf-fmt-wait"><div class="cf-over">Pas encore publiés' + (net === 'ig' ? ' sur Instagram' : net === 'tt' ? ' sur TikTok' : '') + '</div>'
+    var wait = all && off.length ? '<div class="cf-fmt-wait"><div class="cf-over">Pas encore publiés' + (net === 'ig' ? ' sur Instagram' : net === 'tt' ? ' sur TikTok' : '') + '</div>'
       + '<div class="cf-fmt-list">' + off.map(function (f, i) { return fmtRowHTML(f, i, 0, null, null, mx, net); }).join('') + '</div></div>' : '';
-    return '<section class="cf-card cf-fmt" data-block="formats">' + seg + legend + rows + wait + '</section>';
+    var more = all ? '<button type="button" class="cf-fmt-more" data-act="fmt-all" aria-expanded="true">Voir moins</button>'
+      : cache > 0 ? '<button type="button" class="cf-fmt-more" data-act="fmt-all" aria-expanded="false">Voir plus · ' + fInt(cache) + ' ' + plural(cache, 'format') + '</button>' : '';
+    return '<section class="cf-card cf-fmt" data-block="formats">' + seg + rows + wait + more + '</section>';
   }
   // Fenêtre « Voir l'exemple » : la vidéo (fichier de notre stockage) + d'où elle vient, et la plus vue du format si ce
   // n'est pas la même (lien Instagram / TikTok, le fichier n'est pas toujours gardé)
@@ -5460,6 +5464,7 @@
         }
       }
       else if (act === 'fmt-net') { var fk = el.getAttribute('data-k'); ui.fmtNet = fk === 'ig' || fk === 'tt' ? fk : 'all'; render(); }
+      else if (act === 'fmt-all') { ui.fmtAll = !ui.fmtAll; render(); }
       else if (act === 'fmt-ex') { if (el.getAttribute('data-fid')) openModal({ fmtEx: el.getAttribute('data-fid') }, el); }
       else if (act === 'perf-kind') { if (perfKinds().some(function (x) { return x[0] === el.getAttribute('data-k'); })) { if (el.getAttribute('data-side') === 'low') ui.perfKindLow = el.getAttribute('data-k'); else ui.perfKind = el.getAttribute('data-k'); render(); } }
       else if (act === 'rec-filter') { if (['all', 'done', 'in_progress', 'pending', 'other', 'retired'].indexOf(el.getAttribute('data-k')) >= 0) { ui.recFilter = el.getAttribute('data-k'); render(); } }
