@@ -83,12 +83,20 @@ input,select{font-family:inherit;color:inherit}
 .whop-wait i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .whop-mount{position:relative;z-index:1}
-#payBar{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:70;display:flex;align-items:center;gap:12px;
-  background:#16181C;color:#fff;border-radius:16px;padding:14px 18px;font-size:15px;box-shadow:0 18px 40px -16px rgba(0,0,0,.5)}
-#payBar[hidden]{display:none}
-#payBar i{flex:none;width:18px;height:18px;border-radius:50%;border:2.2px solid rgba(255,255,255,.3);border-top-color:#FFC107;animation:spin .8s linear infinite}
+/* paiement parti (Axel 24/10 : « paiement en cours à la place du bouton jaune / du bouton Apple Pay ») : le bouton du module
+   est dans le cadre sécurisé de Whop, intouchable → module voilé et NOTRE bouton jaune « Paiement en cours » posé à la place
+   du sien (--pb : hauteur des conditions Whop sous le bouton) ; collant en bas de l'écran quand le bouton est hors vue
+   (paiement Apple Pay, lancé depuis le haut du module) */
+.pay-veil{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px var(--pb,140px);
+  background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.pay-run{position:sticky;bottom:calc(46px + env(safe-area-inset-bottom))}
+.pay-run small{position:absolute;left:0;right:0;top:100%;margin-top:10px;text-align:center}   /* hors du flux : le bouton seul se cale sur celui de Whop */
+.pay-run b{width:100%;height:58px;border-radius:999px;background:#FFC107;color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);
+  display:flex;align-items:center;justify-content:center;gap:12px;font-size:18px;font-weight:500}
+.pay-run i{flex:none;width:19px;height:19px;border-radius:50%;border:2.4px solid rgba(26,19,0,.22);border-top-color:#1A1300;animation:spin .8s linear infinite}
 .wait-step{font-size:13px;color:var(--text-2);min-height:1.2em}
-@media (prefers-reduced-motion:reduce){#payBar span,.wait-step{animation:pulse 1.6s ease-in-out infinite}}
+/* « Réduire les animations » (iPhone d'Axel) : la roue tourne quand même, et le texte des étapes avance */
+@media (prefers-reduced-motion:reduce){.pay-run i,.whop-wait i{animation:spin .8s linear infinite!important}.pay-run b span,.wait-step{animation:pulse 1.6s ease-in-out infinite}}
 @keyframes pulse{50%{opacity:.55}}
 .whop-wait.fin{position:fixed;inset:0;z-index:60;background:rgba(255,255,255,.97);font-size:15.5px}   /* fin du module : attente de la confirmation serveur sur TOUT l'écran (Axel 24/10 : « petit freeze ») */
 .legal{font-size:13.5px;color:var(--text-2);text-align:center;line-height:1.55;margin:-8px 0 0}
@@ -251,6 +259,7 @@ document.addEventListener("click",e=>{
   if(act==="promo-open"){S.promoOpen=true; r(); const z=(b.closest("#mSum")?$("mSum"):$("rPlan")).querySelector("[data-promo] input"); if(z) z.focus(); return;}
   if(act==="promo-del"){++_devis; S.promo=null; S.promoErr=""; S.promoBusy=false; S.promoPending=""; r(); mountWhop(); return;}
   if(act==="retry"){_wp=null; mountWhop(); return;}   // module Whop qui ne s'affichait pas
+  if(act==="voir-module"){jeterVoile(); return;}   // « Paiement en cours » qui dure : le module redevient visible
   if(act==="bas-ok"){S.basOk=S.plan; mountWhop(); return;}   // palier inférieur accepté après l'avertissement
   const before=cartKey(), code=(S.promo&&S.promo.code)||S.promoPending;
   if(act==="bill") S.bill=S.bill==="y"?"m":"y";
@@ -291,21 +300,46 @@ function appearance(lock){return {theme:{appearance:"light",accentColor:"orange"
     "whop-AddressFieldInput":{backgroundColor:"#F6F7F8"},"whop-AddressFieldSelect":{backgroundColor:"#F6F7F8"},
     "whop-CheckoutPayButton":{backgroundColor:"#FFC107",color:"#1A1300",borderRadius:"999px",height:"58px",fontSize:"18px",fontWeight:"500",boxShadow:"0 14px 30px -14px rgba(255,180,0,.75)"}}}}
 let _co=null,_seq=0;
-function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null;}
+function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null; jeterVoile();}
 function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span><small class="wait-step" aria-live="polite"></small></div>`}
 // étapes affichées sous la roue : on voit que ça avance même quand l'iPhone coupe les animations (Axel 24/10)
 const ETAPES=["Validation par ta banque…","Activation de ton accès…","Encore quelques secondes…"];
 let _etapesT=0;
 function etapes(){ clearInterval(_etapesT); let k=0; const maj=()=>{ document.querySelectorAll(".wait-step").forEach(el=>{ el.textContent=ETAPES[Math.min(k,ETAPES.length-1)] }); k++; };
   _etapesT=setInterval(maj,2500); }
-// bandeau « Paiement en cours » posé dès le clic sur payer (bouton Apple Pay ou carte) ; retiré tout seul si rien ne suit
-// (feuille Apple Pay fermée, carte refusée : le module reste utilisable dessous)
-let _enCoursT=0;
-function enCours(){
-  let b=document.getElementById("payBar");
-  if(!b){ b=document.createElement("div"); b.id="payBar"; b.setAttribute("role","status"); document.body.appendChild(b); }
-  b.innerHTML='<i></i><span>Paiement en cours, ne ferme pas la page…</span>'; b.hidden=false;
-  clearTimeout(_enCoursT); _enCoursT=setTimeout(()=>{ if(!_paye&&!_fige) b.hidden=true; },40e3);
+// « Paiement en cours » dès le clic sur payer (Whop ne le signale qu'une fois la carte valide, ou à l'ouverture de la feuille
+// Apple Pay). Le voile part tout seul et rend le module (son message reste lisible) : module qui change de taille avant le
+// lancement du paiement, ou qui GRANDIT après (message d'erreur : carte refusée) ; 8 s après un clic sans paiement lancé
+// (feuille Apple Pay fermée) ; 60 s après le lancement. Jamais pendant l'étape bancaire (fenêtre Whop au-dessus de tout).
+// Au bout de 15 s, un lien sous le bouton rend le module à la main.
+let _voile=null;
+function enCours(lance){
+  const box=$("co"), f=box&&box.querySelector(".whop-mount iframe");
+  if(!box||!f||_fige) return;
+  if(!_voile||!_voile.v.isConnected){
+    jeterVoile();
+    // conditions Whop sous le bouton : ~147 px sur un module de 335 px de large, ~124 px à 520 px (mesuré le 24/10)
+    const w=f.getBoundingClientRect().width, pb=Math.round(Math.min(160,Math.max(110,147-.124*(w-335))));
+    const v=document.createElement("div"); v.className="pay-veil"; v.setAttribute("role","status"); v.style.setProperty("--pb",pb+"px");
+    v.innerHTML='<div class="pay-run"><b><i></i><span>Paiement en cours…</span></b><small class="wait-step">'+ETAPES[0]+'</small></div>';
+    box.appendChild(v); etapes();
+    const h0=f.getBoundingClientRect().height, vo={v,ro:null,tr:0,tf:0,tl:0,lance:false};
+    if("ResizeObserver" in window){ vo.ro=new ResizeObserver(()=>{ const d=f.getBoundingClientRect().height-h0;
+      if(Math.abs(d)<9||(vo.lance&&d<0)) return;   // après le lancement, un module qui rétrécit = écran de fin ou de traitement
+      clearTimeout(vo.tr); vo.tr=setTimeout(()=>retirerVoile(),1500); }); vo.ro.observe(f); }
+    vo.tl=setTimeout(()=>{ const sm=v.querySelector("small"); if(!sm) return; sm.className="";
+      sm.innerHTML='<button type="button" class="promo-link" data-act="voir-module">Rien ne bouge ? Afficher le module de paiement</button>'; },15e3);
+    _voile=vo;
+  }
+  if(lance) _voile.lance=true;
+  clearTimeout(_voile.tf); _voile.tf=setTimeout(()=>retirerVoile(),lance?60e3:8e3);
+}
+function jeterVoile(){ if(!_voile) return; const vo=_voile; _voile=null; clearTimeout(vo.tr); clearTimeout(vo.tf); clearTimeout(vo.tl);
+  try{ vo.ro&&vo.ro.disconnect() }catch(_){} vo.v.remove(); clearInterval(_etapesT); }
+function retirerVoile(){
+  if(!_voile||_fige||_paye) return;   // paiement abouti : la confirmation prend la main
+  if(document.querySelector("dialog[open]")){ clearTimeout(_voile.tf); _voile.tf=setTimeout(()=>retirerVoile(),3e3); return; }   // étape bancaire ouverte
+  jeterVoile();
 }
 // module retiré (devis en cours…) : plus rien de payable tant qu'il n'est pas remonté
 function suspendre(t){ ++_seq; destroyAll(); $("co").innerHTML=waitHTML(t); }
@@ -386,9 +420,9 @@ function mountWhop(){
     let ready=false;
     _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
       onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove(); veiller(false);},
-      // Axel 24/10 (« petit freeze ») : le bouton du module reste figé pendant le paiement → notre bandeau « Paiement en cours »
-      onCheckoutRequested:()=>{ if(seq===_seq) enCours(); },
-      onCheckoutInitiated:()=>{ if(seq===_seq){ enCours(); veiller(true); } },
+      // Axel 24/10 (« petit freeze ») : le bouton du module reste figé pendant le paiement → notre « Paiement en cours » à sa place
+      onCheckoutRequested:()=>{ if(seq===_seq) enCours(false); },
+      onCheckoutInitiated:()=>{ if(seq===_seq){ enCours(true); veiller(true); } },
       onError:e=>{ if(!ready&&seq===_seq) fallback(box); else console.warn("[whop]",e&&(e.code||e.message)); }
     })).mount(box.querySelector(".whop-mount"));
   }).catch(()=>{ if(seq===_seq) fallback(box); });

@@ -5998,7 +5998,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-1200'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-1300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -7698,6 +7698,20 @@ window.addEventListener('pageshow', function(e){ if(e && e.persisted && !current
 // soi-même, compte de 24 h au plus — ou rattrapage des perdus du 14 au 25/09 —, write-once). « Parrainage OU promo »
 // (Axel 11/09) est tranché au PAIEMENT par whop-webhook (coupon → pas de commission) : un ancien lien ?promo= ne fait donc
 // plus perdre le parrain. Réponse de la base (posé ou refusé) → on oublie le code ; erreur réseau → gardé.
+// « Nom du compte » vide : reprend le nom du compte Google (métadonnées de la connexion Google) et l'enregistre une fois sur
+// le profil ; l'utilisateur le change ensuite dans Mon compte. Rien pour une connexion par code (aucun nom connu).
+async function _aaNomGoogle(p){
+  const { data:{ session } } = await sb.auth.getSession(); const u = session && session.user;
+  if(!u || p.first_name || u.id !== p.id) return;
+  const pv = (u.app_metadata && u.app_metadata.providers) || [], md = u.user_metadata || {};
+  const n = String(md.full_name || md.name || md.given_name || '').trim().slice(0, 60);
+  if(pv.indexOf('google') < 0 || !n) return;
+  const { error } = await sb.from('profiles').update({ first_name: n }).eq('id', u.id);
+  if(error) return;
+  p.first_name = n; if(currentMember && currentMember.id === u.id) currentMember.first_name = n;
+  const m = document.getElementById('memberName'); if(m) m.textContent = n;
+  const inp = document.getElementById('accountFirstName'); if(inp && !inp.value) inp.value = n;
+}
 async function _aaRefSend(p){
   if(window._aaRefBusy) return;
   var ref = null;
@@ -7773,6 +7787,8 @@ function enterApp(profile){
   setTimeout(function(){ try{ _aaLeadSend(); }catch(e){} }, 1500);
   // Parrainage : posé ici pour TOUS les chemins de connexion (connexion.html OTP / Google, login intégré).
   setTimeout(function(){ try{ _aaRefSend(profile); }catch(e){} }, 1700);
+  // « Nom du compte » vide + connexion Google : le nom du compte Google par défaut (Axel 24/10)
+  if(!profile.first_name) setTimeout(function(){ _aaNomGoogle(profile).catch(function(){}); }, 1800);
   updateAccountMenu(profile);
   window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
   // Préchauffe les checkouts en fond dès la connexion → 1er clic sur un plan = ouverture instantanée
