@@ -25,6 +25,9 @@ window.__res=[]; window.__fini=false;
   await new Promise(r=>{f.onload=r; f.src=`/paiement.html?plan=${c.b}&bill=${c.bill}&t=${i}`;});
   const w=f.contentWindow, d=f.contentDocument, clic=id=>{const e=d.querySelector(`[data-id="${id}"]`); if(e) e.click(); return !!e};
   await sleep(300);
+  // posée avant les clics (chaque remontage du module la reprend) ; script en ligne : la CSP de la page interdit eval
+  const inj=code=>{const sc=d.createElement("script"); sc.textContent=code; d.head.appendChild(sc); sc.remove();};
+  inj("S.adresse='combo-test@example.com'");
   const ids=[...d.querySelectorAll("#opts .addon")].map(a=>a.dataset.id).join(",");
   const attenduIds=[NEXT[c.b]?"upgrade":"","credits","prio"].filter(Boolean).join(",");
   const err=[];
@@ -39,6 +42,9 @@ window.__res=[]; window.__fini=false;
   const du=eur(d.querySelector("#rPlan .due span:last-child").textContent), duM=eur(d.querySelector("#mSum .due span:last-child").textContent);
   const attendu=wt?Math.round((wt[0]+wt[1]+(c.pr?PRIO[c.bill][1]:0))*100)/100:NaN;
   if(Math.abs(du-attendu)>0.001||Math.abs(duM-attendu)>0.001) err.push(`total ${du} / mobile ${duM} ≠ Whop ${attendu}`);
+  // 24/10 : achat sans session → étape « adresse » avant le module ; adresse posée dans l'état de la page (le contrôle serveur
+  // est plafonné à 30 / h par IP, testé à part) puis module remonté avec elle
+  if(d.querySelector("[data-adresse]")) inj("S.adresse='combo-test@example.com'; mountWhop()");
   // module Whop : prêt (pas de fallback) en 20 s max
   let etat="attente"; for(let k=0;k<80;k++){ await sleep(250); const box=d.getElementById("co");
    if(box.innerText.includes("ne s'affiche pas")){etat="REFUSÉ";break}
