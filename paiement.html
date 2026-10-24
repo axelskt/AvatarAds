@@ -78,6 +78,7 @@ input,select{font-family:inherit;color:inherit}
 [hidden]{display:none!important}
 /* Apple Pay : replié tant que Whop n'a pas rendu de portefeuille (pas « hidden » : un bloc masqué mesure 0 et ne s'ouvrirait jamais) */
 .whop{position:relative;min-height:420px}
+.whop:has(> [data-adresse]),.whop:has(> .pack-login){min-height:0}   /* étape adresse / message : pas de place réservée au module (Axel 24/10) */
 .whop-wait{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-2);font-size:14px;text-align:center;padding:0 24px}
 .whop-wait i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -347,10 +348,10 @@ function garde(){
    cours → refus + connexion (le changement de plan se fait depuis l'espace) ; sinon le module s'ouvre avec CETTE adresse,
    verrouillée. Vérification impossible (réseau) → on laisse payer : le webhook met de côté un achat douteux. */
 function adresseHTML(){
-  return `<form class="pack-login" data-adresse novalidate><p class="step-p">Ton adresse e-mail : ton compte AvatarAds est créé avec elle, et tu t'y connectes ensuite.</p>
+  return `<form class="pack-login" data-adresse novalidate><p class="step-p">Entre ton adresse e-mail : ton compte AvatarAds est créé avec elle. Le paiement par carte bancaire ou Apple Pay s'affiche juste après.</p>
    <input class="adr-in" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="ton@email.com" value="${esc(S.adrDraft||"")}" aria-label="Adresse e-mail">
    ${S.adrErr?`<div class="promo-err" role="alert">${S.adrErr}</div>`:""}
-   <button class="cta" type="submit"${S.adrBusy?" disabled":""}><span>${S.adrBusy?"Vérification…":"Continuer"}</span>${FLECHE}</button>
+   <button class="cta" type="submit"${S.adrBusy?" disabled":""}><span>${S.adrBusy?"Vérification…":"Continuer vers le paiement"}</span>${FLECHE}</button>
    <a class="promo-link adr-alt" href="/connexion.html">J'ai déjà un compte : me connecter</a></form>`;
 }
 async function verifierAdresse(v){
