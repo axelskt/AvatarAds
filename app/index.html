@@ -13869,6 +13869,16 @@ function nav(id,el){
 // rien. Le résultat du changement de personnage est GARDÉ (_dc.master) : relancer des variantes ne le repaie pas.
 const DC_VARIANTS = [5, 10, 20, 50];
 const DC_CR_PER_VARIANT = 0.5;                       // 10 variantes = 5 crédits
+// Changement de personnage (Wan 3.0, kie, 720p) : 10 crédits par seconde gardée (Axel 24/10). Coût ≈ 0,17 $ / s (kie facture
+// référence + sortie) → marge ≥ 60 % partout sauf l'Élite 90 annuel (~58 %). Réservé Pro / Élite à l'ouverture (Axel 24/10 :
+// raison d'upgrader pour un Starter, et 150 cr/mois ne paient pas plus d'une quinzaine de secondes) ; owner / developer passent.
+const DC_PERSO_CR_SEC = 10;
+const DC_PERSO_PLANS = ['pro', 'elite'];
+function _dcPersoOk(){
+  try{ const p = String((currentMember && currentMember.plan) || '').toLowerCase(); return !!currentMember && (!!currentMember.is_owner || p === 'developer' || DC_PERSO_PLANS.includes(p)); }catch(_){ return false; }
+}
+// Crédits d'un lancement : variantes + changement de personnage à la seconde gardée (arrondie au-dessus, comme kie)
+const _dcCout = () => _dc.variants * DC_CR_PER_VARIANT + (_dc.face ? DC_PERSO_CR_SEC * Math.ceil(Math.max(0, _dc.b - _dc.a) - 0.01) : 0);
 const DC_ALTER = [
   { id:'mirror', ic:'copy2',    t:'Effet miroir' },
   { id:'pixels', ic:'grid',     t:'Pixels & grain' },
@@ -14071,6 +14081,7 @@ function _dcTrimPaint(onlyHead){
   if($('dcLa')) $('dcLa').textContent = _dcT(_dc.a);
   if($('dcLb')) $('dcLb').textContent = _dcT(_dc.b);
   if($('dcLk')) $('dcLk').textContent = 'Passage gardé · ' + _dcT(_dc.b - _dc.a);
+  if(_dc.face) _dcCtaRender();   // le prix du changement de personnage suit la durée gardée
 }
 // Poignées début / fin + fenêtre déplaçable en entier (minimum 1 s gardée)
 function _dcDrag(which, e){
@@ -14274,7 +14285,7 @@ function _dcCardsRender(){
     +   (on&&img ? '<span style="width:100%;height:100%;background:url('+img.url+') center/cover"></span>' : _dcI('user', 16, 'color:var(--accent-2)'))+'</span>'
     + '<span class="col" style="line-height:1.3;min-width:0">'
     +   '<span style="font-weight:600;font-size:14px">Changer le personnage</span>'
-    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(on ? (img ? 'X crédits / seconde' : 'Photo à ajouter') : 'Désactivé')+'</span>'
+    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(!_dcPersoOk() ? 'Réservé Pro et Élite' : on ? (img ? DC_PERSO_CR_SEC + ' crédits / seconde' : 'Photo à ajouter') : 'Désactivé')+'</span>'
     + '</span></button>'
     + '<button onclick="_dcOpen(\'adv\')" class="row" style="'+card+';border:1px solid var(--border);background:var(--surface)">'
     + '<span style="width:36px;height:36px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">'+_dcI('sliders', 16, 'color:var(--accent-2)')+'</span>'
@@ -14285,7 +14296,7 @@ function _dcCardsRender(){
 }
 function _dcCtaRender(){
   const l = document.getElementById('dcCtaLbl'); if(!l) return;
-  l.textContent = 'Décupler ×' + _dc.variants + ' — ' + _dcCr(_dc.variants * DC_CR_PER_VARIANT) + ' crédits' + (_dc.face ? ' + X / s' : '');
+  l.textContent = 'Décupler ×' + _dc.variants + ' — ' + _dcCr(_dcCout()) + ' crédits';
 }
 // Jamais grisé : sans vidéo (ou sans photo si le personnage est activé), le bouton tremble et dit quoi faire
 function _dcGo(){
@@ -14307,7 +14318,11 @@ function _dcGo(){
 }
 
 /* ---------- menus ---------- */
-function _dcOpen(m){ _dc.modal = m; _dcModalRender(); }
+function _dcOpen(m){
+  // Starter : le changement de personnage est une raison d'upgrader (Pro / Élite) — feuille des plans au lieu du menu
+  if(m === 'face' && !_dcPersoOk()){ try{ showPlansSheet('Changer le personnage', 'Disponible avec les plans Pro et Élite'); }catch(_){ toast('Changer le personnage : plans Pro et Élite'); } return; }
+  _dc.modal = m; _dcModalRender();
+}
 function _dcClose(){ _dc.modal = null; _dcModalRender(); }
 function _dcToggleHTML(on, fn){
   return '<button type="button" role="switch" aria-checked="'+on+'" onclick="'+fn+'" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:'+(on?'var(--accent)':'var(--surface-3)')+';display:flex;justify-content:'+(on?'flex-end':'flex-start')+'">'
@@ -14331,7 +14346,7 @@ function _dcModalRender(){
       + '</button>'
       + '<div class="row" style="justify-content:space-between;margin-top:14px">'
       +   '<span class="mono faint" style="font-size:11px">720p</span>'
-      +   '<span class="mono" style="font-size:11px;color:var(--accent-2)">X crédits / seconde</span>'
+      +   '<span class="mono" style="font-size:11px;color:var(--accent-2)">'+DC_PERSO_CR_SEC+' crédits / seconde</span>'
       + '</div>'
       + '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="_dcClose()">Valider</button>';
   } else {

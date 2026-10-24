@@ -33,6 +33,8 @@ export const KIE_OPEN: Record<string, string[]> = {
 // (Axel 09/10) : échec = crédits rendus (KIE_NO_FALLBACK).
   'kling-2.6-mc': ['starter', 'pro', 'elite'],
   'kling-3.0-mc': ['pro', 'elite'],
+  // Décupleur « Changer le personnage » (wan-3) : developer SEULEMENT pendant les tests ; à l'ouverture (Axel 24/10) →
+  // 'wan-3': ['pro', 'elite'] + tirage de 10 cr par seconde gardée (référence + sortie facturées par kie).
 }
 export const KIE_MC_1080_PLANS = ['pro', 'elite']
 // Tarif d'une tâche Motion Control = celui du chemin fal équivalent (tarifVideoFal : 2.6 720p 2 cr/s · 2.6 1080p 3 cr/s ·
