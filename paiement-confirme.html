@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-8hVsgZA90CxDbgB6N9iC/Xog1DjwvQp0NsMcPGC6P3s='; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-X6tjT2cCnwXEfRMwvqUHjv0Vc+ssEMZKSx9v49gLPVA='; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Paiement confirmé — AvatarAds</title>
 <link rel="icon" href="/assets/avatarads-logo-96.png">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -80,7 +80,11 @@ h1{font-family:"Bricolage Grotesque";font-size:30px;font-weight:700;letter-spaci
 
 /* ── hors maquette : attente de la confirmation serveur, valeurs longues du ticket, 1er mot de passe ── */
 .wrap[hidden]{display:none}
-.attente{display:flex;justify-content:center;padding-top:30vh}
+.attente{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:30vh;color:var(--text-2,#5B626B);font-size:15px;text-align:center}
+/* « Réduire les animations » (Axel l'a activé) : ticket et confettis figés, mais l'indicateur d'attente continue (sinon la page
+   paraît bloquée) — sélecteurs par identifiant, plus forts que la règle globale ci-dessus */
+@media (prefers-reduced-motion:reduce){#attente i{animation:spin .8s linear infinite!important}#attenteTxt{animation:pulse 1.6s ease-in-out infinite!important}}
+@keyframes pulse{50%{opacity:.55}}
 .attente i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .r-row span:last-child{text-align:right;min-width:0;overflow-wrap:anywhere}
@@ -103,7 +107,7 @@ h1{font-family:"Bricolage Grotesque";font-size:30px;font-weight:700;letter-spaci
   <img class="logo" src="/assets/avatarads-logo.png" alt="AvatarAds">
 </div>
 
-<div class="attente" id="attente"><i></i></div>
+<div class="attente" id="attente"><i></i><span id="attenteTxt">Confirmation de ton paiement…</span></div>
 <div class="wrap" id="page" hidden>
   <div class="col-l">
     <div class="confetti" id="cL"></div>
@@ -180,11 +184,13 @@ const APERCU=new URLSearchParams(location.search).get("apercu");
   // le compte d'un acheteur sans compte et le reçu (paiement Whop) arrivent quelques secondes après l'activation.
   // Axel 24/10 (« un petit freeze de 2-3 s ») : la page s'affiche dès que le paiement est validé et le compte prêt ; le reçu
   // (n° de commande, carte, montant encaissé) se complète ensuite sur le ticket (completerRecu), sans attendre ici.
-  for(let i=0;i<14;i++){
+  for(let i=0;i<24;i++){
     R=await etat()||R;
     const pret=R&&R.paid&&R.compte!=="attente";
     if(pret&&(R.recu&&R.recu.total!=null||i>=1)) break;
-    if(R&&R.ok&&!R.paid&&i>=4) break;
+    // retour direct de Whop (adresse de retour) : le webhook peut arriver quelques secondes APRÈS l'onglet → on attend ~25 s
+    if(R&&R.ok&&!R.paid&&i>=20) break;
+    const t=document.getElementById("attenteTxt"); if(t) t.textContent=i<3?"Confirmation de ton paiement…":i<8?"Activation de ton accès…":"Encore quelques secondes…";
     await pause(pret?700:1200);
   }
   if(R&&R.ok&&!R.paid) return quitter();

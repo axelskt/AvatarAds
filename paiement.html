@@ -83,6 +83,13 @@ input,select{font-family:inherit;color:inherit}
 .whop-wait i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .whop-mount{position:relative;z-index:1}
+#payBar{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:70;display:flex;align-items:center;gap:12px;
+  background:#16181C;color:#fff;border-radius:16px;padding:14px 18px;font-size:15px;box-shadow:0 18px 40px -16px rgba(0,0,0,.5)}
+#payBar[hidden]{display:none}
+#payBar i{flex:none;width:18px;height:18px;border-radius:50%;border:2.2px solid rgba(255,255,255,.3);border-top-color:#FFC107;animation:spin .8s linear infinite}
+.wait-step{font-size:13px;color:var(--text-2);min-height:1.2em}
+@media (prefers-reduced-motion:reduce){#payBar span,.wait-step{animation:pulse 1.6s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.55}}
 .whop-wait.fin{position:fixed;inset:0;z-index:60;background:rgba(255,255,255,.97);font-size:15.5px}   /* fin du module : attente de la confirmation serveur sur TOUT l'écran (Axel 24/10 : « petit freeze ») */
 .legal{font-size:13.5px;color:var(--text-2);text-align:center;line-height:1.55;margin:-8px 0 0}
 .step-p{font-size:15px;color:var(--text-2);line-height:1.55;margin-bottom:22px}
@@ -285,7 +292,21 @@ function appearance(lock){return {theme:{appearance:"light",accentColor:"orange"
     "whop-CheckoutPayButton":{backgroundColor:"#FFC107",color:"#1A1300",borderRadius:"999px",height:"58px",fontSize:"18px",fontWeight:"500",boxShadow:"0 14px 30px -14px rgba(255,180,0,.75)"}}}}
 let _co=null,_seq=0;
 function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null;}
-function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span></div>`}
+function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span><small class="wait-step" aria-live="polite"></small></div>`}
+// étapes affichées sous la roue : on voit que ça avance même quand l'iPhone coupe les animations (Axel 24/10)
+const ETAPES=["Validation par ta banque…","Activation de ton accès…","Encore quelques secondes…"];
+let _etapesT=0;
+function etapes(){ clearInterval(_etapesT); let k=0; const maj=()=>{ document.querySelectorAll(".wait-step").forEach(el=>{ el.textContent=ETAPES[Math.min(k,ETAPES.length-1)] }); k++; };
+  _etapesT=setInterval(maj,2500); }
+// bandeau « Paiement en cours » posé dès le clic sur payer (bouton Apple Pay ou carte) ; retiré tout seul si rien ne suit
+// (feuille Apple Pay fermée, carte refusée : le module reste utilisable dessous)
+let _enCoursT=0;
+function enCours(){
+  let b=document.getElementById("payBar");
+  if(!b){ b=document.createElement("div"); b.id="payBar"; b.setAttribute("role","status"); document.body.appendChild(b); }
+  b.innerHTML='<i></i><span>Paiement en cours, ne ferme pas la page…</span>'; b.hidden=false;
+  clearTimeout(_enCoursT); _enCoursT=setTimeout(()=>{ if(!_paye&&!_fige) b.hidden=true; },40e3);
+}
 // module retiré (devis en cours…) : plus rien de payable tant qu'il n'est pas remonté
 function suspendre(t){ ++_seq; destroyAll(); $("co").innerHTML=waitHTML(t); }
 // Module Whop impossible à afficher (bloqueur, réseau). Audit 23/10 (constat 17) : la page Whop de secours ne reprend ni le
@@ -351,17 +372,23 @@ function mountWhop(){
   // PAS de returnUrl (Axel 23/10, achat test iPhone) : avec une adresse de retour, Whop renvoie l'onglet à la fin du
   // paiement et fait d'abord passer l'acheteur sans compte Whop par son écran « entrez le code » sur whop.com. Sans elle,
   // l'acheteur reste ici (comme dans l'app) : la veille (aa_nonce) l'emmène sur « Paiement confirmé ».
-  const acc=compte(), meta={metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{})};
+  // 24/10 (achat test d'Axel : renvoyé sur l'accueil par la redirection du compte Whop) : adresse de retour EXPLICITE vers
+  // « Paiement confirmé », même onglet (l'identifiant aa_nonce y est relu). L'écran « entrez le code » du 23/10 venait de
+  // l'option « Inclure le code OAuth » du compte Whop, désormais exclue.
+  const acc=compte(), meta={returnUrl:location.origin+"/paiement-confirme.html",metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{})};
   whopReady().then(W=>{
     if(seq!==_seq) return;
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
     // en tête du module quand l'appareil le propose
     _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:()=>{ if(seq!==_seq) return; figer();
-        if(!box.querySelector(".whop-wait")) box.insertAdjacentHTML("afterbegin",waitHTML("Confirmation du paiement…").replace("whop-wait","whop-wait fin")); veiller(true); }},
+        if(!box.querySelector(".whop-wait")) box.insertAdjacentHTML("afterbegin",waitHTML("Paiement accepté, confirmation…").replace("whop-wait","whop-wait fin")); etapes(); veiller(true); }},
       meta,S.promo?{promoCode:S.promo.code}:{}));
     let ready=false;
     _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
       onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove(); veiller(false);},
+      // Axel 24/10 (« petit freeze ») : le bouton du module reste figé pendant le paiement → notre bandeau « Paiement en cours »
+      onCheckoutRequested:()=>{ if(seq===_seq) enCours(); },
+      onCheckoutInitiated:()=>{ if(seq===_seq){ enCours(); veiller(true); } },
       onError:e=>{ if(!ready&&seq===_seq) fallback(box); else console.warn("[whop]",e&&(e.code||e.message)); }
     })).mount(box.querySelector(".whop-mount"));
   }).catch(()=>{ if(seq===_seq) fallback(box); });
@@ -437,6 +464,7 @@ function lignes(){
   return [{n:"Plan "+p.n+(y?" annuel":""),q:1,p:y?p.y:p.m}].concat(ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>({n:a.t,q:1,p:a.p})));
 }
 function garderPanier(){ if(retourBanque||_fige) return; const acc=compte();
+  try{ sessionStorage.setItem("aa_pay_from",location.pathname+location.search) }catch(_){}
   try{ sessionStorage.setItem("aa_pay_order",JSON.stringify({lines:lignes(),promo:S.promo?S.promo.code:null,total:S.promo?S.promo.total:total(),email:acc?acc.email:null})); }catch(_){} }
 function apresPaiement(){
   destroyAll(); $("co").innerHTML=waitHTML("Paiement confirmé…");
