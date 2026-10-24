@@ -914,6 +914,12 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         Omni
 
       </div>
+      <!-- Décupleur (maquette Claude Design 24/10) : une vidéo → N variantes uniques — compte dev/owner seulement pour l'instant -->
+      <div class="nav-i" id="navDecupleur" onclick="nav('decupleur',this)" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+        Décupleur
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">NOUVEAU</span>
+      </div>
       <div class="nav-i" onclick="nav('montage',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/></svg>
         Montage IA
@@ -928,20 +934,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <div class="nav-i" id="navAffiliation" style="display:none" onclick="nav('affiliation',this);initAffiliation()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h0M18 12h0"/></svg>
         Parrainage
-      </div>
-      <!-- 📤 Publier (#116) — cross-post Postiz, visible compte developer uniquement -->
-      <div class="nav-i" id="navPublish" onclick="nav('publish',this)" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-        Publier
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">DEV</span>
-      </div>
-      <!-- ⚙️ Détails montage — l'écran post-Montage IA (réviser puis régénérer),
-           ouvert sur le DERNIER montage terminé du compte. Entrée dev pour voir
-           l'interface sans relancer un montage. -->
-      <div class="nav-i" id="navMtDet" onclick="_mtDetDemo()" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        Détails montage
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">DEV</span>
       </div>
       <!-- Creative Factory en 1 clic (Axel 25/09) : ouvre le dashboard factory-v2 dans un nouvel onglet — compte dev/owner seulement -->
       <div class="nav-i" id="navFactory" onclick="window.open('/factory-v2.html','_blank','noopener')" style="display:none">
@@ -4273,6 +4265,25 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       </div>
     </div>
 
+    <!-- ══ DÉCUPLEUR ══ (maquette Claude Design 24/10, reprise 1:1 — src/gen-decupleur.jsx du handoff)
+         Une vidéo (fichier ou lien TikTok / Instagram) → N variantes uniques. Compte dev/owner SEULEMENT pour l'instant
+         (#navDecupleur, gating du profil). Le serveur n'est pas branché : import + aperçu + rognage réels, génération simulée. -->
+    <div class="view" id="v-decupleur" style="flex-direction:column;min-height:0">
+      <style>
+        @keyframes dcShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+        #v-decupleur{line-height:1.45}
+        /* même socle que la maquette (boutons nus) — :where() garde la spécificité à zéro : .btn & co restent prioritaires */
+        :where(#v-decupleur) button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+        /* .btn de l'app = bordure 1 px transparente ; la maquette n'en a pas sur le bouton plein (sinon +2 px de haut) */
+        #v-decupleur .btn-primary{border:0}
+        #v-decupleur .dc-drop:hover{border-color:var(--accent) !important;background:rgba(255,90,31,.05) !important}
+        #v-decupleur .dc-drop.dc-over{border-color:var(--accent) !important;background:rgba(255,90,31,.05) !important}
+      </style>
+      <div id="dcRoot" class="col" style="flex:1;min-height:0"></div>
+      <input type="file" id="dcFile" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm" hidden onchange="_dcPickVideo(this)">
+      <input type="file" id="dcFaceFile" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden onchange="_dcPickFace(this)">
+    </div>
+
     <div class="view" id="v-montage" style="flex-direction:column;min-height:0">
       <!-- ============ MONTAGE IA — refonte design 1:1 (maquette Claude Design) ============ -->
       <style>
@@ -6026,7 +6037,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-1500'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-1900'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -7877,12 +7888,10 @@ function enterApp(profile){
   // Bouton orange "Voir les plans" : caché (remplacé par btnUpgradePlan pour tous)
   const seePlansBtn = document.getElementById('btnSeePlans');
   if(seePlansBtn) seePlansBtn.style.display = 'none';
-  // 📤 Publier (#116) : module cross-post visible UNIQUEMENT compte developer/owner
-  const navPub = document.getElementById('navPublish');
-  if(navPub) navPub.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
-  // ⚙️ Détails montage : même gating dev — ouvre l'écran post-Montage IA
-  const navDet = document.getElementById('navMtDet');
-  if(navDet) navDet.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
+  // Décupleur (24/10) : visible UNIQUEMENT compte developer/owner tant que le serveur n'est pas branché.
+  // (« Publier » et « Détails montage » retirés de la barre le 24/10 à la demande d'Axel.)
+  const navDcp = document.getElementById('navDecupleur');
+  if(navDcp) navDcp.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
   // Creative Factory (Axel 25/09) : même gating dev/owner — le dashboard revérifie l'accès côté serveur (factory_access)
   const navFac = document.getElementById('navFactory');
   if(navFac) navFac.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
@@ -13830,6 +13839,7 @@ function nav(id,el){
   if(id==='express')    initExpress();
   if(id==='omni')       initOmni();
   if(id==='montage')    initMontage();
+  if(id==='decupleur')  initDecupleur();
   if(id==='audioclean') initAudioCleanView();
   if(id==='publish')    initPublishView();
   if(id==='studio')     initStudio();
@@ -13848,6 +13858,540 @@ function nav(id,el){
   }
   if(window._mNavSync) _mNavSync(id);
 }
+// ══ DÉCUPLEUR ══ (maquette Claude Design 24/10, reprise 1:1 de src/gen-decupleur.jsx)
+// Une vidéo (fichier ou lien TikTok / Instagram) → N variantes uniques, chacune avec un mélange d'altérations
+// (miroir, pixels & grain, teinte, empreinte sonore, textes choc). Option : changer le personnage avant de décupler.
+// Compte dev/owner seulement (#navDecupleur). À BRANCHER côté serveur : téléchargement des liens, découpe [a, b],
+// changement de personnage, génération + contrôle des empreintes, ZIP. En attendant : import, aperçu et rognage
+// RÉELS (le fichier reste dans le navigateur), génération SIMULÉE — aucun crédit débité, rien n'est envoyé.
+const DC_VARIANTS = [5, 10, 20, 50];
+const DC_CR_PER_VARIANT = 0.5;                       // 10 variantes = 5 crédits
+const DC_ALTER = [
+  { id:'mirror', ic:'copy2',    t:'Effet miroir' },
+  { id:'pixels', ic:'grid',     t:'Pixels & grain' },
+  { id:'tint',   ic:'palette',  t:'Teinte' },
+  { id:'audio',  ic:'waveform', t:'Empreinte sonore' },
+  { id:'text',   ic:'type',     t:'Textes choc' },
+];
+const DC_TEXT_POS = ['Haut','Centre','Bas','Aléatoire'];
+const _DC_IC = {
+  copy2:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/>',
+  film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/>',
+  link:'<path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/>',
+  sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+  check:'<path d="M20 6L9 17l-5-5"/>',
+  play:'<path d="M7 4l13 8-13 8z"/>',
+  download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+  regen:'<path d="M3 12a9 9 0 019-9 9 9 0 016.7 3M21 12a9 9 0 01-9 9 9 9 0 01-6.7-3M21 3v5h-5M3 21v-5h5"/>',
+  close:'<path d="M6 6l12 12M18 6L6 18"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  palette:'<path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/>',
+  waveform:'<path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/>',
+  type:'<path d="M4 7V5h16v2M9 19h6M12 5v14"/>',
+};
+function _dcI(n, size, style, cls){
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="'+(n==='play'?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
+    +(cls?' class="'+cls+'"':'')+(style?' style="'+style+'"':'')+'>'+_DC_IC[n]+'</svg>';
+}
+const _dcT = (s) => { s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
+const _dcCr = (n) => (Math.round(n*10)/10).toString().replace('.', ',');
+const _dcEsc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const _dcMob = () => window.matchMedia('(max-width:768px)').matches;
+const _DC_FACE_GRAD = 'linear-gradient(135deg,oklch(.62 .12 40),oklch(.42 .1 300))';
+
+const _dc = {
+  src:null,               // { kind:'file'|'link', name, dur, hue, url?, thumbs? }
+  link:'', linkErr:false, linkLoad:null,
+  a:0, b:0, t:0, play:true,
+  variants:10,
+  face:false, faceImg:null,   // { name, url }
+  modal:null,                 // 'face' | 'adv'
+  alt:{ mirror:true, pixels:true, tint:true, audio:true, text:true },
+  textPos:'Aléatoire',
+  phase:'idle', pct:0, nudge:null,
+  _tick:null, _linkIv:null, _runIv:null, _nudgeT:null, _mq:false,
+};
+
+function initDecupleur(){
+  if(!currentMember || !(currentMember.plan === 'developer' || currentMember.is_owner)){ nav('generator'); return; }
+  if(!_dc._mq){
+    _dc._mq = true;
+    try{ window.matchMedia('(max-width:768px)').addEventListener('change', () => { if(_dcOn()) _dcRender(); }); }catch(_){}
+  }
+  _dcRender();
+}
+function _dcOn(){ const v = document.getElementById('v-decupleur'); return !!(v && v.classList.contains('on')); }
+
+/* ---------- rendu ---------- */
+function _dcRender(){
+  const root = document.getElementById('dcRoot'); if(!root) return;
+  clearInterval(_dc._tick); _dc._tick = null;
+  const mob = _dcMob();
+  if(_dc.phase === 'running'){ root.innerHTML = _dcRunningHTML(); _dcRunPaint(); return; }
+  if(_dc.phase === 'done'){ root.innerHTML = _dcDoneHTML(mob); return; }
+  root.innerHTML =
+    '<div class="scroll-y" style="flex:1;min-height:0;padding:'+(mob?'20px 16px 28px':'26px 40px')+'">'
+    + '<div class="col" style="max-width:640px;margin:0 auto;gap:16px">'
+    +   '<div class="center" style="margin-bottom:4px">'
+    +     '<h1 class="display row" style="font-size:'+(mob?26:32)+'px;font-weight:800;justify-content:center;align-items:center;gap:10px">Décupleur'
+    +       '<span class="pill" style="background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:700;font-size:10.5px;padding:4px 9px">NOUVEAU</span></h1>'
+    +     '<p class="muted" style="margin-top:6px;font-size:'+(mob?13.5:14.5)+'px">Une vidéo, des dizaines de versions uniques.</p>'
+    +   '</div>'
+    +   '<div id="dcSrc"></div>'
+    +   '<div id="dcVar"></div>'
+    +   '<div id="dcCards" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"></div>'
+    +   '<button id="dcCta" onclick="_dcGo()" class="btn btn-primary" style="width:100%;min-width:0;padding:17px 18px;font-size:16px;font-weight:800;border-radius:16px;box-shadow:0 16px 40px -14px var(--accent-glow)">'
+    +     _dcI('copy2', 18, 'flex:0 0 auto') + '<span id="dcCtaLbl" style="min-width:0;white-space:normal;text-align:center;line-height:1.25"></span></button>'
+    +   '<span id="dcNudge" class="center rise" style="font-size:12.5px;color:#ff6b7a;margin-top:-6px;display:none"></span>'
+    + '</div>'
+    + '<div id="dcModal"></div>'
+    + '</div>';
+  _dcSrcRender(); _dcVarRender(); _dcCardsRender(); _dcCtaRender(); _dcModalRender();
+}
+
+function _dcSrcRender(){
+  const host = document.getElementById('dcSrc'); if(!host) return;
+  clearInterval(_dc._tick); _dc._tick = null;
+  const mob = _dcMob(), s = _dc.src;
+  if(!s){
+    host.innerHTML =
+      '<div class="col" style="gap:10px">'
+      + '<button id="dcDrop" onclick="document.getElementById(\'dcFile\').click()" class="col dc-drop" style="gap:10px;align-items:center;justify-content:center;height:'+(mob?190:220)+'px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);transition:.15s">'
+      +   '<span style="width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">'+_dcI('film', 24, 'color:var(--accent-2)')+'</span>'
+      +   '<span style="font-weight:700;font-size:16px">Importe ta vidéo</span>'
+      +   '<span class="mono faint" style="font-size:11px">MP4 · MOV · WEBM</span>'
+      + '</button>'
+      + '<div class="row" style="gap:8px">'
+      +   '<div style="position:relative;flex:1;min-width:0">'
+      +     _dcI('link', 15, 'position:absolute;left:13px;top:50%;transform:translateY(-50%)', 'faint')
+      +     '<input id="dcLink" class="field" value="'+_dcEsc(_dc.link)+'" oninput="_dcLinkInput(this)" onkeydown="if(event.key===\'Enter\')_dcFetchLink()" placeholder="Ou colle un lien TikTok / Instagram" style="padding-left:38px'+(_dc.linkErr?';border-color:#ff6b7a':'')+'">'
+      +   '</div>'
+      +   '<button id="dcAdd" class="btn btn-ghost" style="flex:0 0 auto" onclick="_dcFetchLink()"'+((!_dc.link.trim()||_dc.linkLoad!==null)?' disabled':'')+'>Ajouter</button>'
+      + '</div>'
+      + '<span id="dcLinkErr" style="font-size:12px;color:#ff6b7a;display:'+(_dc.linkErr?'inline':'none')+'">Lien TikTok ou Instagram uniquement</span>'
+      + '<div id="dcLinkLoad" class="col rise" style="gap:7px;display:'+(_dc.linkLoad!==null?'flex':'none')+'">'
+      +   '<div class="row" style="justify-content:space-between">'
+      +     '<span class="mono faint" style="font-size:11px">Récupération de la vidéo…</span>'
+      +     '<span id="dcLinkPct" class="mono" style="font-size:11px;color:var(--accent-2)">'+Math.round(_dc.linkLoad||0)+' %</span>'
+      +   '</div>'
+      +   '<div style="height:6px;border-radius:6px;background:var(--surface-2);overflow:hidden">'
+      +     '<div id="dcLinkBar" style="height:100%;width:'+(_dc.linkLoad||0)+'%;border-radius:6px;transition:width .11s linear;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+    _dcDropWire();
+    return;
+  }
+  const dur = s.dur, pa = (_dc.a/dur)*100, pb = (_dc.b/dur)*100, pt = (_dc.t/dur)*100;
+  const thumbs = Array.from({length:12}).map((_, i) => {
+    const im = s.thumbs && s.thumbs[i];
+    return '<div style="flex:1;border-radius:5px;background:'+(im ? 'url('+im+') center/cover' : 'linear-gradient(170deg, oklch(0.44 0.12 '+(s.hue+i*6)+'), oklch(0.2 0.05 '+(s.hue+40)+'))')+'"></div>';
+  }).join('');
+  const handle = (k, p) =>
+    '<div onpointerdown="_dcDrag(\''+k+'\',event)" id="dcH'+k+'" title="'+(k==='a'?'Début':'Fin')+'" style="position:absolute;top:0;bottom:0;left:calc('+p+'% - '+(k==='a'?0:14)+'px);width:14px;cursor:ew-resize;z-index:3;background:var(--accent);border-radius:'+(k==='a'?'9px 0 0 9px':'0 9px 9px 0')+';display:grid;place-items:center">'
+    + '<span style="width:2px;height:16px;border-radius:2px;background:rgba(26,10,2,.55)"></span></div>';
+  host.innerHTML =
+    '<div class="col card" style="gap:12px;padding:'+(mob?14:18)+'px">'
+    + '<div class="row" style="justify-content:space-between;align-items:center;gap:10px">'
+    +   '<span class="row gap8" style="align-items:center;min-width:0;font-size:13px;font-weight:600">'
+    +     _dcI(s.kind==='link'?'link':'film', 14, 'color:var(--accent-2);flex:0 0 auto')
+    +     '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_dcEsc(s.name)+'</span>'
+    +   '</span>'
+    +   '<button class="btn-quiet btn-sm" style="flex:0 0 auto;font-size:12.5px" onclick="_dcChange()">Changer</button>'
+    + '</div>'
+    + '<div class="col" style="gap:14px;align-items:center">'
+    +   '<button onclick="_dcTogglePlay()" style="position:relative;height:'+(mob?'300px':'min(330px,40vh)')+';aspect-ratio:9 / 16;border-radius:16px;overflow:hidden;border:1px solid var(--border-2);box-shadow:0 24px 50px -28px rgba(0,0,0,.7);background:linear-gradient(170deg, oklch(0.46 0.13 '+s.hue+'), oklch(0.16 0.05 '+(s.hue+40)+'))">'
+    +     (s.url
+            ? '<video id="dcVid" src="'+s.url+'" muted playsinline preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+            : '<div style="position:absolute;left:50%;top:30%;transform:translateX(-50%);width:34%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.88)"></div>'
+            + '<div style="position:absolute;left:50%;top:52%;transform:translateX(-50%);width:58%;height:34%;border-radius:46% 46% 0 0;background:rgba(255,255,255,.82)"></div>')
+    +     '<div style="position:absolute;inset:0;background:linear-gradient(transparent 60%, rgba(0,0,0,.55))"></div>'
+    +     '<div id="dcPause" style="position:absolute;inset:0;display:'+(_dc.play?'none':'grid')+';place-items:center">'
+    +       '<span style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.35)">'+_dcI('play', 20, 'color:#fff')+'</span></div>'
+    +     '<span id="dcTime" class="mono" style="position:absolute;left:8px;bottom:8px;font-size:10.5px;color:#fff;background:rgba(0,0,0,.5);padding:3px 7px;border-radius:6px">'+_dcT(_dc.t)+' / '+_dcT(dur)+'</span>'
+    +   '</button>'
+    +   '<div style="width:100%">'
+    +     '<div id="dcBand" style="position:relative;height:46px;border-radius:10px;overflow:hidden;background:var(--panel-1);border:1px solid var(--border);touch-action:none">'
+    +       '<div id="dcThumbs" class="row" style="position:absolute;inset:0;gap:2px;padding:2px;align-items:stretch">'+thumbs+'</div>'
+    +       '<div id="dcExA" style="position:absolute;top:0;bottom:0;left:0;width:'+pa+'%;background:rgba(8,8,10,.72)"></div>'
+    +       '<div id="dcExB" style="position:absolute;top:0;bottom:0;left:'+pb+'%;right:0;background:rgba(8,8,10,.72)"></div>'
+    +       '<div id="dcWin" onpointerdown="_dcDrag(\'mid\',event)" style="position:absolute;top:0;bottom:0;left:'+pa+'%;width:'+(pb-pa)+'%;cursor:grab;border:2px solid var(--accent);border-radius:9px;box-shadow:0 0 0 1px rgba(0,0,0,.3)"></div>'
+    +       handle('a', pa) + handle('b', pb)
+    +       '<div id="dcHead" style="position:absolute;top:-2px;bottom:-2px;left:'+pt+'%;width:2px;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.9);pointer-events:none;z-index:2"></div>'
+    +     '</div>'
+    +     '<div class="row" style="justify-content:space-between;margin-top:8px">'
+    +       '<span id="dcLa" class="mono faint" style="font-size:11px">'+_dcT(_dc.a)+'</span>'
+    +       '<span id="dcLk" class="mono" style="font-size:11px;color:var(--accent-2);font-weight:600">Passage gardé · '+_dcT(_dc.b-_dc.a)+'</span>'
+    +       '<span id="dcLb" class="mono faint" style="font-size:11px">'+_dcT(_dc.b)+'</span>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+  const v = document.getElementById('dcVid');
+  if(v){
+    v.addEventListener('loadedmetadata', () => { try{ v.currentTime = _dc.a; }catch(_){} if(_dc.play) v.play().catch(()=>{}); }, { once:true });
+  }
+  _dc._tick = setInterval(_dcTick, 100);
+}
+
+// Lecture en boucle sur le passage gardé (maquette : +0,1 s toutes les 100 ms, retour au début à la fin)
+function _dcTick(){
+  if(!_dc.src || _dc.phase !== 'idle') return;
+  const v = document.getElementById('dcVid');
+  if(!_dcOn()){ if(v && !v.paused) v.pause(); return; }
+  if(v){
+    if(_dc.play && v.paused && v.readyState >= 2) v.play().catch(()=>{});
+    let t = v.currentTime;
+    if(!v.seeking && (t >= _dc.b - 0.05 || t < _dc.a - 0.25 || v.ended)){ try{ v.currentTime = _dc.a; }catch(_){} t = _dc.a; }
+    _dc.t = t;
+  } else if(_dc.play){
+    const n = _dc.t + 0.1; _dc.t = n >= _dc.b ? _dc.a : Math.max(_dc.a, n);
+  }
+  _dcTrimPaint(true);
+}
+function _dcTrimPaint(onlyHead){
+  const s = _dc.src; if(!s) return;
+  const dur = s.dur, pa = (_dc.a/dur)*100, pb = (_dc.b/dur)*100, pt = (_dc.t/dur)*100;
+  const $ = (id) => document.getElementById(id);
+  if($('dcHead')) $('dcHead').style.left = pt + '%';
+  if($('dcTime')) $('dcTime').textContent = _dcT(_dc.t) + ' / ' + _dcT(dur);
+  if(onlyHead) return;
+  if($('dcExA')) $('dcExA').style.width = pa + '%';
+  if($('dcExB')) $('dcExB').style.left = pb + '%';
+  if($('dcWin')){ $('dcWin').style.left = pa + '%'; $('dcWin').style.width = (pb-pa) + '%'; }
+  if($('dcHa')) $('dcHa').style.left = 'calc(' + pa + '% - 0px)';
+  if($('dcHb')) $('dcHb').style.left = 'calc(' + pb + '% - 14px)';
+  if($('dcLa')) $('dcLa').textContent = _dcT(_dc.a);
+  if($('dcLb')) $('dcLb').textContent = _dcT(_dc.b);
+  if($('dcLk')) $('dcLk').textContent = 'Passage gardé · ' + _dcT(_dc.b - _dc.a);
+}
+// Poignées début / fin + fenêtre déplaçable en entier (minimum 1 s gardée)
+function _dcDrag(which, e){
+  e.preventDefault(); e.stopPropagation();
+  const band = document.getElementById('dcBand'); if(!band || !_dc.src) return;
+  const r = band.getBoundingClientRect(), dur = _dc.src.dur, min = Math.min(1, dur);
+  const at = (x) => Math.max(0, Math.min(dur, ((x - r.left) / r.width) * dur));
+  const x0 = e.clientX, a0 = _dc.a, b0 = _dc.b;
+  const mv = (ev) => {
+    const prevA = _dc.a;
+    if(which === 'a') _dc.a = Math.max(0, Math.min(at(ev.clientX), b0 - min));
+    else if(which === 'b') _dc.b = Math.min(dur, Math.max(at(ev.clientX), a0 + min));
+    else { const d = ((ev.clientX - x0) / r.width) * dur, len = b0 - a0;
+      const na = Math.max(0, Math.min(dur - len, a0 + d)); _dc.a = na; _dc.b = na + len; }
+    if(_dc.a !== prevA){   // maquette : la lecture repart du début du passage dès qu'il bouge
+      _dc.t = _dc.a;
+      const v = document.getElementById('dcVid'); if(v && !v.seeking){ try{ v.currentTime = _dc.a; }catch(_){} }
+    }
+    _dcTrimPaint();
+  };
+  const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+}
+function _dcTogglePlay(){
+  _dc.play = !_dc.play;
+  const v = document.getElementById('dcVid');
+  if(v){ if(_dc.play) v.play().catch(()=>{}); else v.pause(); }
+  const p = document.getElementById('dcPause'); if(p) p.style.display = _dc.play ? 'none' : 'grid';
+}
+
+/* ---------- source : fichier ---------- */
+function _dcDropWire(){
+  const z = document.getElementById('dcDrop'); if(!z) return;
+  z.addEventListener('dragover', (e) => { e.preventDefault(); z.classList.add('dc-over'); });
+  z.addEventListener('dragleave', () => z.classList.remove('dc-over'));
+  z.addEventListener('drop', (e) => { e.preventDefault(); z.classList.remove('dc-over'); const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(f) _dcLoadFile(f); });
+}
+function _dcPickVideo(inp){ const f = inp.files && inp.files[0]; inp.value = ''; if(f) _dcLoadFile(f); }
+function _dcLoadFile(f){
+  if(!/^video\//.test(f.type) && !/\.(mp4|mov|webm|m4v)$/i.test(f.name)){ toast('Importe une vidéo MP4, MOV ou WEBM'); return; }
+  const url = URL.createObjectURL(f);
+  const probe = document.createElement('video');
+  probe.muted = true; probe.preload = 'metadata'; probe.playsInline = true;
+  probe.onloadedmetadata = () => {
+    const dur = probe.duration;
+    if(!isFinite(dur) || dur <= 0){ URL.revokeObjectURL(url); toast('Impossible de lire cette vidéo'); return; }
+    _dcSetSrc({ kind:'file', name:f.name, dur, hue: 18 + Math.round(Math.random()*240), url });
+    _dcThumbs(url, dur);
+  };
+  probe.onerror = () => { URL.revokeObjectURL(url); toast('Ce format ne se lit pas dans ton navigateur — essaie un MP4'); };
+  probe.src = url;
+}
+function _dcSetSrc(src){
+  _dcFreeSrc();
+  _dc.src = src; _dc.a = 0; _dc.b = src.dur; _dc.t = 0; _dc.play = true;
+  _dcSrcRender(); _dcCtaRender();
+}
+function _dcFreeSrc(){ if(_dc.src && _dc.src.url){ try{ URL.revokeObjectURL(_dc.src.url); }catch(_){} } }
+// 12 vignettes de la bande, lues dans la vraie vidéo (un lecteur à part : l'aperçu continue de tourner)
+function _dcThumbs(url, dur){
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+  const c = document.createElement('canvas'); c.width = 180; c.height = 320;
+  const g = c.getContext('2d'), out = []; let i = 0;
+  const next = () => {
+    if(!_dc.src || _dc.src.url !== url){ v.removeAttribute('src'); v.load(); return; }
+    if(i >= 12){
+      _dc.src.thumbs = out; v.removeAttribute('src'); v.load();
+      const box = document.getElementById('dcThumbs');
+      if(box) box.querySelectorAll(':scope>div').forEach((d, k) => { if(out[k]) d.style.background = 'url(' + out[k] + ') center/cover'; });
+      return;
+    }
+    try{ v.currentTime = Math.min(dur - 0.05, (i + 0.5) * dur / 12); }catch(_){ i = 12; next(); }
+  };
+  v.onseeked = () => {
+    try{
+      const vw = v.videoWidth, vh = v.videoHeight, k = Math.max(c.width / vw, c.height / vh);
+      const w = vw * k, h = vh * k;
+      g.drawImage(v, (c.width - w) / 2, (c.height - h) / 2, w, h);
+      out[i] = c.toDataURL('image/jpeg', .72);
+    }catch(_){}
+    i++; next();
+  };
+  v.onloadeddata = next;
+  v.onerror = () => {};
+}
+function _dcChange(){
+  _dcFreeSrc(); _dc.src = null; _dc.link = ''; _dc.linkErr = false;
+  _dcSrcRender(); _dcCtaRender();
+}
+
+/* ---------- source : lien TikTok / Instagram ---------- */
+function _dcLinkInput(inp){
+  _dc.link = inp.value;
+  if(_dc.linkErr){ _dc.linkErr = false; inp.style.borderColor = ''; const e = document.getElementById('dcLinkErr'); if(e) e.style.display = 'none'; }
+  const b = document.getElementById('dcAdd'); if(b) b.disabled = !_dc.link.trim() || _dc.linkLoad !== null;
+}
+function _dcFetchLink(){
+  if(!_dc.link.trim() || _dc.linkLoad !== null) return;
+  const ok = /^(https?:\/\/)?(www\.|vm\.|m\.)?(tiktok\.com|instagram\.com)\//i.test(_dc.link.trim());
+  _dc.linkErr = !ok;
+  const inp = document.getElementById('dcLink'), err = document.getElementById('dcLinkErr');
+  if(inp) inp.style.borderColor = ok ? '' : '#ff6b7a';
+  if(err) err.style.display = ok ? 'none' : 'inline';
+  if(!ok) return;
+  // À BRANCHER : téléchargement serveur (durée + miniatures + progression réelle). Simulé en attendant.
+  const name = _dc.link.trim().replace(/^https?:\/\//, '');
+  let p = 0; _dc.linkLoad = 0;
+  const box = document.getElementById('dcLinkLoad'); if(box) box.style.display = 'flex';
+  const add = document.getElementById('dcAdd'); if(add) add.disabled = true;
+  clearInterval(_dc._linkIv);
+  _dc._linkIv = setInterval(() => {
+    p = Math.min(100, p + 6 + Math.random()*10); _dc.linkLoad = p;
+    const bar = document.getElementById('dcLinkBar'), pc = document.getElementById('dcLinkPct');
+    if(bar) bar.style.width = p + '%'; if(pc) pc.textContent = Math.round(p) + ' %';
+    if(p >= 100){
+      clearInterval(_dc._linkIv);
+      setTimeout(() => { _dc.linkLoad = null; _dcSetSrc({ kind:'link', name, dur:24, hue: 18 + Math.round(Math.random()*240) }); }, 250);
+    }
+  }, 110);
+}
+
+/* ---------- variantes, cartes, bouton ---------- */
+function _dcVarRender(){
+  const host = document.getElementById('dcVar'); if(!host) return;
+  host.innerHTML = '<div class="label" style="margin-bottom:10px">Nombre de variantes</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">'
+    + DC_VARIANTS.map(n => { const on = _dc.variants === n; return (
+        '<button onclick="_dcSetVariants('+n+')" class="col" style="gap:3px;align-items:center;padding:12px 6px;border-radius:13px;transition:.15s;border:1.5px solid '+(on?'var(--accent)':'var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--surface)')+'">'
+        + '<span class="display" style="font-size:22px;font-weight:800;color:'+(on?'var(--accent-2)':'var(--text)')+'">×'+n+'</span>'
+        + '<span class="mono faint" style="font-size:10px">'+_dcCr(n*DC_CR_PER_VARIANT)+' cr</span></button>'); }).join('')
+    + '</div>';
+}
+function _dcSetVariants(n){ _dc.variants = n; _dcVarRender(); _dcCtaRender(); }
+function _dcCardsRender(){
+  const host = document.getElementById('dcCards'); if(!host) return;
+  const card = 'padding:14px 15px;border-radius:14px;text-align:left;transition:.15s;gap:12px;align-items:center';
+  const on = _dc.face, img = _dc.faceImg;
+  const nAlt = DC_ALTER.filter(x => _dc.alt[x.id]).length;
+  host.innerHTML =
+    '<button onclick="_dcOpen(\'face\')" class="row" style="'+card+';border:1px solid '+(on?'var(--accent-line)':'var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--surface)')+'">'
+    + '<span style="width:36px;height:36px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;overflow:hidden;background:'+(on&&img?_DC_FACE_GRAD:'var(--accent-soft)')+';border:1px solid var(--accent-line)">'
+    +   (on&&img ? '<span style="width:100%;height:100%;background:url('+img.url+') center/cover"></span>' : _dcI('user', 16, 'color:var(--accent-2)'))+'</span>'
+    + '<span class="col" style="line-height:1.3;min-width:0">'
+    +   '<span style="font-weight:600;font-size:14px">Changer le personnage</span>'
+    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(on ? (img ? 'X crédits / seconde' : 'Photo à ajouter') : 'Désactivé')+'</span>'
+    + '</span></button>'
+    + '<button onclick="_dcOpen(\'adv\')" class="row" style="'+card+';border:1px solid var(--border);background:var(--surface)">'
+    + '<span style="width:36px;height:36px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">'+_dcI('sliders', 16, 'color:var(--accent-2)')+'</span>'
+    + '<span class="col" style="line-height:1.3;min-width:0">'
+    +   '<span style="font-weight:600;font-size:14px">Paramètres avancés</span>'
+    +   '<span class="faint" style="font-size:11.5px">'+nAlt+' altération'+(nAlt>1?'s':'')+' active'+(nAlt>1?'s':'')+'</span>'
+    + '</span></button>';
+}
+function _dcCtaRender(){
+  const l = document.getElementById('dcCtaLbl'); if(!l) return;
+  l.textContent = 'Décupler ×' + _dc.variants + ' — ' + _dcCr(_dc.variants * DC_CR_PER_VARIANT) + ' crédits' + (_dc.face ? ' + X / s' : '');
+}
+// Jamais grisé : sans vidéo (ou sans photo si le personnage est activé), le bouton tremble et dit quoi faire
+function _dcGo(){
+  const ready = !!_dc.src && (!_dc.face || !!_dc.faceImg);
+  const n = document.getElementById('dcNudge'), b = document.getElementById('dcCta');
+  if(ready){ if(n) n.style.display = 'none'; _dcRun(); return; }
+  if(n){ n.textContent = !_dc.src ? 'Ajoute une vidéo pour commencer' : 'Ajoute la photo du personnage'; n.style.display = 'inline'; }
+  if(b){ b.style.animation = 'none'; void b.offsetWidth; b.style.animation = 'dcShake .38s'; }
+  clearTimeout(_dc._nudgeT);
+  _dc._nudgeT = setTimeout(() => { const m = document.getElementById('dcNudge'); if(m) m.style.display = 'none'; const c = document.getElementById('dcCta'); if(c) c.style.animation = 'none'; }, 2400);
+}
+
+/* ---------- menus ---------- */
+function _dcOpen(m){ _dc.modal = m; _dcModalRender(); }
+function _dcClose(){ _dc.modal = null; _dcModalRender(); }
+function _dcToggleHTML(on, fn){
+  return '<button type="button" role="switch" aria-checked="'+on+'" onclick="'+fn+'" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:'+(on?'var(--accent)':'var(--surface-3)')+';display:flex;justify-content:'+(on?'flex-end':'flex-start')+'">'
+    + '<span style="display:block;width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>';
+}
+function _dcModalRender(){
+  const host = document.getElementById('dcModal'); if(!host) return;
+  if(!_dc.modal){ host.innerHTML = ''; return; }
+  const title = _dc.modal === 'face' ? 'Changer le personnage' : 'Paramètres avancés';
+  let body = '';
+  if(_dc.modal === 'face'){
+    const img = _dc.faceImg;
+    body =
+      '<div class="row" style="justify-content:space-between;align-items:center;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--panel-1);margin-bottom:12px">'
+      + '<span style="font-weight:600;font-size:14px">Activer</span>' + _dcToggleHTML(_dc.face, '_dcFaceToggle()') + '</div>'
+      + '<button onclick="document.getElementById(\'dcFaceFile\').click()" class="col" style="width:100%;gap:10px;align-items:center;justify-content:center;padding:22px 16px;border-radius:14px;border:1px dashed '+(img?'var(--accent-line)':'var(--border-2)')+';background:'+(img?'var(--accent-soft)':'var(--panel-1)')+';opacity:'+(_dc.face?1:.55)+'">'
+      +   '<span style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:'+(img?_DC_FACE_GRAD:'var(--surface-2)')+';border:1px solid var(--border-2)">'
+      +     (img ? '<span style="width:100%;height:100%;background:url('+img.url+') center/cover"></span>' : _dcI('image', 22, '', 'faint'))+'</span>'
+      +   '<span style="font-weight:700;font-size:14.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(img ? _dcEsc(img.name) : 'Ajoute la photo de l\'avatar')+'</span>'
+      +   '<span class="faint" style="font-size:12px">'+(img ? 'Cliquer pour remplacer' : 'Visage et corps · JPG · PNG')+'</span>'
+      + '</button>'
+      + '<div class="row" style="justify-content:space-between;margin-top:14px">'
+      +   '<span class="mono faint" style="font-size:11px">720p</span>'
+      +   '<span class="mono" style="font-size:11px;color:var(--accent-2)">X crédits / seconde</span>'
+      + '</div>'
+      + '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="_dcClose()">Valider</button>';
+  } else {
+    body =
+      '<p class="faint" style="font-size:12.5px;margin:-6px 0 14px">Appliqués différemment à chaque variante</p>'
+      + '<div class="col" style="gap:8px">'
+      + DC_ALTER.map(x =>
+          '<div class="col" style="gap:10px;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--panel-1)">'
+          + '<div class="row" style="justify-content:space-between;align-items:center">'
+          +   '<span class="row gap10" style="align-items:center;font-size:14px;font-weight:600">'+_dcI(x.ic, 16, 'color:var(--accent-2)')+x.t+'</span>'
+          +   _dcToggleHTML(!!_dc.alt[x.id], '_dcAltToggle(\''+x.id+'\')')
+          + '</div>'
+          + (x.id === 'text' && _dc.alt.text
+              ? '<div class="seg" style="width:100%">' + DC_TEXT_POS.map(p => '<button class="'+(_dc.textPos===p?'on':'')+'" style="flex:1" onclick="_dcTextPos(\''+p+'\')">'+p+'</button>').join('') + '</div>'
+              : '')
+          + '</div>').join('')
+      + '</div>'
+      + '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="_dcClose()">Valider</button>';
+  }
+  host.innerHTML =
+    '<div onclick="_dcClose()" style="position:fixed;inset:0;z-index:7000;background:rgba(6,6,9,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px">'
+    + '<div onclick="event.stopPropagation()" style="width:min(460px,94vw);max-height:88vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:20px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)">'
+    +   '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px">'
+    +     '<span class="display" style="font-size:20px;font-weight:800">'+title+'</span>'
+    +     '<button class="btn-quiet" onclick="_dcClose()">'+_dcI('close', 17)+'</button>'
+    +   '</div>'
+    +   body
+    + '</div></div>';
+}
+function _dcFaceToggle(){ _dc.face = !_dc.face; _dcModalRender(); _dcCardsRender(); _dcCtaRender(); }
+function _dcPickFace(inp){
+  const f = inp.files && inp.files[0]; inp.value = ''; if(!f) return;
+  if(!/^image\/(jpeg|png)$/.test(f.type) && !/\.(jpe?g|png)$/i.test(f.name)){ toast('Photo JPG ou PNG'); return; }
+  if(_dc.faceImg){ try{ URL.revokeObjectURL(_dc.faceImg.url); }catch(_){} }
+  _dc.faceImg = { name:f.name, url:URL.createObjectURL(f) }; _dc.face = true;
+  _dcModalRender(); _dcCardsRender(); _dcCtaRender();
+}
+function _dcAltToggle(id){ _dc.alt[id] = !_dc.alt[id]; _dcModalRender(); _dcCardsRender(); }
+function _dcTextPos(p){ _dc.textPos = p; _dcModalRender(); }
+
+/* ---------- génération (simulée tant que le serveur n'est pas branché) ---------- */
+function _dcStages(){
+  return [
+    ...(_dc.src && _dc.src.kind === 'link' ? ['Téléchargement de la vidéo'] : []),
+    'Découpe du passage gardé',
+    ...(_dc.face ? ['Changement du personnage'] : []),
+    'Génération des ' + _dc.variants + ' variantes',
+    'Contrôle des empreintes',
+  ];
+}
+function _dcRun(){
+  _dc.phase = 'running'; _dc.pct = 0; _dc.modal = null;
+  const v = document.getElementById('dcVid'); if(v) v.pause();
+  _dcRender();
+  let p = 0; clearInterval(_dc._runIv);
+  _dc._runIv = setInterval(() => {
+    p = Math.min(100, p + 3 + Math.random()*5); _dc.pct = p; _dcRunPaint();
+    if(p >= 100){ clearInterval(_dc._runIv); setTimeout(() => { if(_dc.phase === 'running'){ _dc.phase = 'done'; _dcRender(); } }, 300); }
+  }, 120);
+}
+function _dcCancel(){ clearInterval(_dc._runIv); _dc.phase = 'idle'; _dcRender(); }
+function _dcRunningHTML(){
+  return '<div class="col" style="flex:1;min-height:0;align-items:center;justify-content:center;padding:40px 24px;text-align:center">'
+    + '<div style="width:72px;height:72px;border-radius:22px;display:grid;place-items:center;margin-bottom:22px;background:radial-gradient(110px 80px at 50% 20%, rgba(255,90,31,.4), transparent), var(--surface);border:1px solid var(--accent-line)">'+_dcI('copy2', 30, 'color:var(--accent-2)')+'</div>'
+    + '<div class="display" style="font-size:22px;font-weight:800">Décuplage en cours…</div>'
+    + '<p id="dcStage" class="muted mono" style="font-size:13px;margin-top:8px"></p>'
+    + '<div style="width:100%;max-width:420px;height:8px;border-radius:8px;background:var(--surface-2);overflow:hidden;margin-top:24px">'
+    +   '<div id="dcRunBar" style="height:100%;width:0%;border-radius:8px;transition:width .15s;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div></div>'
+    + '<div class="display accent" style="font-size:32px;font-weight:800;margin-top:12px"><span id="dcRunPct">0</span><span style="font-size:15px">%</span></div>'
+    + '<div id="dcRunList" class="col" style="gap:8px;margin-top:20px;width:100%;max-width:420px;text-align:left"></div>'
+    + '<button class="btn-quiet btn-sm" style="margin-top:22px" onclick="_dcCancel()">Annuler</button>'
+    + '</div>';
+}
+function _dcRunPaint(){
+  const stages = _dcStages(), st = Math.min(stages.length - 1, Math.floor(_dc.pct / 100 * stages.length));
+  const $ = (id) => document.getElementById(id);
+  if($('dcStage')) $('dcStage').textContent = stages[st];
+  if($('dcRunBar')) $('dcRunBar').style.width = _dc.pct + '%';
+  if($('dcRunPct')) $('dcRunPct').textContent = Math.round(_dc.pct);
+  if($('dcRunList')) $('dcRunList').innerHTML = stages.map((s, i) =>
+    '<div class="row gap10" style="font-size:13px;opacity:'+(i<=st?1:.4)+'">'
+    + (i < st ? _dcI('check', 15, 'color:var(--accent-2);flex:0 0 auto')
+              : '<span style="width:7px;height:7px;margin:0 4px;flex:0 0 auto;border-radius:50%;background:'+(i===st?'var(--accent)':'transparent')+';border:1px solid var(--text-3)"></span>')
+    + '<span style="color:'+(i<=st?'var(--text)':'var(--text-3)')+'">'+s+'</span></div>').join('');
+}
+
+/* ---------- résultat ---------- */
+function _dcTile(i){
+  const s = _dc.src, hue = s ? s.hue : 18;
+  const mirror = _dc.alt.mirror && i % 2 === 1, shift = _dc.alt.tint ? (i * 23) % 60 - 30 : 0, txt = _dc.alt.text && i % 3 === 0;
+  const top = { Haut:'12%', Centre:'45%', Bas:'70%' }[_dc.textPos] || (i % 2 ? '12%' : '70%');
+  // vraie vidéo : la vignette du milieu du passage gardé, avec l'altération de la variante (aperçu, pas le rendu)
+  const th = s && s.thumbs && s.thumbs.length ? s.thumbs[Math.min(11, Math.max(0, Math.floor(((_dc.a + _dc.b) / 2) / s.dur * 12)))] : null;
+  return '<div style="position:relative;aspect-ratio:9 / 16;border-radius:12px;overflow:hidden;border:1px solid var(--border-2);background:linear-gradient(170deg, oklch(0.46 0.13 '+(hue+shift)+'), oklch(0.16 0.05 '+(hue+40+shift)+'))">'
+    + '<div style="position:absolute;inset:0;transform:'+(mirror?'scaleX(-1)':'none')+'">'
+    + (th
+        ? '<div style="position:absolute;inset:0;background:url('+th+') center/cover;filter:hue-rotate('+shift+'deg)"></div>'
+        : '<div style="position:absolute;left:42%;top:30%;transform:translateX(-50%);width:34%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.86)"></div>'
+          + '<div style="position:absolute;left:42%;top:52%;transform:translateX(-50%);width:58%;height:34%;border-radius:46% 46% 0 0;background:rgba(255,255,255,.8)"></div>')
+    + '</div>'
+    + (_dc.alt.pixels ? '<div style="position:absolute;inset:0;opacity:.18;background:repeating-linear-gradient(0deg,rgba(255,255,255,.5) 0 1px,transparent 1px 3px)"></div>' : '')
+    + (txt ? '<span style="position:absolute;left:8%;right:8%;top:'+top+';text-align:center;font-family:\'Bricolage Grotesque\';font-weight:800;font-size:10px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8)">ATTENDS LA FIN</span>' : '')
+    + '<span class="mono" style="position:absolute;left:6px;top:6px;font-size:9.5px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:5px">#'+String(i+1).padStart(2,'0')+'</span>'
+    + '<button title="Télécharger" onclick="_dcDownload()" style="position:absolute;right:6px;bottom:6px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff">'+_dcI('download', 13)+'</button>'
+    + '</div>';
+}
+function _dcDoneHTML(mob){
+  const n = _dc.variants, cols = mob ? 3 : (n >= 20 ? 8 : 5);
+  return '<div class="scroll-y" style="flex:1;min-height:0;padding:'+(mob?'20px 16px 28px':'28px 40px')+'">'
+    + '<div style="max-width:1080px;margin:0 auto">'
+    +   '<div class="row" style="justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px">'
+    +     '<div class="row gap12" style="align-items:center">'
+    +       '<span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;background:rgba(40,199,149,.14);border:1px solid rgba(40,199,149,.4)">'+_dcI('check', 18, 'color:var(--green)')+'</span>'
+    +       '<div class="col" style="line-height:1.25">'
+    +         '<span class="display" style="font-size:'+(mob?20:24)+'px;font-weight:800">'+n+' variantes prêtes</span>'
+    +         '<span class="faint" style="font-size:12.5px">'+_dcT(_dc.b - _dc.a)+' chacune · toutes différentes</span>'
+    +       '</div>'
+    +     '</div>'
+    +     '<div class="row gap10">'
+    +       '<button class="btn btn-ghost btn-sm" onclick="_dcCancel()">'+_dcI('regen', 14)+'<span>Recommencer</span></button>'
+    +       '<button class="btn btn-primary btn-sm" onclick="_dcDownload()">'+_dcI('download', 14)+'<span>Tout télécharger</span></button>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div style="display:grid;grid-template-columns:repeat('+cols+',minmax(0,1fr));gap:'+(mob?8:12)+'px">'
+    +     Array.from({length:n}).map((_, i) => _dcTile(i)).join('')
+    +   '</div>'
+    + '</div></div>';
+}
+// À BRANCHER : N fichiers 9:16 + archive ZIP. Tant que le serveur ne génère rien, il n'y a rien à télécharger.
+function _dcDownload(){ toast('Téléchargement disponible dès que la génération sera branchée'); }
+
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
   const thumb = document.getElementById('yt-thumb');
@@ -44057,6 +44601,7 @@ lastY=y;
       var FAC_IC='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4V10l6 4V6l6 4v11z"/></svg>';
       var KIT_IC='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
       h+='<h2 class="display" style="font-size:17px;font-weight:800;margin:22px 0 12px">Dev</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+        +'<button class="mm-tool" data-go="decupleur"><span class="mm-ic">'+iconOf('decupleur')+'</span><b style="font-size:14.5px">Décupleur</b></button>'
         +'<button class="mm-tool" data-act="factory"><span class="mm-ic">'+FAC_IC+'</span><b style="font-size:14.5px">Creative Factory</b></button>'
         +'<button class="mm-tool" data-act="kit"><span class="mm-ic">'+KIT_IC+'</span><b style="font-size:14.5px">Kit de publication</b></button></div>';
     }
