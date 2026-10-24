@@ -14,6 +14,7 @@
 //       Env requis (.env) : SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { retoucheVideo } from './retouche.mjs'
+import { dcFetch, dcCut, dcVariantes } from './decupleur.mjs'   // Décupleur (24/10) : lien → MP4, passage gardé, N variantes
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync, statSync, renameSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -1011,7 +1012,7 @@ function construireBaseSansVoix(plan, jobDir, basePath, fps) {
   console.log(`▶ Musique sans voix : base = ${R > 0.3 ? `réaction ${R} s + ` : ''}${seq.length} plan(s) de visuels → ${t} s`)
 }
 
-export async function renderJob(jobDir, outPath, { draft = false, userId = null } = {}) {
+export async function renderJob(jobDir, outPath, { draft = false, userId = null, onProgress = null } = {}) {
   RENDER_USER = userId || null
   const t0 = Date.now()
   const plan = JSON.parse(readFileSync(join(jobDir, 'plan.json'), 'utf8'))
@@ -1052,6 +1053,18 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     if (!f) throw new Error('photo de départ manquante (retouche)')
     const r = retoucheVideo(join(jobDir, 'base.mp4'), join(dir, f), outPath)
     console.log('✓ retouche', JSON.stringify({ grainPhoto: r.grainPhoto, grainVideo: r.grainVideo, bruit: r.bruit }))
+    return
+  }
+
+  // Décupleur (24/10) : lien TikTok / Instagram → MP4 (aucune entrée téléchargée), passage gardé seul (référence du changement
+  // de personnage), N variantes dans jobDir/dc-out (publiées par pollLoop, pas par l'envoi du MP4 unique). Voir decupleur.mjs.
+  if (plan.__compose === 'dc-fetch') { await dcFetch(String(plan.lien || ''), outPath); return }
+  if (plan.__compose === 'dc-cut') { await dcCut(join(jobDir, 'base.mp4'), outPath, plan.a, plan.b); return }
+  if (plan.__compose === 'decupleur') {
+    const master = join(jobDir, 'assets', 'master.mp4')
+    await dcVariantes({ src: join(jobDir, 'base.mp4'), master: existsSync(master) ? master : null, outDir: join(jobDir, 'dc-out'),
+      a: plan.a, b: plan.b, n: Number(plan.n), alt: plan.alt || {}, textPos: plan.textPos, seed: plan.seed,
+      onProgress: typeof onProgress === 'function' ? onProgress : async () => {} })
     return
   }
 
@@ -3509,7 +3522,7 @@ async function pollLoop() {
     try {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
       // + préparation des vidéos MCP (02/10)
-      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix'])   // motion-voix : simple mux (copie du flux vidéo), quelques secondes
+      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix', 'dc-fetch', 'dc-cut'])   // Décupleur : récupération d'un lien / découpe = quelques secondes   // motion-voix : simple mux (copie du flux vidéo), quelques secondes
       if (!cand) {
         if (Date.now() - dernierBalayage > 5 * 60_000) await reprendreOrphelins()
         // 15/10 : attente qui S'ALLONGE quand la file reste vide (2 s → 12 s, + un peu de hasard pour que les 6 moteurs ne
@@ -3580,7 +3593,8 @@ async function pollLoop() {
           if (error) throw new Error('download ' + path + ': ' + error.message)
           writeFileSync(dest, Buffer.from(await data.arrayBuffer()))
         }
-        await dl(job.input_video, join(jobDir, 'base.mp4'))
+        // dc-fetch (Décupleur) : la vidéo vient du LIEN (le moteur la télécharge lui-même) — input_video n'est que la clé réservée
+        if (!(job.plan && job.plan.__compose === 'dc-fetch')) await dl(job.input_video, join(jobDir, 'base.mp4'))
         // #montage-audio : son optionnel fourni par l'utilisateur (musique / bruitages) → mixé au montage
         // audit 02/10 : un son utilisateur n'est lu que dans le dossier du propriétaire du job (jamais celui d'un autre compte)
         // Audit 02/10 (WRK-1) : même règle stricte que les autres entrées (cheminSur) — optionnel, donc ignoré, pas fatal
@@ -3620,7 +3634,9 @@ async function pollLoop() {
         }
 
         const out = join(jobDir, 'final.mp4')
-        await renderJob(jobDir, out, { userId: job.user_id || null })
+        // Décupleur : avancement écrit entre deux variantes (barre de l'app + battement du job pendant un long lot)
+        const surProgres = async (p) => { try { await sb.from('render_jobs').update({ progress: p, updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'rendering') } catch (_) { /* best-effort */ } }
+        await renderJob(jobDir, out, { userId: job.user_id || null, onProgress: surProgres })
         // contrôle qualité d'un MONTAGE (pas des compositions) : noté dans la trace du job, jamais bloquant
         if (!(job.plan && job.plan.__compose)) {
           try { const qc = qcMontage(out); if (qc.ok) console.log(`✓ QC montage : rien à signaler (${qc.duree} s)`); else console.warn(`⚠ QC montage : ${qc.defauts.join(' · ')}`) } catch (e) { console.warn('QC montage :', e.message) }
@@ -3641,6 +3657,20 @@ async function pollLoop() {
         // `fileSizeLimit`, réglée via l'API de management). Plus AUCUN montage n'est
         // dégradé : pleine qualité quelle que soit la durée, le ré-encodage ne reste
         // qu'en filet de sécurité sous le nouveau plafond (480 Mo).
+        if (job.plan && job.plan.__compose === 'decupleur') {
+          // N variantes (+ affiches, dc.json, variantes.zip) sous <uid>/dc-<job>/ ; output_url = le manifeste (render-job signe le reste)
+          const dir = join(jobDir, 'dc-out'), prefixe = `${job.user_id}/dc-${job.id}`
+          const TYPES = { mp4: 'video/mp4', jpg: 'image/jpeg', json: 'application/json', zip: 'application/zip' }
+          for (const f of readdirSync(dir).sort((x, y) => (x === 'dc.json') - (y === 'dc.json'))) {   // manifeste en DERNIER
+            const ext = extname(f).slice(1)
+            if (!TYPES[ext]) continue
+            const { error: upErr } = await sb.storage.from('render-media').upload(`${prefixe}/${f}`, readFileSync(join(dir, f)), { contentType: TYPES[ext], upsert: true })
+            if (upErr) throw new Error('upload ' + f + ': ' + upErr.message)
+          }
+          console.log(`✅ job ${job.id} → ${prefixe}/ (${Math.round((Date.now() - tDebut) / 1000)}s)`)
+          await sb.from('render_jobs').update({ status: 'done', output_url: `${prefixe}/dc.json`, progress: 100, trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
+          await reservationJob(sb, job, true)
+        } else {
         const durF = (() => { try { return parseFloat(ffprobe(out, 'format=duration')) || 60 } catch (_) { return 60 } })()
         const MAX_UP = 480 * 1024 * 1024
         let outFinal = out
@@ -3695,6 +3725,7 @@ async function pollLoop() {
         console.log(`✅ job ${job.id} → ${outKey} (${Math.round((Date.now() - tDebut) / 1000)}s)`)
         await sb.from('render_jobs').update({ status: 'done', output_url: outKey, trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
         await reservationJob(sb, job, true)
+        }
       } catch (e) {
         console.error('✗ job', job.id, e.message)
         // crédits RENDUS AVANT d'annoncer l'échec (relecture 09/10) : l'app rembourse dès qu'elle lit « failed » — dans l'ordre

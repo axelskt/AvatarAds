@@ -9,7 +9,9 @@
 // POST JSON :
 //   { action:'create', plan:{...}, input_video:'<uid>/in-x.mp4', assets:[{id,path,kind}], avatar_clips?:['<uid>/av0.mp4',…] } -> { ok, job_id }
 //   (kind: 'image' | 'video' — #111 ; avatar_clips = scenes lipsync #119, ordre = plan.avatarSegments)
-//   { action:'status', job_id } -> { ok, status, url?, error? }
+//   { action:'status', job_id } -> { ok, status, url?, error?, progress? [, variants, zip, controle (Décupleur)] }
+//   Décupleur (24/10, developer / owner) : { action:'dc-fetch', url } · { action:'dc-cut', input_video, a, b }
+//     · { action:'decupleur', input_video, a, b, n, alt, textPos, master? } -> { ok, job_id }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -24,6 +26,9 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 // Clés de job d'un rendu (une par op tirée, 3 au plus) — MÊMES clés dans render-worker/worker.mjs (reservationJob).
+// Décupleur : liens acceptés (MÊME motif que render-worker/decupleur.mjs, revérifié par le moteur)
+const DC_LIEN = /^https:\/\/(?:(?:www|m|vm|vt)\.)?(?:tiktok\.com|instagram\.com)\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]{1,400}$/
+const DC_COMPOSES = ['dc-fetch', 'dc-cut', 'decupleur']
 const cleRendu = (id: string) => ['render:' + id, 'render:' + id + '#1', 'render:' + id + '#2']
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -310,6 +315,64 @@ serve(async (req: Request) => {
       return json({ ok: true, job_id: data.id })
     }
 
+    // ── DÉCUPLEUR (Axel 24/10) — compte developer / owner SEULEMENT tant que la fonctionnalité est en test ─────────────────
+    // dc-fetch : lien TikTok / Instagram → <uid>/<job>.mp4 (téléchargé par le moteur) ; dc-cut : passage gardé seul (≤ 15 s,
+    // vidéo de référence du changement de personnage) ; decupleur : N variantes sous <uid>/dc-<job>/. Plan RECONSTRUIT ici
+    // (jamais repris du client), chemins contrôlés (cheminSur), 3 jobs en cours au plus. Aucun tirage : owner / developer ne
+    // débitent rien (spendCreditsFor). L'ouverture à tous ajoutera la réservation (0,5 cr / variante) comme les autres rendus.
+    if (DC_COMPOSES.includes(String(body.action))) {
+      const _p = await requirePlan(user.id, [], 'Le Décupleur')
+      if (!_p.ok) return json({ error: 'Le Décupleur est en test (compte développeur seulement)' }, 403)
+      const _g = await billableGate({ userId: user.id, proxy: 'render-job-dc', requireDebit: false, rateMax: 30 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
+      {
+        const { count, error: cErr } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id).in('status', ['queued', 'rendering']).in('plan->>__compose', DC_COMPOSES)
+          .gte('updated_at', new Date(Date.now() - 45 * 60 * 1000).toISOString())
+        if (!cErr && (count ?? 0) >= 3) return json({ error: 'Un décuplage est déjà en cours — attends qu\'il se termine' }, 429)
+      }
+      const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : NaN }
+      let plan: Record<string, unknown>
+      let input: string | null
+      let assets: { id: string; path: string; kind: string }[] = []
+      if (body.action === 'dc-fetch') {
+        let u = String(body.url ?? '').trim().slice(0, 450)
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u
+        u = u.replace(/^http:\/\//i, 'https://')
+        if (!DC_LIEN.test(u)) return json({ error: 'Lien TikTok ou Instagram uniquement' }, 400)
+        plan = { __compose: 'dc-fetch', lien: u, duration: 1 }   // « lien » et pas « url » : aucune clé média du nettoyeur du moteur (assainirPlan)
+        input = `${user.id}/dc-lien-${Date.now()}.mp4`   // clé réservée : le moteur lit le LIEN, jamais ce fichier
+      } else {
+        input = cheminSur(user.id, body.input_video)
+        if (!input || !/\.(mp4|mov|webm|m4v)$/i.test(input)) return json({ error: 'chemin invalide' }, 400)
+        const a = num(body.a), b = num(body.b)
+        if (!(a >= 0) || !(b > a) || b - a < 1) return json({ error: 'passage invalide (1 s minimum)' }, 400)
+        if (body.action === 'dc-cut') {
+          if (b - a > 15.05) return json({ error: 'Passage de 15 s maximum avec le changement de personnage' }, 400)
+          plan = { __compose: 'dc-cut', a, b, duration: b - a }
+        } else {
+          const n = Number(body.n)
+          if (![5, 10, 20, 50].includes(n)) return json({ error: 'nombre de variantes invalide' }, 400)
+          if (b - a > 60.05) return json({ error: 'Passage de 60 s maximum' }, 400)
+          if (n * (b - a) > 901) return json({ error: `Trop long pour ×${n} : garde ${Math.floor(900 / n)} s maximum` }, 400)
+          const al = (body.alt && typeof body.alt === 'object' && !Array.isArray(body.alt)) ? body.alt as Record<string, unknown> : {}
+          const alt = { mirror: al.mirror === true, pixels: al.pixels === true, tint: al.tint === true, audio: al.audio === true, text: al.text === true }
+          const textPos = ['Haut', 'Centre', 'Bas', 'Aléatoire'].includes(String(body.textPos)) ? String(body.textPos) : 'Aléatoire'
+          if (body.master != null && body.master !== '') {
+            // vidéo du changement de personnage = un résultat kie rapatrié dans le dossier du compte, rien d'autre
+            const m = cheminSur(user.id, body.master)
+            if (!m || !m.startsWith(`${user.id}/kie/`) || !/\.mp4$/i.test(m)) return json({ error: 'chemin invalide' }, 400)
+            assets = [{ id: 'master', path: m, kind: 'video' }]
+          }
+          plan = { __compose: 'decupleur', a, b, n, alt, textPos, seed: Math.floor(Math.random() * 2147483647), duration: b - a }
+        }
+      }
+      const { data, error } = await service.from('render_jobs')
+        .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips: [] })
+        .select('id').single()
+      if (error || !data) return json({ error: 'creation impossible' }, 500)
+      return json({ ok: true, job_id: data.id })
+    }
+
     if (body.action === 'last') {
       // le dernier montage TERMINÉ du compte — l'entrée dev « Détails montage »
       // ouvre l'écran de révision dessus sans relancer un rendu.
@@ -326,7 +389,7 @@ serve(async (req: Request) => {
       const id = String(body.job_id || '')
       if (!id) return json({ error: 'job_id manquant' }, 400)
       const { data: job, error } = await service.from('render_jobs')
-        .select('id, user_id, status, output_url, error, plan, input_video, assets, avatar_clips').eq('id', id).single()
+        .select('id, user_id, status, output_url, error, plan, input_video, assets, avatar_clips, progress').eq('id', id).single()
       if (error || !job) return json({ error: 'job introuvable' }, 404)
       if (job.user_id !== user.id) return json({ error: 'acces refuse' }, 403)
       let url: string | null = null
@@ -358,9 +421,27 @@ serve(async (req: Request) => {
           .createSignedUrl(job.input_video, 3600)
         source_url = ssigned?.signedUrl ?? null
       }
+      // Décupleur : les N variantes (téléchargement), leurs affiches, le ZIP et le contrôle des empreintes (dc.json du moteur)
+      let dc: Record<string, unknown> = {}
+      const cmp = (job.plan as { __compose?: string } | null)?.__compose
+      if (job.status === 'done' && cmp === 'decupleur' && job.output_url && cheminSur(user.id, job.output_url) === job.output_url && /\/dc\.json$/.test(job.output_url)) {
+        const prefixe = job.output_url.slice(0, -'/dc.json'.length)
+        const st = service.storage.from('render-media')
+        let man: { variantes?: { fichier: string; affiche: string; distOriginal?: number; distMin?: number }[]; zip?: boolean; controle?: string; faibles?: number; passage?: number } = {}
+        try { const { data: f } = await st.download(job.output_url); if (f) man = JSON.parse(await f.text()) } catch (_) { man = {} }
+        const vs = (man.variantes ?? []).filter((v) => /^v\d{2}\.mp4$/.test(v.fichier) && /^v\d{2}\.jpg$/.test(v.affiche)).slice(0, 50)
+        const [dl, af, zp] = await Promise.all([
+          vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.fichier}`), 7200, { download: true }) : Promise.resolve({ data: [] }),
+          vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.affiche}`), 7200) : Promise.resolve({ data: [] }),
+          man.zip ? st.createSignedUrl(`${prefixe}/variantes.zip`, 7200, { download: 'variantes.zip' }) : Promise.resolve({ data: null }),
+        ])
+        dc = { variants: vs.map((v, i) => ({ url: (dl.data ?? [])[i]?.signedUrl ?? null, poster: (af.data ?? [])[i]?.signedUrl ?? null,
+            distOriginal: v.distOriginal ?? null, distMin: v.distMin ?? null })),
+          zip: (zp.data as { signedUrl?: string } | null)?.signedUrl ?? null, controle: man.controle ?? null, faibles: man.faibles ?? 0, passage: man.passage ?? null }
+      }
       // plan/input/assets/clips : ce qu'il faut pour RÉGÉNÉRER avec des
       // personnalisations sans que le client ait à garder d'état local
-      return json({ ok: true, status: job.status, url, derived_url, source_url, error: job.error,
+      return json({ ok: true, status: job.status, url, derived_url, source_url, error: job.error, progress: job.progress ?? null, ...dc,
         plan: job.plan, input_video: job.input_video, assets: job.assets, avatar_clips: job.avatar_clips })
     }
 

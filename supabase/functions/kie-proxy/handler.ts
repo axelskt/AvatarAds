@@ -45,7 +45,9 @@
 //   GET  ?path=/kie/requests/<rid>/status      → { status: IN_QUEUE | IN_PROGRESS | COMPLETED | FAILED [, billing] }
 //   GET  ?path=/kie/requests/<rid>             → résultat RAPATRIÉ dans render-media (URL signée 1 h)
 //   POST ?path=/kie/requests/<rid>/ack         → l'app confirme avoir rangé le résultat (filet : plus rien à faire)
-// alias : nano-banana-pro · veo3-lite · veo3-fast · kling-2.6-mc · kling-3.0-mc · omnihuman-1.5 · omni-flash
+// alias : nano-banana-pro · veo3-lite · veo3-fast · kling-2.6-mc · kling-3.0-mc · omnihuman-1.5 · omni-flash · wan-3
+// wan-3 (Décupleur, 24/10) : Wan 3.0 en mode référence (Video1 = passage gardé, Image1 = nouveau personnage) — compte developer
+// SEULEMENT (absent de KIE_OPEN → 403 pour tout client) ; facturé par kie (durée de la référence + durée produite) × tarif.
 // `billing` (erreurs et FAILED) : none | released | refunded | drawn | closed | unfunded — l'app ne replie QUE sur
 // released / none (réservation re-tirable proprement), et jamais pour Omni Flash (refunded en temps normal).
 // Veo client (25/09) : image de départ OBLIGATOIRE (Express en a toujours une ; c'est aussi la preuve de propriété du
@@ -65,9 +67,9 @@ import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman
 
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
-const ALIASES = ['nano-banana-pro', 'veo3-lite', 'veo3-fast', 'kling-2.6-mc', 'kling-3.0-mc', 'omnihuman-1.5', 'omni-flash'] as const
+const ALIASES = ['nano-banana-pro', 'veo3-lite', 'veo3-fast', 'kling-2.6-mc', 'kling-3.0-mc', 'omnihuman-1.5', 'omni-flash', 'wan-3'] as const
 type Alias = typeof ALIASES[number]
-const ALLOW = /^\/(health|balance|kie\/(nano-banana-pro|veo3-lite|veo3-fast|kling-2\.6-mc|kling-3\.0-mc|omnihuman-1\.5|omni-flash)|kie\/requests\/(mk|veo)-[A-Za-z0-9_-]{6,120}(\/status|\/ack)?)$/
+const ALLOW = /^\/(health|balance|kie\/(nano-banana-pro|veo3-lite|veo3-fast|kling-2\.6-mc|kling-3\.0-mc|omnihuman-1\.5|omni-flash|wan-3)|kie\/requests\/(mk|veo)-[A-Za-z0-9_-]{6,120}(\/status|\/ack)?)$/
 const NB_AR = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9', 'auto']
 // Coûts serveur (= débit légitime de l'app → ne 402 jamais un flux normal) :
 //   Nano Banana Pro = 5 (= google-ai-proxy costFor, = CREDIT_COSTS.imgUpscale4K / imgRealistic) ;
@@ -159,6 +161,24 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
     const duration = d <= 4 ? '4' : d <= 6 ? '6' : d <= 8 ? '8' : '10'
     return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'google/gemini-omni-flash-1-1', input: {
       prompt, first_frame_url: img, duration, aspect_ratio: pick(b.aspect_ratio, ['9:16', '16:9'] as const, '9:16'), resolution: '1080p' } } }
+  }
+  if (alias === 'wan-3') {
+    // Wan 3.0 « référence » (Décupleur, Axel 24/10) : remplace le personnage de Video1 par celui d'Image1. Limites kie : vidéo
+    // de référence 1–15 s (le passage gardé, découpé par le moteur), durée produite entière 2–15 s (référence + sortie ≤ 30 s),
+    // pas de son généré (le moteur remet le son d'origine), 720P par défaut (Axel : 720p). Prompt de l'app (≤ 20 000).
+    const vid = okInput(b.video_url, uid), img = okInput(b.image_url, uid)
+    if (!vid || !img) return { error: 'video_url / image_url : URL de notre storage uniquement' }
+    const prompt = str(b.prompt, 20000)
+    if (!prompt) return { error: 'prompt requis' }
+    const d = Math.round(Number(b.duration) || 5)
+    const input: Record<string, unknown> = {
+      prompt, reference_video_urls: [vid], reference_image_urls: [img],
+      resolution: pick(b.resolution, ['480P', '720P', '1080P'] as const, '720P'),
+      aspect_ratio: pick(b.aspect_ratio, ['adaptive', '16:9', '4:3', '1:1', '3:4', '9:16'] as const, 'adaptive'),
+      duration: Math.min(15, Math.max(2, d)), audio: b.audio === true, nsfw_checker: false,
+    }
+    if (Number.isInteger(b.seed) && b.seed >= 0 && b.seed <= 2147483647) input.seed = b.seed
+    return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'wan/3-0-video', input } }
   }
   // omnihuman-1.5 (clients Élite depuis le 26/09, voir KIE_OPEN) : 1080p imposé aux clients (même prix que le 720p chez kie ;
   // le 720p reste possible pour le compte developer, test A/B), jamais le mode rapide (« sacrifie la qualité »), graine

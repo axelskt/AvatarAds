@@ -18,11 +18,21 @@
 FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg ca-certificates curl fonts-liberation unzip \
+    ffmpeg ca-certificates curl fonts-liberation unzip zip \
     chromium \
     libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdrm2 libgbm1 libgtk-3-0 \
     libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 xdg-utils \
   && rm -rf /var/lib/apt/lists/*
+
+# Décupleur (24/10) : yt-dlp pour les liens TikTok / Instagram — binaire autonome ÉPINGLÉ (version + empreinte SHA-256,
+# comme l'image par digest : audit supply-chain 06/09). TikTok / Instagram changent souvent : si les liens ne passent plus,
+# monter YTDLP_VERSION et reprendre la somme de « yt-dlp_linux » dans
+# https://github.com/yt-dlp/yt-dlp/releases/download/<version>/SHA2-256SUMS (le build échoue si elle ne correspond pas).
+ARG YTDLP_VERSION=2026.10.21
+ARG YTDLP_SHA256=d8bd33fca9d5b23bd5b9952b3fca36db5c46331933fda9f598a3da14ce2c243f
+RUN curl -fsSL -o /usr/local/bin/yt-dlp "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux" \
+  && echo "${YTDLP_SHA256}  /usr/local/bin/yt-dlp" | sha256sum -c - \
+  && chmod 755 /usr/local/bin/yt-dlp
 
 # la CLI hyperframes utilise CE navigateur : plus de téléchargement, plus de
 # dépendance réseau au moment du rendu, et un démarrage à froid bien plus court

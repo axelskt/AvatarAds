@@ -99,6 +99,7 @@ export const KIE_CLIENT_LABELS: Record<string, string> = {
   'omnihuman-1.5': 'Vidéo avatar',   // OmniHuman (26/09) : jamais le nom du moteur ni du fournisseur côté client
   'kling-2.6-mc': 'Motion Control',
   'kling-3.0-mc': 'Motion Control',
+  'wan-3': 'Changement de personnage',   // Décupleur (24/10)
 }
 export const kieLabel = (alias: string, dev: boolean): string => dev ? (KIE_LABELS[alias] || 'kie.ai') : (KIE_CLIENT_LABELS[alias] || 'Génération')
 // Métadonnées de la ligne Bibliothèque écrite par le filet. « Compte developer » = le PLAN du propriétaire (lu par le filet),
@@ -116,6 +117,7 @@ export const KIE_LABELS: Record<string, string> = {
   'veo3-fast': 'Vidéo Veo Fast · kie.ai',
   'kling-2.6-mc': 'Motion Control 2.6 · kie.ai',
   'kling-3.0-mc': 'Motion Control 3.0 · kie.ai',
+  'wan-3': 'Changement de personnage · kie.ai',   // Décupleur (24/10), compte developer seulement
   'omnihuman-1.5': 'Omni Human · kie.ai',
   'omni-flash': 'Vidéo Omni Flash · kie.ai',
 }

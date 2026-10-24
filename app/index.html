@@ -4276,6 +4276,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         :where(#v-decupleur) button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
         /* .btn de l'app = bordure 1 px transparente ; la maquette n'en a pas sur le bouton plein (sinon +2 px de haut) */
         #v-decupleur .btn-primary{border:0}
+        #v-decupleur a.btn{text-decoration:none}
         #v-decupleur .dc-drop:hover{border-color:var(--accent) !important;background:rgba(255,90,31,.05) !important}
         #v-decupleur .dc-drop.dc-over{border-color:var(--accent) !important;background:rgba(255,90,31,.05) !important}
       </style>
@@ -6037,7 +6038,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-1900'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-2300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -11887,7 +11888,7 @@ async function _kieRun(alias, body, opt){
       for(let k=0; k<5; k++){   // la route résultat est idempotente côté kie-proxy → on peut la rappeler
         let rr=null, rd={};
         try{ ({ r:rr, j:rd } = await call(sd.response_url)); }catch(_){}
-        if(rr && rr.ok && rd.url){ console.log('[kie] terminé', alias, rid, rd.kie||{}); return { url: rd.url, kind: rd.kind, kie: rd.kie||{}, rid }; }
+        if(rr && rr.ok && rd.url){ console.log('[kie] terminé', alias, rid, rd.kie||{}); return { url: rd.url, kind: rd.kind, kie: rd.kie||{}, rid, storage_path: rd.storage_path || '' }; }
         if(rr && rr.status===409){ try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){} throw fail('kie : '+(rd.error||'déjà rangée dans ta Bibliothèque'), 'pending'); }
         if(rr && rr.status===422){ const m = rd.error || 'échec'; throw fail('kie : '+m, 'failed', refusRe.test(m), rd.billing); }
         await new Promise(res=>setTimeout(res, 3000*(k+1)));
@@ -13861,9 +13862,11 @@ function nav(id,el){
 // ══ DÉCUPLEUR ══ (maquette Claude Design 24/10, reprise 1:1 de src/gen-decupleur.jsx)
 // Une vidéo (fichier ou lien TikTok / Instagram) → N variantes uniques, chacune avec un mélange d'altérations
 // (miroir, pixels & grain, teinte, empreinte sonore, textes choc). Option : changer le personnage avant de décupler.
-// Compte dev/owner seulement (#navDecupleur). À BRANCHER côté serveur : téléchargement des liens, découpe [a, b],
-// changement de personnage, génération + contrôle des empreintes, ZIP. En attendant : import, aperçu et rognage
-// RÉELS (le fichier reste dans le navigateur), génération SIMULÉE — aucun crédit débité, rien n'est envoyé.
+// Compte dev/owner seulement (#navDecupleur ; render-job et kie-proxy revérifient). Chaîne réelle (24/10) : fichier déposé
+// dans render-media (ou lien récupéré par le moteur : job dc-fetch) → [changement de personnage : passage découpé (dc-cut)
+// → Wan 3.0 chez kie (alias wan-3, prompt _DC_WAN_PROMPT, 720p, son d'origine remis par le moteur)] → N variantes +
+// contrôle des empreintes + ZIP (job decupleur, render-worker/decupleur.mjs). Aucun crédit : owner / developer ne débitent
+// rien. Le résultat du changement de personnage est GARDÉ (_dc.master) : relancer des variantes ne le repaie pas.
 const DC_VARIANTS = [5, 10, 20, 50];
 const DC_CR_PER_VARIANT = 0.5;                       // 10 variantes = 5 crédits
 const DC_ALTER = [
@@ -13902,15 +13905,17 @@ const _dcMob = () => window.matchMedia('(max-width:768px)').matches;
 const _DC_FACE_GRAD = 'linear-gradient(135deg,oklch(.62 .12 40),oklch(.42 .1 300))';
 
 const _dc = {
-  src:null,               // { kind:'file'|'link', name, dur, hue, url?, thumbs? }
-  link:'', linkErr:false, linkLoad:null,
+  src:null,               // { kind:'file'|'link', name, dur, hue, url, w, h, file?, key? (render-media), thumbs? }
+  link:'', linkErr:false, linkErrMsg:'', linkLoad:null,
   a:0, b:0, t:0, play:true,
   variants:10,
-  face:false, faceImg:null,   // { name, url }
+  face:false, faceImg:null,   // { name, url, file }
+  master:null,                // résultat du changement de personnage gardé : { sig, cutKey, masterKey, cutDur, url }
+  res:null,                   // dernier lot : { variants:[{url,poster}], zip, controle, faibles, keep, master }
   modal:null,                 // 'face' | 'adv'
   alt:{ mirror:true, pixels:true, tint:true, audio:true, text:true },
   textPos:'Aléatoire',
-  phase:'idle', pct:0, nudge:null,
+  phase:'idle', pct:0, nudge:null, stageIdx:0, runId:0,
   _tick:null, _linkIv:null, _runIv:null, _nudgeT:null, _mq:false,
 };
 
@@ -13970,7 +13975,7 @@ function _dcSrcRender(){
       +   '</div>'
       +   '<button id="dcAdd" class="btn btn-ghost" style="flex:0 0 auto" onclick="_dcFetchLink()"'+((!_dc.link.trim()||_dc.linkLoad!==null)?' disabled':'')+'>Ajouter</button>'
       + '</div>'
-      + '<span id="dcLinkErr" style="font-size:12px;color:#ff6b7a;display:'+(_dc.linkErr?'inline':'none')+'">Lien TikTok ou Instagram uniquement</span>'
+      + '<span id="dcLinkErr" style="font-size:12px;color:#ff6b7a;display:'+(_dc.linkErr?'inline':'none')+'">'+_dcEsc(_dc.linkErrMsg || 'Lien TikTok ou Instagram uniquement')+'</span>'
       + '<div id="dcLinkLoad" class="col rise" style="gap:7px;display:'+(_dc.linkLoad!==null?'flex':'none')+'">'
       +   '<div class="row" style="justify-content:space-between">'
       +     '<span class="mono faint" style="font-size:11px">Récupération de la vidéo…</span>'
@@ -14112,7 +14117,7 @@ function _dcLoadFile(f){
   probe.onloadedmetadata = () => {
     const dur = probe.duration;
     if(!isFinite(dur) || dur <= 0){ URL.revokeObjectURL(url); toast('Impossible de lire cette vidéo'); return; }
-    _dcSetSrc({ kind:'file', name:f.name, dur, hue: 18 + Math.round(Math.random()*240), url });
+    _dcSetSrc({ kind:'file', name:f.name, dur, hue: 18 + Math.round(Math.random()*240), url, file:f, w:probe.videoWidth, h:probe.videoHeight });
     _dcThumbs(url, dur);
   };
   probe.onerror = () => { URL.revokeObjectURL(url); toast('Ce format ne se lit pas dans ton navigateur — essaie un MP4'); };
@@ -14120,14 +14125,16 @@ function _dcLoadFile(f){
 }
 function _dcSetSrc(src){
   _dcFreeSrc();
-  _dc.src = src; _dc.a = 0; _dc.b = src.dur; _dc.t = 0; _dc.play = true;
+  _dc.src = src; _dc.a = 0; _dc.b = src.dur; _dc.t = 0; _dc.play = true; _dc.master = null; _dc.res = null;
   _dcSrcRender(); _dcCtaRender();
 }
-function _dcFreeSrc(){ if(_dc.src && _dc.src.url){ try{ URL.revokeObjectURL(_dc.src.url); }catch(_){} } }
+function _dcFreeSrc(){ if(_dc.src && _dc.src.url && /^blob:/.test(_dc.src.url)){ try{ URL.revokeObjectURL(_dc.src.url); }catch(_){} } }
 // 12 vignettes de la bande, lues dans la vraie vidéo (un lecteur à part : l'aperçu continue de tourner)
 function _dcThumbs(url, dur){
   const v = document.createElement('video');
-  v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+  v.muted = true; v.playsInline = true; v.preload = 'auto';
+  if(/^https?:/.test(url)) v.crossOrigin = 'anonymous';   // vidéo d'un lien = URL signée du stockage : lisible par le canvas (CORS)
+  v.src = url;
   const c = document.createElement('canvas'); c.width = 180; c.height = 320;
   const g = c.getContext('2d'), out = []; let i = 0;
   const next = () => {
@@ -14153,39 +14160,95 @@ function _dcThumbs(url, dur){
   v.onerror = () => {};
 }
 function _dcChange(){
-  _dcFreeSrc(); _dc.src = null; _dc.link = ''; _dc.linkErr = false;
+  _dcFreeSrc(); _dc.src = null; _dc.link = ''; _dc.linkErr = false; _dc.linkErrMsg = ''; _dc.master = null; _dc.res = null;
   _dcSrcRender(); _dcCtaRender();
 }
 
 /* ---------- source : lien TikTok / Instagram ---------- */
 function _dcLinkInput(inp){
   _dc.link = inp.value;
-  if(_dc.linkErr){ _dc.linkErr = false; inp.style.borderColor = ''; const e = document.getElementById('dcLinkErr'); if(e) e.style.display = 'none'; }
+  if(_dc.linkErr) _dcLinkError('');
   const b = document.getElementById('dcAdd'); if(b) b.disabled = !_dc.link.trim() || _dc.linkLoad !== null;
 }
-function _dcFetchLink(){
-  if(!_dc.link.trim() || _dc.linkLoad !== null) return;
-  const ok = /^(https?:\/\/)?(www\.|vm\.|m\.)?(tiktok\.com|instagram\.com)\//i.test(_dc.link.trim());
-  _dc.linkErr = !ok;
+function _dcLinkError(msg){
+  _dc.linkErr = !!msg; _dc.linkErrMsg = msg || '';
   const inp = document.getElementById('dcLink'), err = document.getElementById('dcLinkErr');
-  if(inp) inp.style.borderColor = ok ? '' : '#ff6b7a';
-  if(err) err.style.display = ok ? 'none' : 'inline';
+  if(inp) inp.style.borderColor = msg ? '#ff6b7a' : '';
+  if(err){ err.textContent = msg || ''; err.style.display = msg ? 'inline' : 'none'; }
+}
+function _dcProbeUrl(url){
+  return new Promise((res, rej) => {
+    const v = document.createElement('video');
+    v.muted = true; v.preload = 'metadata'; v.playsInline = true; v.crossOrigin = 'anonymous';
+    v.onloadedmetadata = () => res({ dur: v.duration, w: v.videoWidth, h: v.videoHeight });
+    v.onerror = () => rej(new Error('Vidéo récupérée illisible'));
+    v.src = url;
+  });
+}
+// Le moteur télécharge le lien (job dc-fetch, yt-dlp) et le range dans render-media/<uid>/<job>.mp4. Pas de progression
+// réelle côté téléchargeur : la barre avance vers 92 % pendant l'attente, puis 100 % à l'arrivée de la vidéo.
+async function _dcFetchLink(){
+  if(!_dc.link.trim() || _dc.linkLoad !== null) return;
+  const lien = _dc.link.trim();
+  const ok = /^(https?:\/\/)?(www\.|vm\.|vt\.|m\.)?(tiktok\.com|instagram\.com)\//i.test(lien);
+  _dcLinkError(ok ? '' : 'Lien TikTok ou Instagram uniquement');
   if(!ok) return;
-  // À BRANCHER : téléchargement serveur (durée + miniatures + progression réelle). Simulé en attendant.
-  const name = _dc.link.trim().replace(/^https?:\/\//, '');
+  const name = lien.replace(/^https?:\/\//, '');
   let p = 0; _dc.linkLoad = 0;
   const box = document.getElementById('dcLinkLoad'); if(box) box.style.display = 'flex';
   const add = document.getElementById('dcAdd'); if(add) add.disabled = true;
-  clearInterval(_dc._linkIv);
-  _dc._linkIv = setInterval(() => {
-    p = Math.min(100, p + 6 + Math.random()*10); _dc.linkLoad = p;
+  const paint = () => {
     const bar = document.getElementById('dcLinkBar'), pc = document.getElementById('dcLinkPct');
     if(bar) bar.style.width = p + '%'; if(pc) pc.textContent = Math.round(p) + ' %';
-    if(p >= 100){
-      clearInterval(_dc._linkIv);
-      setTimeout(() => { _dc.linkLoad = null; _dcSetSrc({ kind:'link', name, dur:24, hue: 18 + Math.round(Math.random()*240) }); }, 250);
-    }
-  }, 110);
+  };
+  clearInterval(_dc._linkIv);
+  _dc._linkIv = setInterval(() => { p = p + (92 - p) * 0.05; _dc.linkLoad = p; paint(); }, 300);
+  try{
+    const uid = await _dcUid();
+    const st = await _dcJob({ action:'dc-fetch', url: lien }, () => _dc.linkLoad !== null, null, 6);
+    if(!st.url) throw new Error('Vidéo récupérée introuvable');
+    const meta = await _dcProbeUrl(st.url);
+    clearInterval(_dc._linkIv); p = 100; _dc.linkLoad = 100; paint();
+    await new Promise(r => setTimeout(r, 250));
+    _dc.linkLoad = null;
+    _dcSetSrc({ kind:'link', name, dur: meta.dur, hue: 18 + Math.round(Math.random()*240), url: st.url, key: uid + '/' + st.job_id + '.mp4', w: meta.w, h: meta.h });
+    _dcThumbs(st.url, meta.dur);
+  }catch(e){
+    clearInterval(_dc._linkIv); _dc.linkLoad = null;
+    const b2 = document.getElementById('dcLinkLoad'); if(b2) b2.style.display = 'none';
+    const a2 = document.getElementById('dcAdd'); if(a2) a2.disabled = !_dc.link.trim();
+    _dcLinkError((e && e.message) || 'Impossible de récupérer cette vidéo');
+  }
+}
+
+/* ---------- serveur (render-job) ---------- */
+async function _dcUid(){
+  const { data:{ session } } = await sb.auth.getSession();
+  const u = session && session.user && session.user.id;
+  if(!u) throw new Error('Session requise — reconnecte-toi');
+  return u;
+}
+async function _dcApi(body){
+  const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok || j.ok === false){ const e = new Error(j.error || ('HTTP ' + r.status)); e._http = r.status; throw e; }
+  return j;
+}
+// Crée le job puis le suit jusqu'au bout → statut final (+ job_id). alive() faux = abandon (Annuler) ; onProgress(0–100).
+async function _dcJob(body, alive, onProgress, maxMin){
+  const { job_id } = await _dcApi(body);
+  const t0 = Date.now(), maxMs = (maxMin || 40) * 60000;
+  while(Date.now() - t0 < maxMs){
+    await new Promise(r => setTimeout(r, 2500));
+    if(alive && !alive()){ const e = new Error('annulé'); e._dcAnnule = true; throw e; }
+    let st;
+    try{ st = await _dcApi({ action:'status', job_id }); }
+    catch(e){ if(e && [403, 404].includes(e._http)) throw e; continue; }   // coupure réseau / hoquet : tour suivant
+    if(typeof onProgress === 'function' && st.progress != null){ try{ onProgress(Number(st.progress) || 0); }catch(_){} }
+    if(st.status === 'done') return Object.assign(st, { job_id });
+    if(st.status === 'failed') throw new Error(st.error || 'échec du traitement');
+  }
+  throw new Error('Le serveur met trop de temps — réessaie dans un instant');
 }
 
 /* ---------- variantes, cartes, bouton ---------- */
@@ -14226,10 +14289,18 @@ function _dcCtaRender(){
 }
 // Jamais grisé : sans vidéo (ou sans photo si le personnage est activé), le bouton tremble et dit quoi faire
 function _dcGo(){
-  const ready = !!_dc.src && (!_dc.face || !!_dc.faceImg);
+  const keep = _dc.b - _dc.a, nv = _dc.variants;
+  // limites du serveur dites AVANT de lancer (Wan 3.0 : référence de 2 à 15 s ; un lot : 60 s gardées, 15 min produites)
+  const why = !_dc.src ? 'Ajoute une vidéo pour commencer'
+    : (_dc.face && !_dc.faceImg) ? 'Ajoute la photo du personnage'
+    : (_dc.face && keep > 15.05) ? 'Garde 15 s maximum avec le changement de personnage'
+    : (_dc.face && keep < 2) ? 'Garde 2 s minimum avec le changement de personnage'
+    : keep > 60.05 ? 'Garde 60 s maximum'
+    : nv * keep > 901 ? 'Trop long pour ×' + nv + ' : garde ' + Math.floor(900 / nv) + ' s maximum'
+    : '';
   const n = document.getElementById('dcNudge'), b = document.getElementById('dcCta');
-  if(ready){ if(n) n.style.display = 'none'; _dcRun(); return; }
-  if(n){ n.textContent = !_dc.src ? 'Ajoute une vidéo pour commencer' : 'Ajoute la photo du personnage'; n.style.display = 'inline'; }
+  if(!why){ if(n) n.style.display = 'none'; _dcRun(); return; }
+  if(n){ n.textContent = why; n.style.display = 'inline'; }
   if(b){ b.style.animation = 'none'; void b.offsetWidth; b.style.animation = 'dcShake .38s'; }
   clearTimeout(_dc._nudgeT);
   _dc._nudgeT = setTimeout(() => { const m = document.getElementById('dcNudge'); if(m) m.style.display = 'none'; const c = document.getElementById('dcCta'); if(c) c.style.animation = 'none'; }, 2400);
@@ -14295,13 +14366,29 @@ function _dcPickFace(inp){
   const f = inp.files && inp.files[0]; inp.value = ''; if(!f) return;
   if(!/^image\/(jpeg|png)$/.test(f.type) && !/\.(jpe?g|png)$/i.test(f.name)){ toast('Photo JPG ou PNG'); return; }
   if(_dc.faceImg){ try{ URL.revokeObjectURL(_dc.faceImg.url); }catch(_){} }
-  _dc.faceImg = { name:f.name, url:URL.createObjectURL(f) }; _dc.face = true;
+  _dc.faceImg = { name:f.name, url:URL.createObjectURL(f), file:f }; _dc.face = true;
   _dcModalRender(); _dcCardsRender(); _dcCtaRender();
 }
 function _dcAltToggle(id){ _dc.alt[id] = !_dc.alt[id]; _dcModalRender(); _dcCardsRender(); }
 function _dcTextPos(p){ _dc.textPos = p; _dcModalRender(); }
 
-/* ---------- génération (simulée tant que le serveur n'est pas branché) ---------- */
+/* ---------- génération ---------- */
+// Prompt du changement de personnage (Wan 3.0, mode référence : Video1 = passage gardé, Image1 = nouveau personnage).
+// Règle des prompts de réalisme (skill images-ia) : le détail dit CE QU'ON VEUT VOIR, l'interdit dit COMMENT NE PAS L'OBTENIR.
+const _DC_WAN_PROMPT = [
+  'Video editing task. Video1 is the source footage. Image1 shows the new person.',
+  'Replace the person who appears in Video1 with the person from Image1, as one seamless, continuous edit of Video1.',
+  'Identity comes ONLY from Image1: same face and facial features, skin tone, hair, body shape and outfit as the person in Image1, identical in every frame from the first to the last.',
+  'Keep everything else from Video1 exactly as it is, frame by frame: camera framing, camera movement and handheld shake, background and every object, lighting direction and color, color grade, timing and speed, body pose, gestures, hand movements, head movements, gaze direction, facial expressions and mouth movements (the lips must follow the original speech of Video1 exactly), and any on-screen text or overlays.',
+  'Do not add, remove or move any object, person, text or logo. Do not change the scene, the duration, the speed or the aspect ratio. No cut, no transition, no new camera angle, no zoom.',
+  'Photorealistic, natural smartphone footage: real skin texture with pores and small imperfections, natural light on the new person that matches the scene, sharp details.',
+  'Never: beauty filter, skin smoothing, plastic or waxy skin, cartoon, CGI or painted look, blur, flicker, morphing face, identity drift, extra or missing fingers, distorted hands.',
+].join(' ');
+function _dcAspect(){
+  const s = _dc.src; if(!s || !s.w || !s.h) return 'adaptive';
+  const r = s.w / s.h, c = [['9:16', 9/16], ['3:4', 3/4], ['1:1', 1], ['4:3', 4/3], ['16:9', 16/9]];
+  return c.reduce((best, x) => Math.abs(Math.log(x[1] / r)) < Math.abs(Math.log(best[1] / r)) ? x : best)[0];
+}
 function _dcStages(){
   return [
     ...(_dc.src && _dc.src.kind === 'link' ? ['Téléchargement de la vidéo'] : []),
@@ -14311,17 +14398,68 @@ function _dcStages(){
     'Contrôle des empreintes',
   ];
 }
-function _dcRun(){
-  _dc.phase = 'running'; _dc.pct = 0; _dc.modal = null;
+async function _dcRun(){
+  const run = _dc.runId = Date.now();
+  _dc.phase = 'running'; _dc.pct = 0; _dc.stageIdx = 0; _dc.modal = null; _dc.res = null;
   const v = document.getElementById('dcVid'); if(v) v.pause();
   _dcRender();
-  let p = 0; clearInterval(_dc._runIv);
-  _dc._runIv = setInterval(() => {
-    p = Math.min(100, p + 3 + Math.random()*5); _dc.pct = p; _dcRunPaint();
-    if(p >= 100){ clearInterval(_dc._runIv); setTimeout(() => { if(_dc.phase === 'running'){ _dc.phase = 'done'; _dcRender(); } }, 300); }
-  }, 120);
+  const alive = () => _dc.runId === run && _dc.phase === 'running';
+  const stages = _dcStages(), nv = _dc.variants;
+  const etape = (nom, pct) => { if(!alive()) return; const k = stages.indexOf(nom); if(k >= 0) _dc.stageIdx = k; _dc.pct = Math.max(_dc.pct, Math.min(100, pct)); _dcRunPaint(); };
+  try{
+    const uid = await _dcUid();
+    etape('Découpe du passage gardé', 3);   // un lien est déjà téléchargé (à l'import) : son étape passe tout de suite
+    // 1) la source dans le stockage (une seule fois par vidéo)
+    if(!_dc.src.key){
+      const f = _dc.src.file; if(!f) throw new Error('Vidéo introuvable — réimporte-la');
+      const e = ((/\.(mp4|mov|webm|m4v)$/i.exec(f.name) || [])[1] || 'mp4').toLowerCase();
+      const key = uid + '/dc-src-' + Date.now() + '.' + e;
+      const up = await sb.storage.from('render-media').upload(key, f, { contentType: f.type || (e === 'mov' ? 'video/quicktime' : e === 'webm' ? 'video/webm' : 'video/mp4'), upsert:true });
+      if(up.error) throw new Error('Envoi de la vidéo impossible (' + _aaStoMsg(up.error) + ')');
+      _dc.src.key = key;
+    }
+    if(!alive()) return;
+    let input = _dc.src.key, a = _dc.a, b = _dc.b, master = null;
+    // 2) changement de personnage : passage découpé → Wan 3.0 (kie) — résultat gardé pour les lots suivants
+    if(_dc.face){
+      const fi = _dc.faceImg.file;
+      const sig = [_dc.src.key, a.toFixed(2), b.toFixed(2), _dc.faceImg.name, fi && fi.size, fi && fi.lastModified].join('|');
+      if(!(_dc.master && _dc.master.sig === sig)){
+        const cut = await _dcJob({ action:'dc-cut', input_video: input, a, b }, alive, null, 10);
+        if(!cut.url) throw new Error('Découpe du passage impossible');
+        etape('Changement du personnage', 10);
+        const img = await _kieUpload(fi);
+        const t0 = Date.now();
+        const res = await _kieRun('wan-3', { video_url: cut.url, image_url: img, prompt: _DC_WAN_PROMPT, resolution: '720P',
+          aspect_ratio: _dcAspect(), duration: Math.ceil(b - a - 0.01), audio: false },
+          { every: 6000, maxPolls: 300, onTick: () => etape('Changement du personnage', 10 + 45 * (1 - Math.exp(-(Date.now() - t0) / 240000))) });
+        if(!res.storage_path) throw new Error('Résultat du changement de personnage introuvable');
+        _kieAck(res.rid);
+        _dc.master = { sig, cutKey: uid + '/' + cut.job_id + '.mp4', masterKey: res.storage_path, cutDur: b - a, url: res.url };
+      }
+      input = _dc.master.cutKey; master = _dc.master.masterKey; a = 0; b = _dc.master.cutDur;
+    }
+    if(!alive()) return;
+    // 3) les variantes + contrôle des empreintes (le moteur écrit son avancement entre deux variantes)
+    const base = _dc.face ? 58 : 10;
+    etape('Génération des ' + nv + ' variantes', base);
+    const st = await _dcJob({ action:'decupleur', input_video: input, a, b, n: nv, alt: { ..._dc.alt }, textPos: _dc.textPos, master }, alive,
+      (p) => etape(p >= 92 ? 'Contrôle des empreintes' : 'Génération des ' + nv + ' variantes', base + (99 - base) * p / 100), 45);
+    if(!alive()) return;
+    _dc.res = { variants: st.variants || [], zip: st.zip || null, controle: st.controle, faibles: st.faibles || 0, keep: b - a, master: _dc.face ? _dc.master : null };
+    _dc.pct = 100; _dc.phase = 'done'; _dcRender();
+  }catch(e){
+    if(!alive() || (e && e._dcAnnule)) return;
+    console.warn('[décupleur]', e);
+    _dc.phase = 'idle'; _dcRender();
+    toast((e && e.message) || 'Le décuplage a échoué');
+  }
 }
-function _dcCancel(){ clearInterval(_dc._runIv); _dc.phase = 'idle'; _dcRender(); }
+function _dcCancel(){
+  const wan = _dc.phase === 'running' && _dcStages()[_dc.stageIdx] === 'Changement du personnage';
+  _dc.runId = 0; clearInterval(_dc._runIv); _dc.phase = 'idle'; _dcRender();
+  if(wan) toast('Le changement de personnage continue côté serveur : il arrivera dans ta Bibliothèque');
+}
 function _dcRunningHTML(){
   return '<div class="col" style="flex:1;min-height:0;align-items:center;justify-content:center;padding:40px 24px;text-align:center">'
     + '<div style="width:72px;height:72px;border-radius:22px;display:grid;place-items:center;margin-bottom:22px;background:radial-gradient(110px 80px at 50% 20%, rgba(255,90,31,.4), transparent), var(--surface);border:1px solid var(--accent-line)">'+_dcI('copy2', 30, 'color:var(--accent-2)')+'</div>'
@@ -14335,7 +14473,7 @@ function _dcRunningHTML(){
     + '</div>';
 }
 function _dcRunPaint(){
-  const stages = _dcStages(), st = Math.min(stages.length - 1, Math.floor(_dc.pct / 100 * stages.length));
+  const stages = _dcStages(), st = Math.max(0, Math.min(stages.length - 1, _dc.stageIdx || 0));
   const $ = (id) => document.getElementById(id);
   if($('dcStage')) $('dcStage').textContent = stages[st];
   if($('dcRunBar')) $('dcRunBar').style.width = _dc.pct + '%';
@@ -14349,10 +14487,17 @@ function _dcRunPaint(){
 
 /* ---------- résultat ---------- */
 function _dcTile(i){
+  const v = _dc.res && _dc.res.variants && _dc.res.variants[i];
+  const num = '<span class="mono" style="position:absolute;left:6px;top:6px;font-size:9.5px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:5px">#'+String(i+1).padStart(2,'0')+'</span>';
+  if(v){   // vraie variante : son affiche, et le téléchargement du MP4 (URL signée 2 h)
+    return '<div style="position:relative;aspect-ratio:9 / 16;border-radius:12px;overflow:hidden;border:1px solid var(--border-2);background:var(--surface-2)'+(v.poster ? ' url(\''+v.poster+'\') center/cover' : '')+'">'
+      + num
+      + (v.url ? '<a href="'+_dcEsc(v.url)+'" download="variante-'+String(i+1).padStart(2,'0')+'.mp4" title="Télécharger" style="position:absolute;right:6px;bottom:6px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff">'+_dcI('download', 13)+'</a>' : '')
+      + '</div>';
+  }
   const s = _dc.src, hue = s ? s.hue : 18;
   const mirror = _dc.alt.mirror && i % 2 === 1, shift = _dc.alt.tint ? (i * 23) % 60 - 30 : 0, txt = _dc.alt.text && i % 3 === 0;
   const top = { Haut:'12%', Centre:'45%', Bas:'70%' }[_dc.textPos] || (i % 2 ? '12%' : '70%');
-  // vraie vidéo : la vignette du milieu du passage gardé, avec l'altération de la variante (aperçu, pas le rendu)
   const th = s && s.thumbs && s.thumbs.length ? s.thumbs[Math.min(11, Math.max(0, Math.floor(((_dc.a + _dc.b) / 2) / s.dur * 12)))] : null;
   return '<div style="position:relative;aspect-ratio:9 / 16;border-radius:12px;overflow:hidden;border:1px solid var(--border-2);background:linear-gradient(170deg, oklch(0.46 0.13 '+(hue+shift)+'), oklch(0.16 0.05 '+(hue+40+shift)+'))">'
     + '<div style="position:absolute;inset:0;transform:'+(mirror?'scaleX(-1)':'none')+'">'
@@ -14363,12 +14508,18 @@ function _dcTile(i){
     + '</div>'
     + (_dc.alt.pixels ? '<div style="position:absolute;inset:0;opacity:.18;background:repeating-linear-gradient(0deg,rgba(255,255,255,.5) 0 1px,transparent 1px 3px)"></div>' : '')
     + (txt ? '<span style="position:absolute;left:8%;right:8%;top:'+top+';text-align:center;font-family:\'Bricolage Grotesque\';font-weight:800;font-size:10px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8)">ATTENDS LA FIN</span>' : '')
-    + '<span class="mono" style="position:absolute;left:6px;top:6px;font-size:9.5px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:5px">#'+String(i+1).padStart(2,'0')+'</span>'
+    + num
     + '<button title="Télécharger" onclick="_dcDownload()" style="position:absolute;right:6px;bottom:6px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff">'+_dcI('download', 13)+'</button>'
     + '</div>';
 }
 function _dcDoneHTML(mob){
-  const n = _dc.variants, cols = mob ? 3 : (n >= 20 ? 8 : 5);
+  const r = _dc.res, n = r && r.variants.length ? r.variants.length : _dc.variants, cols = mob ? 3 : (n >= 20 ? 8 : 5);
+  const keep = r ? r.keep : (_dc.b - _dc.a);
+  // contrôle des empreintes : « toutes différentes » seulement s'il passe ; sinon on dit combien restent trop proches
+  const sous = !r || r.controle === 'ok' ? 'toutes différentes'
+    : r.faibles + ' trop proche' + (r.faibles > 1 ? 's' : '') + ' de l’original — active plus d’altérations';
+  const perso = r && r.master && r.master.url
+    ? '<a class="btn btn-ghost btn-sm" href="'+_dcEsc(r.master.url)+'" download="personnage.mp4">'+_dcI('user', 14)+'<span>Vidéo du personnage</span></a>' : '';
   return '<div class="scroll-y" style="flex:1;min-height:0;padding:'+(mob?'20px 16px 28px':'28px 40px')+'">'
     + '<div style="max-width:1080px;margin:0 auto">'
     +   '<div class="row" style="justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px">'
@@ -14376,11 +14527,12 @@ function _dcDoneHTML(mob){
     +       '<span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;background:rgba(40,199,149,.14);border:1px solid rgba(40,199,149,.4)">'+_dcI('check', 18, 'color:var(--green)')+'</span>'
     +       '<div class="col" style="line-height:1.25">'
     +         '<span class="display" style="font-size:'+(mob?20:24)+'px;font-weight:800">'+n+' variantes prêtes</span>'
-    +         '<span class="faint" style="font-size:12.5px">'+_dcT(_dc.b - _dc.a)+' chacune · toutes différentes</span>'
+    +         '<span class="faint" style="font-size:12.5px">'+_dcT(keep)+' chacune · '+sous+'</span>'
     +       '</div>'
     +     '</div>'
-    +     '<div class="row gap10">'
+    +     '<div class="row gap10" style="flex-wrap:wrap">'
     +       '<button class="btn btn-ghost btn-sm" onclick="_dcCancel()">'+_dcI('regen', 14)+'<span>Recommencer</span></button>'
+    +       perso
     +       '<button class="btn btn-primary btn-sm" onclick="_dcDownload()">'+_dcI('download', 14)+'<span>Tout télécharger</span></button>'
     +     '</div>'
     +   '</div>'
@@ -14389,8 +14541,14 @@ function _dcDoneHTML(mob){
     +   '</div>'
     + '</div></div>';
 }
-// À BRANCHER : N fichiers 9:16 + archive ZIP. Tant que le serveur ne génère rien, il n'y a rien à télécharger.
-function _dcDownload(){ toast('Téléchargement disponible dès que la génération sera branchée'); }
+// ZIP si le moteur l'a fait (≤ 250 Mo) ; sinon les variantes une par une (le navigateur peut demander l'autorisation)
+function _dcDownload(){
+  const r = _dc.res;
+  if(!r || !r.variants.length){ toast('Aucune variante à télécharger'); return; }
+  const go = (url, nom) => { const a = document.createElement('a'); a.href = url; a.download = nom; document.body.appendChild(a); a.click(); a.remove(); };
+  if(r.zip){ go(r.zip, 'variantes.zip'); return; }
+  r.variants.forEach((v, i) => { if(v.url) setTimeout(() => go(v.url, 'variante-' + String(i+1).padStart(2,'0') + '.mp4'), i * 450); });
+}
 
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
