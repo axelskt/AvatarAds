@@ -8,6 +8,9 @@ const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const WHOP_WEBHOOK_SECRET  = Deno.env.get('WHOP_WEBHOOK_SECRET') ?? ''  // Whop Dashboard → Developer → Webhooks
 const RESEND_API_KEY       = Deno.env.get('RESEND_API_KEY') ?? ''       // e-mail de bienvenue — no-op si absent
+// Audit 23/10 (constat 43) : jamais d'adresse en clair dans les journaux (même forme que paiement-compte). Les alertes
+// envoyées à Axel gardent l'adresse complète.
+const masque = (e: unknown) => { const s = String(e ?? ''); if (!s.includes('@')) return s || '—'; const [u, d] = s.split('@'); return (u || '').slice(0, 2) + '•••@' + (d || '') }
 
 // ─────────────────────────────────────────────────────────────────
 // ABONNEMENTS (mensuel + annuel) → fixe le plan + remet les crédits
@@ -86,7 +89,8 @@ const monthlyCents = (cents: number, planId: string) => ANNUAL_PLAN_IDS.has(plan
 // le prix Élite max (22499) — sinon commission 13500 (filleul Pro annuel) < 22499 → NON flaguée alors qu'elle dépasse
 // ce que le parrain paie. On préfère le prix EXACT via whop_plan_id (ci-dessous) ; ce repli ne sert que s'il manque.
 const REFERRER_PLAN_CAP: Record<string, number> = { starter: 2999, pro: 4999, elite: 8999 }
-async function creditReferral(sb: any, referredId: string, referredEmail: string, planId: string, data: any, label: string) {
+// refAchat : abonnement Whop du paiement (activation : data.id ; paiement : membership) — sert au dédoublonnage.
+async function creditReferral(sb: any, referredId: string, referredEmail: string, planId: string, data: any, label: string, refAchat: string | null = null) {
   try {
     const { data: prof } = await sb.from('profiles').select('referred_by, signup_ip').eq('id', referredId).maybeSingle()
     const code = String(prof?.referred_by || '').trim()
@@ -123,7 +127,7 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     }
     const _hasCoupon = Object.values(_cpFields).some(v => v !== undefined && v !== null && v !== '' && v !== false && v !== 0)
     if (_hasCoupon) {
-      console.log(`🎟️ Parrainage ANNULÉ (coupon détecté) — filleul ${referredEmail}, plan ${planId}, champs=${JSON.stringify(Object.fromEntries(Object.entries(_cpFields).filter(([, v]) => v !== undefined)))}`)
+      console.log(`🎟️ Parrainage ANNULÉ (coupon détecté) — filleul ${masque(referredEmail)}, plan ${planId}, champs=${JSON.stringify(Object.fromEntries(Object.entries(_cpFields).filter(([, v]) => v !== undefined)))}`)
       return
     }
     console.log(`🔎 parrainage payload keys (${label}/${planId}): ${Object.keys(data || {}).join(',')}`)   // confirmer le champ coupon sur un vrai paiement avec promo
@@ -163,15 +167,18 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
       ? `auto-parrainage possible : commission ${(commission / 100).toFixed(2)}€ > plan parrain ${refProf?.plan} ${(refPlanCap / 100).toFixed(2)}€/mois`
       : !_sipFilleul ? 'IP d’inscription du filleul inconnue (inscription Google) : auto-parrainage non vérifiable'
       : null
-    if (reviewReason) console.warn(`🚩 parrainage ASYMÉTRIQUE (flag revue owner) — ${reviewReason} (parrain ${referrerId}, filleul ${referredEmail})`)
+    if (reviewReason) console.warn(`🚩 parrainage ASYMÉTRIQUE (flag revue owner) — ${reviewReason} (parrain ${referrerId}, filleul ${masque(referredEmail)})`)
     const { error } = await sb.from('referral_earnings').insert({
       referrer_id: referrerId, referred_id: referredId, referred_email: referredEmail, plan_id: planId, label,
       amount_cents: amountCents, commission_cents: commission, currency: 'EUR',
       review_reason: reviewReason,
-      dedupe_key: `${referredId}:${planId}:${day}`,   // une commission par paiement (activation + payment.succeeded = même jour)
+      // Audit 23/10 (constat 45) : une commission par ACHAT et par jour. L'activation et le paiement du 1er cycle d'un
+      // abonnement portent le même membership (fusionnés, même dans le désordre) ; deux packs achetés le même jour sont deux
+      // memberships (deux commissions). Avant : clé par plan et par jour, le 2e achat identique du jour était perdu.
+      dedupe_key: `${referredId}:${refAchat || planId}:${day}`,
     })
-    if (error) { if (String(error.code) === '23505') console.log('↩️ parrainage : commission déjà comptée aujourd\'hui'); else console.error('⚠️ parrainage :', error.message); return }
-    console.log(`💶 Parrainage : +${(commission / 100).toFixed(2)} € pour ${referrerId} (${label} ${planId}, filleul ${referredEmail})`)
+    if (error) { if (String(error.code) === '23505') console.log('↩️ parrainage : commission déjà comptée pour cet achat aujourd\'hui'); else console.error('⚠️ parrainage :', error.message); return }
+    console.log(`💶 Parrainage : +${(commission / 100).toFixed(2)} € pour ${referrerId} (${label} ${planId}, filleul ${masque(referredEmail)})`)
   } catch (e) { console.error('⚠️ parrainage :', e) }
 }
 
@@ -221,7 +228,7 @@ async function flagReferralClawback(sb: any, referredId: string | null, referred
       if (error) { console.error('⚠️ parrainage (clawback) :', error.message); return null }
       n++
     }
-    if (n) console.warn(`🚩 parrainage : ${n} commission(s) du filleul ${referredId || referredEmail} mise(s) en revue (${action})`)
+    if (n) console.warn(`🚩 parrainage : ${n} commission(s) du filleul ${referredId || masque(referredEmail)} mise(s) en revue (${action})`)
     return n
   } catch (e) { console.error('⚠️ parrainage (clawback) :', e); return null }
 }
@@ -350,6 +357,125 @@ async function alertOwner(subject: string, title: string, rows: [string, string]
   } catch (e) { console.error('alerte owner', e) }
 }
 
+// ── Audit 23/10 (constats 20, 22) : résiliation par le webhook d'un abonnement Whop REMPLACÉ (changement de palier,
+// nouveau rendu prioritaire). En fin de période (cancel_at_period_end, paramètre API v1), jamais de remboursement.
+// Refus de Whop → l'abonnement est relu : s'il finit déjà (résilié, terminé, fin de période programmée), c'est fait.
+// Relecture du 24/10 : appels bornés à 8 s (un Whop muet ne bloque plus le webhook).
+async function annulerChezWhop(membershipId: string): Promise<{ ok: boolean; detail: string }> {
+  const key = Deno.env.get('WHOP_API_KEY') ?? ''
+  if (!key) return { ok: false, detail: 'WHOP_API_KEY manquant' }
+  const headers = { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }
+  const url = `https://api.whop.com/api/v1/memberships/${encodeURIComponent(membershipId)}`
+  try {
+    const rc = await fetch(`${url}/cancel`, { method: 'POST', headers, body: JSON.stringify({ cancel_at_period_end: true }), signal: AbortSignal.timeout(8000) })
+    if (rc.ok) return { ok: true, detail: 'fin de période programmée' }
+    const err = `${rc.status} ${(await rc.text().catch(() => '')).slice(0, 200)}`
+    const rg = await fetch(url, { headers, signal: AbortSignal.timeout(8000) }).catch(() => null)
+    const m = rg && rg.ok ? await rg.json().catch(() => null) : null
+    const st = String(m?.status ?? '').toLowerCase()
+    if (m && (m.cancel_at_period_end === true || ['canceled', 'cancelled', 'completed', 'expired'].includes(st))) return { ok: true, detail: `déjà en fin chez Whop (${st || 'fin de période programmée'})` }
+    return { ok: false, detail: err }
+  } catch (e) { return { ok: false, detail: String((e as Error)?.message ?? e).slice(0, 200) } }
+}
+// File whop_annulations (remplie par whop_webhook_activer et par le rendu prioritaire) : chaque abonnement encore à résilier
+// est envoyé à Whop. Relecture du 24/10 : un échec n'est plus rendu à Whop en 500 (l'activation sortait alors du journal :
+// la page « Paiement confirmé » attendait pour rien, et une ligne refusée pour de bon faisait échouer toutes les activations
+// suivantes du compte). La ligne reste dans la file : essais espacés de 30 min, 8 au plus, d'abord pour le compte à son
+// activation (userId), puis après chaque webhook traité (balayerAnnulations, userId null). Au 8e échec, Axel est alerté
+// pour résilier à la main. Clé API absente : signalé à l'activation, jamais retenté. null = la base n'a pas répondu.
+const ANNUL_ESPACEMENT_MS = 30 * 60_000
+const ANNUL_ESSAIS_MAX = 8
+async function traiterAnnulations(sb: any, userId: string | null, max = 20): Promise<{ echecs: string[]; sansCle: string[] } | null> {
+  let q = sb.from('whop_annulations').select('membership_id, user_id, genre, essais, dernier_essai_at, remplace_par').is('fait_at', null)
+  if (userId) q = q.eq('user_id', userId)
+  const { data: rows, error } = await q.order('created_at', { ascending: true })
+  if (error) { console.error('❌ whop_annulations (lecture) :', error.message ?? error); return null }
+  const echecs: string[] = [], sansCle: string[] = []
+  const aTenter = (rows || []).filter((r: any) => (r.essais || 0) < ANNUL_ESSAIS_MAX
+    && !(r.dernier_essai_at && Date.now() - Date.parse(r.dernier_essai_at) < ANNUL_ESPACEMENT_MS)).slice(0, max)
+  for (const r of aTenter) {
+    const id = String(r.membership_id), quoi = r.genre === 'prio' ? 'rendu prioritaire' : 'abonnement'
+    const res = await annulerChezWhop(id)
+    if (res.ok) {
+      const { error: e2 } = await sb.from('whop_annulations').update({ fait_at: new Date().toISOString(), derniere_erreur: null, dernier_essai_at: new Date().toISOString() }).eq('membership_id', id)
+      if (e2) console.warn('ℹ️ whop_annulations (non bloquant) :', e2.message ?? e2)
+      console.log(`🔁 Ancien ${quoi} ${id} résilié chez Whop (${res.detail})`)
+      continue
+    }
+    const essais = (r.essais || 0) + 1
+    const { error: e3 } = await sb.from('whop_annulations').update({ essais, derniere_erreur: res.detail, dernier_essai_at: new Date().toISOString() }).eq('membership_id', id)
+    if (e3) console.warn('ℹ️ whop_annulations (non bloquant) :', e3.message ?? e3)
+    if (res.detail === 'WHOP_API_KEY manquant') { console.error(`⚠️ WHOP_API_KEY manquant — ancien ${quoi} ${id} NON annulé (risque de double facturation)`); sansCle.push(id); continue }
+    console.error(`⚠️ Échec annulation ancien ${quoi} ${id} (essai ${essais}/${ANNUL_ESSAIS_MAX}): ${res.detail}`.slice(0, 300)); echecs.push(id)
+    if (essais >= ANNUL_ESSAIS_MAX) {
+      await alertOwner(`Abonnement Whop à résilier à la main — AvatarAds`, 'Résiliation d’un abonnement remplacé abandonnée', [
+        ['Compte', String(r.user_id || '—')], ['À résilier', `${id} (${quoi})`], ['Remplacé par', String(r.remplace_par || '—')],
+        ['Essais', String(essais)], ['Dernière erreur', res.detail],
+      ], `Whop a refusé ${ANNUL_ESSAIS_MAX} fois la résiliation (fin de période) de cet abonnement remplacé : plus aucun essai automatique. Résilie-le à la main dans Whop, sinon il continue d’être prélevé.`)
+    }
+  }
+  return { echecs, sansCle }
+}
+async function alerteAnnulations(email: string, userId: string, nouveau: string | null, ann: { echecs: string[]; sansCle: string[] }) {
+  await alertOwner(`⚠️ Ancien abonnement Whop non résilié — ${email || userId}`, 'Remplacement d’abonnement : l’ancien n’a pas pu être résilié chez Whop', [
+    ['Compte', userId], ['E-mail Whop', email || '—'], ['Nouvel abonnement', String(nouveau || '—')],
+    ['À résilier', [...ann.echecs, ...ann.sansCle].join(', ')],
+  ], ann.echecs.length
+    ? `Whop a refusé ou n’a pas répondu. Le nouvel abonnement est bien appliqué ; la résiliation de l’ancien sera retentée automatiquement (webhooks suivants, toutes les 30 min au plus, ${ANNUL_ESSAIS_MAX} essais), avec une alerte si elle est abandonnée. Tu peux aussi le résilier tout de suite à la main dans Whop (fin de période).`
+    : 'Clé API Whop absente : résilie l’ancien abonnement à la main dans Whop (fin de période), sinon il continue d’être prélevé.')
+}
+// Après chaque webhook traité (200) : la file whop_annulations de TOUS les comptes est retentée (5 lignes au plus, essais
+// espacés). Tourne après la réponse quand le runtime le permet (EdgeRuntime.waitUntil). Ne lève jamais d'erreur.
+async function balayerAnnulations() {
+  try {
+    if (!Deno.env.get('WHOP_API_KEY')) return   // sans clé, rien à tenter (signalé à l'activation)
+    const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+    await traiterAnnulations(sb, null, 5)
+  } catch (e) { console.warn('ℹ️ whop_annulations (balayage, non bloquant) :', (e as Error)?.message) }
+}
+
+// ── Relecture du 24/10 (constats 4/11/16 par l'ADRESSE seule) : achat mis de côté par whop_webhook_activer (compte
+// retrouvé par la seule adresse Whop et déjà abonné ailleurs). Fin, remboursement ou litige de cet abonnement : la ligne
+// est close (Axel ne doit plus pouvoir le valider). false = la base n'a pas répondu (l'appelant rend 500, Whop rejoue).
+async function cloreAchatAVerifier(sb: any, mid: string | null, decision: string): Promise<boolean> {
+  if (!mid) return true
+  const { data, error } = await sb.from('whop_achats_a_verifier').update({ traite_at: new Date().toISOString(), decision })
+    .eq('membership_id', mid).is('traite_at', null).select('membership_id')
+  if (error) { console.error('❌ whop_achats_a_verifier :', error.message ?? error); return false }
+  if (data?.length) console.log(`Achat à vérifier ${mid} clos (${decision})`)
+  return true
+}
+async function alerteAchatAVerifier(email: string, profile: any, nouveau: string | null, planId: string, actuel: string | null, action: string) {
+  await alertOwner(`Achat à vérifier AvatarAds — ${email}`, 'Abonnement payé avec l’adresse d’un compte déjà abonné', [
+    ['Événement', action], ['Compte', String(profile.id)], ['E-mail Whop', email],
+    ['Abonnement payé', `${nouveau || '—'} (${planId})`], ['Abonnement en cours du compte', `${actuel || 'aucun enregistré'} (${profile.whop_plan_id || profile.plan || '—'})`],
+  ], 'Le paiement ne porte pas l’identifiant du compte connecté : il a été fait sans session (page de secours whop.com, page Tarifs déconnectée) ou par quelqu’un qui connaît cette adresse. Rien n’a été changé : l’abonnement en cours n’est pas résilié, le plan et les crédits du compte sont intacts. '
+    + `Si c’est bien le titulaire (montée en gamme), applique l’achat en SQL : select public.whop_achat_valider('${nouveau || ''}'); (l’ancien abonnement sera résilié chez Whop au webhook suivant, ou résilie-le à la main). Sinon, résilie le nouvel abonnement dans Whop.`)
+}
+// Relecture du 24/10 (constat 4) : aa_user_id désigne un compte qui ne porte PAS l'adresse payée chez Whop. Le refus est
+// gardé (l'identifiant vient du navigateur), mais Axel est prévenu : un client honnête dont Whop aurait imposé une autre
+// adresse verrait sinon son achat partir sans bruit sur un autre compte (panne du 20/10 que aa_user_id corrigeait).
+async function alerteEcartCompte(ecart: { compte: string; adresse: string }, emailWhop: string, action: string, achat: string, rattache: string) {
+  await alertOwner(`Achat rattaché à une autre adresse que le compte connecté — ${emailWhop || ecart.compte}`, 'Identifiant de compte et adresse Whop différents', [
+    ['Événement', action], ['Compte connecté (aa_user_id)', ecart.compte], ['Adresse de ce compte', ecart.adresse || '—'],
+    ['Adresse payée chez Whop', emailWhop || '—'], ['Achat', achat], ['Rattaché à', rattache],
+  ], 'Le paiement porte l’identifiant d’un compte AvatarAds, mais l’adresse payée chez Whop n’est pas la sienne : l’achat a suivi l’adresse Whop (cet identifiant vient du navigateur, il peut être forgé). Si c’est bien le même client, déplace le plan ou les crédits à la main sur le compte connecté ; sinon, rien à faire.')
+}
+
+// Audit 23/10 (constat 21) : achat SANS compte → le code de parrainage du visiteur (metadata aa_ref du paiement) est posé
+// sur le compte créé, avec les règles de set_referrer (whop_webhook_poser_parrain), AVANT la commission du 1er paiement.
+// Best-effort : ne bloque jamais le paiement. Relecture du 24/10 : appelée SEULEMENT pour un compte créé par ce paiement
+// (ou par le rendu prioritaire du même panier) ou retrouvé par un aa_user_id vérifié — jamais pour un compte retrouvé par
+// l'adresse ou par l'abonnement : aa_ref est choisi par l'acheteur, qui pouvait sinon se poser en parrain d'un compte
+// tout juste créé dont il connaît l'adresse (30 % de tous ses paiements), ce que set_referrer réserve au titulaire.
+async function poserParrain(sb: any, userId: string, code: string) {
+  try {
+    const { data: pose, error } = await sb.rpc('whop_webhook_poser_parrain', { p_user: userId, p_code: code })
+    if (error) console.warn('ℹ️ parrainage (code du paiement, non bloquant) :', error.message)
+    else if (pose) console.log(`🤝 Parrain posé d'après le paiement (${userId})`)
+  } catch (e) { console.warn('ℹ️ parrainage (code du paiement, non bloquant) :', (e as Error)?.message) }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // PACKS one-shot → AJOUTE des crédits (ne touche pas au plan)
 // ─────────────────────────────────────────────────────────────────
@@ -427,8 +553,8 @@ async function ensureAccount(sb: any, email: string): Promise<string | null> {
   try {
     // marque serveur (app_metadata, impossible à poser via /signup) : sans elle la base refuse le compte (23/10)
     const { data, error } = await sb.auth.admin.createUser({ email, email_confirm: true, app_metadata: { aa_origine: 'serveur' } })
-    if (error) { console.warn(`ℹ️ Compte non créé pour ${email} : ${error.message}`); return null }
-    console.log(`👤 Compte AvatarAds créé automatiquement pour ${email} (achat sans compte)`)
+    if (error) { console.warn(`ℹ️ Compte non créé pour ${masque(email)} : ${error.message}`); return null }
+    console.log(`👤 Compte AvatarAds créé automatiquement pour ${masque(email)} (achat sans compte)`)
     return data?.user?.id ?? null
   } catch (e) { console.error('⚠️ ensureAccount:', e); return null }
 }
@@ -448,7 +574,7 @@ async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string;
       const id = await sendResend(RESEND_API_KEY, opts.email, subjectV2(c0, opts.plan),
         renderV2(c0, { prenom: opts.firstName || '', plan: opts.plan, unsub }), unsub, 'c0')
       if (id) await sb.from('email_log').update({ resend_id: id, mail: 'c0' }).eq('user_id', opts.userId).eq('kind', 'welcome')
-      console.log(id ? `📧 Bienvenue v2 envoyée à ${opts.email}` : `⚠️ Bienvenue v2 non envoyée à ${opts.email}`)
+      console.log(id ? `📧 Bienvenue v2 envoyée à ${masque(opts.email)}` : `⚠️ Bienvenue v2 non envoyée à ${masque(opts.email)}`)
       return
     }
     // Paiement reçu, compte pas encore créé : même gabarit que les e-mails v2 (06/10), sans visuel.
@@ -467,11 +593,23 @@ async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string;
     }
     const id = await sendResend(RESEND_API_KEY, opts.email, pendingMail.objet,
       renderV2(pendingMail, { prenom: opts.firstName || '', plan: opts.plan, unsub: 'https://avatarads.fr/app/' }), 'https://avatarads.fr/app/', 'pending')
-    console.log(id ? `📧 E-mail « plan en attente » envoyé à ${opts.email}` : `⚠️ E-mail « plan en attente » non envoyé à ${opts.email}`)
+    console.log(id ? `📧 E-mail « plan en attente » envoyé à ${masque(opts.email)}` : `⚠️ E-mail « plan en attente » non envoyé à ${masque(opts.email)}`)
   } catch (e) { console.error('⚠️ welcome email:', e) }
 }
 
+// Relecture du 24/10 : après chaque webhook traité (200, signature vérifiée), la file des résiliations Whop est retentée
+// (balayerAnnulations), après la réponse quand le runtime le permet. Runtime sans waitUntil (bancs de test) : attendue.
 serve(async (req) => {
+  const res = await traiterWebhook(req)
+  if (res.status === 200) {
+    const job = balayerAnnulations()
+    const ru = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime
+    if (ru && typeof ru.waitUntil === 'function') { try { ru.waitUntil(job) } catch { await job } } else await job
+  }
+  return res
+})
+
+async function traiterWebhook(req: Request): Promise<Response> {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
   const body = await req.text()
@@ -504,10 +642,16 @@ serve(async (req) => {
   // crédits alors qu'il a récupéré son argent. On rétrograde + remet à zéro. (payment.failed = échec temporaire
   // avec retries Whop → EXCLU ; la résiliation définitive passe par membership.went_invalid.)
   const isClawback   = /(refund|dispute|chargeback)/.test(action) && !/dispute[._](won|closed|resolved)/.test(action)
+  // Audit 23/10 (constat 24) : résiliation ou réactivation faite CHEZ WHOP (espace client, reçus, lien « Gérer mon
+  // abonnement ») — l'événement porte l'abonnement entier, dont cancel_at_period_end. Avant : jamais répercutée.
+  // À cocher dans Whop (Developer → Webhooks) : membership.cancel_at_period_end_changed (ou membership.updated).
+  const isCancelFlag = /membership[._](cancel[._]at[._]period[._]end[._]changed|updated)/.test(action)
 
   // paiements/renouvellements : l'e-mail peut manquer du payload → on garde aussi l'ID d'abonnement Whop
-  const memberId = data.membership_id ?? data.membership?.id ?? ((isActivate || isDeactivate) ? (data.id ?? null) : null) ?? null
-  console.log(`📨 Whop webhook: ${action} · plan=${planId} · email=${email || '—'}`)
+  const memberId = data.membership_id ?? data.membership?.id ?? ((isActivate || isDeactivate || isCancelFlag) ? (data.id ?? null) : null) ?? null
+  // statut Whop de l'abonnement (activation) : active, completed (pack), trialing (essai gratuit)
+  const statut = String(data.status ?? '').toLowerCase().trim()
+  console.log(`📨 Whop webhook: ${action} · plan=${planId} · email=${email ? masque(email) : '—'}`)
 
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false }
@@ -547,19 +691,35 @@ serve(async (req) => {
   // gardait son plan. whop_member_id n'est jamais écrit par le client (profiles_guard) : il vient des seuls webhooks
   // signés. Pas d'index unique dessus : plusieurs lignes (PGRST116) = clé ambiguë → repli e-mail, comme avant.
   // lookup : clé qui a trouvé le profil + échec de lecture (hors PGRST116), lus par résiliation et remboursement.
-  const lookup: { by: 'abonnement' | 'email' | null; failed: boolean } = { by: null, failed: false }
+  // Relecture du 24/10 : 'compte' = aa_user_id vérifié (adresse du compte = adresse Whop), distinct de 'abonnement' : seul
+  // un compte retrouvé par 'email' déclenche la mise de côté d'un achat (whop_webhook_activer, p_par_adresse).
+  const lookup: { by: 'compte' | 'abonnement' | 'email' | null; failed: boolean } = { by: null, failed: false }
+  // aa_user_id d'un compte existant qui ne porte pas l'adresse Whop (alerte à Axel à l'activation, relecture du 24/10)
+  let aaEcart: { compte: string; adresse: string } | null = null
   // Audit 04/10 (CRED-2) : clés passables en argument — le remboursement / litige les lit aussi sous data.payment.
   // Axel 20/10 : les crédits vont au COMPTE AVATARADS qui a payé, pas à l'adresse saisie chez Whop. Le checkout de l'app
   // envoie l'identifiant du compte connecté (metadata.aa_user_id) : il passe AVANT l'e-mail (client karimab4 : payé avec
   // une adresse, inscrit avec une autre → compte resté en Free). Lecture tolérante (emplacement selon l'événement Whop).
-  const aaUid = String(data.metadata?.aa_user_id ?? data.membership?.metadata?.aa_user_id ?? data.checkout?.metadata?.aa_user_id ?? '').trim()
+  // Audit 23/10 (constats 4, 11, 16) : aa_user_id est écrit par le NAVIGATEUR (localStorage, metadata du checkout) — qui
+  // connaît l'identifiant d'un autre compte pouvait lui rattacher son achat (ancien abonnement de la victime résilié, plan
+  // et crédits remplacés, puis free au remboursement). Il n'est plus suivi que si l'adresse du compte est CELLE de
+  // l'acheteur chez Whop (la page verrouille l'adresse Whop sur celle du compte connecté) ; sinon : abonnement puis adresse.
+  const aaUidBrut = String(data.metadata?.aa_user_id ?? data.membership?.metadata?.aa_user_id ?? data.checkout?.metadata?.aa_user_id ?? '').trim()
+  const aaUid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(aaUidBrut) ? aaUidBrut.toLowerCase() : ''
+  // code de parrainage du visiteur, joint au paiement par la page (constat 21) — même confiance que ?ref= : posé seulement
+  // sur un compte de moins de 24 h sans parrain (whop_webhook_poser_parrain)
+  const aaRef = String(data.metadata?.aa_ref ?? '').trim().slice(0, 40)
   const findProfile = async (mid: string | null = memberId, em: string = email) => {
-    const cols = 'id, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used'
+    const cols = 'id, email, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, whop_cancel_at_period_end, first_sub_bonus_used'
     lookup.by = null; lookup.failed = false
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(aaUid)) {
+    if (aaUid && em) {
       const { data: p, error } = await sb.from('profiles').select(cols).eq('id', aaUid).maybeSingle()
       if (error && error.code !== 'PGRST116') lookup.failed = true
-      if (p) { lookup.by = 'abonnement'; return p }
+      if (p && String(p.email || '').toLowerCase().trim() === em) { lookup.by = 'compte'; return p }
+      if (p) {
+        console.warn(`⚠️ aa_user_id ignoré : le compte ${aaUid} ne porte pas l'adresse de l'acheteur chez Whop (${masque(em)}) → abonnement puis adresse`)
+        aaEcart = { compte: aaUid, adresse: String(p.email || '') }
+      }
     }
     if (mid) {
       const { data: p, error } = await sb.from('profiles').select(cols).eq('whop_member_id', mid).maybeSingle()
@@ -573,8 +733,8 @@ serve(async (req) => {
     }
     return null
   }
-  // Crédits ACHETÉS en pack encore disponibles (les crédits du plan sont consommés en premier)
-  const boughtLeft = (p: any) => Math.min(p?.bought_credits || 0, p?.credits_remaining || 0)
+  // Crédits ACHETÉS encore disponibles (least(bought_credits, credits_remaining)) : calculés désormais par les fonctions
+  // serveur whop_webhook_* sur la ligne verrouillée (audit 23/10, constats 1/13), plus ici.
 
   // ─── 23/10 (Axel) : RENDU PRIORITAIRE — il ne touche JAMAIS au plan ni aux crédits. Activation → drapeau
   //     profiles.rendu_prioritaire (+ abonnement mémorisé) ; résiliation / remboursement → drapeau retiré ; paiements et
@@ -593,16 +753,50 @@ serve(async (req) => {
     if (PRIO_PLANS.has(pPlan) || byMember) {
       if (isActivate) {
         let profile = await findProfile()
-        if (!profile && email) { await ensureAccount(sb, email); profile = await findProfile() }
-        if (!profile) { console.error('❌ Rendu prioritaire : aucun compte pour', email || pMember); return await failDb() }
-        const { error } = await sb.from('profiles').update({ rendu_prioritaire: true, prio_member_id: data.id ?? memberId ?? null }).eq('id', profile.id)
+        if (lookup.failed) return await failDb()   // relecture du 24/10 : un hoquet ne doit pas dégrader la recherche
+        let cree: string | null = null
+        if (!profile && email) { cree = await ensureAccount(sb, email); profile = await findProfile(); if (lookup.failed) return await failDb() }
+        if (!profile) { console.error('❌ Rendu prioritaire : aucun compte pour', email ? masque(email) : pMember); return await failDb() }
+        const parAdresse = lookup.by === 'email' && profile.id !== cree, parCompte = lookup.by === 'compte'
+        const nouveau = String(data.id ?? memberId ?? '') || null
+        if (aaEcart) await alerteEcartCompte(aaEcart, email, action, `rendu prioritaire (${pPlan})`, `compte ${profile.id}${profile.id === cree ? ' (créé pour cet achat)' : ''}`)
+        // Audit 23/10 (constat 20) : un 2e rendu prioritaire (racheté avec un changement de palier) remplaçait l'ancien
+        // sur le profil sans le résilier → deux abonnements prélevés, l'ancien référencé nulle part. L'ancien est mis en
+        // file de résiliation AVANT d'être oublié par le profil, puis résilié chez Whop (fin de période).
+        const { data: cur, error: curErr } = await sb.from('profiles').select('prio_member_id').eq('id', profile.id).maybeSingle()
+        if (curErr) { console.error('❌ Rendu prioritaire (lecture) :', curErr); return await failDb() }
+        const ancien = cur?.prio_member_id ? String(cur.prio_member_id) : null
+        // Relecture du 24/10 : compte retrouvé par la seule adresse et qui a déjà SON rendu prioritaire → rien ne change (sinon
+        // quiconque connaît l'adresse faisait résilier le sien, puis le coupait en résiliant l'abonnement acheté). Axel décide.
+        if (ancien && nouveau && ancien !== nouveau && parAdresse) {
+          console.warn(`Rendu prioritaire ${nouveau} payé avec l'adresse d'un compte qui a déjà le sien (${profile.id}, ${ancien}) : rien n'est changé, Axel est alerté`)
+          await alertOwner(`Rendu prioritaire à vérifier AvatarAds — ${email}`, 'Rendu prioritaire payé avec l’adresse d’un compte qui l’a déjà', [
+            ['Événement', action], ['Compte', String(profile.id)], ['E-mail Whop', email], ['Rendu prioritaire payé', nouveau], ['Rendu prioritaire du compte', ancien],
+          ], 'Le paiement ne porte pas l’identifiant du compte connecté (paiement sans session, ou quelqu’un qui connaît l’adresse). Rien n’a été changé : le compte garde son rendu prioritaire et son abonnement n’est pas résilié. Deux rendus prioritaires sont donc prélevés : résilie l’un des deux dans Whop.')
+          return new Response('OK (rendu prioritaire à vérifier)', { status: 200 })
+        }
+        if (ancien && nouveau && ancien !== nouveau) {
+          const { error: aErr } = await sb.from('whop_annulations').insert({ membership_id: ancien, user_id: profile.id, genre: 'prio', remplace_par: nouveau })
+          if (aErr && String(aErr.code) !== '23505') { console.error('❌ whop_annulations (rendu prioritaire) :', aErr); return await failDb() }
+        }
+        const { error } = await sb.from('profiles').update({ rendu_prioritaire: true, prio_member_id: nouveau }).eq('id', profile.id)
         if (error) { console.error('❌ Rendu prioritaire (activation) :', error); return await failDb() }
-        console.log(`⚡ Rendu prioritaire activé pour ${email || profile.id}`)
+        console.log(`⚡ Rendu prioritaire activé pour ${profile.id}`)
+        // panier sans compte « abonnement + rendu prioritaire » : si c'est le rendu prioritaire qui a créé le compte, le
+        // parrain est posé ici, avant que l'abonnement du même panier ne verse la commission de son 1er paiement
+        if (aaRef && (profile.id === cree || parCompte)) await poserParrain(sb, profile.id, aaRef)
+        // Relecture du 24/10 : un échec de résiliation de l'ancien n'est plus un 500 (alerte, file retentée plus tard)
+        const ann = await traiterAnnulations(sb, profile.id)
+        if (ann && (ann.echecs.length || ann.sansCle.length)) await alerteAnnulations(email, profile.id, nouveau, ann)
       } else if (isDeactivate || isClawback) {
         const target = byMember || await findProfile()
+        if (!byMember && lookup.failed) return await failDb()   // relecture du 24/10 : lecture vérifiée
         if (target) {
           const expiring = String(data.id ?? pMember ?? '')
-          const { data: cur } = await sb.from('profiles').select('prio_member_id').eq('id', target.id).maybeSingle()
+          // relecture du 24/10 : lecture vérifiée (en échec, cur valait null et le drapeau était retiré, même quand c'est
+          // l'ANCIEN rendu prioritaire, résilié par le webhook, qui expire)
+          const { data: cur, error: curErr } = await sb.from('profiles').select('prio_member_id').eq('id', target.id).maybeSingle()
+          if (curErr) { console.error('❌ Rendu prioritaire (lecture, fin) :', curErr); return await failDb() }
           // seulement l'abonnement prioritaire MÉMORISÉ (l'ancien, résilié après un nouvel achat, ne coupe rien)
           if (!cur?.prio_member_id || !expiring || cur.prio_member_id === expiring) {
             const { error } = await sb.from('profiles').update({ rendu_prioritaire: false, prio_member_id: null }).eq('id', target.id)
@@ -627,88 +821,116 @@ serve(async (req) => {
     }
 
     let profile = await findProfile()
-    // 23/10 : variante « abonnement + pack » achetée sans compte → compte créé D'ABORD, pour que le pack arrive sur le
-    // profil comme crédits achetés (une ligne en attente ne sait pas les distinguer des crédits du plan). Échec → repli
-    // sur la ligne en attente ci-dessous, pack compris.
+    // Audit 23/10 (constat 23) : lecture en échec → 500, Whop rejoue (un hoquet créait sinon un compte ou une ligne en
+    // attente pour un acheteur qui a déjà un compte).
+    if (lookup.failed) return await failDb()
+    // Achat SANS compte (abonnement, variante ou pack) → compte créé D'ABORD, puis profil relu : l'achat s'applique au
+    // profil (variantes depuis le 23/10 ; tous les achats depuis l'audit du 23/10, constats 14 et 19). Le rendu prioritaire
+    // du même panier peut créer le compte au même instant : ensureAccount échoue alors, la relecture le trouve. Avant, un
+    // abonnement sans pack écrivait d'abord sa ligne en attente : si le rendu prioritaire créait le compte entre-temps, la
+    // ligne restait orpheline et le compte en Free. La ligne en attente ne sert plus qu'en repli (création refusée).
+    let cree: string | null = null   // compte créé par CE paiement (seul cas, avec aa_user_id vérifié, où aa_ref est posé)
+    if (!profile) {
+      cree = await ensureAccount(sb, email)
+      profile = await findProfile()
+      if (lookup.failed) return await failDb()
+    }
+    // Relecture du 24/10 : compte retrouvé par la SEULE adresse Whop (ni aa_user_id vérifié, ni même abonnement, ni créé ici)
+    const parAdresse = !!profile && lookup.by === 'email' && profile.id !== cree
+    const parrainPermis = !!profile && (profile.id === cree || lookup.by === 'compte')
+    if (aaEcart) await alerteEcartCompte(aaEcart, email, action, `${sub ? 'abonnement' : 'pack'} ${planId}`,
+      profile ? `compte ${profile.id}${profile.id === cree ? ' (créé pour cet achat)' : ''}` : 'achat en attente (aucun compte)')
     const packVar = VARIANT_PACK[planId] || 0
-    if (sub && !profile && packVar) { await ensureAccount(sb, email); profile = await findProfile() }
+    const essai = statut === 'trialing'
+    // repli : la ligne en attente ne sera appliquée par personne si un compte porte déjà l'adresse
+    const alerteOrpheline = async (quoi: string) => {
+      if (!(await findProfile())) return
+      await alertOwner(`⚠️ Achat en attente orphelin AvatarAds — ${email}`, 'Achat mis en attente alors qu’un compte porte l’adresse', [
+        ['Événement', action], ['E-mail Whop', email], ['Abonnement', String(data.id || '—')], ['Achat', quoi],
+      ], 'Le compte a été créé pendant le traitement de ce paiement : la ligne pending_activations ne sera pas appliquée. Applique le plan ou les crédits à la main sur le compte, puis supprime la ligne.')
+    }
 
     if (sub) {
       if (profile) {
-        // ── UPGRADE/CHANGEMENT DE PLAN : annule l'ancien abonnement Whop pour ne JAMAIS facturer deux fois ──
-        const oldMemberId = profile.whop_member_id
-        const newMemberId = data.id ?? null
-        if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
-          const key = Deno.env.get('WHOP_API_KEY') ?? ''
-          if (key) {
-            try {
-              const rc = await fetch(`https://api.whop.com/api/v1/memberships/${oldMemberId}/cancel`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cancel_at_period_end: true }),   // 23/10 : paramètre API v1 (cancellation_mode était ignoré → annulation immédiate)
-              })
-              console.log(rc.ok
-                ? `🔁 Ancien abonnement ${oldMemberId} annulé automatiquement (remplacé par ${newMemberId})`
-                : `⚠️ Échec annulation ancien abonnement ${oldMemberId}: ${rc.status} ${await rc.text().catch(()=> '')}`.slice(0, 300))
-            } catch (e) { console.error('⚠️ Annulation ancien abonnement:', e) }
-          } else {
-            console.error('⚠️ WHOP_API_KEY manquant — ancien abonnement NON annulé (risque de double facturation)')
-          }
+        // Audit 23/10 (constats 1/13, 22, 27, 59) : plan, crédits, bonus et pack écrits par UNE fonction serveur sur la
+        // ligne verrouillée (avant : solde lu, appel Whop d'annulation, puis solde absolu réécrit → une dépense ou un pack
+        // passé entre-temps était rendu ou effacé). Même abonnement déjà appliqué → rien ne bouge (verrou) ; pack d'une
+        // variante versé une fois par abonnement, même après une désactivation ; essai gratuit (trialing) → plan ouvert sans
+        // crédits ni bonus, le 1er vrai paiement verse le mois. L'ancien abonnement (changement de palier) est mis en file
+        // de résiliation par la fonction, puis résilié chez Whop ci-dessous.
+        // Relecture du 24/10 : compte retrouvé par la seule adresse Whop et déjà abonné ailleurs → l'achat est mis de côté
+        // par la fonction (p_par_adresse) : rien n'est appliqué ni résilié, Axel valide ou résilie dans Whop.
+        const newMemberId = data.id ? String(data.id) : null
+        const { data: r, error } = await sb.rpc('whop_webhook_activer', {
+          p_user: profile.id, p_member: newMemberId, p_plan_id: planId, p_plan: sub.plan, p_credits: sub.credits,
+          p_bonus: FIRST_SUB_BONUS[sub.plan] ?? 0, p_pack: packVar, p_manage_url: data.manage_url ?? null,
+          p_annuel: ANNUAL_PLAN_IDS.has(planId), p_essai: essai, p_par_adresse: parAdresse,
+        })
+        if (error || !r?.ok) { console.error('❌ Update profil:', error?.message ?? r?.raison ?? error); return await failDb() }
+        if (r.a_verifier) {
+          console.warn(`Achat mis de côté : abonnement ${newMemberId || '—'} payé avec l'adresse ${masque(email)}, compte ${profile.id} déjà abonné (${r.abonnement_du_compte || 'abonnement non enregistré'}), sans identifiant de compte vérifié`)
+          if (r.nouveau) await alerteAchatAVerifier(email, profile, newMemberId, planId, r.abonnement_du_compte ?? null, action)
+          return new Response('OK (achat à vérifier)', { status: 200 })
         }
-        // 🌞 Bonus premier abonnement (une seule fois par compte)
-        const bonus = profile.first_sub_bonus_used ? 0 : (FIRST_SUB_BONUS[sub.plan] ?? 0)
-        const keep = boughtLeft(profile) // les crédits achetés en pack survivent au changement de plan
-        // pack d'une variante : une seule fois par abonnement (une 2e activation du même abonnement ne le reverse pas)
-        const packAdd = packVar && !(newMemberId && oldMemberId && String(oldMemberId) === String(newMemberId)) ? packVar : 0
-        const { error } = await sb.from('profiles').update({
-          plan:              sub.plan,
-          credits_remaining: sub.credits + bonus + keep + packAdd,
-          bought_credits:    keep + packAdd,
-          credits_total:     sub.credits,
-          whop_member_id:    data.id ?? null,
-          whop_plan_id:      planId,
-          whop_manage_url:   data.manage_url ?? null,
-          whop_cancel_at_period_end: false,
-          first_sub_bonus_used: true,
-        }).eq('id', profile.id)
-        if (error) { console.error('❌ Update profil:', error); return await failDb() }
-        await markIgLeadPaid(sb, profile.id, sub.plan, profile.plan)   // plan AVANT cette mise à jour (lu par findProfile)
-        await creditReferral(sb, profile.id, email, planId, data, 'abonnement')
-        console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''}${keep ? ' +' + keep + ' achetés reportés' : ''}${packAdd ? ' +' + packAdd + ' pack' : ''})`)
-        await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: sub.credits + bonus + keep + packAdd })
+        if (r.deja) {
+          console.log(`↩️ Abonnement ${newMemberId} déjà appliqué au compte ${profile.id} : rien ne bouge`)
+        } else {
+          await markIgLeadPaid(sb, profile.id, sub.plan, r.plan_avant ?? profile.plan)   // plan AVANT cette mise à jour
+          if (aaRef && parrainPermis) await poserParrain(sb, profile.id, aaRef)
+          await creditReferral(sb, profile.id, email, planId, data, 'abonnement', newMemberId)
+          console.log(`✅ Plan activé pour ${masque(email)}: ${sub.plan} (${essai ? 'essai gratuit, crédits au 1er paiement' : sub.credits + ' crédits'}${r.bonus ? ' +' + r.bonus + ' bonus' : ''}${r.keep ? ' +' + r.keep + ' achetés reportés' : ''}${r.pack ? ' +' + r.pack + ' pack' : ''})`)
+          await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: r.credits ?? 0 })
+        }
+        // Audit 23/10 (constat 22) : un échec de résiliation de l'ancien abonnement n'était qu'un log (double facturation
+        // silencieuse) → alerte à Axel. Relecture du 24/10 : plus de 500 (l'activation restait hors du journal, la page
+        // « Paiement confirmé » attendait) : la ligne reste dans whop_annulations, retentée par les webhooks suivants.
+        const ann = await traiterAnnulations(sb, profile.id)
+        if (ann && (ann.echecs.length || ann.sansCle.length)) await alerteAnnulations(email, profile.id, newMemberId, ann)
       } else {
         // Audit 06/09 : l'upsert écrasait un pending EXISTANT → un pack acheté AVANT l'abonnement (sans compte)
         // était perdu. On préserve les crédits d'un pack (pending plan=free) et les crédits image en attente.
         const { data: paS } = await sb.from('pending_activations').select('plan, credits, img_credits').eq('email', email).maybeSingle()
         const carryPack = (paS && (!paS.plan || paS.plan === 'free')) ? (paS.credits || 0) : 0
         const carryImg  = paS?.img_credits || 0
+        // relecture du 24/10 (constat 59) : essai gratuit → plan ouvert sans crédits du plan, bonus ni pack (comme
+        // whop_webhook_activer) ; le 1er vrai paiement verse le mois
+        const credAttente = essai ? 0 : sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + packVar
+        // Relecture du 24/10 (constat 27) : mêmes verrous que whop_webhook_activer — le compte créé plus tard applique cette
+        // ligne (mois + pack) ; une 2e activation du même abonnement ne doit ni remettre le mois à plein ni reverser le pack.
+        if (data.id && !essai) {
+          for (const [k, quoi] of [['whop-activation:', 'audit.activation'], ...(packVar ? [['whop-pack-variante:', 'audit.pack_variante']] : [])]) {
+            const { error: lkErr } = await sb.from('webhook_events').insert({ event_id: k + String(data.id), body: { action: quoi, data: { membership: String(data.id), plan: planId, attente: true } } })
+            if (lkErr && String(lkErr.code) !== '23505') { console.error('❌ verrou (achat en attente) :', lkErr); return await failDb() }
+          }
+        }
         const { error } = await sb.from('pending_activations').upsert({
           email, product: 'avatarads', plan: sub.plan,
-          credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + carryPack + packVar,
+          credits: credAttente + carryPack,
           img_credits: carryImg,
           whop_member_id: data.id ?? null, whop_plan_id: planId, paid_at: new Date().toISOString(),
         }, { onConflict: 'email' })
         if (error) { console.error('❌ pending_activations:', error); return await failDb() }
-        console.log(`⏳ Activation en attente pour ${email}: ${sub.plan}`)
-        const newId = await ensureAccount(sb, email)
+        console.log(`⏳ Activation en attente pour ${masque(email)}: ${sub.plan}`)
+        const newId = await ensureAccount(sb, email)   // 2e essai : une création qui passe maintenant applique la ligne
         if (newId) {
           await markIgLeadPaid(sb, newId, sub.plan, 'free')
-          await creditReferral(sb, newId, email, planId, data, 'abonnement')
-          await sendWelcomeEmail(sb, { userId: newId, email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + carryPack + packVar })
+          if (aaRef) await poserParrain(sb, newId, aaRef)
+          await creditReferral(sb, newId, email, planId, data, 'abonnement', data.id ? String(data.id) : null)
+          await sendWelcomeEmail(sb, { userId: newId, email, plan: sub.plan, credits: credAttente + carryPack })
         } else {
-          await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + packVar, pending: true })
+          await alerteOrpheline(`abonnement ${PLAN_LABEL[sub.plan] ?? sub.plan} (${planId})`)
+          await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: credAttente, pending: true })
         }
       }
     } else if (pack) {
       if (profile) {
-        const { error } = await sb.from('profiles').update({
-          credits_remaining: (profile.credits_remaining || 0) + (pack.credits || 0),
-          bought_credits:    boughtLeft(profile) + (pack.credits || 0), // tracés à part : préservés à l'annulation
-          img_bonus_credits: (profile.img_bonus_credits || 0) + (pack.imgCredits || 0),
-        }).eq('id', profile.id)
-        if (error) { console.error('❌ Crédit pack:', error); return await failDb() }
-        console.log(`✅ Pack crédité pour ${email}: +${pack.credits || 0} crédits, +${pack.imgCredits || 0} images`)
-        await creditReferral(sb, profile.id, email, planId, data, 'pack')
+        // Audit 23/10 (constat 6) : AJOUT sur la ligne courante par une fonction serveur (avant : solde lu puis réécrit en
+        // absolu → une dépense passée entre les deux était effacée)
+        const { data: r, error } = await sb.rpc('whop_webhook_pack', { p_user: profile.id, p_credits: pack.credits || 0, p_img: pack.imgCredits || 0 })
+        if (error || !r?.ok) { console.error('❌ Crédit pack:', error?.message ?? r?.raison ?? error); return await failDb() }
+        console.log(`✅ Pack crédité pour ${masque(email)}: +${pack.credits || 0} crédits, +${pack.imgCredits || 0} images`)
+        if (aaRef && parrainPermis) await poserParrain(sb, profile.id, aaRef)
+        await creditReferral(sb, profile.id, email, planId, data, 'pack', data.id ? String(data.id) : null)
       } else {
         // Pack payé sans compte → stocké en attente (cumulatif, plan inchangé)
         const { data: pa } = await sb.from('pending_activations').select('plan, credits, img_credits').eq('email', email).maybeSingle()
@@ -724,14 +946,25 @@ serve(async (req) => {
           ...(subPending ? {} : { paid_at: new Date().toISOString() }),
         }, { onConflict: 'email' })
         if (error) { console.error('❌ pending pack:', error); return await failDb() }
-        console.log(`⏳ Pack en attente pour ${email}`)
-        await ensureAccount(sb, email)   // Axel 20/10 : même règle que l'abonnement (le pack est appliqué à la création)
+        console.log(`⏳ Pack en attente pour ${masque(email)}`)
+        const newId = await ensureAccount(sb, email)   // 2e essai (le pack est appliqué à la création par handle_new_user)
+        if (newId) {
+          if (aaRef) await poserParrain(sb, newId, aaRef)
+          await creditReferral(sb, newId, email, planId, data, 'pack', data.id ? String(data.id) : null)
+        } else await alerteOrpheline(`pack de ${pack.credits || 0} crédits (${planId})`)
       }
     }
   }
 
   // ─── membership.went_invalid → annulation / expiration ────────
   else if (isDeactivate) {
+    // Downgrade uniquement si l'abonnement QUI EXPIRE est BIEN l'actif du profil — par IDENTIFIANT D'ABONNEMENT
+    // (audit 06/09 : comparer le plan id cassait l'upgrade vers le MÊME palier — l'ancien membership expirait avec
+    // le même plan id et rétrogradait le nouveau). Repli sur le plan id seulement si aucun member id n'est stocké.
+    const expiringMember = data.id ?? memberId ?? null
+    // Relecture du 24/10 : un achat mis de côté (à vérifier) qui se termine n'est plus validable par Axel (avant tout
+    // autre test : même un événement sans e-mail le clôt)
+    if (!(await cloreAchatAVerifier(sb, expiringMember ? String(expiringMember) : null, 'abonnement terminé'))) return await failDb()
     if (!email) return new Response('OK', { status: 200 })
     // Les packs one-shot n'affectent jamais le plan
     if (PACK_MAP[planId] || !SUB_MAP[planId]) return new Response('OK', { status: 200 })
@@ -739,32 +972,19 @@ serve(async (req) => {
     const profile = await findProfile()
     // Audit 02/10 : lecture en échec → 500, Whop rejoue (un repli silencieux sur l'e-mail pourrait viser le mauvais compte).
     if (lookup.failed) return await failDb()
-    // Downgrade uniquement si l'abonnement QUI EXPIRE est BIEN l'actif du profil — par IDENTIFIANT D'ABONNEMENT
-    // (audit 06/09 : comparer le plan id cassait l'upgrade vers le MÊME palier — l'ancien membership expirait avec
-    // le même plan id et rétrogradait le nouveau). Repli sur le plan id seulement si aucun member id n'est stocké.
-    const expiringMember = data.id ?? memberId ?? null
     // Audit 02/10 (PAY-1) : un abonnement payé SANS compte puis résilié restait dans pending_activations et
     // handle_new_user appliquait quand même le plan à l'inscription. Neutralisé AVANT tout autre effet (échec DB → 500,
     // Whop rejoue), avec ou sans profil : l'adresse de l'achat peut être portée par un autre compte (changement d'e-mail).
     const neutralised = await neutralisePendingSub(sb, email, expiringMember, planId)
     if (neutralised === null) return await failDb()
-    if (neutralised) console.log(`⛔ Résiliation (${email}) : ${neutralised} abonnement(s) en attente retiré(s)`)
-    const estActif = profile && (
-      (profile.whop_member_id && expiringMember && String(profile.whop_member_id) === String(expiringMember)) ||
-      (!profile.whop_member_id && (!profile.whop_plan_id || profile.whop_plan_id === planId))
-    )
-    if (estActif) {
-      const keep = boughtLeft(profile) // les crédits achetés restent parqués (réutilisables au prochain abonnement)
-      await sb.from('profiles').update({
-        plan:              'free',
-        credits_remaining: keep,
-        bought_credits:    keep,
-        whop_member_id:    null,
-        whop_plan_id:      null,
-        whop_manage_url:   null,
-        whop_cancel_at_period_end: false,
-      }).eq('id', profile.id)
-      console.log(`⛔ Plan résilié pour ${email} → free${keep ? ` (${keep} crédits achetés conservés)` : ''}`)
+    if (neutralised) console.log(`⛔ Résiliation (${masque(email)}) : ${neutralised} abonnement(s) en attente retiré(s)`)
+    if (profile) {
+      // Audit 23/10 (constats 1/13, 23) : retour en free par une fonction serveur — « abonnement qui expire = l'actif du
+      // profil » et crédits achetés gardés, vérifiés et calculés sur la ligne verrouillée (avant : solde lu puis réécrit, et
+      // écriture non vérifiée : un échec laissait le compte payant à vie, sans rejeu). Échec → 500, Whop rejoue.
+      const { data: r, error } = await sb.rpc('whop_webhook_fin', { p_user: profile.id, p_member: expiringMember ? String(expiringMember) : null, p_plan_id: planId })
+      if (error || !r?.ok) { console.error('❌ Fin d’abonnement :', error?.message ?? r?.raison ?? error); return await failDb() }
+      if (r.actif) console.log(`⛔ Plan résilié pour ${masque(email)} → free${r.keep ? ` (${r.keep} crédits achetés conservés)` : ''}`)
     }
     // Audit 02/10 (PAY-1) : alerte owner pour toute résiliation SANS compte, et pour un abonnement en attente retiré
     // alors qu'un compte porte l'adresse (cas inhabituel : changement d'e-mail). Une résiliation ordinaire avec compte
@@ -791,6 +1011,8 @@ serve(async (req) => {
     // Paiement réussi / renouvellement. L'e-mail peut manquer du payload d'un paiement → on retrouve le profil
     // par l'abonnement Whop (memberId), et on déduit le plan du profil si le payload ne le porte pas.
     const profile = await findProfile()
+    // Audit 23/10 (constat 23) : lecture en échec → 500, Whop rejoue (avant : paiement traité « sans profil », mois perdu).
+    if (lookup.failed) return await failDb()
     // Audit 02/10 (PAY-1) : sans compte, l'abonnement en attente sert à rafraîchir paid_at (voir plus bas) et, si le
     // paiement ne porte pas le plan, à le déduire. Lecture best-effort : un hoquet DB ne bloque pas le webhook.
     const pend = profile ? null : await findPendingRows(sb, email, memberId)
@@ -799,52 +1021,67 @@ serve(async (req) => {
     const effPlanId = planId || profile?.whop_plan_id || pendSub?.whop_plan_id || ''
     const sub = SUB_MAP[effPlanId]
     if (!sub) return new Response('OK', { status: 200 })
-    // Ignore le renouvellement d'un ANCIEN abonnement (après upgrade) → ne doit pas écraser le plan actif
-    if (profile && profile.whop_plan_id && planId && profile.whop_plan_id !== planId) {
-      console.log(`ℹ️ Renouvellement ignoré (abonnement ${planId} n'est plus l'actif de ${profile.id})`)
-      return new Response('OK', { status: 200 })
-    }
-    // ── Anti DOUBLE-CRÉDIT du 1er cycle (audit 05/09, M3) : au premier achat Whop envoie DEUX événements
-    //    (activation + paiement) avec des webhook-id différents → l'idempotence par event_id ne les fusionne
-    //    pas et le paiement REPORTAIT un solde tout juste fixé par l'activation (150 → 300). Si une activation
-    //    du même abonnement / e-mail a été reçue dans les 10 dernières minutes, ce paiement est un no-op.
-    if (profile) {
+    if (profile && !memberId) {
+      // Paiement SANS identifiant d'abonnement (jamais observé : les paiements Whop portent membership.id) : règles d'avant.
+      // Plan différent de l'actif = ancien abonnement ; activation du même plan et de la même adresse reçue dans les 10
+      // dernières minutes = paiement du 1er cycle (audit 05/09, M3).
+      if (profile.whop_plan_id && planId && profile.whop_plan_id !== planId) {
+        console.log(`ℹ️ Renouvellement ignoré (abonnement ${planId} n'est plus l'actif de ${profile.id})`)
+        return new Response('OK', { status: 200 })
+      }
       const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString()
-      const { data: recents } = await sb.from('webhook_events').select('body').gte('received_at', tenMinAgo).order('received_at', { ascending: false }).limit(200)   // audit métier 06/09 : ordonné + plafond relevé (l'activation ne doit pas sortir de la fenêtre)
-      const memberKey = memberId || data.id || null
+      const { data: recents } = await sb.from('webhook_events').select('body').gte('received_at', tenMinAgo).order('received_at', { ascending: false }).limit(200)
       const dupAct = (recents || []).some((e: any) => {
         const b = e?.body || {}; const a = String(b.action ?? b.event ?? b.type ?? '').toLowerCase(); const d = b.data || {}
-        if (!/membership[._](went[._]valid|activated)/.test(a)) return false
+        if (!/membership[._](went[._]valid|activated)/.test(a) || String(d.status ?? '').toLowerCase() === 'trialing') return false
         const em = String(d.user?.email ?? d.member?.user?.email ?? d.customer?.email ?? d.email ?? '').toLowerCase().trim()
-        const mid = d.id ?? d.membership_id ?? d.membership?.id ?? null
-        return (memberKey && mid && String(mid) === String(memberKey)) || (email && em && em === email)
+        return !!email && em === email && String(d.plan?.id ?? d.plan_id ?? '') === effPlanId
       })
       if (dupAct) {
-        console.log(`ℹ️ Paiement du 1er cycle déjà crédité par l'activation (${memberKey || email}) → pas de re-crédit`)
+        console.log(`ℹ️ Paiement du 1er cycle déjà crédité par l'activation (${masque(email)}) → pas de re-crédit`)
         return new Response('OK (déjà crédité à l\'activation)', { status: 200 })
       }
     }
     if (profile) {
-      // REPORT PLAFONNÉ À 2× (03/09 — Axel) : les crédits du PLAN non consommés sont reportés au mois suivant,
-      // mais le solde du plan ne peut jamais dépasser 2× les crédits mensuels (le surplus des vieux mois est perdu).
-      // Les crédits ACHETÉS en pack (bought) ne sont jamais plafonnés et s'ajoutent par-dessus.
-      const bought      = boughtLeft(profile)
-      const planLeft    = Math.max(0, (profile.credits_remaining || 0) - bought)   // solde du plan encore là
-      const rolled      = Math.min(planLeft + sub.credits, 2 * sub.credits)         // report + mois neuf, plafond 2×
-      const newBalance  = rolled + bought
-      await sb.from('profiles').update({
-        plan:              sub.plan,
-        credits_remaining: newBalance,
-        bought_credits:    bought,
-        credits_total:     sub.credits,
-        whop_plan_id:      effPlanId,
-        whop_cancel_at_period_end: false,
-      }).eq('id', profile.id)
-      console.log(`🔄 Renouvellement: ${sub.plan} → ${newBalance} (report ${planLeft} + ${sub.credits}, plafond ${2 * sub.credits}${bought ? ` +${bought} achetés` : ''}) — ${profile.id}`)
-      await markIgLeadPaid(sb, profile.id, sub.plan, profile.plan)   // no-op pour un vrai renouvellement (déjà payant)
-      await creditReferral(sb, profile.id, email, effPlanId, data, 'renouvellement')
+      // Audit 23/10 (constats 1/13, 22, 23, 27, 34) : report plafonné à 2× (03/09 — Axel) calculé par une fonction serveur
+      // sur la ligne verrouillée (avant : solde lu puis réécrit en absolu, écriture non vérifiée → mois payé perdu sans
+      // rejeu). La fonction ignore le paiement d'un ANCIEN abonnement (identifiant ≠ abonnement du profil, même s'il porte
+      // le même plan Whop) et reconnaît le paiement du 1er cycle par l'activation de CE membership (verrou ou journal,
+      // 3 jours) : plus par l'adresse (un pack acheté juste avant un renouvellement le faisait sauter) ni par une fenêtre
+      // de 10 minutes (un 1er paiement rejoué tard par Whop était crédité une 2e fois). Elle réécrit l'abonnement Whop d'un
+      // profil qui n'en a plus (réactivation par un simple paiement).
+      const { data: r, error } = await sb.rpc('whop_webhook_renouveler', {
+        p_user: profile.id, p_member: memberId ? String(memberId) : null, p_plan_id: effPlanId, p_plan: sub.plan,
+        p_credits: sub.credits, p_annuel: ANNUAL_PLAN_IDS.has(effPlanId),
+      })
+      if (error || !r?.ok) { console.error('❌ Renouvellement :', error?.message ?? r?.raison ?? error); return await failDb() }
+      if (r.effet === 'ancien_abonnement') {
+        console.log(`ℹ️ Paiement ignoré : l'abonnement ${memberId} n'est plus l'actif de ${profile.id} (actif : ${r.abonnement_du_compte})`)
+        // 1er paiement d'un NOUVEL abonnement arrivé avant son activation : normal, l'activation suit. Sinon, un ancien
+        // abonnement continue d'être prélevé sans crédits (résiliation ratée) → Axel est prévenu.
+        if (String(data.billing_reason ?? '').toLowerCase() !== 'subscription_create') {
+          // relecture du 24/10 : abonnement mis de côté (achat à vérifier) et pas encore tranché → rappel dédié
+          const { data: att } = await sb.from('whop_achats_a_verifier').select('membership_id').eq('membership_id', String(memberId)).is('traite_at', null).maybeSingle()
+          if (att) await alertOwner(`Rappel : achat à vérifier prélevé à nouveau — ${email || profile.id}`, 'Un achat mis de côté continue d’être prélevé', [
+            ['Événement', action], ['Compte', profile.id], ['E-mail Whop', email || '—'],
+            ['Abonnement prélevé', String(memberId)], ['Abonnement actif du compte', String(r.abonnement_du_compte || '—')],
+          ], `Cet abonnement attend ta vérification (payé avec l’adresse d’un compte déjà abonné, sans session) : ce paiement ne donne aucun crédit. Applique-le (select public.whop_achat_valider('${memberId}');) ou résilie-le dans Whop.`)
+          else await alertOwner(`⚠️ Paiement d’un ancien abonnement AvatarAds — ${email || profile.id}`, 'Un abonnement remplacé continue d’être prélevé', [
+            ['Événement', action], ['Compte', profile.id], ['E-mail Whop', email || '—'],
+            ['Abonnement prélevé', String(memberId)], ['Abonnement actif du compte', String(r.abonnement_du_compte || '—')],
+          ], 'Ce paiement ne donne aucun crédit : l’abonnement prélevé n’est plus celui du compte. Résilie-le dans Whop (fin de période) et rembourse ce paiement si besoin.')
+        }
+        return new Response('OK', { status: 200 })
+      }
+      if (r.effet === 'premier_cycle') {
+        console.log(`ℹ️ Paiement du 1er cycle déjà crédité par l'activation (${memberId}) → pas de re-crédit`)
+        return new Response('OK (déjà crédité à l\'activation)', { status: 200 })
+      }
+      console.log(`🔄 Renouvellement: ${sub.plan} → ${r.apres} (report ${r.report} + ${sub.credits}, plafond ${2 * sub.credits}${r.achetes ? ` +${r.achetes} achetés` : ''}) — ${profile.id}`)
+      await markIgLeadPaid(sb, profile.id, sub.plan, r.plan_avant ?? profile.plan)   // no-op pour un vrai renouvellement (déjà payant)
+      await creditReferral(sb, profile.id, email, effPlanId, data, 'renouvellement', memberId ? String(memberId) : null)
     } else {
-      console.warn(`⚠️ Renouvellement sans profil (email=${email || '—'} member=${memberId || '—'} plan=${effPlanId})`)
+      console.warn(`⚠️ Renouvellement sans profil (email=${email ? masque(email) : '—'} member=${memberId || '—'} plan=${effPlanId})`)
       // Audit 02/10 (PAY-1) : handle_new_user ignore désormais un abonnement en attente dont le DERNIER paiement
       // (paid_at) a plus d'une période + marge. Un acheteur toujours sans compte qui continue de payer garde donc une
       // ligne fraîche : paid_at est rafraîchi à chaque paiement du MÊME abonnement (identifiant, sinon plan).
@@ -854,7 +1091,7 @@ serve(async (req) => {
       if (memeAbo) {
         const { error: touchErr } = await sb.from('pending_activations').update({ paid_at: new Date().toISOString() }).eq('email', pendSub.email)
         if (touchErr) console.warn('ℹ️ pending_activations (renouvellement, non bloquant) :', touchErr.message)
-        else console.log(`⏳ Abonnement en attente prolongé (${pendSub.email}, ${effPlanId})`)
+        else console.log(`⏳ Abonnement en attente prolongé (${masque(pendSub.email)}, ${effPlanId})`)
       }
     }
   }
@@ -881,7 +1118,7 @@ serve(async (req) => {
     const sansArgentRendu = (/^refund[._]/.test(action) && ['failed', 'canceled', 'cancelled'].includes(statutRemb))
       || (/^dispute[._]/.test(action) && statutRemb === 'won')
     if (sansArgentRendu) {
-      console.log(`${action} au statut ${statutRemb} : aucun changement (${cEmail || cMember || '—'})`)
+      console.log(`${action} au statut ${statutRemb} : aucun changement (${cEmail ? masque(cEmail) : cMember || '—'})`)
       await alertOwner(`Remboursement / litige sans effet — ${cEmail || cMember || '—'}`, 'Remboursement / litige sans argent rendu', [
         ['Événement', action], ['Statut', statutRemb], ['Membre', cEmail || '—'], ['Abonnement', String(cMember || '—')],
         ['Effet sur le compte', 'aucun'],
@@ -892,6 +1129,8 @@ serve(async (req) => {
     // Audit 02/10 : lecture en échec → 500, Whop rejoue (même raison que la résiliation).
     if (lookup.failed) return await failDb()
     const memberKey = cMember
+    // Relecture du 24/10 : un achat mis de côté (à vérifier) remboursé ou contesté n'est plus validable par Axel
+    if (!(await cloreAchatAVerifier(sb, memberKey, 'remboursé ou contesté'))) return await failDb()
     // Audit 02/10 (PAY-1) : un achat fait SANS compte vit dans pending_activations (appliqué par handle_new_user à
     // l'inscription). Lignes de l'acheteur (e-mail ET membership) lues et traitées AVANT tout autre effet, avec ou sans
     // profil : l'adresse de l'achat peut être portée par un autre compte après un changement d'e-mail (relecture 02/10).
@@ -918,6 +1157,8 @@ serve(async (req) => {
     // paiement remboursé, remboursement, mises à jour d'un litige). Verrou = ligne synthétique du journal (index unique sur
     // event_id, même principe que lemonsqueezy-webhook), rendu si le retrait échoue (Whop rejoue et retire alors vraiment).
     const payKey = String(data.payment?.id ?? data.payment_id ?? data.id ?? '').trim()
+    // 1er paiement de l'abonnement (Whop : billing_reason « subscription_create », vu sur tous les 1ers paiements reçus)
+    const premierPaiementRemb = String(pay.billing_reason ?? data.billing_reason ?? '').toLowerCase() === 'subscription_create'
     const packLock = pack && payKey ? `whop-clawback-pack:${payKey}` : null
     let packDeja = false
     if (packLock) {
@@ -944,28 +1185,35 @@ serve(async (req) => {
 
     if (profile) {
       // Le remboursement concerne l'abonnement de CE compte : même membership ; ou compte payant SANS membership enregistré
-      // (ancien), abonnement remboursé connu, même plan (ou aucun plan enregistré) et membership qui n'est pas celui d'un
+      // (ancien), abonnement remboursé connu, MÊME plan Whop enregistré (relecture finale du 24/10 : un plan donné à la main,
+      // sans plan Whop, n'est jamais remis à zéro par le litige d'un abonnement inconnu) et membership qui n'est pas celui d'un
       // achat en attente (règle de la résiliation). Sinon (pack, autre abonnement, identifiant absent) : pas de remise à zéro.
       const profPaid = String(profile.plan || 'free').toLowerCase() !== 'free'
       const memberEnAttente = !!memberKey && pend.rows.some((x: any) => String(x.whop_member_id || '') === memberKey)
       const concerne = !pack && (
         (!!memberKey && !!profMember && profMember === memberKey) ||
-        (!profMember && profPaid && !!sub && !memberEnAttente && (!profile.whop_plan_id || profile.whop_plan_id === refPlan)))
+        (!profMember && profPaid && !!sub && !memberEnAttente && !!profile.whop_plan_id && profile.whop_plan_id === refPlan))
+      // Relecture du 24/10 (constat 44) : le pack d'une variante n'est retiré que s'il a bien été versé à CE compte (verrou
+      // 'whop-pack-variante:' posé à son versement ; repris du journal ou posé pour un achat en attente : sans compte noté).
+      // Avant : un achat mis de côté ou rattaché ailleurs, puis contesté, retirait le pack au compte de l'adresse.
+      let packVerseIci = false
+      if (!pack && !concerne && VARIANT_PACK[refPlan] && premierPaiementRemb && memberKey) {
+        const { data: lk, error: lkErr } = await sb.from('webhook_events').select('body').eq('event_id', 'whop-pack-variante:' + memberKey).maybeSingle()
+        if (lkErr && lkErr.code !== 'PGRST116') { console.error('❌ verrou du pack de variante (lecture) :', lkErr); return await failDb() }
+        const pour = lk?.body?.data?.user
+        packVerseIci = !!lk && (!pour || String(pour) === String(profile.id))
+      }
       let effet: string, note: string
       if (pack) {
         if (packDeja) {
           effet = 'aucun : crédits de ce pack déjà retirés (même paiement)'
           note = 'Événement en double pour un pack déjà traité : rien n’a été retiré une deuxième fois.'
         } else {
-          const before = profile.credits_remaining || 0
-          const after  = Math.max(0, before - (pack.credits || 0))
-          const { error: pkErr } = await sb.from('profiles').update({
-            credits_remaining: after,
-            bought_credits:    Math.min(after, Math.max(0, boughtLeft(profile) - (pack.credits || 0))),
-            img_bonus_credits: Math.max(0, (profile.img_bonus_credits || 0) - (pack.imgCredits || 0)),
-          }).eq('id', profile.id)
-          if (pkErr) { console.error('❌ Clawback pack :', pkErr); await releasePackLock(); return await failDb() }
-          console.log(`💸 Clawback pack (${action}) pour ${cEmail || profile.id} : ${before} → ${after} crédits, plan ${profile.plan} inchangé`)
+          // Audit 23/10 (constat 6) : retrait calculé sur la ligne verrouillée (fonction serveur), plancher 0
+          const { data: rp, error: pkErr } = await sb.rpc('whop_webhook_retirer_pack', { p_user: profile.id, p_credits: pack.credits || 0, p_img: pack.imgCredits || 0 })
+          if (pkErr || !rp?.ok) { console.error('❌ Clawback pack :', pkErr?.message ?? rp?.raison ?? pkErr); await releasePackLock(); return await failDb() }
+          const before = rp.avant ?? 0, after = rp.apres ?? 0
+          console.log(`💸 Clawback pack (${action}) pour ${profile.id} : ${before} → ${after} crédits, plan ${profile.plan} inchangé`)
           effet = `${before - after} crédits retirés (solde ${before} → ${after}), plan et abonnement inchangés`
           note = 'Seuls les crédits du pack remboursé ont été retirés (plancher 0).' + NOTE_COMMISSIONS
         }
@@ -973,15 +1221,45 @@ serve(async (req) => {
         const { error: clawErr } = await sb.from('profiles').update({
           plan: 'free', credits_remaining: 0, bought_credits: 0,
           whop_member_id: null, whop_plan_id: null, whop_manage_url: null, whop_cancel_at_period_end: false,
+          annuel_debut: null, annuel_mois: null,
         }).eq('id', profile.id)
-        console.log(`💸 Clawback (${action}) pour ${cEmail || profile.id} → free, crédits remis à zéro`)
-        if (!clawErr) await unmarkIgLeadPaid(sb, profile.id)   // plus compté « payant » (seulement si le profil est bien repassé free)
+        // Audit 23/10 (constat 23) : écriture vérifiée — en échec, l'alerte annonçait quand même « plan remis à free » et
+        // Whop ne rejouait pas. Désormais 500 : les lignes en attente déjà traitées le restent (rejeu sans effet).
+        if (clawErr) { console.error('❌ Clawback :', clawErr); return await failDb() }
+        console.log(`💸 Clawback (${action}) pour ${profile.id} → free, crédits remis à zéro`)
+        await unmarkIgLeadPaid(sb, profile.id)   // plus compté « payant »
         effet = 'plan remis à free, crédits à zéro'
         // Audit 02/10 : compte retrouvé par l'e-mail et sans abonnement Whop enregistré → l'abonnement remboursé peut
         // être porté par un autre compte (adresse changée puis ancienne adresse réinscrite).
         const parEmailSansAbo = lookup.by === 'email' && !profile.whop_member_id
         note = 'Plan remis à free, crédits à zéro.' + NOTE_COMMISSIONS
           + (parEmailSansAbo ? ' Ce compte a été retrouvé par l’e-mail et n’avait pas d’abonnement Whop enregistré : s’il s’agit du remboursement d’un abonnement, vérifie qu’aucun autre compte ne le porte (adresse changée) et remets-le à free à la main le cas échéant.' : '')
+      } else if (VARIANT_PACK[refPlan] && premierPaiementRemb && packVerseIci) {
+        // Audit 23/10 (constat 44) : 1er paiement d'une VARIANTE (abonnement + pack) remboursé ou contesté alors que
+        // l'abonnement n'est plus celui du compte (fin de période passée : compte en free, pack gardé en crédits achetés).
+        // Les crédits du pack payé par CE paiement sont retirés (plancher 0), une fois par paiement (même verrou que le pack
+        // seul). Paiement non identifié comme le 1er (billing_reason absent) : rien, alerte comme avant.
+        const varPack = VARIANT_PACK[refPlan]
+        const lock = payKey ? `whop-clawback-pack:${payKey}` : null
+        let deja = false
+        if (lock) {
+          const { error: lkErr } = await sb.from('webhook_events').insert({ event_id: lock, body: { action: 'audit.clawback_pack', data: { payment: payKey, plan: refPlan, variante: true } } })
+          if (lkErr) { if (String(lkErr.code) !== '23505') { console.error('❌ verrou clawback pack (variante) :', lkErr); return await failDb() } deja = true }
+        }
+        if (deja) {
+          effet = 'aucun : crédits du pack de cette variante déjà retirés (même paiement)'
+          note = 'Événement en double pour un paiement déjà traité : rien n’a été retiré une deuxième fois.'
+        } else {
+          const { data: rp, error: vpErr } = await sb.rpc('whop_webhook_retirer_pack', { p_user: profile.id, p_credits: varPack, p_img: 0 })
+          if (vpErr || !rp?.ok) {
+            console.error('❌ Clawback pack (variante) :', vpErr?.message ?? rp?.raison ?? vpErr)
+            if (lock) { try { await sb.from('webhook_events').delete().eq('event_id', lock) } catch (_) { /* best-effort */ } }
+            return await failDb()
+          }
+          console.log(`💸 Clawback pack de variante (${action}) pour ${profile.id} : ${rp.avant} → ${rp.apres} crédits`)
+          effet = `${(rp.avant ?? 0) - (rp.apres ?? 0)} crédits du pack de la variante retirés (solde ${rp.avant} → ${rp.apres}), plan inchangé`
+          note = 'Le 1er paiement de cette variante (abonnement + pack) a été remboursé ou contesté alors que l’abonnement n’est plus celui du compte : seuls les crédits du pack ont été retirés (plancher 0).' + NOTE_COMMISSIONS
+        }
       } else {
         console.log(`ℹ️ Clawback (${action}) sans effet sur ${profile.id} : membership remboursé ${memberKey || '—'} (${refPlan || 'plan inconnu'}), abonnement du compte ${profMember || '—'} (${profile.whop_plan_id || '—'})`)
         effet = 'aucun changement'
@@ -993,10 +1271,10 @@ serve(async (req) => {
       // Audit 02/10 (PAY-3) : les commissions récentes du filleul passent en revue → plus retirables. Une commission
       // DÉJÀ virée reste à réverser À LA MAIN (l'accounting des payouts est trop sensible pour un revert automatique).
       const flagged = await flagReferralClawback(sb, profile.id, cEmail, action)
-      if (removed || reduced) console.log(`💸 Clawback (${action}) : ${removed} ligne(s) en attente supprimée(s), ${reduced} réduite(s) pour ${cEmail || cMember}`)
+      if (removed || reduced) console.log(`💸 Clawback (${action}) : ${removed} ligne(s) en attente supprimée(s), ${reduced} réduite(s) pour ${cEmail ? masque(cEmail) : cMember}`)
       await alertOwner(`⚠️ Clawback AvatarAds — ${cEmail || profile.id}`, 'Remboursement / litige', [
         ['Événement', action], ['Membre', cEmail || profile.id],
-        ['Compte retrouvé par', lookup.by === 'abonnement' ? 'abonnement Whop' : 'e-mail'],
+        ['Compte retrouvé par', lookup.by === 'abonnement' ? 'abonnement Whop' : lookup.by === 'compte' ? 'compte connecté (aa_user_id vérifié)' : 'e-mail'],
         ['Remboursé', rembourse],
         ['Abonnement remboursé / abonnement du compte', `${memberKey || '—'} / ${profMember || '—'}`],
         ['Effet sur le compte', effet],
@@ -1004,7 +1282,7 @@ serve(async (req) => {
         ['Commissions de parrainage mises en revue (90 j)', flagged === null ? 'échec, à vérifier à la main' : String(flagged)],
       ], note)
     } else {
-      console.log(`ℹ️ Clawback ${action} sans profil (${cEmail || '—'}) : ${removed} ligne(s) en attente supprimée(s), ${reduced} réduite(s)`)
+      console.log(`ℹ️ Clawback ${action} sans profil (${cEmail ? masque(cEmail) : '—'}) : ${removed} ligne(s) en attente supprimée(s), ${reduced} réduite(s)`)
       const flagged = cEmail ? await flagReferralClawback(sb, null, cEmail, action) : 0
       await alertOwner(`⚠️ Clawback AvatarAds (sans compte) — ${cEmail || cMember || '—'}`, 'Remboursement / litige sans compte', [
         ['Événement', action], ['E-mail Whop', cEmail || '—'], ['Abonnement', String(cMember || '—')],
@@ -1020,10 +1298,30 @@ serve(async (req) => {
     }
   }
 
+  // ─── résiliation / réactivation faite chez Whop (cancel_at_period_end) — audit 23/10, constat 24 ──
+  // Avant : jamais répercutée. Résilier depuis Whop gardait les crédits du plan (règle « retirés tout de suite »
+  // contournée), laissait « Annuler l'abonnement » et le cadeau de fidélité dans l'app, et delete-account refusait en
+  // boucle. Passage à true : même retrait que la résiliation dans l'app (crédits du plan retirés, achetés gardés, drapeau
+  // posé) ; passage à false : drapeau retiré (comme whop-uncancel). Seulement pour l'abonnement ACTIF du profil. Le rendu
+  // prioritaire est traité plus haut (sans effet).
+  else if (isCancelFlag) {
+    const cape = data.cancel_at_period_end
+    if (typeof cape !== 'boolean' || !memberId) { console.log(`ℹ️ ${action} sans drapeau ou sans abonnement : ignoré`); return new Response('OK', { status: 200 }) }
+    if (planId && !SUB_MAP[planId]) return new Response('OK', { status: 200 })   // pack ou plan hors catalogue
+    const profile = await findProfile()
+    if (lookup.failed) return await failDb()
+    if (!profile) { console.log(`ℹ️ ${action} : aucun compte pour l'abonnement ${memberId}`); return new Response('OK', { status: 200 }) }
+    const { data: r, error } = await sb.rpc('whop_webhook_resiliation', { p_user: profile.id, p_member: String(memberId), p_programmee: cape })
+    if (error || !r?.ok) { console.error('❌ Résiliation chez Whop :', error?.message ?? r?.raison ?? error); return await failDb() }
+    if (r.effet === 'resiliee') console.log(`⛔ Résiliation faite chez Whop (${memberId}) : crédits du plan retirés pour ${profile.id} (${r.avant} → ${r.keep}, achetés gardés)`)
+    else if (r.effet === 'reactivee') console.log(`↩️ Réactivation faite chez Whop (${memberId}) pour ${profile.id}`)
+    else console.log(`ℹ️ ${action} (${memberId}) : ${r.effet === 'deja' ? 'déjà à jour' : 'pas l’abonnement actif du compte'}`)
+  }
+
   // ─── Autres events → on ignore ────────────────────────────────
   else {
     console.log(`ℹ️ Event ignoré: ${action}`)
   }
 
   return new Response('OK', { status: 200 })
-})
+}

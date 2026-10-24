@@ -5213,6 +5213,8 @@ setTimeout(function(){
         </div>
         <p class="faint" style="font-size:11.5px;line-height:1.5;margin-bottom:16px;overflow-wrap:anywhere">Adresse actuelle : <b id="emailModalCur" style="color:var(--text-2)">—</b></p>
         <div id="emailChgStep1">
+          <!-- audit 23/10 (n° 26) : changer d'adresse retire la connexion Google liée à l'ancienne (affiché aux comptes Google) -->
+          <p id="emailChgGoogle" class="faint" style="display:none;font-size:12px;line-height:1.5;margin:0 0 12px">Tu te connectes avec Google : après le changement, connecte-toi avec un code reçu sur ta nouvelle adresse (ou avec Google si c'est une adresse Gmail).</p>
           <div class="setup-label" style="margin-bottom:8px">Nouvel e-mail</div>
           <input class="field" type="email" id="accountNewEmail" placeholder="nouveau@email.com" autocomplete="email" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')saveAccountEmail()">
           <button id="emailChgSendBtn" class="btn btn-primary" onclick="saveAccountEmail()" style="width:100%;margin-top:14px;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Recevoir le code</button>
@@ -5996,7 +5998,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-0300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-1200'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -9633,6 +9635,11 @@ function openEmailModal(){
   _emailChgReset();
   const cur = document.getElementById('emailModalCur'); if(cur) cur.textContent = (currentMember && currentMember.email) || '—';
   const inp = document.getElementById('accountNewEmail'); if(inp) inp.value = '';
+  const gNote = document.getElementById('emailChgGoogle');
+  if(gNote){ gNote.style.display = 'none';
+    try{ sb.auth.getSession().then(function(r){ const u = r && r.data && r.data.session && r.data.session.user;
+      const pv = (u && u.app_metadata && u.app_metadata.providers) || [];
+      gNote.style.display = pv.indexOf('google') >= 0 ? 'block' : 'none'; }).catch(function(){}); }catch(_){} }
   m.style.display = 'grid';
   setTimeout(function(){ try{ inp.focus(); }catch(_){} }, 80);
 }

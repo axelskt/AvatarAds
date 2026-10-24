@@ -86,6 +86,9 @@ input,select{font-family:inherit;color:inherit}
 .legal{font-size:13.5px;color:var(--text-2);text-align:center;line-height:1.55;margin:-8px 0 0}
 .step-p{font-size:15px;color:var(--text-2);line-height:1.55;margin-bottom:22px}
 .pack-login{padding:6px 0 4px}.pack-login .cta{margin-top:18px}
+.adr-in{width:100%;height:54px;border-radius:999px;border:1px solid var(--line);background:var(--field);padding:0 20px;font-size:16px;outline:none}
+.adr-in:focus{border-color:#C9CED4}
+.adr-alt{display:block;text-align:center;margin-top:6px}
 .cta{width:100%;height:58px;border-radius:999px;background:linear-gradient(180deg,#FFD43B,#FFC107);color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-size:18px;font-weight:500;margin-top:8px;transition:.15s;text-decoration:none}
 .cta:hover{filter:brightness(1.05);color:#1A1300}
 .cta .ar{display:flex;align-items:center;gap:18px}.cta .ar::before{content:"";width:1px;height:24px;background:rgba(26,19,0,.25)}
@@ -153,9 +156,14 @@ const QUOTE_URL="https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/whop-quot
 // Pack seul (?pack=S|M|L, depuis l'app « Recharger des crédits ») : paiement unique au prix normal, sans options
 const PACK_SEUL={S:{n:"Pack crédits S",c:120,p:19.99,plan:"plan_hR0u4VHoeszbu"},M:{n:"Pack crédits M",c:300,p:34.99,plan:"plan_GLoKHMqZtNbLK"},L:{n:"Pack crédits L",c:600,p:74.99,plan:"plan_iRh99E5F2g4XU"}};
 const qs=new URLSearchParams(location.search);
-const base0=PLANS[qs.get("plan")]?qs.get("plan"):"pro";
+// clés PROPRES seulement (audit 23/10, constat 47 : ?plan=constructor lisait Object.prototype et cassait la page)
+const aCle=(o,k)=>k!=null&&Object.prototype.hasOwnProperty.call(o,k);
+const base0=aCle(PLANS,qs.get("plan"))?qs.get("plan"):"pro";
+const pack0=String(qs.get("pack")||"").toUpperCase();
+// step : 1 = choix et paiement, 2 = paiement terminé (panier figé) ; promoPending : code en cours de devis ; basOk : palier
+// inférieur accepté après l'avertissement
 const S={plan:base0,base:base0,bill:qs.get("bill")==="y"?"y":"m",add:{},step:1,promo:null,promoOpen:false,promoBusy:false,promoErr:"",promoDraft:"",
-  packSeul:PACK_SEUL[String(qs.get("pack")||"").toUpperCase()]?String(qs.get("pack")).toUpperCase():""};
+  promoPending:"",basOk:"",packSeul:aCle(PACK_SEUL,pack0)?pack0:""};
 // plan Whop payé : la variante « palier + pack » si le pack est coché, sinon l'abonnement seul
 function planWhop(){if(S.packSeul) return PACK_SEUL[S.packSeul].plan; const v=S.add.credits&&(VAR[S.plan]||{})[PLANS[S.base].pack];return v?v[S.bill]:PLANS[S.plan].pid[S.bill]}
 function prioWhop(){return S.packSeul||!S.add.prio?"":(S.bill==="y"&&(S.plan==="elite60"||S.plan==="elite90")?PRIO.y3ds:PRIO[S.bill]).plan}
@@ -213,15 +221,20 @@ function r(){
 }
 // ce que paie le paiement : le plan (mensuel ou annuel, avec ou sans pack) + le rendu prioritaire, et le code promo
 function cartKey(){return [...panier(),S.promo?S.promo.code:""].join("|")}
-// devis Whop du panier avec ce code ; succès → code appliqué et module remonté avec lui, échec → message sous le champ
+// devis Whop du panier avec ce code ; succès → code appliqué et module remonté avec lui, échec → message sous le champ.
+// Audit 23/10 (constat 29) : pendant le devis, l'ancien module (ancien panier, ancien code) n'est plus payable, et un panier
+// changé pendant le devis relance un devis avec le MÊME code (promoPending) au lieu de le perdre et de bloquer le champ
+let _devis=0;
 async function appliquerPromo(code){
   code=String(code||"").trim(); S.promoDraft=code; S.promoErr="";
   if(!/^[A-Za-z0-9_-]{1,40}$/.test(code)){S.promoErr="Entre un code promo valide.";r();return}
-  S.promoBusy=true; S.promoOpen=true; S.promo=null; r();
-  const cle=panier().join("|"); let res=null;
+  const n=++_devis;
+  S.promoBusy=true; S.promoOpen=true; S.promo=null; S.promoPending=code; r();
+  suspendre("Mise à jour du total…");
+  let res=null;
   try{ const q=await fetch(QUOTE_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plans:panier(),promo:code})}); res=await q.json(); }catch(_){}
-  if(cle!==panier().join("|")) return;   // le panier a changé pendant le devis : le nouveau devis fait foi
-  S.promoBusy=false;
+  if(n!==_devis||S.step!==1) return;   // un devis plus récent (panier changé pendant celui-ci) fait foi
+  S.promoBusy=false; S.promoPending="";
   if(res&&res.ok){S.promo={code:res.code,discount:res.discount,total:res.total}; S.promoOpen=false; S.promoDraft="";}
   else S.promoErr=(res&&res.message)||"Vérification impossible pour le moment, réessaie.";
   r(); mountWhop();
@@ -230,8 +243,11 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]"); if(!b||S.step!==1) return;
   const act=b.dataset.act;
   if(act==="promo-open"){S.promoOpen=true; r(); const z=(b.closest("#mSum")?$("mSum"):$("rPlan")).querySelector("[data-promo] input"); if(z) z.focus(); return;}
-  if(act==="promo-del"){S.promo=null; S.promoErr=""; r(); mountWhop(); return;}
-  const before=cartKey(), code=S.promo&&S.promo.code;
+  if(act==="promo-del"){++_devis; S.promo=null; S.promoErr=""; S.promoBusy=false; S.promoPending=""; r(); mountWhop(); return;}
+  if(act==="retry"){_wp=null; mountWhop(); return;}   // module Whop qui ne s'affichait pas
+  if(act==="bas-ok"){S.basOk=S.plan; mountWhop(); return;}   // palier inférieur accepté après l'avertissement
+  if(act==="adr-autre"){S.adresse=""; S.adrErr=""; mountWhop(); return;}   // achat sans session : changer d'adresse
+  const before=cartKey(), code=(S.promo&&S.promo.code)||S.promoPending;
   if(act==="bill") S.bill=S.bill==="y"?"m":"y";
   if(act==="opt"){const id=b.dataset.id;
     if(id==="upgrade"){S.plan=S.plan===S.base?NEXT[S.base]:S.base;S.add.upgrade=S.plan!==S.base;}
@@ -241,7 +257,8 @@ document.addEventListener("click",e=>{
   r(); if(cartKey()!==before) mountWhop();
 });
 document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-promo]")) S.promoDraft=e.target.value;});
-document.addEventListener("submit",e=>{const f=e.target.closest("[data-promo]"); if(!f) return; e.preventDefault(); if(!S.promoBusy) appliquerPromo(f.elements.code.value);});
+document.addEventListener("submit",e=>{const f=e.target.closest("[data-promo]"); if(!f) return; e.preventDefault(); if(!S.promoBusy&&S.step===1) appliquerPromo(f.elements.code.value);});
+document.addEventListener("submit",e=>{const f=e.target.closest("[data-adresse]"); if(!f) return; e.preventDefault(); if(S.step===1) verifierAdresse(f.elements.email.value);});
 document.addEventListener("keydown",e=>{const b=e.target.closest&&e.target.closest('[data-act="opt"]'); if(b&&(e.key===" "||e.key==="Enter")){e.preventDefault();b.click();}});
 $("back").addEventListener("click",()=>{ if(history.length>1&&document.referrer) history.back(); else location.href="/tarifs.html"; });
 
@@ -272,13 +289,100 @@ function appearance(lock){return {theme:{appearance:"light",accentColor:"orange"
 let _co=null,_seq=0;
 function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null;}
 function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span></div>`}
-function fallback(el,plan){el.innerHTML=`<div class="whop-wait" style="position:static;padding:30px 0"><span>Le module de paiement ne s'affiche pas.</span><a href="https://whop.com/checkout/${esc(plan)}" target="_blank" rel="noopener">Payer sur la page sécurisée Whop</a></div>`}
+// module retiré (devis en cours…) : plus rien de payable tant qu'il n'est pas remonté
+function suspendre(t){ ++_seq; destroyAll(); $("co").innerHTML=waitHTML(t); }
+// Module Whop impossible à afficher (bloqueur, réseau). Audit 23/10 (constat 17) : la page Whop de secours ne reprend ni le
+// rendu prioritaire, ni le code promo, ni le suivi de cet onglet → proposée SEULEMENT pour un panier d'un seul article sans
+// code, avec l'adresse du compte verrouillée (comme l'app, _whopHostedUrl) ; sinon message + « Réessayer », jamais un
+// paiement partiel
+function fallback(el){
+  const items=panier(), acc=compte(), seul=items.length===1&&!S.promo;
+  const adr=acc?acc.email:S.adresse;
+  const url="https://whop.com/checkout/"+encodeURIComponent(items[0])+(adr?"?email="+encodeURIComponent(adr)+"&email.disabled=1":"");
+  el.innerHTML=`<div class="whop-wait" style="position:static;padding:30px 0"><span>Le module de paiement ne s'affiche pas (bloqueur de publicités ou connexion lente ?).</span>
+   <button type="button" class="promo-link" data-act="retry">Réessayer</button>
+   ${seul?`<span>Tu peux aussi payer sur la page sécurisée Whop${acc?" : ton adresse y est reprise, les crédits arrivent sur ton compte.":" : ton compte AvatarAds est créé avec l'adresse saisie là-bas, connecte-toi ensuite avec elle (code par e-mail)."}</span><a href="${esc(url)}" target="_blank" rel="noopener">Payer sur la page sécurisée Whop</a>`
+     :`<span>La page Whop de secours ne reprend pas tout ton panier (${[items.length>1?"rendu prioritaire":"",S.promo?"code promo":""].filter(Boolean).join(", ")}) : désactive ton bloqueur de publicités pour cette page, puis réessaie.</span>`}</div>`}
+/* ── Plan actuel du compte connecté (audit 23/10, constats 18 et 31) ───────────────────────────────────────────────────
+   Lu une fois au chargement (paiement-compte, action plan, avec la session). Même palier → pas de paiement ; palier
+   inférieur → avertissement (les crédits restants du plan actuel disparaissent au changement de plan) ; pack seul d'un compte
+   Free → réservé aux abonnés (crédits inutilisables sans plan). Lecture impossible → la page reste comme avant. */
+const RANG={starter:1,pro:2,elite:3,elite60:4,elite90:5};
+let ACTUEL=null, _planPret=false;
+// plan Whop (abonnement ou variante avec pack) → palier et rythme
+function palierDe(id){
+  for(const k of Object.keys(PLANS)){ const p=PLANS[k]; if(p.pid.m===id) return {palier:k,bill:"m"}; if(p.pid.y===id) return {palier:k,bill:"y"};
+    for(const v of Object.values(VAR[k]||{})){ if(v.m===id) return {palier:k,bill:"m"}; if(v.y===id) return {palier:k,bill:"y"}; } }
+  return null;
+}
+async function lirePlan(){
+  if(!compte()) return;
+  try{
+    const tok=await jeton(); if(!tok) return;
+    const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),6000);
+    const j=await fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json",Authorization:"Bearer "+tok},body:JSON.stringify({action:"plan"})}).then(x=>x.json());
+    clearTimeout(t);
+    if(!j||!j.ok) return;
+    const plan=String(j.plan||""), w=palierDe(String(j.plan_whop||""));
+    // palier exact par le plan Whop ; sinon le nom (« elite » seul ne dit pas 30, 60 ou 90)
+    ACTUEL=!aCle(RANG,plan)?{plan,palier:""}:w&&w.palier.indexOf(plan)===0?{plan,palier:w.palier,bill:w.bill,exact:true}:{plan,palier:plan,bill:"",exact:plan!=="elite"};
+  }catch(_){}
+}
+// ce que la page montre à la place du module pour ce panier ("" = paiement normal)
+function garde(){
+  if(!ACTUEL) return "";
+  if(S.packSeul) return ACTUEL.plan==="free"?`<div class="pack-login"><p class="step-p">Les packs de crédits sont réservés aux abonnés : ils s'ajoutent aux crédits de ton plan. Choisis d'abord un plan, puis recharge depuis ton espace.</p>
+   <a class="cta" href="/tarifs.html"><span>Voir les plans</span>${FLECHE}</a></div>`:"";
+  if(!ACTUEL.palier) return "";
+  const cur=PLANS[ACTUEL.palier], rc=RANG[ACTUEL.palier], rn=RANG[S.plan];
+  if(ACTUEL.exact&&rn===rc) return `<div class="pack-login"><p class="step-p">Tu es déjà abonné au plan <b>${cur.n}</b>${ACTUEL.bill?(ACTUEL.bill==="y"?" (annuel)":" (mensuel)"):""} : rien à payer ici. Ton abonnement se gère depuis ton espace${NEXT[S.base]&&S.plan===S.base?", ou choisis un plan supérieur ci-dessus":""}.</p>
+   <a class="cta" href="/app/"><span>Ouvrir mon espace</span>${FLECHE}</a></div>`;
+  const flou=!ACTUEL.exact&&rn>=rc;   // « elite » sans plan Whop connu : Elite, Elite 60 ou Elite 90
+  if((rn<rc||flou)&&S.basOk!==S.plan) return `<div class="pack-login"><p class="step-p">${flou?`Tu as déjà un plan <b>${cur.n}</b>. En changeant de plan`:`Ton plan actuel est <b>${cur.n}</b>. En passant au plan <b>${PLANS[S.plan].n}</b>`}, les crédits restants de ton plan actuel disparaissent dès le paiement (tes crédits achetés restent sur ton compte), et la période déjà payée n'est pas remboursée.</p>
+   <button class="cta" type="button" data-act="bas-ok"><span>J'ai compris, continuer</span>${FLECHE}</button></div>`;
+  return "";
+}
+/* ── Abonnement acheté sans être connecté (Axel 24/10 : « l'achat doit juste être refusé et dire qu'il a déjà un plan en
+   cours ») : l'adresse est demandée AVANT le module Whop et vérifiée (paiement-compte, action adresse). Abonnement déjà en
+   cours → refus + connexion (le changement de plan se fait depuis l'espace) ; sinon le module s'ouvre avec CETTE adresse,
+   verrouillée. Vérification impossible (réseau) → on laisse payer : le webhook met de côté un achat douteux. */
+function adresseHTML(){
+  return `<form class="pack-login" data-adresse novalidate><p class="step-p">Ton adresse e-mail : ton compte AvatarAds est créé avec elle, et tu t'y connectes ensuite.</p>
+   <input class="adr-in" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="ton@email.com" value="${esc(S.adrDraft||"")}" aria-label="Adresse e-mail">
+   ${S.adrErr?`<div class="promo-err" role="alert">${S.adrErr}</div>`:""}
+   <button class="cta" type="submit"${S.adrBusy?" disabled":""}><span>${S.adrBusy?"Vérification…":"Continuer"}</span>${FLECHE}</button>
+   <a class="promo-link adr-alt" href="/connexion.html">J'ai déjà un compte : me connecter</a></form>`;
+}
+async function verifierAdresse(v){
+  const email=String(v||"").trim().toLowerCase(); S.adrDraft=email;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ S.adrErr="Entre une adresse e-mail valide."; mountWhop(); return; }
+  if(S.adrBusy) return; S.adrBusy=true; S.adrErr=""; mountWhop();
+  let j=null;
+  try{ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),8000);
+    j=await fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"adresse",email})}).then(x=>x.json());
+    clearTimeout(t); }catch(_){ j=null; }
+  S.adrBusy=false;
+  if(j&&j.ok&&j.abonne){
+    $("co").innerHTML=`<div class="pack-login"><p class="step-p">L'adresse <b>${esc(email)}</b> a déjà un abonnement AvatarAds en cours. Connecte-toi pour changer de plan depuis ton espace.</p>
+     <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a>
+     <button type="button" class="promo-link adr-alt" data-act="adr-autre">Utiliser une autre adresse</button></div>`;
+    return;
+  }
+  if(j&&j.ok===false&&j.error==="rate"){ S.adrErr="Trop d'essais, réessaie dans quelques minutes."; mountWhop(); return; }
+  if(j&&j.ok===false&&j.error==="email"){ S.adrErr="Entre une adresse e-mail valide."; mountWhop(); return; }
+  S.adresse=email; mountWhop();
+}
 function mountWhop(){
   const seq=++_seq; destroyAll();
   const box=$("co"), items=panier().map(plan=>({plan,quantity:1}));
   // pack seul sans session : les crédits vont sur un compte, on se connecte d'abord (les packs s'achètent depuis l'app)
   if(S.packSeul&&!compte()){ box.innerHTML=`<div class="pack-login"><p class="step-p">Les crédits du pack s'ajoutent à ton compte AvatarAds : connecte-toi d'abord, puis reprends le pack depuis ton espace.</p>
    <a class="cta" href="/connexion.html"><span>Me connecter</span>${FLECHE}</a></div>`; return; }
+  if(!_planPret){ box.innerHTML=waitHTML("Chargement du paiement…"); return; }   // plan du compte pas encore lu
+  if(S.promoPending){ box.innerHTML=waitHTML("Mise à jour du total…"); return; }   // devis en cours : il remontera le module
+  const g=garde(); if(g){ box.innerHTML=g; return; }
+  // abonnement acheté SANS session (Axel 24/10) : l'adresse d'abord, vérifiée côté serveur, puis verrouillée dans le module
+  if(!compte()&&!S.packSeul&&!S.adresse){ box.innerHTML=adresseHTML(); return; }
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>'; garderPanier();
   // PAS de returnUrl (Axel 23/10, achat test iPhone) : avec une adresse de retour, Whop renvoie l'onglet à la fin du
   // paiement et fait d'abord passer l'acheteur sans compte Whop par son écran « entrez le code » sur whop.com. Sans elle,
@@ -288,37 +392,75 @@ function mountWhop(){
     if(seq!==_seq) return;
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
     // en tête du module quand l'appareil le propose
-    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:()=>{ if(seq!==_seq) return;
+    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!(acc||S.adresse)),onComplete:()=>{ if(seq!==_seq) return; figer();
         if(!box.querySelector(".whop-wait")) box.insertAdjacentHTML("afterbegin",waitHTML("Confirmation du paiement…").replace("whop-wait","whop-wait fin")); veiller(true); }},
       meta,S.promo?{promoCode:S.promo.code}:{}));
     let ready=false;
-    _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
+    const adr=acc?acc.email:S.adresse;   // compte connecté, ou adresse vérifiée à l'étape précédente : verrouillée chez Whop
+    _co.create("checkout",Object.assign(adr?{buyerEmail:adr,lockBuyerEmail:true}:{},{
       onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove(); veiller(false);},
-      onError:e=>{ if(!ready&&seq===_seq) fallback(box,items[0].plan); else console.warn("[whop]",e&&(e.code||e.message)); }
+      onError:e=>{ if(!ready&&seq===_seq) fallback(box); else console.warn("[whop]",e&&(e.code||e.message)); }
     })).mount(box.querySelector(".whop-mount"));
-  }).catch(()=>{ if(seq===_seq) fallback(box,items[0].plan); });
+  }).catch(()=>{ if(seq===_seq) fallback(box); });
 }
 /* ── Après le paiement (Axel 23/10, test réel sur iPhone) ─────────────────────────────────────────────────────────────
    On ne dépend pas de l'événement de fin du module Whop : le paiement porte un identifiant de cet onglet (aa_nonce) et la
    page demande au serveur (paiement-compte) s'il est arrivé, puis passe la main à la page « Paiement confirmé »
    (paiement-confirme.html, même identifiant) : reçu, ouverture du compte d'un nouvel acheteur, 1er mot de passe. */
-const SB_URL="https://guvwgiejzkiodghywpwj.supabase.co";
+const SB_URL="https://guvwgiejzkiodghywpwj.supabase.co", SB_KEY="sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck", SB_SESSION="sb-guvwgiejzkiodghywpwj-auth-token";
+// jeton d'accès encore valable (rafraîchi s'il expire dans la minute, session réécrite là où l'app la lit : même code que
+// paiement-confirme.html) — sert à lire le plan du compte connecté
+function garderSession(j){ try{ if(!j.expires_at&&j.expires_in) j.expires_at=Math.floor(Date.now()/1000)+Number(j.expires_in);
+  localStorage.setItem(SB_SESSION,JSON.stringify(j)); return !!localStorage.getItem(SB_SESSION); }catch(_){ return false } }
+async function jeton(){
+  let s=null; try{ s=JSON.parse(localStorage.getItem(SB_SESSION)||"null") }catch(_){}
+  if(!s||!s.access_token) return "";
+  if(!s.refresh_token||(s.expires_at&&s.expires_at*1000-Date.now()>60e3)) return s.access_token;
+  try{ const t=await fetch(SB_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})});
+    const j=await t.json(); if(t.ok&&j.access_token&&garderSession(j)) return j.access_token; }catch(_){}
+  return s.access_token;
+}
 const NONCE=(()=>{ const neuf=()=>{ try{ return crypto.randomUUID() }catch(_){ const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=b[6]&15|64; b[8]=b[8]&63|128;
     const h=[...b].map(x=>x.toString(16).padStart(2,"0")).join(""); return h.slice(0,8)+"-"+h.slice(8,12)+"-"+h.slice(12,16)+"-"+h.slice(16,20)+"-"+h.slice(20) } };
   try{ let n=sessionStorage.getItem("aa_pay_nonce"); if(!n){ n=neuf(); sessionStorage.setItem("aa_pay_nonce",n); } return n }catch(_){ return neuf() } })();
 const appel=(corps,jeton)=>fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},jeton?{Authorization:"Bearer "+jeton}:{}),body:JSON.stringify(corps)}).then(r=>r.json());
-let _veille=0,_veilleFin=0,_paye=false,_vite=false;
+let _veille=0,_veilleFin=0,_paye=false,_vite=false,_fige=false,_attente=0,_dernier=null,_tarde="";
+const ATTENTE_MS=90e3;   // au-delà, la roue fait place à un message (audit 23/10, constat 30)
 // module affiché : vérification toutes les 4 s (30 min) ; fin du module ou retour de la banque : tout de suite puis toutes
 // les 1,5 s (le webhook arrive en quelques secondes)
 function veiller(vite){ if(_paye) return; _veilleFin=Date.now()+30*60e3;
-  if(vite&&!_vite){ _vite=true; clearInterval(_veille); _veille=0; }
+  if(vite&&!_vite){ _vite=true; clearInterval(_veille); _veille=0; if(!_attente) _attente=Date.now(); }
   if(!_veille) _veille=setInterval(verifier,_vite?1500:4000); if(vite) verifier(); }
 async function verifier(){
   if(_paye) return;
-  if(Date.now()>_veilleFin){ clearInterval(_veille); _veille=0; return; }
+  if(Date.now()>_veilleFin){ clearInterval(_veille); _veille=0; if(_attente) tarde(_dernier); return; }
   let r=null; try{ r=await appel({action:"etat",nonce:NONCE}); }catch(_){ return; }
-  if(_paye||!r||!r.paid||r.compte==="attente") return;   // « attente » : le webhook crée encore le compte
+  if(_paye||!r) return;
+  if(r.paid) _dernier=r;
+  if(r.paid&&r.compte==="attente"&&!_attente) _attente=Date.now();
+  if(!r.paid||r.compte==="attente"){   // « attente » : le webhook crée encore le compte
+    if(_attente&&Date.now()-_attente>ATTENTE_MS) tarde(_dernier);
+    return;
+  }
   _paye=true; clearInterval(_veille); _veille=0; apresPaiement();
+}
+// confirmation qui tarde (paiement fait, compte pas encore créé ou webhook pas encore reçu) : consigne au lieu d'une roue
+// sans fin ; la veille continue et emmène quand même sur « Paiement confirmé » si tout arrive
+function tarde(r){
+  const cmd=r&&r.recu&&r.recu.commande, acc=compte();
+  const h=`<div class="pack-login"><p class="step-p">${r&&r.paid?"Paiement reçu. Ton compte AvatarAds est en cours de création":"Ton paiement est en cours de confirmation"} : ne paie pas une 2e fois.
+   ${acc?"Tes crédits arrivent sur ton compte dans quelques minutes.":"Vérifie tes e-mails, puis connecte-toi avec l'adresse saisie au paiement."}
+   Si rien n'arrive, écris-nous à <a href="mailto:bonjour@avatarads.fr">bonjour@avatarads.fr</a>${cmd?` en indiquant la commande <b>${esc(cmd)}</b>`:""}.</p>
+   <a class="cta" href="${acc?"/app/":"/connexion.html"}"><span>${acc?"Ouvrir mon espace":"Me connecter"}</span>${FLECHE}</a></div>`;
+  if(h===_tarde) return; _tarde=h;
+  ++_seq; destroyAll(); $("co").innerHTML=h;
+}
+// paiement terminé (fin du module Whop) : panier figé (audit 23/10, constat 28) — plus aucun clic ne remonte un module de
+// paiement ni ne réécrit le panier dont le reçu tire ses lignes
+function figer(){
+  if(S.step!==1) return;
+  garderPanier(); S.step=2; _fige=true;
+  ["opts","rPlan","mPlan","mSum"].forEach(id=>{ const el=$(id); if(!el) return; el.style.pointerEvents="none"; el.setAttribute("aria-disabled","true"); try{ el.inert=true }catch(_){} });
 }
 // panier payé, tel qu'affiché (lignes du reçu de la page « Paiement confirmé ») ; pas réécrit au retour d'une étape bancaire
 // hors page, où les options cochées ne sont plus connues
@@ -328,8 +470,8 @@ function lignes(){
   const p=PLANS[S.plan],y=S.bill==="y";
   return [{n:"Plan "+p.n+(y?" annuel":""),q:1,p:y?p.y:p.m}].concat(ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>({n:a.t,q:1,p:a.p})));
 }
-function garderPanier(){ if(retourBanque) return; const acc=compte();
-  try{ sessionStorage.setItem("aa_pay_order",JSON.stringify({lines:lignes(),promo:S.promo?S.promo.code:null,total:S.promo?S.promo.total:total(),email:acc?acc.email:null})); }catch(_){} }
+function garderPanier(){ if(retourBanque||_fige) return; const acc=compte();
+  try{ sessionStorage.setItem("aa_pay_order",JSON.stringify({lines:lignes(),promo:S.promo?S.promo.code:null,total:S.promo?S.promo.total:total(),email:acc?acc.email:(S.adresse||null)})); }catch(_){} }
 function apresPaiement(){
   destroyAll(); $("co").innerHTML=waitHTML("Paiement confirmé…");
   try{ sessionStorage.setItem("aa_pay_ok",NONCE); sessionStorage.removeItem("aa_pay_nonce");   // un autre achat dans cet onglet aura son identifiant
@@ -340,7 +482,8 @@ function apresPaiement(){
 const FLECHE='<span class="ar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
 // retour d'une étape bancaire hors page (returnUrl) : le paiement est peut-être déjà passé
 if(qs.get("status")==="succeeded"||qs.get("payment")) veiller(true);
-r(); mountWhop();
+// compte connecté : son plan est lu AVANT de monter le module (même palier, palier inférieur, pack d'un compte Free)
+r(); mountWhop(); lirePlan().finally(()=>{ _planPret=true; if(S.step===1) mountWhop(); });
 </script>
 </body>
 </html>

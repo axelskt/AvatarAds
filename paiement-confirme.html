@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-0yg7VPN9IVKagAK2xZNyCHvN+ZB/JYFq2thPIylYmjU='; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-NuS+zhq6kKYUpjSdEmpfE36/jDmeyGJ4/wK9tl8IiKc='; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Paiement confirmé — AvatarAds</title>
 <link rel="icon" href="/assets/avatarads-logo-96.png">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -21,6 +21,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .back{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text-2)}
 .logo{width:30px;height:30px;border-radius:9px;display:block}
 .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:calc(100vh - 64px)}
+.wrap.seul{grid-template-columns:minmax(0,1fr)}
 .col-l{position:relative;padding:56px 28px;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);min-width:0;overflow:hidden}
 .col-r{position:relative;padding:56px 28px 40px;display:flex;align-items:flex-start;justify-content:center;min-width:0;overflow:hidden;background:#F6F7F8}
 
@@ -162,18 +163,20 @@ function quitter(){ location.replace(lire("aa_pay_from")||"/tarifs.html"); }
 $("back").onclick=()=>{ location.href=compte()?"/app/":"/"; };
 
 let R=null, AUTO=false, EMAIL="";
-// lien de vérification (?apercu, ?apercu=abo, ?apercu=code) : commande d'exemple, aucun appel au serveur, rien n'est enregistré
+// lien de vérification (?apercu, ?apercu=abo, ?apercu=code, ?apercu=achat) : commande d'exemple, aucun appel au serveur,
+// rien n'est enregistré (« achat » : acheteur sans compte, écran du code reçu à l'adresse de l'achat)
 const APERCU=new URLSearchParams(location.search).get("apercu");
 (async()=>{
   if(APERCU!==null){
-    const abo=APERCU==="abo"||APERCU==="code", acc=compte();
+    const abo=APERCU==="abo"||APERCU==="code", achat=APERCU==="achat", acc=compte();
     PANIER={lines:abo?[{n:"Plan Pro",q:1,p:49.99},{n:"Pack crédits M",q:1,p:27.99}]:[{n:"Pack crédits M",q:1,p:34.99}],promo:null};
-    R={ok:true,paid:true,compte:"connecte",mdp:false,google:false,recu:{commande:"APERCU-0001",methode:"Carte bancaire",last4:"4242",total:abo?77.98:34.99,date:new Date().toISOString()}};
-    EMAIL=acc?acc.email:"test@exemple.fr";
+    R={ok:true,paid:true,compte:achat?"nouveau":"connecte",mdp:false,google:false,recu:{commande:"APERCU-0001",methode:"Carte bancaire",last4:"4242",total:abo?77.98:34.99,date:new Date().toISOString()}};
+    if(achat) R.email="te•••@exemple.fr";
+    EMAIL=achat?R.email:acc?acc.email:"test@exemple.fr";
     try{ await Promise.race([document.fonts.ready,pause(1500)]) }catch(_){}
     return afficher();
   }
-  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(NONCE||"")) return quitter();
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(NONCE||"")) return venuDeWhop()?sansSuivi():quitter();
   // le compte d'un acheteur sans compte et le reçu (paiement Whop) arrivent quelques secondes après l'activation
   for(let i=0;i<14;i++){
     R=await etat()||R;
@@ -184,18 +187,9 @@ const APERCU=new URLSearchParams(location.search).get("apercu");
   }
   if(R&&R.ok&&!R.paid) return quitter();
   R=R||{};
-  // nouvel acheteur (compte créé par l'achat) : connecté ici, son 1er mot de passe se crée depuis « Ouvrir mon espace »
+  // nouvel acheteur (compte créé par l'achat) : rien n'est ouvert à l'arrivée. Audit 23/10 : l'adresse saisie chez Whop n'est
+  // pas vérifiée, « Ouvrir mon espace » envoie d'abord un code à cette adresse (codeAchat) ; déjà ouvert dans cet onglet → AUTO
   AUTO=lire("aa_pay_auto")===NONCE;
-  if(R.compte==="nouveau"&&!AUTO){
-    try{
-      const c=await etat("connexion");
-      if(c&&c.token_hash){
-        const v=await fetch(SB_URL+"/auth/v1/verify",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({type:"magiclink",token_hash:c.token_hash})});
-        const j=await v.json();
-        if(v.ok&&j.access_token&&j.refresh_token&&garderSession(j)){ AUTO=true; EMAIL=c.email||(j.user&&j.user.email)||""; try{ sessionStorage.setItem("aa_pay_auto",NONCE) }catch(_){} }
-      }
-    }catch(_){}
-  }
   const acc=compte();
   EMAIL=EMAIL||((R.compte==="connecte"||AUTO)&&acc?acc.email:"")||R.email||(PANIER&&PANIER.email)||"";
   // polices du ticket chargées AVANT de le mesurer (sinon la hauteur d'impression est fausse de quelques pixels)
@@ -204,12 +198,48 @@ const APERCU=new URLSearchParams(location.search).get("apercu");
   afficher();
 })();
 
+// Achat fait sur la page Whop (lien whop.com) puis renvoyé ici par Whop (« URL de redirection de succès ») : aucun
+// identifiant de cet onglet, donc ni reçu ni ouverture du compte par code. Axel 24/10 : plus de renvoi vers les tarifs —
+// « Paiement confirmé » sans ticket, « Ouvrir mon espace » (connexion habituelle avec l'adresse payée). Seulement si la
+// visite vient bien de Whop (page d'origine whop.com ou paramètre de paiement Whop) : sinon retour aux tarifs comme avant.
+function venuDeWhop(){
+  try{ if(/(^|\.)whop\.com$/i.test(new URL(document.referrer).hostname)) return true }catch(_){}
+  const q=new URLSearchParams(location.search);
+  for(const [k,v] of q) if(/^(payment|membership|receipt|checkout|session|plan)_?id$/i.test(k)||/^(pay|mem|plan|ch|rcpt)_[A-Za-z0-9]+$/.test(v)) return true;
+  return false;
+}
+function sansSuivi(){
+  R={ok:true,paid:true,compte:"whop"};
+  const acc=compte();
+  $("sub").innerHTML=acc?`Ton accès arrive sur ton compte <b>${esc(acc.email)}</b> dans un instant.`
+    :"Ton accès arrive sur ton compte AvatarAds : connecte-toi avec l'adresse utilisée pour payer.";
+  document.querySelector(".col-r").remove();
+  $("page").classList.add("seul");
+  $("attente").remove(); $("page").hidden=false;
+  play();
+}
+
 function afficher(){
   const rc=R.recu||{}, o=PANIER||{};
   const lines=Array.isArray(o.lines)&&o.lines.length?o.lines:[{n:"AvatarAds",q:1,p:Number(rc.total)||0}];
   const sous=lines.reduce((s,l)=>s+l.p*l.q,0);
   const total=rc.total!=null?Number(rc.total):o.total!=null?Number(o.total):sous;
   const ecart=Math.round((total-sous)*100)/100;
+  // devise réellement encaissée (Whop peut facturer dans la devise de l'acheteur) : montants du paiement affichés avec elle
+  const dev=rc.total!=null&&/^[a-z]{3}$/.test(String(rc.devise||""))?String(rc.devise):"eur";
+  const argent=v=>dev==="eur"?eur(v):(Math.round(v*100)/100).toFixed(2).replace(".",",")+" "+dev.toUpperCase();
+  const libRemise=o.promo?"Code "+esc(String(o.promo).toUpperCase()):"Remise";
+  // remise et taxes lues sur le paiement réel (paiement-compte) ; sans elles, l'écart total − lignes reste sur UNE ligne
+  let detail="", apres="";
+  if(rc.total!=null&&typeof rc.remise==="number"){
+    const remise=Number(rc.remise)||0, taxes=Number(rc.taxes)||0, incl=!!rc.taxes_incluses;
+    if(remise>0) detail+=`<div class="r-row"><span>${libRemise}</span><span>−${argent(remise)}</span></div>`;
+    if(taxes>0&&!incl) detail+=`<div class="r-row"><span>Taxes</span><span>${argent(taxes)}</span></div>`;
+    const reste=dev==="eur"?Math.round((total-(sous-remise+(incl?0:taxes)))*100)/100:0;
+    if(Math.abs(reste)>=0.01) detail+=`<div class="r-row"><span>Ajustement</span><span>${reste<0?"−":""}${argent(Math.abs(reste))}</span></div>`;
+    if(taxes>0&&incl) apres=`<div class="r-row"><span>Dont taxes</span><span>${argent(taxes)}</span></div>`;
+  } else if(ecart<0) detail=`<div class="r-row"><span>${o.promo?libRemise:"Ajustement"}</span><span>−${eur(-ecart)}</span></div>`;
+  else if(ecart>0) detail=`<div class="r-row"><span>Ajustement</span><span>${eur(ecart)}</span></div>`;
   const ref=rc.commande||"—", d=rc.date?new Date(rc.date):new Date();
   const kind=lines.some(l=>/crédit/i.test(l.n))?"Tes crédits arrivent":"Ton accès est actif";
   $("sub").innerHTML=`${kind} sur ton compte${EMAIL?` <b>${esc(EMAIL)}</b>`:" AvatarAds"}.`;
@@ -224,9 +254,10 @@ function afficher(){
   ${lines.map(l=>`<div class="r-row"><span>${l.q} × ${esc(l.n)}</span><span>${eur(l.p*l.q)}</span></div>`).join("")}
   <div class="dots"></div>
   <div class="r-row"><span>Sous-total</span><span>${eur(sous)}</span></div>
-  ${ecart<0?`<div class="r-row"><span>${o.promo?"Code "+esc(String(o.promo).toUpperCase()):"Remise"}</span><span>−${eur(-ecart)}</span></div>`:ecart>0?`<div class="r-row"><span>Taxes</span><span>${eur(ecart)}</span></div>`:""}
+  ${detail}
   <div class="r-row"><span>Frais</span><span>0€</span></div>
-  <div class="r-row b"><span>TOTAL</span><span>${eur(total)}</span></div>
+  <div class="r-row b"><span>TOTAL</span><span>${argent(total)}</span></div>
+  ${apres}
   <div class="dots"></div>
   <div class="r-row"><span>${esc(rc.methode||"Carte bancaire")}</span><span>${rc.last4?"•••• "+esc(rc.last4):""}</span></div>
   <div class="r-row"><span>Statut</span><span>PAYÉ</span></div>
@@ -260,7 +291,7 @@ function burst(id, n, delay, colors){
   }
 }
 function play(){
-  document.getElementById("cL").innerHTML = ""; document.getElementById("cR").innerHTML = "";
+  document.getElementById("cL").innerHTML = ""; const cR = document.getElementById("cR"); if (cR) cR.innerHTML = "";
   document.querySelectorAll(".ok,.ok svg path,h1,.sub,.cta,.feed,.shadow").forEach(el=>{
     el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
   });
@@ -268,16 +299,64 @@ function play(){
   burst("cR", 70, 2.9, ["#FF5A1F","#FFC107","#22A06B","#FF8042"]);
 }
 
-// « Ouvrir mon espace » : compte sans mot de passe (et sans Google) → on le crée d'abord ; sinon le studio ; pas de session
-// dans ce navigateur (compte déjà existant) → connexion habituelle
+// « Ouvrir mon espace » : compte créé par l'achat → code reçu à son adresse d'abord ; compte sans mot de passe (et sans
+// Google) → on le crée ; sinon le studio ; pas de session dans ce navigateur (compte déjà existant) → connexion habituelle
 $("open").onclick=()=>{
-  if(APERCU!==null) return motDePasse(APERCU==="code"?"code":"direct",EMAIL);
+  if(APERCU!==null) return APERCU==="achat"?codeAchat():motDePasse(APERCU==="code"?"code":"direct",EMAIL);
+  if(R.compte==="nouveau"&&!AUTO) return codeAchat();
   const acc=compte();
   if(!acc) return location.href="/connexion.html";
   const acheteur=AUTO||R.compte==="connecte";   // la session de ce navigateur est bien celle de l'acheteur
   if(!acheteur||R.mdp!==false||R.google) return location.href="/app/";
   motDePasse(AUTO?"direct":"code",acc.email);
 };
+
+// Acheteur sans compte (audit 23/10) : Whop ne vérifie pas l'adresse saisie au paiement. Code à 6 chiffres envoyé à cette
+// adresse (paiement-compte, action « code ») ; l'action « connexion » ne remet le jeton qu'avec le bon code. Ensuite, comme
+// avant : session dans ce navigateur, puis 1er mot de passe
+function codeAchat(){
+  $("done").innerHTML=`
+   <div class="ok"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22A06B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M4.5 7.5l7.5 5.5 7.5-5.5"/></svg></div>
+   <h1>Confirme ton adresse</h1>
+   <p class="sub">Un code à 6 chiffres arrive sur <b>${esc(R.email||EMAIL||"ton adresse e-mail")}</b>&nbsp;: il ouvre ton espace et confirme que cette adresse est bien la tienne.</p>
+   <form class="pw" id="cdForm" autocomplete="on" novalidate>
+    <label for="cdCode">Code reçu par e-mail</label><input id="cdCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 chiffres">
+    <div class="pw-hint" id="cdHint" role="status"></div>
+    <button class="cta" type="submit" id="cdBtn"><span>Ouvrir mon espace</span>${FLECHE}</button>
+   </form>
+   <button class="pw-link" type="button" id="cdResend">Renvoyer le code</button>
+   <a class="pw-link" href="/connexion.html">Me connecter autrement</a>`;
+  const c=$("cdCode"), h=$("cdHint"), btn=$("cdBtn");
+  const dire=(t,k)=>{ h.textContent=t; h.className="pw-hint"+(k?" "+k:""); };
+  c.oninput=()=>{ c.value=c.value.replace(/\D/g,"").slice(0,6) };
+  const ouvert="Ce compte est déjà ouvert : connecte-toi avec ton adresse e-mail.";
+  const envoyer=async()=>{ if(APERCU!==null) return dire("Aperçu : aucun code n'est envoyé.");
+    const out=await appel({action:"code",nonce:NONCE}).catch(()=>null);
+    if(out&&out.ok&&out.envoye) return dire("Code envoyé. Pense à regarder tes spams.");
+    dire(out&&out.compte&&out.compte!=="nouveau"?ouvert:out&&out.error==="cooldown"?`Patiente ${out.wait||30} s avant de redemander un code.`
+      :out&&out.error==="too_many_codes"?"Trop de codes demandés, réessaie dans une heure.":"Envoi du code impossible pour le moment, réessaie.","ko"); };
+  envoyer(); $("cdResend").onclick=envoyer;
+  const erreur=j=>j&&j.compte&&j.compte!=="nouveau"?ouvert:!j?"Vérification impossible pour le moment, réessaie."
+    :j.error==="wrong_code"?"Code incorrect, vérifie-le.":j.error==="expired"?"Code expiré : redemande un code."
+    :j.error==="too_many_attempts"?"Trop d'essais : redemande un code dans quelques minutes.":"Vérification impossible pour le moment, réessaie.";
+  $("cdForm").onsubmit=async ev=>{
+    ev.preventDefault();
+    if(!/^\d{6}$/.test(c.value)) return dire("Entre le code à 6 chiffres reçu par e-mail","ko");
+    if(APERCU!==null) return dire("Aperçu : rien n'est vérifié.","ok");
+    btn.disabled=true; btn.firstElementChild.textContent="Vérification…";
+    let j=null; try{ j=await appel({action:"connexion",nonce:NONCE,code:c.value}); }catch(_){}
+    if(!j||!j.token_hash){ btn.disabled=false; btn.firstElementChild.textContent="Ouvrir mon espace"; return dire(erreur(j),"ko"); }
+    // jeton à usage unique → session écrite là où l'app la lit (comme la connexion par code)
+    let s=null;
+    try{ const v=await fetch(SB_URL+"/auth/v1/verify",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({type:"magiclink",token_hash:j.token_hash})});
+      s=await v.json(); if(!(v.ok&&s.access_token&&s.refresh_token&&garderSession(s))) s=null; }catch(_){ s=null }
+    if(!s) return location.replace("/connexion.html");
+    AUTO=true; EMAIL=j.email||(s.user&&s.user.email)||EMAIL; try{ sessionStorage.setItem("aa_pay_auto",NONCE) }catch(_){}
+    if(j.mdp===false&&!j.google) return motDePasse("direct",EMAIL);
+    location.replace("/app/");
+  };
+  setTimeout(()=>{ try{ c.focus() }catch(_){} },300);
+}
 
 // 1er mot de passe. « direct » : compte ouvert par l'achat (le serveur le sait, paiement-compte) ; « code » : compte déjà
 // utilisé, preuve par un code envoyé à son adresse (même chemin que Mon compte, auth-otp)
