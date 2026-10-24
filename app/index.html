@@ -5026,6 +5026,34 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
   </div>
 </div>
 <script>
+/* RETOUR GOOGLE (24/10, Axel : « connecté sans compte ») : les jetons arrivent dans l'URL (#access_token=…). supabase-js ne
+   les gardait qu'APRÈS avoir demandé /auth/v1/user au serveur ; sur iPhone, cette première requête part parfois dans une
+   connexion morte (voir _aaFetch, _aaGarderConnexion) et n'arrive jamais : jetons perdus, session jamais enregistrée, compte
+   jamais chargé, seule une NOUVELLE connexion Google sauvait (journaux du 24/10, 12:00:40 → 12:02:15 UTC). La session est donc
+   enregistrée ICI, sans réseau, telle que supabase-js la lit (identité lue dans le jeton signé), puis l'URL est nettoyée :
+   supabase-js la retrouve comme une session normale et la lecture du profil se relance tant qu'il faut. */
+(function(){
+  try{
+    var h = location.hash || ''; if(h.indexOf('access_token=') < 0) return;
+    var q = new URLSearchParams(h.replace(/^#\/?/, ''));
+    var at = q.get('access_token'), rt = q.get('refresh_token'), ty = q.get('type') || '';
+    if(!at || !rt || ty === 'recovery' || ty === 'email_change') return;   // liens de récupération : traités par supabase-js
+    var p = at.split('.')[1]; if(!p) return;
+    p = p.replace(/-/g, '+').replace(/_/g, '/'); while(p.length % 4) p += '=';
+    var c = JSON.parse(decodeURIComponent(atob(p).split('').map(function(ch){ return '%' + ('00' + ch.charCodeAt(0).toString(16)).slice(-2); }).join('')));
+    if(!c || !c.sub || !c.exp) return;
+    var now = Math.floor(Date.now() / 1000), exp = parseInt(q.get('expires_at') || '', 10) || c.exp;
+    if(exp <= now + 30) return;
+    var sess = { access_token: at, token_type: q.get('token_type') || 'bearer', expires_in: parseInt(q.get('expires_in') || '', 10) || (exp - now), expires_at: exp, refresh_token: rt,
+      user: { id: c.sub, aud: c.aud || 'authenticated', role: c.role || 'authenticated', email: c.email || '', phone: c.phone || '', app_metadata: c.app_metadata || {},
+        user_metadata: c.user_metadata || {}, is_anonymous: !!c.is_anonymous, last_sign_in_at: new Date((c.iat || now) * 1000).toISOString(), created_at: '', identities: [] } };
+    if(q.get('provider_token')) sess.provider_token = q.get('provider_token');
+    if(q.get('provider_refresh_token')) sess.provider_refresh_token = q.get('provider_refresh_token');
+    localStorage.setItem('sb-guvwgiejzkiodghywpwj-auth-token', JSON.stringify(sess));
+    localStorage.setItem('aa_login_at', String(Date.now()));
+    history.replaceState(null, '', location.pathname + location.search);
+  }catch(e){}
+})();
 /* ANTI-FLASH LOGIN (04/09) : si une session est PROBABLE (jeton Supabase en localStorage, ou
    « rester connecté » récent), on masque le login TOUT DE SUITE — sinon un retour arrière / reload
    ré-affichait l'écran de connexion une fraction de seconde avant que la session async se résolve
@@ -5998,7 +6026,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-1300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-1500'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -6016,7 +6044,9 @@ function _aaFetch(input, init){
   // ne fait qu'UN renouvellement de session à la fois (refreshingDeferred) et toutes les requêtes de la page l'attendent ;
   // un dernier essai figé (connexion morte, serveur muet) gelait donc la page entière pour toujours. 20 s au plus : l'erreur
   // est « réessayable » pour supabase-js (session gardée) et la relecture suivante repart sur une requête neuve.
-  const waits = /^\/auth\/v1\//.test(path) ? [5000, 8000, 20000] : [5000, 8000, 0];
+  // 24/10 : la connexion morte peut durer bien plus de 13 s (journaux : ~90 s) → plus d'essais, tous bornés ; le dernier
+  // « sans limite » d'avant restait pendu sur une connexion morte, sans jamais rendre la main aux relectures.
+  const waits = /^\/auth\/v1\//.test(path) ? [5000, 8000, 12000, 20000] : [5000, 8000, 12000, 20000, 30000];
   const essai = function(i){
     const ac = new AbortController(), t = waits[i] ? setTimeout(function(){ ac.abort(); }, waits[i]) : null;
     return fetch(input, Object.assign({}, opt, { signal: ac.signal })).then(function(r){ clearTimeout(t); return r; }, function(e){
@@ -6040,6 +6070,20 @@ function _aaPageLock(name, acquireTimeout, fn){
   return run;
 }
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: _aaPageLock }, global: { fetch: _aaFetch } });
+// 24/10 (« connecté sans compte » au retour dans l'app) : la connexion HTTP/3 vers Supabase meurt sans bruit après ~1 min sans
+// échange, et Safari y envoie ensuite TOUTES les requêtes jusqu'à s'en apercevoir (parfois 90 s). Même maintien que la page de
+// connexion (garderConnexion) : un petit appel sans clé au chargement, au retour sur l'onglet, puis toutes les 20 s si visible.
+let _aaPingAt = 0;
+function _aaGarderConnexion(force){
+  if(document.hidden || (!force && Date.now() - _aaPingAt < 15000)) return;
+  _aaPingAt = Date.now();
+  try{ fetch(SUPABASE_URL + '/auth/v1/health', { mode: 'no-cors', cache: 'no-store' }).catch(function(){}); }catch(_){}
+}
+_aaGarderConnexion(true);
+setInterval(function(){ _aaGarderConnexion(true); }, 20000);
+document.addEventListener('visibilitychange', function(){ _aaGarderConnexion(true); });
+window.addEventListener('pageshow', function(){ _aaGarderConnexion(true); });
+window.addEventListener('focus', function(){ _aaGarderConnexion(false); });
 // 19/10 (Axel : « il y a un slider pour aller à droite ou à gauche ») : rien ne débordait — Safari était ZOOMÉ au pincement du
 // trackpad (tout ~3 % plus grand que sur un autre onglet, même fenêtre) : la page devient déplaçable de gauche à droite avec
 // une barre. L'app est une interface à taille fixe (viewport maximum-scale=1) : sur ordinateur, le pincement Safari est bloqué.
@@ -7586,14 +7630,26 @@ function authOtpBack(){
 // de session), le « compte neuf » n'est déduit que d'une absence de ligne, et un échec final affiche « Recharger ».
 function _aaAttente(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 function _aaBorne(p, ms){ return Promise.race([p, new Promise(function(_, ko){ setTimeout(function(){ ko(new Error('délai dépassé')); }, ms); })]); }
-function _aaBootEchec(){
+const _AA_BOOT_CSS='position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:10050;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;padding:12px 14px 12px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border-2);box-shadow:0 12px 40px rgba(0,0,0,.28);color:var(--text);font:600 14px var(--font)';
+// 24/10 : dès le démarrage avec une session enregistrée, « Ouverture de ton compte… » (roue) au lieu d'une interface à moitié
+// vide sans explication ; _aaBootEchec la remplace par « nouvel essai automatique · Recharger » si ça traîne ou rate
+function _aaBootAttente(){
   if(currentMember || document.getElementById('aaBootEchec')) return;
-  const d=document.createElement('div'); d.id='aaBootEchec'; d.setAttribute('role','alert');
+  const d=document.createElement('div'); d.id='aaBootEchec'; d.dataset.attente='1'; d.setAttribute('role','status');
+  d.style.cssText=_AA_BOOT_CSS;
+  d.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="2" aria-hidden="true" style="flex:0 0 auto;animation:spin .8s linear infinite"><path d="M8 1.5A6.5 6.5 0 1 1 1.5 8"/></svg>'
+    +'<span style="flex:1 1 auto;min-width:0;line-height:1.3">Ouverture de ton compte…</span>';
+  document.body.appendChild(d);
+}
+function _aaBootEchec(){
+  if(currentMember) return;
+  const old=document.getElementById('aaBootEchec'); if(old && !old.dataset.attente) return;
+  const d=old||document.createElement('div'); d.id='aaBootEchec'; delete d.dataset.attente; d.setAttribute('role','alert');
   d.style.cssText='position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:10050;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;padding:12px 14px 12px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border-2);box-shadow:0 12px 40px rgba(0,0,0,.28);color:var(--text);font:600 14px var(--font)';
   d.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:0 0 auto"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>'
     +'<span style="flex:1 1 auto;min-width:0;line-height:1.3">Ton compte n’a pas pu se charger — nouvel essai automatique en cours.</span>'
     +'<button type="button" class="btn btn-sm" style="flex:0 0 auto;background:var(--accent);color:#fff;border:0;font-weight:700" onclick="location.reload()">Recharger</button>';
-  document.body.appendChild(d);
+  if(!old) document.body.appendChild(d);
 }
 let _aaProfileRun = null;
 function loadProfile(user){
@@ -8220,6 +8276,7 @@ async function initAuth(){
   // de la session en cours de fermeture : l'app s'ouvrait sur une session supprimée et aa_login_at repartait à zéro), mais AVANT
   // la lecture de la session : un SIGNED_IN / TOKEN_REFRESHED tardif (réseau revenu, retour sur l'onglet) relit le profil.
   _aaEcouteSession();
+  if(!currentMember && _aaSessionUid()) _aaBootAttente();   // 24/10 : « Ouverture de ton compte… » visible tout de suite
   setTimeout(function(){ if(!currentMember && _aaSessionUid()){ _aaBootEchec(); _aaBootPlanifie(); } }, 12000);   // 15/10 : rien d'ouvert à 12 s → « Recharger » visible, les essais continuent
   // session lue en 26 s au plus (serveur lent, renouvellement de jeton en cours)
   let session = null, sessionBloquee = false;

@@ -421,13 +421,12 @@ function mountWhop(){
   if(S.promoPending){ box.innerHTML=waitHTML("Mise à jour du total…"); return; }   // devis en cours : il remontera le module
   const g=garde(); if(g){ box.innerHTML=g; return; }
   box.innerHTML=waitHTML("Chargement du paiement…")+'<div class="whop-mount"></div>'; garderPanier();
-  // PAS de returnUrl (Axel 23/10, achat test iPhone) : avec une adresse de retour, Whop renvoie l'onglet à la fin du
-  // paiement et fait d'abord passer l'acheteur sans compte Whop par son écran « entrez le code » sur whop.com. Sans elle,
-  // l'acheteur reste ici (comme dans l'app) : la veille (aa_nonce) l'emmène sur « Paiement confirmé ».
-  // 24/10 (achat test d'Axel : renvoyé sur l'accueil par la redirection du compte Whop) : adresse de retour EXPLICITE vers
-  // « Paiement confirmé », même onglet (l'identifiant aa_nonce y est relu). L'écran « entrez le code » du 23/10 venait de
-  // l'option « Inclure le code OAuth » du compte Whop, désormais exclue.
-  const acc=compte(), meta={returnUrl:location.origin+"/paiement-confirme.html",metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{})};
+  // Fin du paiement (2 achats test d'Axel, 24/10, renvoyés sur l'accueil) : le module Whop déplaçait l'onglet LUI-MÊME vers
+  // une destination choisie par son serveur (l'accueil chez nous, quel que soit le réglage du compte et même avec l'adresse
+  // de retour). allowCompletionNavigation:false (option du module, lue dans son code : « case redirect ») : Whop ne bouge
+  // plus l'onglet ; onComplete arrive, la veille (aa_nonce) emmène sur « Paiement confirmé ». L'adresse de retour reste
+  // pour une étape bancaire HORS page (retour ici avec ?payment=…&status=…, relus par paiement-confirme.html).
+  const acc=compte(), meta={returnUrl:location.origin+"/paiement-confirme.html",allowCompletionNavigation:false,metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{})};
   whopReady().then(W=>{
     if(seq!==_seq) return;
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
