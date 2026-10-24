@@ -14376,13 +14376,17 @@ function _dcTextPos(p){ _dc.textPos = p; _dcModalRender(); }
 // Prompt du changement de personnage (Wan 3.0, mode référence : Video1 = passage gardé, Image1 = nouveau personnage).
 // Règle des prompts de réalisme (skill images-ia) : le détail dit CE QU'ON VEUT VOIR, l'interdit dit COMMENT NE PAS L'OBTENIR.
 const _DC_WAN_PROMPT = [
-  'Video editing task. Video1 is the source footage. Image1 shows the new person.',
-  'Replace the person who appears in Video1 with the person from Image1, as one seamless, continuous edit of Video1.',
-  'Identity comes ONLY from Image1: same face and facial features, skin tone, hair, body shape and outfit as the person in Image1, identical in every frame from the first to the last.',
-  'Keep everything else from Video1 exactly as it is, frame by frame: camera framing, camera movement and handheld shake, background and every object, lighting direction and color, color grade, timing and speed, body pose, gestures, hand movements, head movements, gaze direction, facial expressions and mouth movements (the lips must follow the original speech of Video1 exactly), and any on-screen text or overlays.',
-  'Do not add, remove or move any object, person, text or logo. Do not change the scene, the duration, the speed or the aspect ratio. No cut, no transition, no new camera angle, no zoom.',
-  'Photorealistic, natural smartphone footage: real skin texture with pores and small imperfections, natural light on the new person that matches the scene, sharp details.',
-  'Never: beauty filter, skin smoothing, plastic or waxy skin, cartoon, CGI or painted look, blur, flicker, morphing face, identity drift, extra or missing fingers, distorted hands.',
+  // Mission (Axel 24/10) : remplacer le personnage de la vidéo par l'avatar donné — mêmes mouvements, avatar 1:1 à la
+  // référence, AUCUN mouvement inventé. Le reste de la vidéo ne bouge pas.
+  'Video editing task: character replacement only. Video1 is the source video. Image1 is the new character.',
+  'Replace the person in Video1 with the person in Image1. This is the ONLY change. If several people appear, replace only the main person facing the camera.',
+  'The new person must be a 1:1 match of Image1: exactly the same face, facial features, skin tone, hair color, length and style, body shape and proportions, clothing and accessories as in Image1, identical in every frame from the first to the last.',
+  'Take NOTHING of the original person’s appearance (face, hair, body, clothes): take only their movement.',
+  'Motion comes ONLY from Video1: the new person performs exactly the same movements as the person in Video1, at the same moments and the same speed — same body pose, gestures, hand movements, head movements, gaze direction, facial expressions and mouth movements (the lips follow the original speech of Video1 exactly). Same position, size and framing of the person in the frame.',
+  'Do not invent, add, exaggerate, smooth out or skip any movement.',
+  'Everything else stays exactly as in Video1: camera framing, camera movement and handheld shake, background and every object, lighting and color grade, timing, duration, speed, aspect ratio, and any on-screen text or overlays. Do not add, remove or move any object, person, text or logo. No cut, no transition, no new camera angle, no zoom.',
+  'Photorealistic, natural smartphone footage: real skin texture with pores and small imperfections, natural light on the new person that matches the scene.',
+  'Never: beauty filter, skin smoothing, plastic or waxy skin, cartoon, CGI or painted look, blur, flicker, morphing face, identity drift, invented movement, extra or missing fingers, distorted hands.',
 ].join(' ');
 function _dcAspect(){
   const s = _dc.src; if(!s || !s.w || !s.h) return 'adaptive';
