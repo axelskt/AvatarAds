@@ -123,6 +123,25 @@ r = await envoyer(CIBLE, IP_A)
 const r3 = await verifier(CIBLE, codeDe(CIBLE), IP_A)
 ok('24 h plus tard : l\'appareil peut de nouveau se connecter par code', r.status === 200 && r3.status === 200 && !!r3.j.token_hash, JSON.stringify([r.j, r3.j]))
 
+// ── Axel 24/10 : 3 codes puis 10 min d'attente ; au 5e code, pause de 24 h (par adresse + appareil) ──
+reset()
+const LIM = 'limite@test.fr', IP_L = '203.0.113.200'
+const envois: { status: number, j: any }[] = []
+for (let k = 0; k < 4; k++) { vieillir(); envois.push(await envoyer(LIM, IP_L)) }
+ok('3 codes demandés : envoyés', envois.slice(0, 3).every((x) => x.status === 200), JSON.stringify(envois.slice(0, 3).map((x) => x.j)))
+ok('4e code dans les 10 min : refusé avec l\'attente (≤ 10 min)', envois[3].status === 429 && envois[3].j.error === 'codes_10min' && envois[3].j.wait > 0 && envois[3].j.wait <= 600, JSON.stringify(envois[3].j))
+r = await envoyer(LIM, '203.0.113.201')
+ok('autre appareil : pas bloqué par les 10 min du premier', r.status === 200, JSON.stringify(r.j))
+passer11min(); vieillir()
+const e4 = await envoyer(LIM, IP_L); vieillir()
+const e5 = await envoyer(LIM, IP_L); passer11min(); vieillir()
+const e6 = await envoyer(LIM, IP_L)
+ok('10 min plus tard : 4e et 5e codes envoyés', e4.status === 200 && e5.status === 200, JSON.stringify([e4.j, e5.j]))
+ok('6e code de la journée : pause de 24 h (attente indiquée)', e6.status === 429 && e6.j.error === 'codes_24h' && e6.j.wait > 600 && e6.j.wait <= 86_400, JSON.stringify(e6.j))
+for (const x of db.rows('rate_events')) x.created_at = new Date(Date.parse(x.created_at) - 25 * 3600_000).toISOString()
+vieillir(); r = await envoyer(LIM, IP_L)
+ok('24 h plus tard : de nouveau possible', r.status === 200, JSON.stringify(r.j))
+
 // ── Pas d'oracle : même réponse qu'il y ait un compte ou non ──
 reset()
 db.rows('profiles').push({ id: 'u-existant', email: 'existant@test.fr', plan: 'free' })

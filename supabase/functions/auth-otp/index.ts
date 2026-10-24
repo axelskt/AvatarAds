@@ -60,11 +60,13 @@ const FROM           = 'AvatarAds <bonjour@avatarads.fr>'
 
 const CODE_TTL_MIN     = 10   // validité d'un code
 const COOLDOWN_S       = 30   // délai mini entre deux envois pour un même e-mail
-const MAX_PER_EMAIL_H  = 6    // codes par e-mail et par heure
+// Axel 24/10 : « max 3 codes, ensuite limite temporaire de 10 minutes, puis au bout de 5 pause pendant 24 h » — par couple
+// (e-mail, IP) comme les autres plafonds d'envoi (audit 04/10, CC-3) : un tiers ne bloque jamais l'adresse de quelqu'un
+const MAX_CODES_10MIN  = 3    // codes de connexion par couple (e-mail, IP) sur 10 min
+const MAX_CODES_JOUR   = 5    // codes de connexion par couple (e-mail, IP) sur 24 h glissantes
 const MAX_PER_IP_H     = 30   // codes par IP et par heure
 const MAX_ATTEMPTS     = 5    // essais de vérification par code
-// Audit 02/10 (P3) : anti bombardement d'une boîte (6 / h laissait 144 codes / jour) et vérifications par couple.
-const MAX_PER_EMAIL_DAY      = 15   // codes de connexion par e-mail sur 24 h glissantes
+// Audit 02/10 (P3) : vérifications par couple (e-mail, IP).
 const VERIFY_WIN_S           = 600  // fenêtre des compteurs de vérification (10 min)
 const MAX_VERIFY_EMAIL_IP    = 12   // vérifications par couple (e-mail, IP) — l'ancien plafond par e-mail seul
 const MAX_VERIFY_EMAIL       = 60   // plafond GLOBAL par e-mail, toutes IP confondues (5 IP saturées pour l'atteindre)
@@ -77,8 +79,8 @@ const PWD_GRANT_TTL_S    = 120  // durée de l'autorisation serveur posée juste
 // Audit 02/10 : changement d'adresse — même validité / cooldown / essais que la connexion (constantes ci-dessus).
 const CHG_MAX_PER_USER_H = 5  // codes de changement par compte et par heure
 const CHG_MAX_PER_DEST_H = 5  // codes de changement par adresse cible et par heure
-// Audit 04/10 (CC-3) : 6 / h et 15 / 24 h comptés par couple (e-mail, IP) ; ce plafond-ci, toutes IP confondues, borne le
-// bombardement d'une boîte (3 IP au moins pour l'atteindre).
+// Audit 04/10 (CC-3) : les plafonds d'envoi se comptent par couple (e-mail, IP) ; ce plafond-ci, toutes IP confondues, borne
+// le bombardement d'une boîte (8 IP au moins pour l'atteindre avec 5 codes / jour par couple).
 const MAX_PER_EMAIL_DAY_GLOBAL = 40
 // Audit 04/10 (CC-1) : fenêtre d'annulation d'un changement d'adresse (lien « Ce n'est pas moi » envoyé à l'ancienne adresse).
 const REVERT_TTL_H = 72
@@ -745,6 +747,17 @@ async function passwordChange(req: Request, body: Record<string, unknown>, actio
   return json(200, { ok: true, email: user.email })
 }
 
+// Secondes avant qu'un plafond d'envoi se libère : le plus ancien passage encore dans la fenêtre en sort (lecture seule ;
+// illisible → la fenêtre entière, la page affiche alors la durée maximale)
+async function attenteFenetre(sb: SupabaseClient, key: string, winS: number): Promise<number> {
+  try {
+    const { data } = await sb.from('rate_events').select('created_at').eq('key', key)
+      .gt('created_at', new Date(Date.now() - winS * 1000).toISOString()).order('created_at', { ascending: true }).limit(1)
+    const t = data && data[0] ? Date.parse(data[0].created_at) : 0
+    return t ? Math.max(1, Math.ceil((t + winS * 1000 - Date.now()) / 1000)) : winS
+  } catch { return winS }
+}
+
 // ── Audit 23/10 (n° 40) : PLAFOND CUMULÉ DE CODES FAUX PAR COUPLE (ADRESSE, IP) (connexion par code) ──
 // Échecs comptés dans rate_events (clé = empreintes de l'adresse et de l'IP, comme les autres plafonds), lus SANS compter un
 // passage (rate_hit, lui, compte chaque appel accepté). Lecture impossible → 0 : échec OUVERT, comme rateHit.
@@ -830,8 +843,10 @@ serve(async (req) => {
     // Audit 04/10 (CC-4) : adresse et IP réduites à une empreinte HMAC dans les clés.
     const ipK = ip ? await rk('ip:' + ip) : '-'
     if (ip && !(await rateHit(`otp:send:ip:${ipK}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })
-    if (!(await rateHit(`otp:send:email-ip:${eK}|${ipK}`, 3600, MAX_PER_EMAIL_H))) return json(429, { error: 'too_many_codes' })
-    if (!(await rateHit(`otp:send:email-ip:day:${eK}|${ipK}`, 86_400, MAX_PER_EMAIL_DAY))) return json(429, { error: 'too_many_codes' })
+    // Axel 24/10 : 3 codes puis 10 min d'attente ; au 5e code de la journée, pause de 24 h. La page dit combien attendre.
+    const k10 = `otp:send:email-ip:10min:${eK}|${ipK}`, kJour = `otp:send:email-ip:day:${eK}|${ipK}`
+    if (!(await rateHit(k10, 600, MAX_CODES_10MIN))) return json(429, { error: 'codes_10min', wait: await attenteFenetre(sb, k10, 600) })
+    if (!(await rateHit(kJour, 86_400, MAX_CODES_JOUR))) return json(429, { error: 'codes_24h', wait: await attenteFenetre(sb, kJour, 86_400) })
     if (!(await rateHit(`otp:send:email:day:${eK}`, 86_400, MAX_PER_EMAIL_DAY_GLOBAL))) return json(429, { error: 'too_many_codes' })
 
     // NB : on ne supprime pas les anciens codes ici (le cooldown se lit sur leur created_at).
