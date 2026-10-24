@@ -61,10 +61,10 @@
 
 import { CORS, jsonRes, authUser, userPlan, refusPlan, billableGate, helperGate, applyReservation, applyOmniReservation, applyReservationFull, resolveOp, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
 import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn, KIE_MC_1080_PLANS, KIE_MC_ALIASES, kieMcFalPath, kieMcSortieOk } from '../_shared/kie.ts'
-import { preparerVideoFal, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : vidéo du client copiée + mesurée, comme fal-proxy
+import { preparerVideoFal, preparerVideoWan, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : vidéo du client copiée + mesurée, comme fal-proxy
 import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
 import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
-import { DC_WAN_PROMPT } from '../_shared/decupleur.ts'   // Décupleur : prompt du changement de personnage (UNE version, partagée avec le MCP)
+import { DC_WAN_PROMPT, DC_PLANS, DC_PERSO_CR_SEC, DC_PERSO_MAX, decupleurOuvert } from '../_shared/decupleur.ts'   // Décupleur : prompt du changement de personnage (UNE version, partagée avec le MCP)
 
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
@@ -265,7 +265,8 @@ export async function handler(req: Request): Promise<Response> {
     if (!isDev) {
       if (path === '/balance') return jsonRes(403, { error: 'kie.ai est réservé au compte développeur' })
       if (sub && req.method === 'POST') {
-        const allowed = KIE_OPEN[sub[1]]
+        // wan-3 (Décupleur, 24/10) : Pro / Élite une fois DECUPLEUR_OUVERT=1 (interrupteur lu à chaque requête), sinon fermé
+        const allowed = sub[1] === 'wan-3' ? (decupleurOuvert() ? DC_PLANS : undefined) : KIE_OPEN[sub[1]]
         if (!allowed) return jsonRes(403, { error: 'kie.ai est réservé au compte développeur pour ce modèle', billing: 'none' })
         if (!kieClientsOn()) return jsonRes(403, { error: 'kie.ai momentanément fermé aux clients', billing: 'none' })
         if (err || !(isOwner || allowed.includes(plan))) return jsonRes(403, { error: refusPlan(kieLabel(sub[1], false), allowed), billing: 'none' })
@@ -320,11 +321,28 @@ export async function handler(req: Request): Promise<Response> {
         console.log('[kie] motion vidéo', who, `mesuré=${pv.mesureSec}s facturé=${pv.factureSec}s coût=${pv.cost}`)
       }
 
+      // Décupleur (24/10) : changement de personnage (wan-3) d'un client — référence COPIÉE hors de son dossier puis MESURÉE
+      // (preparerVideoWan) ; durée produite = max(durée demandée, référence mesurée arrondie au-dessus), 2 à 15 s ; coût =
+      // DC_PERSO_CR_SEC × cette durée, tiré EXACTEMENT plus bas (applyReservation) ; 720P et sans son imposés ; échec kie →
+      // rendu puis remboursé (KIE_NO_FALLBACK). Tout refus ici arrive AVANT le tirage (billing 'none').
+      let wanCost = 0
+      if (alias === 'wan-3' && uid && !isDev) {
+        const input = built.body.input as Record<string, unknown>
+        const refs = Array.isArray(input.reference_video_urls) ? input.reference_video_urls as unknown[] : []
+        const pv = await preparerVideoWan({ url: refs[0], uid, base: SUPABASE_URL, bucket: BUCKET, st: mcSt, maxSec: DC_PERSO_MAX })
+        if (!pv.ok) return jsonRes(pv.status, { error: pv.error, billing: 'none' })
+        mcCopie = pv.copie
+        const dur = Math.min(DC_PERSO_MAX, Math.max(2, Math.round(Number(input.duration) || 2), Math.ceil(pv.mesureSec - 0.05)))
+        input.reference_video_urls = [pv.url]; input.duration = dur; input.resolution = '720P'; input.audio = false
+        wanCost = DC_PERSO_CR_SEC * dur
+        console.log('[kie] wan-3 référence', who, `mesuré=${pv.mesureSec}s produit=${dur}s coût=${wanCost}`)
+      }
+
       // ── Réservation (clients, 25/09) : tirée AVANT l'appel kie, EXACTEMENT comme les proxys historiques ──
       //    Nano 4K = 5 sur l'op x-aa-op (google-ai-proxy) ; Omni = EXACTEMENT 5 × le cran envoyé à kie (Axel 25/09) :
       //    réserve qui ne couvre pas ce montant → 402 AVANT kie (plus de vidéo de 10 s financée par 3 crédits).
       //    Veo (25/09) = EXACTEMENT tarif × cran envoyé (Lite 1,5 cr/s 720p · 3 cr/s 1080p ; Fast 3 / 6), jamais la réserve.
-      const cost = alias === 'omni-flash' ? OMNI_FLASH_PER_SEC * omniSecOf(built)
+      const cost = alias === 'wan-3' ? wanCost : alias === 'omni-flash' ? OMNI_FLASH_PER_SEC * omniSecOf(built)
         : isVeo ? kieVeoCost(alias, built.body.resolution, built.body.duration) : NANO_COST
       // OmniHuman (Axel 25/09) : coût = 5 × durée MESURÉE ici sur l'audio (copie serveur servie à kie), jamais un chiffre du
       // client ; illisible / trop long / inaccessible → 400 AVANT tout tirage. Developer : mesuré aussi (plafond), rien tiré.

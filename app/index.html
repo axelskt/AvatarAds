@@ -6038,11 +6038,11 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-2300'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-25-0100'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
-const DC_OUVERT = false;
+const DC_OUVERT = true;   // OUVERT le 24/10 (Axel) — secret serveur DECUPLEUR_OUVERT=1 posé avec
 const DC_PLANS = ['pro', 'elite'];
 if(DC_OUVERT){ try{ document.querySelectorAll('[data-dc-exclu]').forEach(function(e){ e.textContent = 'Décuplage de vidéo'; }); }catch(_){} }   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
@@ -13889,7 +13889,17 @@ function _dcPaywall(){
   try{ showPlansSheet('Option réservée à Pro et Élite', 'Upgrade ton plan maintenant'); }catch(_){ toast('Option réservée à Pro et Élite'); }
 }
 // Crédits d'un lancement : variantes + changement de personnage à la seconde gardée (arrondie au-dessus, comme kie)
-const _dcCout = () => _dc.variants * DC_CR_PER_VARIANT + (_dc.face ? DC_PERSO_CR_SEC * Math.ceil(Math.max(0, _dc.b - _dc.a) - 0.01) : 0);
+// Crédits d'un lancement = ce qui sera DÉBITÉ (spendCreditsFor arrondit au crédit supérieur) : ceil(N × 0,5) pour les
+// variantes + DC_PERSO_CR_SEC par seconde gardée (arrondie au-dessus, = la durée envoyée à kie) pour le personnage.
+const _dcCoutVar = (n) => Math.ceil((n || _dc.variants) * DC_CR_PER_VARIANT);
+const _dcCoutPerso = () => DC_PERSO_CR_SEC * Math.ceil(Math.max(0, _dc.b - _dc.a) - 0.01);
+const _dcCout = () => _dcCoutVar() + (_dc.face && !(_dc.master && _dc.master.sig === _dcSig()) ? _dcCoutPerso() : 0);
+const _dcExempt = () => { try{ return !!currentMember && (!!currentMember.is_owner || String(currentMember.plan || '').toLowerCase() === 'developer'); }catch(_){ return false; } };
+// signature du changement de personnage (même source, même passage, même photo → résultat réutilisé, jamais repayé)
+function _dcSig(){
+  const fi = _dc.faceImg && _dc.faceImg.file;
+  return [_dc.src && _dc.src.key, Number(_dc.a).toFixed(2), Number(_dc.b).toFixed(2), _dc.faceImg && _dc.faceImg.name, fi && fi.size, fi && fi.lastModified].join('|');
+}
 const DC_ALTER = [
   { id:'mirror', ic:'copy2',    t:'Effet miroir' },
   { id:'pixels', ic:'grid',     t:'Pixels & grain' },
@@ -13947,6 +13957,7 @@ function initDecupleur(){
     try{ window.matchMedia('(max-width:768px)').addEventListener('change', () => { if(_dcOn()) _dcRender(); }); }catch(_){}
   }
   _dcRender();
+  _dcReprise();   // un lot payé et lancé avant de quitter la page : on le retrouve
 }
 function _dcOn(){ const v = document.getElementById('v-decupleur'); return !!(v && v.classList.contains('on')); }
 
@@ -14211,6 +14222,7 @@ function _dcProbeUrl(url){
 // réelle côté téléchargeur : la barre avance vers 92 % pendant l'attente, puis 100 % à l'arrivée de la vidéo.
 async function _dcFetchLink(){
   if(!_dc.link.trim() || _dc.linkLoad !== null) return;
+  if(!_dcPlanOk()){ _dcPaywall(); return; }   // récupération par le serveur : Pro / Élite (render-job revérifie)
   const lien = _dc.link.trim();
   const ok = /^(https?:\/\/)?(www\.|vm\.|vt\.|m\.)?(tiktok\.com|instagram\.com)\//i.test(lien);
   _dcLinkError(ok ? '' : 'Lien TikTok ou Instagram uniquement');
@@ -14257,8 +14269,9 @@ async function _dcApi(body){
   return j;
 }
 // Crée le job puis le suit jusqu'au bout → statut final (+ job_id). alive() faux = abandon (Annuler) ; onProgress(0–100).
-async function _dcJob(body, alive, onProgress, maxMin){
+async function _dcJob(body, alive, onProgress, maxMin, onCreated){
   const { job_id } = await _dcApi(body);
+  if(typeof onCreated === 'function'){ try{ onCreated(job_id); }catch(_){} }
   const t0 = Date.now(), maxMs = (maxMin || 40) * 60000;
   while(Date.now() - t0 < maxMs){
     await new Promise(r => setTimeout(r, 2500));
@@ -14270,7 +14283,7 @@ async function _dcJob(body, alive, onProgress, maxMin){
     if(st.status === 'done') return Object.assign(st, { job_id });
     if(st.status === 'failed') throw new Error(st.error || 'échec du traitement');
   }
-  throw new Error('Le serveur met trop de temps — réessaie dans un instant');
+  const lent = new Error('Le serveur met trop de temps — le traitement continue, reviens dans quelques minutes'); lent._dcLent = true; throw lent;
 }
 
 /* ---------- variantes, cartes, bouton ---------- */
@@ -14281,7 +14294,7 @@ function _dcVarRender(){
     + DC_VARIANTS.map(n => { const on = _dc.variants === n; return (
         '<button onclick="_dcSetVariants('+n+')" class="col" style="gap:3px;align-items:center;padding:12px 6px;border-radius:13px;transition:.15s;border:1.5px solid '+(on?'var(--accent)':'var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--surface)')+'">'
         + '<span class="display" style="font-size:22px;font-weight:800;color:'+(on?'var(--accent-2)':'var(--text)')+'">×'+n+'</span>'
-        + '<span class="mono faint" style="font-size:10px">'+_dcCr(n*DC_CR_PER_VARIANT)+' cr</span></button>'); }).join('')
+        + '<span class="mono faint" style="font-size:10px">'+_dcCoutVar(n)+' cr</span></button>'); }).join('')
     + '</div>';
 }
 function _dcSetVariants(n){ _dc.variants = n; _dcVarRender(); _dcCtaRender(); }
@@ -14322,6 +14335,7 @@ function _dcGo(){
     : '';
   const n = document.getElementById('dcNudge'), b = document.getElementById('dcCta');
   if(!why && !_dcPlanOk()){ _dcPaywall(); return; }   // Free / Starter : le paywall, une fois la vidéo prête
+  if(!why && !_dcExempt() && creditsBalance() < _dcCout()){ toast('Il faut ' + _dcCout() + ' crédits — il t\'en reste ' + creditsBalance()); _insufficientCredits(_dcCout() - creditsBalance()); return; }
   if(!why){ if(n) n.style.display = 'none'; _dcRun(); return; }
   if(n){ n.textContent = why; n.style.display = 'inline'; }
   if(b){ b.style.animation = 'none'; void b.offsetWidth; b.style.animation = 'dcShake .38s'; }
@@ -14441,16 +14455,28 @@ async function _dcRun(){
     // 2) changement de personnage : passage découpé → Wan 3.0 (kie) — résultat gardé pour les lots suivants
     if(_dc.face){
       const fi = _dc.faceImg.file;
-      const sig = [_dc.src.key, a.toFixed(2), b.toFixed(2), _dc.faceImg.name, fi && fi.size, fi && fi.lastModified].join('|');
+      const sig = _dcSig();
       if(!(_dc.master && _dc.master.sig === sig)){
         const cut = await _dcJob({ action:'dc-cut', input_video: input, a, b }, alive, null, 10);
         if(!cut.url) throw new Error('Découpe du passage impossible');
         etape('Changement du personnage', 10);
         const img = await _kieUpload(fi);
+        // débit AVANT le fournisseur (skill credits-securite) : DC_PERSO_CR_SEC × la durée envoyée ; kie-proxy mesure la
+        // référence et tire EXACTEMENT ce montant sur CETTE op (x-aa-op). Owner / developer : rien débité, aucune op.
+        const persoSec = Math.ceil(b - a - 0.01);
+        if(!(await spendCreditsFor(DC_PERSO_CR_SEC * persoSec, 'Décupleur · changement de personnage'))){ const q = new Error(''); q._dcSilence = true; throw q; }
+        const opWan = window._aaLastSpendOp || null;
         const t0 = Date.now();
-        const res = await _kieRun('wan-3', { video_url: cut.url, image_url: img, resolution: '720P',
-          aspect_ratio: _dcAspect(), duration: Math.ceil(b - a - 0.01), audio: false },
-          { every: 6000, maxPolls: 300, onTick: () => etape('Changement du personnage', 10 + 45 * (1 - Math.exp(-(Date.now() - t0) / 240000))) });
+        let res;
+        try{
+          res = await _kieRun('wan-3', { video_url: cut.url, image_url: img, resolution: '720P', aspect_ratio: _dcAspect(), duration: persoSec, audio: false },
+            { op: opWan, every: 6000, maxPolls: 300, onTick: () => etape('Changement du personnage', 10 + 45 * (1 - Math.exp(-(Date.now() - t0) / 240000))) });
+        }catch(err){
+          // refus ou échec net → crédits rendus (le serveur l'a souvent déjà fait : refund_credits répond alors « déjà rendu ») ;
+          // issue inconnue (tâche lancée) → rien ici : le filet serveur range le résultat ou rembourse
+          if(opWan && err && (err._kieStage === 'submit' || err._kieStage === 'failed')) await creditsFlowRefund('décupleur personnage', [opWan]);
+          throw err;
+        }
         if(!res.storage_path) throw new Error('Résultat du changement de personnage introuvable');
         _kieAck(res.rid);
         _dc.master = { sig, cutKey: uid + '/' + cut.job_id + '.mp4', masterKey: res.storage_path, cutDur: b - a, url: res.url };
@@ -14461,8 +14487,22 @@ async function _dcRun(){
     // 3) les variantes + contrôle des empreintes (le moteur écrit son avancement entre deux variantes)
     const base = _dc.face ? 58 : 10;
     etape('Génération des ' + nv + ' variantes', base);
-    const st = await _dcJob({ action:'decupleur', input_video: input, a, b, n: nv, alt: { ..._dc.alt }, textPos: _dc.textPos, master }, alive,
-      (p) => etape(p >= 92 ? 'Contrôle des empreintes' : 'Génération des ' + nv + ' variantes', base + (99 - base) * p / 100), 45);
+    // débit des variantes AVANT le rendu : op DÉSIGNÉE, tirée entière par render-job puis liée au job (le moteur la règle à la
+    // livraison, la rembourse à l'échec). Création refusée → rendue ici ; job créé → le serveur en est responsable.
+    if(!(await spendCreditsFor(_dcCoutVar(nv), 'Décupleur ×' + nv))){ const q = new Error(''); q._dcSilence = true; throw q; }
+    const opVar = window._aaLastSpendOp || null;
+    let cree = false;
+    let st;
+    try{
+      st = await _dcJob({ action:'decupleur', input_video: input, a, b, n: nv, alt: { ..._dc.alt }, textPos: _dc.textPos, master, ops: opVar ? [opVar] : [] }, alive,
+        (p) => etape(p >= 92 ? 'Contrôle des empreintes' : 'Génération des ' + nv + ' variantes', base + (99 - base) * p / 100), 45,
+        (id) => { cree = true; _dcJobGarder(id, nv, b - a); });
+    }catch(err){
+      if(!cree && opVar) await creditsFlowRefund('décupleur variantes', [opVar]);
+      else if(cree && err && !err._dcAnnule && !err._dcLent) _dcJobGarder(null);   // échec net : le serveur a rendu les crédits
+      throw err;
+    }
+    _dcJobGarder(null);
     if(!alive()) return;
     _dc.res = { variants: st.variants || [], zip: st.zip || null, controle: st.controle, faibles: st.faibles || 0, keep: b - a, master: _dc.face ? _dc.master : null };
     _dc.pct = 100; _dc.phase = 'done'; _dcRender();
@@ -14470,13 +14510,43 @@ async function _dcRun(){
     if(!alive() || (e && e._dcAnnule)) return;
     console.warn('[décupleur]', e);
     _dc.phase = 'idle'; _dcRender();
-    toast((e && e.message) || 'Le décuplage a échoué');
+    if(!(e && e._dcSilence)) toast((e && e.message) || 'Le décuplage a échoué');   // débit refusé : spendCreditsFor a déjà prévenu
   }
 }
 function _dcCancel(){
-  const wan = _dc.phase === 'running' && _dcStages()[_dc.stageIdx] === 'Changement du personnage';
+  const etapeNom = _dc.phase === 'running' ? _dcStages()[_dc.stageIdx] : '';
   _dc.runId = 0; clearInterval(_dc._runIv); _dc.phase = 'idle'; _dcRender();
-  if(wan) toast('Le changement de personnage continue côté serveur : il arrivera dans ta Bibliothèque');
+  if(etapeNom === 'Changement du personnage') toast('Le changement de personnage continue côté serveur : il arrivera dans ta Bibliothèque');
+  else if(/^Génération|^Contrôle/.test(etapeNom || '')) toast('Le décuplage continue sur le serveur : reviens sur le Décupleur pour récupérer tes variantes');
+}
+// Lot de variantes lancé (déjà payé) : gardé dans ce navigateur pour le retrouver si la page est quittée ou l'attente annulée
+function _dcJobGarder(id, n, keep){
+  try{ if(id) localStorage.setItem('aa_dc_job', JSON.stringify({ id, n, keep, t: Date.now() })); else localStorage.removeItem('aa_dc_job'); }catch(_){}
+}
+async function _dcReprise(){
+  let j = null;
+  try{ j = JSON.parse(localStorage.getItem('aa_dc_job') || 'null'); }catch(_){ j = null; }
+  if(!j || !j.id || Date.now() - (j.t || 0) > 3 * 3600 * 1000 || _dc.phase !== 'idle'){ if(j && Date.now() - (j.t || 0) > 3 * 3600 * 1000) _dcJobGarder(null); return; }
+  const run = _dc.runId = Date.now();
+  _dc.variants = j.n || _dc.variants; _dc.phase = 'running'; _dc.pct = 10; _dc.stageIdx = Math.max(0, _dcStages().length - 2); _dcRender();
+  const alive = () => _dc.runId === run && _dc.phase === 'running';
+  try{
+    let st = null;
+    for(let i = 0; i < 1080 && alive(); i++){
+      try{ st = await _dcApi({ action:'status', job_id: j.id }); }catch(e){ if(e && [403, 404].includes(e._http)){ _dcJobGarder(null); throw e; } }
+      if(st && st.progress != null){ _dc.pct = Math.max(_dc.pct, 10 + 89 * st.progress / 100); _dcRunPaint(); }
+      if(st && (st.status === 'done' || st.status === 'failed')) break;
+      await new Promise(r => setTimeout(r, 2500));
+    }
+    if(!alive()) return;
+    _dcJobGarder(null);
+    if(!st || st.status !== 'done') throw new Error((st && st.error) || 'Le décuplage a échoué — crédits rendus');
+    _dc.res = { variants: st.variants || [], zip: st.zip || null, controle: st.controle, faibles: st.faibles || 0, keep: st.passage || j.keep || 0, master: null };
+    _dc.pct = 100; _dc.phase = 'done'; _dcRender();
+  }catch(e){
+    if(!alive()) return;
+    _dc.phase = 'idle'; _dcRender(); toast((e && e.message) || 'Le décuplage a échoué');
+  }
 }
 function _dcRunningHTML(){
   return '<div class="col" style="flex:1;min-height:0;align-items:center;justify-content:center;padding:40px 24px;text-align:center">'

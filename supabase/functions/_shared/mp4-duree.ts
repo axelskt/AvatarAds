@@ -594,3 +594,29 @@ export async function nettoyerCopiesFal(st: StockageFal, uid: string, maintenant
     return vieux.length
   } catch { return 0 }
 }
+
+// Décupleur (24/10) : vidéo de référence du changement de personnage (kie-proxy, alias wan-3) pour un client — MÊMES garanties
+// que preparerVideoFal : copie serveur hors du dossier du client (fal-in/<uid>/), MESURÉE, c'est elle que lit kie (le client
+// ne peut plus la remplacer entre la mesure et la lecture). La facture suit cette mesure, jamais la durée annoncée.
+export async function preparerVideoWan(o: {
+  url: unknown; uid: string; base: string; bucket: string; st: StockageFal; maxSec: number
+  mesurer?: (url: string) => Promise<number | null>; maintenant?: number
+}): Promise<{ ok: true; copie: string; url: string; mesureSec: number } | { ok: false; status: number; error: string }> {
+  const src = cheminClient(o.url, o.uid, o.base, o.bucket)
+  if (!src) return { ok: false, status: 400, error: 'video_url : vidéo de ton espace de stockage uniquement' }
+  const ext = (src.match(/\.(mp4|mov|m4v)$/i)?.[1] || 'mp4').toLowerCase()
+  const copie = `${FAL_IN_DIR}/${o.uid}/${o.maintenant ?? Date.now()}-${crypto.randomUUID()}.${ext}`
+  let cp: { error: unknown }
+  try { cp = await o.st.copy(src, copie) } catch (e) { cp = { error: e } }
+  if (cp.error) return { ok: false, status: 503, error: 'préparation de la vidéo impossible — réessaie dans un instant' }
+  const jeter = async () => { try { await o.st.remove([copie]) } catch { /* best-effort */ } }
+  let signed = ''
+  try { const sg = await o.st.createSignedUrl(copie, FAL_IN_TTL_S); signed = (!sg.error && sg.data?.signedUrl) || '' } catch { signed = '' }
+  const signPre = `${o.base}/storage/v1/object/sign/${o.bucket}/`
+  if (!signed.includes(`/object/sign/${o.bucket}/${copie}`)) { await jeter(); return { ok: false, status: 503, error: 'préparation de la vidéo impossible — réessaie dans un instant' } }
+  const url = signed.startsWith(signPre) ? signed : signPre + signed.slice(signed.indexOf(copie))
+  const mesureSec = await (o.mesurer ?? dureeMp4Url)(url).catch(() => null)
+  if (!(mesureSec && mesureSec > 0)) { await jeter(); return { ok: false, status: 400, error: 'vidéo illisible : durée introuvable — relance le décuplage' } }
+  if (mesureSec > o.maxSec + 0.3) { await jeter(); return { ok: false, status: 400, error: `passage de ${o.maxSec} s maximum avec le changement de personnage` } }
+  return { ok: true, copie, url, mesureSec }
+}

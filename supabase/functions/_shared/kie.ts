@@ -33,8 +33,8 @@ export const KIE_OPEN: Record<string, string[]> = {
 // (Axel 09/10) : échec = crédits rendus (KIE_NO_FALLBACK).
   'kling-2.6-mc': ['starter', 'pro', 'elite'],
   'kling-3.0-mc': ['pro', 'elite'],
-  // Décupleur « Changer le personnage » (wan-3) : developer SEULEMENT pendant les tests ; à l'ouverture (Axel 24/10) →
-  // 'wan-3': ['pro', 'elite'] + tirage de 10 cr par seconde gardée (référence + sortie facturées par kie).
+  // Décupleur « Changer le personnage » (wan-3) : PAS ici — ouvert aux plans DC_PLANS (Pro / Élite) quand DECUPLEUR_OUVERT=1
+  // (_shared/decupleur.ts, lu à chaque requête par kie-proxy), tirage de 10 cr par seconde produite (référence mesurée).
 }
 export const KIE_MC_1080_PLANS = ['pro', 'elite']
 // Tarif d'une tâche Motion Control = celui du chemin fal équivalent (tarifVideoFal : 2.6 720p 2 cr/s · 2.6 1080p 3 cr/s ·
@@ -73,7 +73,7 @@ export function kieVeoCost(alias: string, resolution: unknown, seconds: unknown)
 // refund, exactement une fois). Nano 4K et Veo Lite gardent leur repli Google → rendu seulement (l'app re-tire la même op).
 // Motion Control (Axel 09/10 : « pas de fallback fal ») : même règle — échec kie = crédits rendus ici, la reprise en 2.6 après
 // un refus de contenu de la 3.0 (repli modération de l'app) reste chez kie, sur une NOUVELLE op.
-export const KIE_NO_FALLBACK = new Set(['omni-flash', 'kling-2.6-mc', 'kling-3.0-mc'])
+export const KIE_NO_FALLBACK = new Set(['omni-flash', 'kling-2.6-mc', 'kling-3.0-mc', 'wan-3'])   // wan-3 (Décupleur) : pas de repli, échec = crédits rendus
 // Interrupteur serveur : secret KIE_CLIENTS=0 referme kie aux clients SANS redéploiement (403 AVANT tout tirage → l'app
 // replie sur Google / fal). Lu à chaque requête. Défaut : ouvert. Le compte developer n'est pas concerné.
 export const kieClientsOn = (): boolean => (Deno.env.get('KIE_CLIENTS') ?? '1').trim() !== '0'

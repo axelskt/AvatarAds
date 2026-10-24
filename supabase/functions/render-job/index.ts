@@ -19,7 +19,7 @@ import { billableGate, userPlan, reserveStrict, reserveEnforce, requirePlan, PLA
   MONTAGE_DUREE_MAX, RENDU_DUREE_MAX, RETOUCHE_OCTETS_MAX, RETOUCHE_EN_COURS_MAX, MOTION_ASSETS, fichierDuFlux, opMotionRecente,
   opFondVideo, opRenduMontage, tailleObjet } from '../_shared/guard.ts'
 import { cheminSur, planClientRenderJob } from '../_shared/storage-path.ts'
-import { lienDecupleur, DC_VARIANTES, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S } from '../_shared/decupleur.ts'
+import { lienDecupleur, DC_VARIANTES, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_PLANS, DC_CR_VARIANTE, decupleurOuvert } from '../_shared/decupleur.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -314,17 +314,20 @@ serve(async (req: Request) => {
       return json({ ok: true, job_id: data.id })
     }
 
-    // ── DÉCUPLEUR (Axel 24/10) — compte developer / owner SEULEMENT tant que la fonctionnalité est en test ─────────────────
+    // ── DÉCUPLEUR (Axel 24/10) — owner / developer (illimités), et Pro / Élite une fois DECUPLEUR_OUVERT=1 ──────────────────
     // dc-fetch : lien TikTok / Instagram → <uid>/<job>.mp4 (téléchargé par le moteur) ; dc-cut : passage gardé seul (≤ 15 s,
     // vidéo de référence du changement de personnage) ; decupleur : N variantes sous <uid>/dc-<job>/. Plan RECONSTRUIT ici
-    // (jamais repris du client), chemins contrôlés (cheminSur), 3 jobs en cours au plus. Aucun tirage : owner / developer ne
-    // débitent rien (spendCreditsFor). L'ouverture à tous ajoutera la réservation (0,5 cr / variante) comme les autres rendus.
+    // (jamais repris du client), chemins contrôlés (cheminSur), 3 jobs en cours au plus. Récupération et découpe : gratuites
+    // (bornées en cadence). Variantes d'un compte non illimité : la réservation de l'app (spendCreditsFor, op DÉSIGNÉE dans
+    // body.ops) est tirée ENTIÈRE ici, au moins ceil(N × 0,5), AVANT l'insertion, puis liée au job (render:<id>) → le moteur la
+    // règle à la livraison, la rembourse à l'échec (reservationJob). Plan illisible (hoquet DB) → refus : jamais un rendu payant
+    // accordé « au doute ».
     if (DC_COMPOSES.includes(String(body.action))) {
-      // À L'OUVERTURE (DECUPLEUR_OUVERT, Pro / Élite) : tirer ici la réservation de l'app (0,5 cr / variante) comme 'create'
-      // (ops désignées → draw_full_reservation → bind_reservation_job) AVANT d'accepter un compte non illimité.
-      const _p = await requirePlan(user.id, [], 'Le Décupleur')
-      if (!_p.ok) return json({ error: 'Le Décupleur est en test (compte développeur seulement)' }, 403)
-      const _g = await billableGate({ userId: user.id, proxy: 'render-job-dc', requireDebit: false, rateMax: 30 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
+      const { plan: dcPlan, isOwner: dcOwner, err: dcErr } = await userPlan(user.id)
+      if (dcErr) return json({ error: 'Vérification du compte impossible — réessaie dans un instant' }, 503)
+      const dcExempt = dcOwner || dcPlan === 'developer'
+      if (!dcExempt && !(decupleurOuvert() && DC_PLANS.includes(dcPlan))) return json({ error: 'Option réservée à Pro et Élite' }, 403)
+      const _g = await billableGate({ userId: user.id, proxy: 'render-job-dc', requireDebit: !dcExempt && body.action === 'decupleur', debitMinutes: 60, rateMax: 30 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
       {
         const { count, error: cErr } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id).in('status', ['queued', 'rendering']).in('plan->>__compose', DC_COMPOSES)
@@ -365,10 +368,45 @@ serve(async (req: Request) => {
           plan = { __compose: 'decupleur', a, b, n, alt, textPos, seed: Math.floor(Math.random() * 2147483647), duration: b - a }
         }
       }
+      // Variantes d'un compte payant : op désignée revérifiée (resolve_op), tirée ENTIÈRE avec un minimum = le prix du lot
+      let tire: { op: string; amt: number } | null = null
+      if (body.action === 'decupleur' && !dcExempt) {
+        const cout = Math.ceil(Number(plan.n) * DC_CR_VARIANTE)
+        const op = String((Array.isArray(body.ops) ? body.ops[0] : '') ?? '').trim()
+        if (!/^[0-9a-f-]{36}$/i.test(op)) return json({ error: 'Aucune réservation de crédits pour ce décuplage.' }, 402)
+        const { data: _op, error: _oe } = await service.rpc('resolve_op', { p_user: user.id, p_hint: op })
+        if (_oe) return json({ error: 'Vérification des crédits impossible — réessaie dans un instant' }, 503)
+        if (_op !== op) return json({ error: 'Aucune réservation de crédits pour ce décuplage.' }, 402)
+        let amt = 0
+        try { const { data: _d } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: op, p_min: cout }); amt = Number(_d) || 0 } catch (_) { amt = 0 }
+        if (amt < cout) {
+          if (amt > 0) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: op, p_cost: amt }) } catch (_) { /* best-effort */ } }
+          return json({ error: 'Réservation de crédits insuffisante pour ce décuplage.' }, 402)
+        }
+        tire = { op, amt }
+      }
       const { data, error } = await service.from('render_jobs')
         .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips: [] })
         .select('id').single()
-      if (error || !data) return json({ error: 'creation impossible' }, 500)
+      if (error || !data) {
+        if (tire) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: tire.op, p_cost: tire.amt }) } catch (_) { /* best-effort */ } }
+        return json({ error: 'creation impossible' }, 500)
+      }
+      if (tire) {
+        // liée au job : règlement à la livraison, remboursement à l'échec (render-worker reservationJob). Une op déjà liée à
+        // un autre rendu (bind = false) : job fermé AVANT d'être pris, tirage rendu → 402 (jamais un rendu payé deux fois).
+        let lie = true
+        try { const { data: _l, error: _le } = await service.rpc('bind_reservation_job', { p_user: user.id, p_op: tire.op, p_job: cleRendu(data.id)[0], p_drawn: tire.amt }); if (!_le && _l === false) lie = false }
+        catch (e) { console.warn('bind décupleur:', (e as Error).message) }
+        if (!lie) {
+          const { data: clos } = await service.from('render_jobs').update({ status: 'failed', error: 'réservation déjà liée à un autre rendu' })
+            .eq('id', data.id).eq('status', 'queued').select('id')
+          if (clos && clos.length) {
+            try { await service.rpc('release_reservation', { p_user: user.id, p_op: tire.op, p_cost: tire.amt }) } catch (_) { /* best-effort */ }
+            return json({ error: 'Réservation de crédits insuffisante pour ce décuplage.' }, 402)
+          }
+        }
+      }
       return json({ ok: true, job_id: data.id })
     }
 
