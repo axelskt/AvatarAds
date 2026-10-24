@@ -5810,7 +5810,7 @@ setTimeout(function(){
         <button id="sheetBtnPro" onclick="sheetCheckout('pro')" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .15s;margin:20px 0 22px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 32px -8px var(--accent-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">Choisir PRO →</button>
         <div style="font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Tout Starter, plus :</div>
         <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;color:var(--text-2);flex:1">
-          <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>AvatarAds × Claude</span><span style="margin-left:auto;flex:0 0 auto;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:#ff8042;background:rgba(255,90,31,.14);border:1px solid rgba(255,90,31,.35);border-radius:4px;padding:1px 5px">EXCLU</span></div>
+          <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span data-dc-exclu>AvatarAds × Claude</span><span style="margin-left:auto;flex:0 0 auto;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:#ff8042;background:rgba(255,90,31,.14);border:1px solid rgba(255,90,31,.35);border-radius:4px;padding:1px 5px">EXCLU</span></div>
           <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>Montage IA Avancé</span></div>
           <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>Qualité Premium images & vidéos</span></div>
           <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>Motion Control Pro</span></div>
@@ -6005,7 +6005,7 @@ setTimeout(function(){
           <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg> <strong style="color:var(--text)">15 AvatarIA</strong>/mois</div>
           <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> jusqu'à 80 vidéos / mois<sup style="color:var(--text-3);font-size:.55em">*</sup></div>
           <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> 20 images IA</div>
-          <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="8" y="6" width="8" height="12" rx="4"/><path d="M8 10H4M8 14H4M16 10h4M16 14h4M12 6V3M9 4l1.5 2M15 4l-1.5 2"/></svg> AvatarAds × Claude <span style="font-size:8px;font-weight:800;color:#ff8042;background:rgba(255,90,31,.14);border:1px solid rgba(255,90,31,.35);border-radius:4px;padding:1px 4px">EXCLU</span></div>
+          <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="8" y="6" width="8" height="12" rx="4"/><path d="M8 10H4M8 14H4M16 10h4M16 14h4M12 6V3M9 4l1.5 2M15 4l-1.5 2"/></svg> <span data-dc-exclu>AvatarAds × Claude</span> <span style="font-size:8px;font-weight:800;color:#ff8042;background:rgba(255,90,31,.14);border:1px solid rgba(255,90,31,.35);border-radius:4px;padding:1px 4px">EXCLU</span></div>
         </div>
       </div>
       <!-- ELITE -->
@@ -6038,7 +6038,13 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-24-2300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-24-2300'; window.__AA_BUILD = AA_BUILD;
+// DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
+// génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
+// dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
+const DC_OUVERT = false;
+const DC_PLANS = ['pro', 'elite'];
+if(DC_OUVERT){ try{ document.querySelectorAll('[data-dc-exclu]').forEach(function(e){ e.textContent = 'Décuplage de vidéo'; }); }catch(_){} }   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -7892,7 +7898,7 @@ function enterApp(profile){
   // Décupleur (24/10) : visible UNIQUEMENT compte developer/owner tant que le serveur n'est pas branché.
   // (« Publier » et « Détails montage » retirés de la barre le 24/10 à la demande d'Axel.)
   const navDcp = document.getElementById('navDecupleur');
-  if(navDcp) navDcp.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
+  if(navDcp) navDcp.style.display = (DC_OUVERT || profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
   // Creative Factory (Axel 25/09) : même gating dev/owner — le dashboard revérifie l'accès côté serveur (factory_access)
   const navFac = document.getElementById('navFactory');
   if(navFac) navFac.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
@@ -9166,7 +9172,8 @@ const UPGRADE_PLANS = {
     label: 'Passer en Pro', badge: 'PRO',
     price: '49,99€',
     features: [
-      { icon: '✓', text: '<strong>AvatarAds × Claude</strong> — génère en parlant à Claude' },
+      DC_OUVERT ? { icon: '✓', text: '<strong>Décuplage de vidéo</strong> — 1 vidéo, jusqu\'à 50 versions uniques' }
+        : { icon: '✓', text: '<strong>AvatarAds × Claude</strong> — génère en parlant à Claude' },
       { icon: '✓', text: '<strong>80 vidéos</strong> / mois — au lieu de 20' },
       { icon: '✓', text: 'Qualité <strong>Premium</strong> images & vidéos' },
       { icon: '✓', text: 'Montage IA Avancé' },
@@ -13864,18 +13871,22 @@ function nav(id,el){
 // (miroir, pixels & grain, teinte, empreinte sonore, textes choc). Option : changer le personnage avant de décupler.
 // Compte dev/owner seulement (#navDecupleur ; render-job et kie-proxy revérifient). Chaîne réelle (24/10) : fichier déposé
 // dans render-media (ou lien récupéré par le moteur : job dc-fetch) → [changement de personnage : passage découpé (dc-cut)
-// → Wan 3.0 chez kie (alias wan-3, prompt _DC_WAN_PROMPT, 720p, son d'origine remis par le moteur)] → N variantes +
+// → Wan 3.0 chez kie (alias wan-3, prompt serveur DC_WAN_PROMPT de _shared/decupleur.ts, 720p, son d'origine remis par le moteur)] → N variantes +
 // contrôle des empreintes + ZIP (job decupleur, render-worker/decupleur.mjs). Aucun crédit : owner / developer ne débitent
 // rien. Le résultat du changement de personnage est GARDÉ (_dc.master) : relancer des variantes ne le repaie pas.
 const DC_VARIANTS = [5, 10, 20, 50];
 const DC_CR_PER_VARIANT = 0.5;                       // 10 variantes = 5 crédits
 // Changement de personnage (Wan 3.0, kie, 720p) : 10 crédits par seconde gardée (Axel 24/10). Coût ≈ 0,17 $ / s (kie facture
-// référence + sortie) → marge ≥ 60 % partout sauf l'Élite 90 annuel (~58 %). Réservé Pro / Élite à l'ouverture (Axel 24/10 :
-// raison d'upgrader pour un Starter, et 150 cr/mois ne paient pas plus d'une quinzaine de secondes) ; owner / developer passent.
+// référence + sortie) → marge ≥ 60 % partout sauf l'Élite 90 annuel (~58 %).
+// TOUT le Décupleur (variantes + personnage) est réservé Pro / Élite (DC_PLANS, Axel 24/10 : raison d'upgrader pour un Free /
+// Starter) ; owner / developer passent. Free / Starter : paywall au clic sur « Décupler » ou sur « Changer le personnage ».
 const DC_PERSO_CR_SEC = 10;
-const DC_PERSO_PLANS = ['pro', 'elite'];
-function _dcPersoOk(){
-  try{ const p = String((currentMember && currentMember.plan) || '').toLowerCase(); return !!currentMember && (!!currentMember.is_owner || p === 'developer' || DC_PERSO_PLANS.includes(p)); }catch(_){ return false; }
+function _dcPlanOk(){
+  try{ const p = String((currentMember && currentMember.plan) || '').toLowerCase(); return !!currentMember && (!!currentMember.is_owner || p === 'developer' || DC_PLANS.includes(p)); }catch(_){ return false; }
+}
+const _dcPersoOk = _dcPlanOk;
+function _dcPaywall(){
+  try{ showPlansSheet('Option réservée à Pro et Élite', 'Upgrade ton plan maintenant'); }catch(_){ toast('Option réservée à Pro et Élite'); }
 }
 // Crédits d'un lancement : variantes + changement de personnage à la seconde gardée (arrondie au-dessus, comme kie)
 const _dcCout = () => _dc.variants * DC_CR_PER_VARIANT + (_dc.face ? DC_PERSO_CR_SEC * Math.ceil(Math.max(0, _dc.b - _dc.a) - 0.01) : 0);
@@ -13930,7 +13941,7 @@ const _dc = {
 };
 
 function initDecupleur(){
-  if(!currentMember || !(currentMember.plan === 'developer' || currentMember.is_owner)){ nav('generator'); return; }
+  if(!currentMember || !(DC_OUVERT || currentMember.plan === 'developer' || currentMember.is_owner)){ nav('generator'); return; }
   if(!_dc._mq){
     _dc._mq = true;
     try{ window.matchMedia('(max-width:768px)').addEventListener('change', () => { if(_dcOn()) _dcRender(); }); }catch(_){}
@@ -14310,6 +14321,7 @@ function _dcGo(){
     : nv * keep > 901 ? 'Trop long pour ×' + nv + ' : garde ' + Math.floor(900 / nv) + ' s maximum'
     : '';
   const n = document.getElementById('dcNudge'), b = document.getElementById('dcCta');
+  if(!why && !_dcPlanOk()){ _dcPaywall(); return; }   // Free / Starter : le paywall, une fois la vidéo prête
   if(!why){ if(n) n.style.display = 'none'; _dcRun(); return; }
   if(n){ n.textContent = why; n.style.display = 'inline'; }
   if(b){ b.style.animation = 'none'; void b.offsetWidth; b.style.animation = 'dcShake .38s'; }
@@ -14320,7 +14332,7 @@ function _dcGo(){
 /* ---------- menus ---------- */
 function _dcOpen(m){
   // Starter : le changement de personnage est une raison d'upgrader (Pro / Élite) — feuille des plans au lieu du menu
-  if(m === 'face' && !_dcPersoOk()){ try{ showPlansSheet('Changer le personnage', 'Disponible avec les plans Pro et Élite'); }catch(_){ toast('Changer le personnage : plans Pro et Élite'); } return; }
+  if(m === 'face' && !_dcPlanOk()){ _dcPaywall(); return; }
   _dc.modal = m; _dcModalRender();
 }
 function _dcClose(){ _dc.modal = null; _dcModalRender(); }
@@ -14388,21 +14400,8 @@ function _dcAltToggle(id){ _dc.alt[id] = !_dc.alt[id]; _dcModalRender(); _dcCard
 function _dcTextPos(p){ _dc.textPos = p; _dcModalRender(); }
 
 /* ---------- génération ---------- */
-// Prompt du changement de personnage (Wan 3.0, mode référence : Video1 = passage gardé, Image1 = nouveau personnage).
-// Règle des prompts de réalisme (skill images-ia) : le détail dit CE QU'ON VEUT VOIR, l'interdit dit COMMENT NE PAS L'OBTENIR.
-const _DC_WAN_PROMPT = [
-  // Mission (Axel 24/10) : remplacer le personnage de la vidéo par l'avatar donné — mêmes mouvements, avatar 1:1 à la
-  // référence, AUCUN mouvement inventé. Le reste de la vidéo ne bouge pas.
-  'Video editing task: character replacement only. Video1 is the source video. Image1 is the new character.',
-  'Replace the person in Video1 with the person in Image1. This is the ONLY change. If several people appear, replace only the main person facing the camera.',
-  'The new person must be a 1:1 match of Image1: exactly the same face, facial features, skin tone, hair color, length and style, body shape and proportions, clothing and accessories as in Image1, identical in every frame from the first to the last.',
-  'Take NOTHING of the original person’s appearance (face, hair, body, clothes): take only their movement.',
-  'Motion comes ONLY from Video1: the new person performs exactly the same movements as the person in Video1, at the same moments and the same speed — same body pose, gestures, hand movements, head movements, gaze direction, facial expressions and mouth movements (the lips follow the original speech of Video1 exactly). Same position, size and framing of the person in the frame.',
-  'Do not invent, add, exaggerate, smooth out or skip any movement.',
-  'Everything else stays exactly as in Video1: camera framing, camera movement and handheld shake, background and every object, lighting and color grade, timing, duration, speed, aspect ratio, and any on-screen text or overlays. Do not add, remove or move any object, person, text or logo. No cut, no transition, no new camera angle, no zoom.',
-  'Photorealistic, natural smartphone footage: real skin texture with pores and small imperfections, natural light on the new person that matches the scene.',
-  'Never: beauty filter, skin smoothing, plastic or waxy skin, cartoon, CGI or painted look, blur, flicker, morphing face, identity drift, invented movement, extra or missing fingers, distorted hands.',
-].join(' ');
+// Prompt du changement de personnage : servi par le SERVEUR (kie-proxy → supabase/functions/_shared/decupleur.ts,
+// DC_WAN_PROMPT), le même pour l'app et le MCP — l'app n'en envoie pas.
 function _dcAspect(){
   const s = _dc.src; if(!s || !s.w || !s.h) return 'adaptive';
   const r = s.w / s.h, c = [['9:16', 9/16], ['3:4', 3/4], ['1:1', 1], ['4:3', 4/3], ['16:9', 16/9]];
@@ -14449,7 +14448,7 @@ async function _dcRun(){
         etape('Changement du personnage', 10);
         const img = await _kieUpload(fi);
         const t0 = Date.now();
-        const res = await _kieRun('wan-3', { video_url: cut.url, image_url: img, prompt: _DC_WAN_PROMPT, resolution: '720P',
+        const res = await _kieRun('wan-3', { video_url: cut.url, image_url: img, resolution: '720P',
           aspect_ratio: _dcAspect(), duration: Math.ceil(b - a - 0.01), audio: false },
           { every: 6000, maxPolls: 300, onTick: () => etape('Changement du personnage', 10 + 45 * (1 - Math.exp(-(Date.now() - t0) / 240000))) });
         if(!res.storage_path) throw new Error('Résultat du changement de personnage introuvable');
@@ -44702,7 +44701,7 @@ lastY=y;
   // « recorder » n'est plus un outil à part : fusionné dans « Audio » (audioclean),
   // le filtre de tabs() purge tout seul les barres sauvegardées qui le listaient.
   var SHORT={generator:'Générateur',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',motion:'Motion',omni:'Omni',audioclean:'Audio',affiliation:'Parrain.'};
-  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',motion:'Motion Control',omni:'Omni',audioclean:'Audio',affiliation:'Parrainage',montage:'Montage IA',publish:'Publier'};
+  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',motion:'Motion Control',omni:'Omni',audioclean:'Audio',affiliation:'Parrainage',montage:'Montage IA',publish:'Publier',decupleur:'Décupleur'};
   var CUSTOMIZABLE=['generator','imagegen','express','motion','omni','studio','library','audioclean'];   // 11/09 : Parrainage retiré des raccourcis personnalisables (inutile dans la barre)
   // 14/08 : Motion Control remplace l'Éditeur et Audio remplace la Bibliothèque
   // dans la barre par défaut (les deux restent dans « Plus »).
@@ -44761,7 +44760,7 @@ lastY=y;
       ['omni','Édition vidéo par prompt'],['studio','Montage type CapCut'],['imagegen','Visuels 4K'],
       ['audioclean','Nettoyage + enregistreur'],['library','Tes vidéos']
       // Parrainage retiré de « Plus » (08/09) : déjà accessible dans « Mon compte »
-    ];
+    ].concat(DC_OUVERT ? [['decupleur','Une vidéo, 50 versions']] : []);
     var h='<h2 class="display" style="font-size:24px;font-weight:800;margin-bottom:16px">Tous les outils</h2>';
     h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
     tools.forEach(function(tl){
@@ -44778,7 +44777,7 @@ lastY=y;
       var FAC_IC='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4V10l6 4V6l6 4v11z"/></svg>';
       var KIT_IC='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
       h+='<h2 class="display" style="font-size:17px;font-weight:800;margin:22px 0 12px">Dev</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
-        +'<button class="mm-tool" data-go="decupleur"><span class="mm-ic">'+iconOf('decupleur')+'</span><b style="font-size:14.5px">Décupleur</b></button>'
+        +(DC_OUVERT ? '' : '<button class="mm-tool" data-go="decupleur"><span class="mm-ic">'+iconOf('decupleur')+'</span><b style="font-size:14.5px">Décupleur</b></button>')
         +'<button class="mm-tool" data-act="factory"><span class="mm-ic">'+FAC_IC+'</span><b style="font-size:14.5px">Creative Factory</b></button>'
         +'<button class="mm-tool" data-act="kit"><span class="mm-ic">'+KIT_IC+'</span><b style="font-size:14.5px">Kit de publication</b></button></div>';
     }

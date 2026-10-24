@@ -64,6 +64,7 @@ import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as dow
 import { preparerVideoFal, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : vidéo du client copiée + mesurée, comme fal-proxy
 import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
 import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
+import { DC_WAN_PROMPT } from '../_shared/decupleur.ts'   // Décupleur : prompt du changement de personnage (UNE version, partagée avec le MCP)
 
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
@@ -165,11 +166,11 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
   if (alias === 'wan-3') {
     // Wan 3.0 « référence » (Décupleur, Axel 24/10) : remplace le personnage de Video1 par celui d'Image1. Limites kie : vidéo
     // de référence 1–15 s (le passage gardé, découpé par le moteur), durée produite entière 2–15 s (référence + sortie ≤ 30 s),
-    // pas de son généré (le moteur remet le son d'origine), 720P par défaut (Axel : 720p). Prompt de l'app (≤ 20 000).
+    // pas de son généré (le moteur remet le son d'origine), 720P par défaut (Axel : 720p). Prompt SERVEUR (DC_WAN_PROMPT,
+    // _shared/decupleur.ts) : celui du client est ignoré — même consigne pour l'app et le MCP.
     const vid = okInput(b.video_url, uid), img = okInput(b.image_url, uid)
     if (!vid || !img) return { error: 'video_url / image_url : URL de notre storage uniquement' }
-    const prompt = str(b.prompt, 20000)
-    if (!prompt) return { error: 'prompt requis' }
+    const prompt = DC_WAN_PROMPT
     const d = Math.round(Number(b.duration) || 5)
     const input: Record<string, unknown> = {
       prompt, reference_video_urls: [vid], reference_image_urls: [img],

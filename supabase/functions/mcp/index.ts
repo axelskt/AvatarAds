@@ -9,7 +9,8 @@ import { dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Audit 02/10 : dur�
 import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX_CREATOR, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL, omniEditPrompt, motionControlPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
-import { cheminSur, clePrepMcp, controlerTaillePlan, nettoyerSonUtilisateur } from '../_shared/storage-path.ts'   // audit 02/10 : chemins render-media et plans de rendu
+import { cheminSur, clePrepMcp, controlerTaillePlan, nettoyerSonUtilisateur } from '../_shared/storage-path.ts'
+import { DC_PLANS, decupleurOuvert, DC_VARIANTES, DC_CR_VARIANTE, DC_PERSO_CR_SEC, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_WAN_PROMPT, lienDecupleur } from '../_shared/decupleur.ts'   // Décupleur (24/10)   // audit 02/10 : chemins render-media et plans de rendu
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -624,7 +625,7 @@ function aaUrlFrom(out){
   var url=aaSafeUrl(sc.url||'');
   // repli « lien dans le texte » : seulement si l'outil n'a renvoyé AUCUNE carte structurée et que ce n'est pas une erreur
   if(!url&&out&&out.content&&!out.isError&&!out.structuredContent){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https:[^\\s)\\]"'<>]+/.exec(t); if(mm&&aaSafeUrl(mm[0])&&/\\/i\\/[0-9a-f-]{36}/.test(mm[0])){ url=aaSafeUrl(mm[0]); break; } } }
-  return { waiting:!!sc.waiting, url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo, forProduct:!!sc.forProduct, tool:sc.tool||'', rate:sc.rate||0, maxDur:sc.maxDur||0, charSrc:sc.charSrc||'', refSrc:sc.refSrc||'' };
+  return { waiting:!!sc.waiting, url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo, forProduct:!!sc.forProduct, tool:sc.tool||'', rate:sc.rate||0, maxDur:sc.maxDur||0, charSrc:sc.charSrc||'', refSrc:sc.refSrc||'', n:sc.n||0, perso:!!sc.perso, link:sc.link||'', persoRate:sc.persoRate||0 };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
@@ -673,6 +674,34 @@ function aaMedia(url, kind, name){
   if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); if(v) media.addEventListener('loadedmetadata', aaKick); }
   m.style.padding='0'; m.style.opacity=''; m.style.fontSize=''; aaBtns(); aaKick(); // 02/09 : plus AUCUN voile hérité de l'état « chargement » sur l'image finale
 }
+// Décupleur : grille des variantes (affiches) — une touche = téléchargement de la variante ; ZIP ; vidéo du personnage
+function aaGrid(j){
+  aaOk=true; aaKindNow='video';
+  var m=document.getElementById('m'); if(!m) return;
+  var vs=(j&&j.variants)||[], i, h='', f=j.faibles||0;
+  h+='<div style="padding:12px 12px 4px"><div style="font-size:15px;font-weight:800">'+vs.length+' variantes prêtes</div>';
+  h+='<div style="font-size:12px;opacity:.72;margin-top:2px">'+(j.controle==='ok'?'Toutes différentes':(f+' trop proche'+(f>1?'s':'')+' de l’original'))+' · touche une variante pour la télécharger</div></div>';
+  h+='<div id="dcg" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:8px 12px"></div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px 14px">';
+  if(aaSafeUrl(j.zip)) h+='<button class="aa-a aa-dl" id="dcz" type="button" style="border:none;cursor:pointer">Tout télécharger</button>';
+  if(aaSafeUrl(j.perso)) h+='<button class="aa-a aa-rg" id="dcp" type="button" style="border:none;cursor:pointer">Vidéo du personnage</button>';
+  h+='</div>';
+  m.style.padding='0'; m.style.opacity=''; m.style.fontSize=''; m.innerHTML=h;
+  var g=document.getElementById('dcg');
+  for(i=0;i<vs.length;i++){ (function(v, k){
+    var b=document.createElement('button'); b.type='button'; b.title='Télécharger la variante '+(k+1);
+    b.style.cssText='position:relative;aspect-ratio:9/16;border:none;padding:0;border-radius:8px;overflow:hidden;cursor:pointer;background:#1e1b21 center/cover no-repeat';
+    var pu=aaSafeUrl(v.poster); if(pu) b.style.backgroundImage='url("'+pu+'")';
+    var t=document.createElement('span'); t.textContent='#'+(k<9?'0':'')+(k+1);
+    t.style.cssText='position:absolute;left:4px;top:4px;font-size:9px;color:#fff;background:rgba(0,0,0,.55);padding:1px 4px;border-radius:4px;font-family:monospace';
+    b.appendChild(t);
+    b.onclick=function(){ var u=aaSafeUrl(v.url); if(u) aaSend('ui/open-link', { url:u }); };
+    g.appendChild(b);
+  })(vs[i], i); }
+  var z=document.getElementById('dcz'); if(z) z.onclick=function(){ aaSend('ui/open-link', { url:aaSafeUrl(j.zip) }); };
+  var pp=document.getElementById('dcp'); if(pp) pp.onclick=function(){ aaSend('ui/open-link', { url:aaSafeUrl(j.perso) }); };
+  aaHugW=560; aaKick();
+}
 function aaSetPct(p){ if(p>aaPct) aaPct=p; var pb=document.getElementById('pb'); if(pb) pb.style.width=aaPct+'%'; }
 function aaPollStatus(u){
   fetch(u, { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
@@ -680,6 +709,7 @@ function aaPollStatus(u){
     if(typeof j.progress==='number') aaSetPct(j.progress);
     if(j.preview&&aaSafeUrl(j.preview)) aaPrev=aaSafeUrl(j.preview);
     if(j.preview&&aaSafeUrl(j.preview)){ var pv=document.getElementById('pv'); if(pv && !pv.firstChild){ var im=document.createElement('img'); im.alt=''; im.style.cssText='display:block;max-width:100%;max-height:420px;margin:12px auto 4px;border-radius:12px'; im.addEventListener('load', aaKick); im.src=aaSafeUrl(j.preview); pv.appendChild(im); var pt0=document.getElementById('pt'); if(pt0) pt0.textContent='Photo prête — vidéo en cours…'; aaKick(); } }
+    if(j.status==='done' && j.kind==='variants'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } aaSetPct(100); setTimeout(function(){ aaGrid(j); }, 350); return; }
     if(j.status==='done' && j.url){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } aaSetPct(100); setTimeout(function(){ aaMedia(j.url, j.kind||'image', ''); }, 350); return; }
     if(j.status==='failed'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } var pt=document.getElementById('pt'); if(pt) pt.textContent=j.msg||(aaPrev?'La vidéo a échoué (crédits de la vidéo rendus) — ta photo de départ est gardée, aussi dans ta Bibliothèque.':'Échec de la génération — réessaie.');
       var pw=document.querySelector('.aa-pw'); if(pw) pw.style.display='none';
@@ -709,7 +739,7 @@ function aaShow(out){
     if(d.prompt) aaPrompt=d.prompt;
     if(d.job_id&&!aaJobId) aaJobId=d.job_id;
     if(d.format) aaFormat=d.format;
-    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap&&!aaCap) aaCap=d.cap; if(d.forVideo) aaForVideo=true; if(d.forProduct) aaForProduct=true; if(d.tool){ aaTool=d.tool; aaRate=d.rate; aaMaxDur=d.maxDur||(d.tool==='edit'?10:30); aaCharSrc=aaSafeUrl(d.charSrc); aaRefSrc=aaSafeUrl(d.refSrc); aaLong=true; }
+    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap&&!aaCap) aaCap=d.cap; if(d.forVideo) aaForVideo=true; if(d.forProduct) aaForProduct=true; if(d.tool){ aaTool=d.tool; aaRate=d.rate; aaMaxDur=d.maxDur||(d.tool==='edit'?10:30); aaCharSrc=aaSafeUrl(d.charSrc); aaRefSrc=aaSafeUrl(d.refSrc); aaLong=true; if(d.tool==='decup'){ aaDcN=d.n||10; aaDcPerso=!!d.perso; aaDcLink=d.link?'1':''; aaDcPR=d.persoRate||10; } }
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.waiting){ aaOk=true; var mw=document.getElementById('m'); if(mw){ mw.style.opacity='.75'; mw.textContent='En attente de la photo dans la carte au-dessus \u2014 rien n\u2019est en cours.'; } aaKick(); return; }   // Axel 01/10 : jamais de fausse barre
     if(d.pending){
@@ -795,6 +825,8 @@ function aaStartJob(dataUrl, link){
 // ── OUTILS VIDÉO (Omni « edit » / Motion Control « motion », Axel 02/10) : dépôt DANS la carte → envoi direct au stockage
 //    (lien signé, progression), cadrage du personnage comme l’app (_mcPrepChar : ratio de la vidéo de réf + visage), lancement.
 var aaSent=false, aaRetryN=0, aaTool='', aaRate=0, aaMaxDur=0, aaCharSrc='', aaRefSrc='', aaVid=null, aaVidDur=0, aaVidW=0, aaVidH=0, aaChar=null, aaBusy=false;
+// Décupleur (24/10) : nombre de variantes, changement de personnage, vidéo venue d'un lien (récupérée par le serveur), tarif / s
+var aaDcN=0, aaDcPerso=false, aaDcLink='', aaDcPR=0;
 function aaEl(id){ return document.getElementById(id); }
 function aaMsg(t){ var pe=aaEl('pe'); if(pe) pe.textContent=t||''; aaKick(); }
 function aaZone(id, titre, sous, accept){
@@ -821,6 +853,10 @@ function aaAskMedia(){
   if(aaTool==='motion'){
     h+= aaCharSrc ? '' : aaZone('zc','1. Photo du personnage','La personne qui va bouger · PNG, JPG, WebP','image/png,image/jpeg,image/webp');
     h+= aaRefSrc ? '' : aaZone('zv',(aaCharSrc?'':'2. ')+'Vidéo de référence','Le mouvement à copier · MP4 ou MOV · '+(aaMaxDur<30?'les '+aaMaxDur+' premières secondes':'3 à 30 s'),'video/mp4,video/quicktime,video/webm');
+  } else if(aaTool==='decup'){
+    if(aaDcPerso && !aaCharSrc) h+=aaZone('zc','1. Photo du nouveau personnage','Visage et corps · PNG, JPG, WebP','image/png,image/jpeg,image/webp');
+    if(aaDcLink) h+='<div style="margin:12px 14px 0;font-size:13px;opacity:.85">Vidéo : récupérée depuis ton lien'+(aaDcPerso&&!aaCharSrc?' — dépose la photo pour lancer':'')+'</div>';
+    else if(!aaRefSrc) h+=aaZone('zv',(aaDcPerso&&!aaCharSrc?'2. ':'')+'Dépose ta vidéo','MP4 ou MOV · '+aaMaxDur+' s gardées au plus — les '+aaDcN+' variantes se lancent dès qu’elle est déposée','video/mp4,video/quicktime,video/webm');
   } else h+= aaRefSrc ? '' : aaZone('zv','Dépose ta vidéo','MP4 ou MOV · '+(aaMaxDur<10?'les '+aaMaxDur+' premières secondes':'10 s max (au-delà, les 10 premières secondes)')+' — la transformation se lance dès qu’elle est déposée','video/mp4,video/quicktime,video/webm');
   h+='<div id="pe" style="font-size:12px;margin:0 14px 14px;min-height:16px;opacity:.85"></div>';
   m.innerHTML=h;
@@ -828,6 +864,7 @@ function aaAskMedia(){
   aaHugW=Math.max(320, Math.min(560, Math.ceil(window.innerWidth||420))); aaMeasure();
   if(aaCharSrc){ var ic=new Image(); ic.crossOrigin='anonymous'; ic.onload=function(){ aaChar=ic; aaMaybeGo(); }; ic.onerror=function(){ aaMsg('Photo du personnage illisible — redemande à Claude.'); }; ic.src=aaCharSrc; }
   if(aaRefSrc){ aaLoadVid(aaRefSrc, null); }
+  if(aaTool==='decup' && aaDcLink && !aaDcPerso) aaMaybeGo();   // vidéo du lien, sans photo à attendre : lancement direct
 }
 function aaPickChar(file){
   if(aaBusy) return;
@@ -850,12 +887,13 @@ function aaLoadVid(src, file){
     var d=v.duration||0;
     var mx=aaMaxDur||(aaTool==='edit'?10:30);
     if(d && d<(aaTool==='edit'?0.8:1)){ aaMsg('Vidéo trop courte (1 s minimum).'); return; }
+    if(aaTool==='decup' && aaDcPerso && d && d<2){ aaMsg('Vidéo trop courte : 2 s minimum avec le changement de personnage.'); return; }
     aaVid={ el:v, file:file, src:src }; aaVidDur=d; aaVidW=v.videoWidth||0; aaVidH=v.videoHeight||0;
     var dk=Math.min(d, mx);   // durée GARDÉE (la préparation coupe au-delà ; la facture suit la vidéo préparée)
-    var bill=aaTool==='edit'?Math.max(1,Math.ceil(dk)):Math.min(30,Math.ceil(dk<3.3?3.6:dk));
+    var bill=aaTool==='edit'?Math.max(1,Math.ceil(dk)):aaTool==='decup'?(Math.ceil(aaDcN*0.5)+(aaDcPerso?aaDcPR*Math.ceil(dk-0.01):0)):Math.min(30,Math.ceil(dk<3.3?3.6:dk));   // Décupleur : aaRate = 1 → bill = crédits
     var txt=(file?(file.name||'vidéo'):'vidéo fournie')+(d?' · '+d.toFixed(1)+' s · ≈ '+(bill*aaRate)+' crédits':'')+(d>mx+0.5?' (les '+mx+' premières secondes)':'');
     if(aaEl('zv')) aaDone('zv', txt); else aaMsg(txt);
-    if(d>mx+0.5 && mx>=(aaTool==='edit'?10:30)){ aaTrimAsk(d, mx, bill); return; }   // trop longue : l'utilisateur confirme la coupe
+    if(d>mx+0.5 && (aaTool==='decup' || mx>=(aaTool==='edit'?10:30))){ aaTrimAsk(d, mx, bill); return; }   // trop longue : l'utilisateur confirme la coupe
     aaMaybeGo();
   };
   v.onloadedmetadata=ok; v.onerror=function(){ if(fini) return; fini=true; aaVid={ el:null, file:file, src:src }; aaVidDur=0; if(aaEl('zv')) aaDone('zv',(file?(file.name||'vidéo'):'vidéo')+' · format lu par le serveur'); aaMaybeGo(); };
@@ -873,8 +911,8 @@ function aaTrimAsk(d, mx, bill){
   pe.appendChild(b); aaKick();
 }
 function aaMaybeGo(){
-  if(aaBusy||!aaVid) return;
-  if(aaTool==='motion'&&!aaChar){ aaMsg('Il manque la photo du personnage.'); return; }
+  if(aaBusy||(!aaVid&&!(aaTool==='decup'&&aaDcLink))) return;
+  if((aaTool==='motion'||(aaTool==='decup'&&aaDcPerso))&&!aaChar){ aaMsg('Il manque la photo du personnage.'); return; }
   aaBusy=true; aaGo().catch(function(e){ aaBusy=false; aaMsg(String(e&&e.message||e)); });
 }
 function aaRelancer(t){
@@ -930,6 +968,11 @@ function aaGo(){
       .then(function(x){ return aaCrop(aaChar, x.j&&x.j.char, x.j&&x.j.ref); })
       .then(function(blob){ if(!blob) throw new Error('Préparation de la photo impossible.'); return aaUrl('char','image/jpeg',blob.size).then(function(u){ return aaPut(u, blob, 'image/jpeg', 'Envoi de la photo'); }); });
   }
+  if(aaTool==='decup'&&aaDcPerso){   // photo du nouveau personnage : envoyée telle quelle (JPEG, 2048 px au plus), pas de cadrage
+    p=p.then(function(){ aaMsg('Préparation de la photo…'); var W=aaChar.naturalWidth||1, H=aaChar.naturalHeight||1, k=Math.min(1, 2048/Math.max(W,H)), cv=document.createElement('canvas');
+        cv.width=Math.max(2,Math.round(W*k)); cv.height=Math.max(2,Math.round(H*k)); cv.getContext('2d').drawImage(aaChar,0,0,cv.width,cv.height); return aaJpeg(cv, 0.92); })
+      .then(function(blob){ if(!blob) throw new Error('Préparation de la photo impossible.'); return aaUrl('char','image/jpeg',blob.size).then(function(u){ return aaPut(u, blob, 'image/jpeg', 'Envoi de la photo'); }); });
+  }
   if(aaVid&&aaVid.file){ var f=aaVid.file, ty=f.type||'video/mp4'; p=p.then(function(){ return aaUrl(aaTool==='motion'?'ref':'video', ty, f.size); }).then(function(u){ return aaPut(u, f, ty, 'Envoi de la vidéo'); }); }
   return p.then(function(){ aaSent=true; return aaLance(); });
 }
@@ -944,7 +987,7 @@ function aaLance(){
       aaBusy=false;
       if(er==='busy'&&aaRetryN<20){ aaRetryN++; aaMsg('Deux vidéos sont déjà en préparation — la carte relance toute seule dans quelques secondes…'); setTimeout(function(){ aaLance().catch(function(e){ aaMsg(String(e&&e.message||e)); }); }, 15000); return; }
       if(er==='no_credits'||er==='busy'){ aaRelancer(er==='no_credits'?'Crédits insuffisants — recharge sur avatarads.fr, puis relance.':'La file est encore pleine — relance dans un instant.'); return; }
-      throw new Error(er==='bad_type'?'Fichier refusé (format ou poids).':er==='plan'?'Réservé aux plans Starter, Pro et Élite':er==='expired'?'Carte expirée — redemande à Claude.':er==='no_video'?'La vidéo n’est pas arrivée — redépose-la.':er==='no_char'?'La photo n’est pas arrivée — redépose-la.':'Échec ('+(er||'réseau')+') — réessaie.');
+      throw new Error(er==='bad_type'?'Fichier refusé (format ou poids).':er==='plan_pro'?'Réservé aux plans Pro et Élite — upgrade ton plan sur avatarads.fr':er==='plan'?'Réservé aux plans Starter, Pro et Élite':er==='expired'?'Carte expirée — redemande à Claude.':er==='no_video'?'La vidéo n’est pas arrivée — redépose-la.':er==='no_char'?'La photo n’est pas arrivée — redépose-la.':'Échec ('+(er||'réseau')+') — réessaie.');
     });
 }
 function aaLikely(p){ return p&&(p.structuredContent||(p.content&&p.content.length)); }
@@ -1377,6 +1420,27 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
       inputSchema: { type: 'object', properties: {} },
     },
   ]
+  // Décupleur (Axel 24/10) : montré au compte illimité pendant les tests, à tous une fois ouvert (l'outil revérifie le plan)
+  if (isOwner || decupleurOuvert()) {
+    tools.push({
+      name: 'decupler_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // carte : vidéo (+ photo du personnage) → progression → grille des variantes + ZIP
+      description: `Le DÉCUPLEUR d'AvatarAds : UNE vidéo → ${DC_VARIANTES.join(', ')} VARIANTES toutes différentes (miroir, cadrage, grain, teinte, empreinte sonore, textes choc), pour publier la même vidéo plusieurs fois sans être vu comme un doublon. Option change_character : AVANT de décupler, la personne de la vidéo est remplacée par celle d'une photo (mêmes mouvements, avatar identique à la photo ; ${DC_PERSO_MAX} s gardées au plus). Coût : ${DC_CR_VARIANTE} crédit par variante (arrondi au-dessus : 10 variantes = ${Math.ceil(10 * DC_CR_VARIANTE)} crédits) + ${DC_PERSO_CR_SEC} crédits par seconde gardée avec le changement de personnage. Réservé aux plans Pro et Élite. Débité au lancement, rendu si échec. ❓ Si le nombre de variantes n'est pas dans le message, pose UNE question courte (5, 10, 20 ou 50 ?), puis appelle l'outil. 🎬 LA VIDÉO : lien TikTok / Instagram collé par l'utilisateur → link ; vidéo jointe au chat (que tu ne reçois pas) → appelle SANS fichier, la CARTE la fait déposer ; URL directe d'un MP4 déjà en ligne → video_url. Photo du nouveau personnage : jointe au chat → rien, la carte la fait déposer ; déjà en ligne → image_url. Pas de devis ; n'appelle aucun check ensuite (la carte suit tout et affiche les variantes). ⛔ Ne nomme JAMAIS le moteur technique : parle du « Décupleur d'AvatarAds ».`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          variants: { type: 'integer', enum: DC_VARIANTES, description: 'Nombre de variantes : 5, 10, 20 ou 50 (défaut 10).' },
+          link: { type: 'string', description: "Lien TikTok ou Instagram de la vidéo à décupler (la vidéo est récupérée par le serveur)." },
+          video_url: { type: 'string', description: "Optionnel : URL http(s) DIRECTE d'un MP4 / MOV déjà en ligne (60 Mo max). Pas un lien TikTok / Instagram (→ link)." },
+          change_character: { type: 'boolean', description: `true = remplacer d'abord la personne de la vidéo par celle d'une photo (${DC_PERSO_CR_SEC} crédits / seconde gardée, ${DC_PERSO_MAX} s max).` },
+          image_url: { type: 'string', description: "Optionnel, avec change_character : URL http(s) d'une photo DÉJÀ en ligne du nouveau personnage (ex. un avatar créé avec generate_image). Photo jointe au chat : ne mets rien, la carte la fait déposer." },
+          duration_seconds: { type: 'integer', minimum: 1, maximum: DC_PASSAGE_MAX, description: `Optionnel : ne garder que les N premières secondes (défaut : le maximum, ${DC_PASSAGE_MAX} s — ${DC_PERSO_MAX} s avec le changement de personnage).` },
+          alterations: { type: 'array', items: { type: 'string', enum: ['miroir', 'pixels', 'teinte', 'son', 'textes'] }, description: "Optionnel : altérations à appliquer (défaut : toutes). « textes » = textes choc sur une variante sur deux." },
+          text_position: { type: 'string', enum: ['Haut', 'Centre', 'Bas', 'Aléatoire'], description: 'Position des textes choc (défaut Aléatoire).' },
+        },
+      },
+    })
+  }
   if (isAdmin) {
     tools.push({
       name: 'admin_find_user',
@@ -3345,7 +3409,9 @@ const OMNI_EDIT_SEC: Record<string, number> = { '720p': 3, '1080p': 4 }   // = C
 const MC_SEC = { std: 2, hd: 3, v3: 6, v26pro: 3, topaz: 1 }
 const mcRate = (model: unknown, quality: unknown) => model === '3.0' ? MC_SEC.v3 : (quality === '1080p' ? MC_SEC.hd : MC_SEC.std)
 const MC_PRO_PLANS = ['pro', 'elite']                                       // 1080p et Motion 3.0 : Pro & Élite (comme l'app)
-const VT_OP = /^(vn|vns|ve|vm|vmr|vu|vur|vd|vdg|vk|vkr):/   // étapes + réservations (voir « ÉTAPES RÉSERVES »)
+// Décupleur (Axel 24/10) : owner / developer pendant les tests ; Pro / Élite une fois DECUPLEUR_OUVERT=1 (comme l'app)
+const droitDecupleur = (p: Record<string, unknown>) => isUnlimited(p) || (decupleurOuvert() && DC_PLANS.includes(String(p.plan || '').toLowerCase()))
+const VT_OP = /^(vn|vns|ve|vm|vmr|vu|vur|vd|vdg|vk|vkr|df|dfs|dw|dwg|dj):/   // étapes + réservations (voir « ÉTAPES RÉSERVES ») ; d… = Décupleur
 const VT_STALE_MIN = 60                                                     // kie : file jusqu'à ~25 min + reprise 2.6 : jamais remboursé en cours de route
 const FAL_OMNI_EDIT = 'google/gemini-omni-flash/v1.1/edit'
 const FAL_TOPAZ = 'fal-ai/topaz/upscale/video'
@@ -3537,6 +3603,7 @@ const VT_MAX_LIVRAISON = 100_000_000   // = limite du bucket mcp-media (100 Mo) 
 async function advanceVideoTool(job: Record<string, unknown>): Promise<void> {
   const userId = String(job.user_id), op = String(job.op_name || ''), pj = (job.params || {}) as Record<string, unknown>
   const outil = String(pj.tool)
+  if (outil === 'decup') { await advanceDecupleur(job); return }   // Décupleur (24/10) : étapes à part (variantes, pas une vidéo livrée)
   // réservation de livraison orpheline (isolate tué pendant la copie) → rendue 3 min après SA date (vdg_at), jamais d'après
   // updated_at (que /status rafraîchit toutes les 8 s : l'orphelin n'aurait jamais été libéré tant que la carte sonde)
   if (op.startsWith('vdg:')) {
@@ -3717,7 +3784,7 @@ async function vtCopierSource(userId: string, jobId: string, url: string, quoi: 
   const { error } = await svc.storage.from(bucket).upload(path, got.bytes, { contentType: got.contentType, upsert: true })
   return error ? 'Copie du fichier impossible — réessaie.' : { bucket, path }
 }
-async function vtCarte(profile: Record<string, unknown>, tool: 'omni_edit' | 'motion', params: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent | { job: string; cap: string; extra: Record<string, unknown> }> {
+async function vtCarte(profile: Record<string, unknown>, tool: 'omni_edit' | 'motion' | 'decup', params: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent | { job: string; cap: string; extra: Record<string, unknown> }> {
   const userId = String(profile.id)
   // cartes gratuites tant que rien n'est lancé : 30 par heure et par compte au plus (audit 02/10)
   if (!isUnlimited(profile) && !(await rateHit('mcp-vtcarte:' + userId, 3600, 30))) return toolErr('Trop de cartes ouvertes cette heure-ci — utilise une carte déjà affichée ou réessaie plus tard.')
@@ -3731,7 +3798,7 @@ async function vtCarte(profile: Record<string, unknown>, tool: 'omni_edit' | 'mo
     await svc.from('mcp_jobs').update({ params: { video: true, tool, ...params, src_path: c.path } }).eq('id', pj.id)
     params.src_path = c.path; extra.refSrc = await signRender(c.path, 2 * 3600)
   }
-  const iUrl = tool === 'motion' ? String(args.image_url || '').trim() : ''
+  const iUrl = (tool === 'motion' || (tool === 'decup' && params.perso === true)) ? String(args.image_url || '').trim() : ''
   if (iUrl) {
     const c = await vtCopierSource(userId, pj.id, iUrl, 'image')
     if (typeof c === 'string') { await svc.from('mcp_jobs').update({ status: 'failed', error: 'source refusée' }).eq('id', pj.id); return toolErr(c) }
@@ -3772,6 +3839,200 @@ async function runMotionControl(profile: Record<string, unknown>, args: Record<s
     content: [{ type: 'text', text: `[système] Carte Motion Control prête (Motion ${model}, ${quality}, ${rate} crédits/seconde de la vidéo de référence, 3 à 30 s — ex. 10 s = ${10 * rate} crédits ; débités au lancement, rendus si échec). L'utilisateur dépose dans la carte ${c.extra.charSrc ? '' : 'la photo du personnage puis '}${c.extra.refSrc ? '' : 'la vidéo de référence (le mouvement à copier)'} ; le cadrage est ajusté automatiquement et la génération se lance toute seule (compte 3 à 10 min).\nRÉPONSE À ÉCRIRE MAINTENANT : une seule phrase courte, par ex. « Dépose la photo du personnage et la vidéo de référence dans la carte, la vidéo se lance toute seule. » N'appelle aucun autre outil pour cette vidéo.` }],
     structuredContent: { job_id: c.job, cap: c.cap, statusUrl: `https://mcp.avatarads.fr/status/${c.job}`, kind: 'video', pending: true, tool: 'motion', rate, maxDur, ...c.extra },
   }
+}
+
+// ── Outil decupler_video (Décupleur, Axel 24/10) ──────────────────────────────────────────────────────────────────────
+// Étapes (op_name) : df:<rendu> lien récupéré par le moteur (dc-fetch) → vn:<rendu> vidéo préparée (mc-ref → mcp-prep/<uid>/,
+// hors du dossier réinscriptible) → durée MESURÉE → débit (variantes + personnage) → [dw:<tâche> changement de personnage
+// chez kie (Wan 3.0, prompt DC_WAN_PROMPT, sans son) → copie du résultat] → dj:<rendu> N variantes (decupleur) → done.
+// Réservations (compare-and-swap) : dfs, vns, dwg. Toujours en cours après VT_STALE_MIN → remboursé (filet commun).
+async function runDecupler(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+  if (!droitDecupleur(profile)) {
+    const plan = String(profile.plan || 'free').toLowerCase()
+    return toolErr(decupleurOuvert()
+      ? `Le Décupleur est réservé aux plans Pro et Élite (plan actuel : ${PLAN_LABEL[plan] || plan}). Upgrade ton plan sur ${APP_URL}`
+      : 'Le Décupleur arrive bientôt sur Claude.')
+  }
+  const n = DC_VARIANTES.includes(Number(args.variants)) ? Number(args.variants) : 10
+  const perso = args.change_character === true || String(args.change_character).toLowerCase() === 'true'
+  if (perso && !kieKey()) return toolErr('Changement de personnage momentanément indisponible — réessaie plus tard.')
+  const lienBrut = String(args.link || '').trim()
+  const lien = lienBrut ? lienDecupleur(lienBrut) : null
+  if (lienBrut && !lien) return toolErr("Lien TikTok ou Instagram uniquement. Pour une autre vidéo : appelle l'outil sans lien (la carte la fait déposer) ou passe son URL directe dans video_url.")
+  const plafond = Math.min(perso ? DC_PERSO_MAX : DC_PASSAGE_MAX, Math.floor(DC_BUDGET_S / n))
+  const maxDur = Math.min(plafond, Math.max(perso ? 2 : 1, Math.round(Number(args.duration_seconds) || plafond)))
+  const NOMS: Record<string, string> = { miroir: 'mirror', pixels: 'pixels', teinte: 'tint', son: 'audio', textes: 'text' }
+  const choisies = Array.isArray(args.alterations) ? (args.alterations as unknown[]).map(String) : null
+  const alt: Record<string, boolean> = { mirror: true, pixels: true, tint: true, audio: true, text: true }
+  if (choisies) for (const [fr, en] of Object.entries(NOMS)) alt[en] = choisies.includes(fr)
+  const textPos = ['Haut', 'Centre', 'Bas', 'Aléatoire'].includes(String(args.text_position)) ? String(args.text_position) : 'Aléatoire'
+  const c = await vtCarte(profile, 'decup', { n, perso, alt, text_pos: textPos, max_dur: maxDur, ...(lien ? { lien } : {}) }, lien ? { ...args, video_url: '' } : args)
+  if ('content' in c) return c
+  const varCost = Math.ceil(n * DC_CR_VARIANTE)
+  const tarif = `${varCost} crédits pour les ${n} variantes${perso ? ` + ${DC_PERSO_CR_SEC} crédits par seconde gardée pour le changement de personnage (ex. 8 s = ${varCost + 8 * DC_PERSO_CR_SEC} crédits)` : ''}`
+  const quoi = (lien ? 'la vidéo du lien est récupérée par le serveur' : c.extra.refSrc ? 'la vidéo fournie est chargée' : "l'utilisateur dépose sa vidéo dans la carte")
+    + (perso ? (c.extra.charSrc ? ', la photo du personnage aussi' : ', puis la photo du nouveau personnage') : '')
+  const phrase = lien ? (perso && !c.extra.charSrc ? 'Dépose la photo du nouveau personnage dans la carte, le décuplage se lance tout seul.' : 'Je récupère ta vidéo, les variantes arrivent dans la carte.')
+    : perso && !c.extra.charSrc ? 'Dépose la photo du nouveau personnage et ta vidéo dans la carte, le décuplage se lance tout seul.' : 'Dépose ta vidéo dans la carte, le décuplage se lance tout seul.'
+  return {
+    content: [{ type: 'text', text: `[système] Carte Décupleur prête (${n} variantes ; ${tarif} ; débités au lancement, rendus si échec ; ${maxDur} s gardées au plus) : ${quoi}, le décuplage se lance tout seul et la carte affiche les variantes.\nRÉPONSE À ÉCRIRE MAINTENANT : une seule phrase courte, par ex. « ${phrase} » N'appelle aucun autre outil pour cette vidéo.` }],
+    structuredContent: { job_id: c.job, cap: c.cap, statusUrl: `https://mcp.avatarads.fr/status/${c.job}`, kind: 'video', pending: true, tool: 'decup', rate: 1, maxDur, n, perso, link: lien || '', persoRate: DC_PERSO_CR_SEC, ...c.extra },
+  }
+}
+// Changement de personnage chez kie (= alias wan-3 de kie-proxy : Wan 3.0 en mode référence, 720P, sans son, prompt serveur).
+async function soumettreWanKie(refUrl: string, charUrl: string, duree: number): Promise<{ ok: boolean; status: number; task: string; msg: string }> {
+  if (!kieKey()) return { ok: false, status: 503, task: '', msg: 'indisponible' }
+  const body = { model: 'wan/3-0-video', input: { prompt: DC_WAN_PROMPT, reference_video_urls: [refUrl], reference_image_urls: [charUrl],
+    resolution: '720P', aspect_ratio: 'adaptive', duration: Math.min(DC_PERSO_MAX, Math.max(2, duree)), audio: false, nsfw_checker: false } }
+  try {
+    const r = await fetch(`${KIE}/api/v1/jobs/createTask`, { method: 'POST', headers: kieHeaders(), body: JSON.stringify(body), signal: AbortSignal.timeout(30000) })
+    const j = await r.json().catch(() => ({})) as Record<string, any>
+    const task = String(j?.data?.taskId || '')
+    if (j?.code === 200 && /^[A-Za-z0-9_-]{6,120}$/.test(task)) return { ok: true, status: 200, task, msg: '' }
+    return { ok: false, status: Number(j?.code) || r.status, task: '', msg: String(j?.msg || '').slice(0, 200) }
+  } catch { return { ok: false, status: 0, task: '', msg: 'sans réponse' } }
+}
+// Message d'un lien refusé par le moteur : SES phrases (écrites pour l'utilisateur), jamais une erreur technique brute
+function dcMessageLien(err: unknown): string {
+  const e = String(err || '')
+  return /^(Vidéo privée|Vidéo introuvable|Vidéo trop|Vidéo illisible|Impossible de récupérer|Récupération|Lien TikTok)/.test(e) ? e.slice(0, 200)
+    : 'Impossible de récupérer cette vidéo — dépose le fichier dans la carte.'
+}
+async function dcLancerLot(job: Record<string, unknown>, de: string, base: string, keep: number, master: string | null, patch: Record<string, unknown>): Promise<void> {
+  const pj = (job.params || {}) as Record<string, unknown>
+  const { data: rj, error } = await svc.from('render_jobs').insert({ user_id: String(job.user_id), status: 'queued', input_video: base, avatar_clips: [],
+    assets: master ? [{ id: 'master', path: master, kind: 'video' }] : [],
+    plan: { __compose: 'decupleur', a: 0, b: keep, n: Number(pj.n) || 10, alt: pj.alt || {}, textPos: pj.text_pos || 'Aléatoire', seed: Math.floor(Math.random() * 2147483647), duration: keep } })
+    .select('id').single()
+  if (error || !rj) { await vtEchec(job, 'Lancement du décuplage impossible — crédits rendus, réessaie.', de); return }
+  await vtPasser(job, de, 'dj:' + rj.id, { ...patch, lot_at: Date.now() })
+}
+async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
+  const userId = String(job.user_id), op = String(job.op_name || ''), pj = (job.params || {}) as Record<string, unknown>
+  if (/^(dfs|vns|dwg):/.test(op)) return   // réservation en cours (ou orpheline : le filet VT_STALE_MIN rend ce qui a été débité)
+  const n = Number(pj.n) || 10, perso = pj.perso === true
+
+  // 0) LIEN récupéré par le moteur (dc-fetch) → préparé comme une vidéo déposée (mc-ref)
+  if (op.startsWith('df:')) {
+    const { data: rj } = await svc.from('render_jobs').select('status, output_url, error').eq('id', op.slice(3)).maybeSingle()
+    if (!rj) return
+    if (rj.status === 'failed') { await vtEchec(job, dcMessageLien(rj.error)); return }
+    if (rj.status !== 'done' || !rj.output_url) return
+    const lu = cheminSur(userId, rj.output_url)
+    if (!lu) { await vtEchec(job, 'Récupération de la vidéo impossible — dépose le fichier dans la carte.'); return }
+    if (!(await vtPasser(job, op, 'dfs:' + op.slice(3)))) return
+    const { data: prep, error } = await svc.from('render_jobs').insert({ user_id: userId, status: 'queued', input_video: lu, assets: [], avatar_clips: [],
+      plan: { __compose: 'mc-ref', maxDur: Number(pj.max_dur) || DC_PASSAGE_MAX } }).select('id').single()
+    if (error || !prep) { await vtEchec(job, 'Préparation de la vidéo impossible — réessaie.', 'dfs:' + op.slice(3)); return }
+    await vtPasser(job, 'dfs:' + op.slice(3), 'vn:' + prep.id, { src_path: lu })   // vidéo du lien supprimée à la fin (vtNettoyer)
+    return
+  }
+
+  // 1) PRÉPARATION faite → durée MESURÉE sur la copie du moteur → débit → personnage (kie) ou directement les variantes
+  if (op.startsWith('vn:')) {
+    const { data: rj } = await svc.from('render_jobs').select('status, output_url').eq('id', op.slice(3)).maybeSingle()
+    if (!rj || rj.status === 'failed') { await vtEchec(job, 'Vidéo illisible — réexporte-la en MP4 et réessaie.'); return }
+    if (rj.status !== 'done' || !rj.output_url) return
+    const prep = clePrepMcp(userId, op.slice(3))
+    if (!prep || String(rj.output_url) !== prep) { await vtEchec(job, 'Préparation de la vidéo impossible — réessaie dans quelques minutes.'); return }
+    const essais = (Number(pj.prep_try) || 0) + 1, res = 'vns:' + op.slice(3)
+    if (!(await vtPasser(job, op, res, { prep_path: prep, prep_try: essais }))) return
+    const dur = await vtDuree(prep)
+    if (!dur) { if (essais < 3) { await vtPasser(job, res, op); return } await vtEchec(job, 'Vidéo illisible — réexporte-la en MP4 et réessaie.', res); return }
+    const keep = Math.min(dur, perso ? DC_PERSO_MAX : DC_PASSAGE_MAX, Math.floor(DC_BUDGET_S / n), Number(pj.max_dur) || DC_PASSAGE_MAX)
+    if (keep < (perso ? 2 : 1)) { await vtEchec(job, perso ? 'Vidéo trop courte : 2 s minimum avec le changement de personnage.' : 'Vidéo trop courte (1 s minimum).', res); return }
+    const persoSec = perso ? Math.ceil(keep - 0.01) : 0
+    const cost = Math.ceil(n * DC_CR_VARIANTE) + persoSec * DC_PERSO_CR_SEC
+    const bal = await spendForJob(userId, String(job.id), cost)
+    if (bal === null || bal === -1 || bal === -2) { await vtEchec(job, `Crédits insuffisants : il en faut ${cost}. Recharge sur avatarads.fr`, res); return }
+    // entrée du lot = copie de la vidéo préparée dans le dossier du compte (le moteur ne lit que <uid>/…) ; le passage [0, keep]
+    // est fixé par le plan : une copie remplacée entre-temps ne peut pas allonger le travail payé
+    const base = `${userId}/mcp-src/${job.id}-prep.mp4`
+    const cp = await svc.storage.from('render-media').copy(prep, base)
+    if (cp.error) { await vtEchec(job, 'Préparation de la vidéo impossible — crédits rendus, réessaie.', res); return }
+    const patch = { dur: Math.round(dur * 100) / 100, keep: Math.round(keep * 1000) / 1000, bill: cost, base_path: base }
+    if (perso) {
+      const refUrl = await signRender(prep, 3 * 3600), charUrl = await signPath(String(pj.char_path || ''), 3 * 3600)
+      if (!refUrl || !charUrl) { await vtEchec(job, 'Photo du personnage introuvable — redépose-la.', res); return }
+      const w = await soumettreWanKie(refUrl, charUrl, persoSec)
+      if (!w.ok) {
+        console.warn('[mcp] décupleur : changement de personnage refusé', job.id, w.status, w.msg)
+        await vtEchec(job, (w.status === 0 || w.status === 402 || w.status === 429 || w.status === 433 || w.status >= 455) ? 'Changement de personnage momentanément indisponible — crédits rendus, réessaie dans quelques minutes.' : 'Changement de personnage refusé — crédits rendus. Essaie une autre photo ou une autre vidéo.', res)
+        return
+      }
+      await vtPasser(job, res, 'dw:' + w.task, { ...patch, dw_at: Date.now() })
+      return
+    }
+    await dcLancerLot(job, res, base, keep, null, patch)
+    return
+  }
+
+  // 2) CHANGEMENT DE PERSONNAGE chez kie : prêt → copié dans le dossier du compte → variantes avec CETTE vidéo (son d'origine)
+  if (op.startsWith('dw:')) {
+    const rec = await kieRecord('mk', op.slice(3))
+    if (rec.transient || !rec.found || rec.state === 'queue' || rec.state === 'run') return
+    if (!(rec.state === 'ok' && rec.urls.length)) {
+      const e = erreurKling({ error: `${rec.errType} ${rec.err}`.trim() || 'échec' }, 0)
+      console.warn('[mcp] décupleur : changement de personnage en échec', job.id, rec.errType, String(rec.err).slice(0, 200))
+      await vtEchec(job, e.moderation ? 'Changement de personnage refusé par la modération — crédits rendus. Essaie une autre photo.' : 'Le changement de personnage a échoué — crédits rendus, réessaie.', op)
+      return
+    }
+    const res = 'dwg:' + op.slice(3)
+    if (!(await vtPasser(job, op, res))) return
+    const dl = await kieDownload(rec.urls[0])
+    const master = `${userId}/mcp-src/${job.id}-perso.mp4`
+    const up = dl && dl.buf.byteLength > 1000 ? await svc.storage.from('render-media').upload(master, new Uint8Array(dl.buf), { contentType: 'video/mp4', upsert: true }) : null
+    if (!up || up.error) { await vtPasser(job, res, op); return }   // nouvel essai au passage suivant (le filet borne)
+    await dcLancerLot(job, res, String(pj.base_path || ''), Number(pj.keep) || 0, master, { perso_path: master })
+    return
+  }
+
+  // 3) VARIANTES : avancement recopié pour la carte ; fini → le job porte le manifeste (dc.json) du lot
+  if (op.startsWith('dj:')) {
+    const { data: rj } = await svc.from('render_jobs').select('status, output_url, progress').eq('id', op.slice(3)).maybeSingle()
+    if (!rj) return
+    if (rj.status === 'failed') { await vtEchec(job, 'La fabrication des variantes a échoué — crédits rendus, réessaie.'); return }
+    if (rj.status !== 'done' || !rj.output_url) {
+      if (rj.progress != null && Number(rj.progress) !== Number(pj.lot_pct)) await svc.from('mcp_jobs').update({ params: { ...pj, lot_pct: Number(rj.progress) } }).eq('id', String(job.id)).eq('status', 'running').eq('op_name', op)
+      return
+    }
+    const man = cheminSur(userId, rj.output_url)
+    if (!man || man !== `${userId}/dc-${op.slice(3)}/dc.json`) { await vtEchec(job, 'Livraison impossible — crédits rendus.'); return }
+    const { data: fin } = await svc.from('mcp_jobs').update({ status: 'done', result_url: man, updated_at: new Date().toISOString() })
+      .eq('id', String(job.id)).eq('status', 'running').eq('op_name', op).select('id')
+    if (fin && fin.length) {
+      // sources de la carte, vidéo préparée et sa copie supprimées ; les variantes et la vidéo du personnage restent
+      await vtNettoyer(pj)
+      if (pj.base_path) { try { await svc.storage.from('render-media').remove([String(pj.base_path)]) } catch (_) { /* best effort */ } }
+    }
+  }
+}
+// Réponse /status d'un Décupleur : avancement par étape ; fini → variantes signées (2 h), ZIP, vidéo du personnage
+async function statutDecupleur(j: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const pj = (j.params || {}) as Record<string, unknown>, op = String(j.op_name || ''), perso = pj.perso === true
+  if (j.status === 'failed') return { status: 'failed', kind: 'variants', progress: 100, error: 'failed', msg: String(pj.user_msg || '') || 'Le décuplage a échoué — crédits rendus.' }
+  if (j.status !== 'done') {
+    const base = perso ? 58 : 15
+    let p = 8
+    if (/^(vn|vns):/.test(op)) p = 12
+    else if (/^(dw|dwg):/.test(op)) p = Math.round(15 + 40 * (1 - Math.exp(-(Date.now() - (Number(pj.dw_at) || Date.now())) / 240000)))
+    else if (op.startsWith('dj:')) p = Math.round(base + (97 - base) * (Number(pj.lot_pct) || 0) / 100)
+    return { status: 'running', kind: 'variants', progress: p, error: null }
+  }
+  const man = String(j.result_url || ''), uid = String(j.user_id)
+  if (!cheminSur(uid, man) || !/\/dc\.json$/.test(man)) return { status: 'running', kind: 'variants', progress: 97, error: null }
+  const prefixe = man.slice(0, -'/dc.json'.length), st = svc.storage.from('render-media')
+  let m: { variantes?: { fichier: string; affiche: string }[]; zip?: boolean; controle?: string; faibles?: number; passage?: number } = {}
+  try { const { data: f } = await st.download(man); if (f) m = JSON.parse(await f.text()) } catch (_) { m = {} }
+  const vs = (m.variantes ?? []).filter((v) => /^v\d{2}\.mp4$/.test(v.fichier) && /^v\d{2}\.jpg$/.test(v.affiche)).slice(0, 50)
+  const [dl, af] = await Promise.all([
+    vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.fichier}`), 7200, { download: true }) : Promise.resolve({ data: [] }),
+    vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.affiche}`), 7200) : Promise.resolve({ data: [] }),
+  ])
+  const zip = m.zip ? (await st.createSignedUrl(`${prefixe}/variantes.zip`, 7200, { download: 'variantes.zip' })).data?.signedUrl ?? null : null
+  const persoUrl = perso && cheminSur(uid, pj.perso_path) ? (await st.createSignedUrl(String(pj.perso_path), 7200, { download: 'personnage.mp4' })).data?.signedUrl ?? null : null
+  return { status: 'done', kind: 'variants', progress: 100, error: null, zip, perso: persoUrl, controle: m.controle ?? null, faibles: m.faibles ?? 0, passage: m.passage ?? null,
+    variants: vs.map((_, i) => ({ url: (dl.data ?? [])[i]?.signedUrl ?? null, poster: (af.data ?? [])[i]?.signedUrl ?? null })) }
 }
 
 async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
@@ -5410,6 +5671,7 @@ serve(async (req) => {
       if (j2) j = { ...j, ...j2 }
     }
     if (j.status === 'pending') return new Response(JSON.stringify({ status: 'pending', kind: j.kind, url: null, progress: 0, error: null, link_failed: ((j.params as Record<string, unknown> | null) || {}).link_failed || null }), { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
+    if (((j.params as Record<string, unknown> | null) || {}).tool === 'decup') return new Response(JSON.stringify(await statutDecupleur(j)), { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
     const elapsed = Date.now() - new Date(String(j.created_at)).getTime()
     const outilV = String(((j.params as Record<string, unknown> | null) || {}).tool || '')
     const attendu = j.kind === 'image' ? 50000 : outilV === 'motion' ? 480000 : outilV === 'omni_edit' ? 150000 : j.kind === 'avatar' ? 200000 : 130000
@@ -5444,7 +5706,7 @@ serve(async (req) => {
     const { data: pj } = await svc.from('mcp_jobs').select('id, user_id, status, created_at, params').eq('id', jobId).maybeSingle()
     if (!pj) return json(404, { error: 'not_found' })
     const pp = (pj.params || {}) as Record<string, unknown>
-    if (pj.status !== 'pending' || !['omni_edit', 'motion'].includes(String(pp.tool))) return json(409, { error: 'not_pending' })
+    if (pj.status !== 'pending' || !['omni_edit', 'motion', 'decup'].includes(String(pp.tool))) return json(409, { error: 'not_pending' })
     if (Date.now() - new Date(String(pj.created_at)).getTime() > 2 * 3600 * 1000) return json(403, { error: 'expired' })
     if (segs[1] === 'mc-face') {
       // 2 analyses d'image (non facturées) : 3 par carte et 20 par heure et par compte au plus (audit 02/10) ; au-delà,
@@ -5454,7 +5716,7 @@ serve(async (req) => {
       return json(200, { char: c, ref: r })
     }
     const slot = String(body.slot || ''), type = String(body.type || '').toLowerCase(), size = Number(body.size) || 0
-    const okSlot = pp.tool === 'omni_edit' ? slot === 'video' : (slot === 'ref' || slot === 'char')
+    const okSlot = pp.tool === 'omni_edit' ? slot === 'video' : pp.tool === 'decup' ? (slot === 'video' || (slot === 'char' && pp.perso === true)) : (slot === 'ref' || slot === 'char')
     if (!okSlot) return json(400, { error: 'bad_slot' })
     const video = slot !== 'char'
     if (video ? !/^video\/(mp4|quicktime|webm|x-m4v)$/.test(type) : type !== 'image/jpeg') return json(415, { error: 'bad_type' })
@@ -5485,6 +5747,44 @@ serve(async (req) => {
     const params = (pj.params || {}) as Record<string, unknown>
     // ── OUTILS VIDÉO (Omni / Motion Control) : fichiers déjà envoyés par la carte → préparation par le serveur de rendu.
     //    Rien n'est débité ici : le débit a lieu quand la durée RÉELLE est mesurée (advanceVideoTool), avant le moteur.
+    // ── DÉCUPLEUR (24/10) : vidéo déposée (ou lien récupéré par le moteur) + photo du personnage si demandé → préparation.
+    //    Rien n'est débité ici : le débit suit la durée MESURÉE de la vidéo préparée (advanceDecupleur).
+    if (params.tool === 'decup') {
+      const uid = String(pj.user_id)
+      const { data: profD } = await svc.from('profiles').select('*').eq('id', uid).maybeSingle()
+      if (!profD) return json(404, { error: 'no_profile' })
+      if (!droitDecupleur(profD)) return json(403, { error: 'plan_pro' })
+      const lien = typeof params.lien === 'string' ? lienDecupleur(params.lien) : null
+      const src = cheminSur(uid, params.src_path) || ''
+      if (!lien) {
+        const infoV = src.startsWith(uid + '/mcp-src/' + jobId) ? await fichierInfo('render-media', src) : null
+        if (!infoV) return json(400, { error: 'no_video' })
+        if (infoV.size > 200_000_000 || (infoV.mime && !/^(video\/(mp4|quicktime|webm|x-m4v)|application\/octet-stream)$/.test(infoV.mime))) return json(415, { error: 'bad_type' })
+      }
+      if (params.perso === true) {
+        const chr = cheminSur(uid, params.char_path) || ''
+        const infoC = chr.startsWith(uid + '/mcp-src/' + jobId) ? await fichierInfo('mcp-media', chr) : null
+        if (!infoC) return json(400, { error: 'no_char' })
+        if (infoC.size > 15_000_000 || (infoC.mime && infoC.mime !== 'image/jpeg')) return json(415, { error: 'bad_type' })
+      }
+      if (!isUnlimited(profD)) {
+        const mini = Math.ceil((Number(params.n) || 10) * DC_CR_VARIANTE) + (params.perso === true ? 2 * DC_PERSO_CR_SEC : 0)
+        if ((Number(profD.credits_remaining) || 0) < mini) return json(402, { error: 'no_credits' })
+        const { count } = await svc.from('render_jobs').select('id', { count: 'exact', head: true }).eq('user_id', uid).in('status', ['queued', 'rendering']).in('plan->>__compose', ['mc-ref', 'dc-fetch', 'decupleur'])
+        if ((count || 0) >= 2) return json(429, { error: 'busy' })
+      }
+      const nowD = new Date().toISOString()
+      const { data: tookD } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: 0, created_at: nowD, updated_at: nowD })
+        .eq('id', jobId).eq('status', 'pending').select('id')
+      if (!tookD || !tookD.length) return json(409, { error: 'not_pending' })
+      const { data: rjD, error: rjDE } = await svc.from('render_jobs').insert(lien
+        ? { user_id: uid, status: 'queued', input_video: `${uid}/dc-lien-${Date.now()}.mp4`, assets: [], avatar_clips: [], plan: { __compose: 'dc-fetch', lien, duration: 1 } }
+        : { user_id: uid, status: 'queued', input_video: src, assets: [], avatar_clips: [], plan: { __compose: 'mc-ref', maxDur: Number(params.max_dur) || DC_PASSAGE_MAX } })
+        .select('id').single()
+      if (rjDE || !rjD) { await failAndRefund(uid, { id: jobId }, 'préparation impossible'); return json(500, { error: 'prep' }) }
+      await svc.from('mcp_jobs').update({ op_name: (lien ? 'df:' : 'vn:') + rjD.id }).eq('id', jobId).eq('status', 'running')
+      return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
+    }
     if (params.tool === 'omni_edit' || params.tool === 'motion') {
       const uid = String(pj.user_id)
       const { data: profT } = await svc.from('profiles').select('*').eq('id', uid).maybeSingle()
@@ -5988,6 +6288,7 @@ serve(async (req) => {
       else if (name === 'generate_video') out = await runGenerateVideo(profile, args, ctx)
       else if (name === 'edit_video') out = await runEditVideo(profile, args)
       else if (name === 'motion_control') out = await runMotionControl(profile, args)
+      else if (name === 'decupler_video') out = await runDecupler(profile, args)
       else if (name === 'check_image') out = await runCheckImage(profile, args)
       else if (name === 'check_video') out = await runCheckVideo(profile, args)
       else if (name === 'generate_avatar_video') out = await runGenerateAvatarVideo(profile, args, ctx)

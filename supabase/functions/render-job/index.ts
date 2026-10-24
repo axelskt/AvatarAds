@@ -19,6 +19,7 @@ import { billableGate, userPlan, reserveStrict, reserveEnforce, requirePlan, PLA
   MONTAGE_DUREE_MAX, RENDU_DUREE_MAX, RETOUCHE_OCTETS_MAX, RETOUCHE_EN_COURS_MAX, MOTION_ASSETS, fichierDuFlux, opMotionRecente,
   opFondVideo, opRenduMontage, tailleObjet } from '../_shared/guard.ts'
 import { cheminSur, planClientRenderJob } from '../_shared/storage-path.ts'
+import { lienDecupleur, DC_VARIANTES, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S } from '../_shared/decupleur.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -26,8 +27,6 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 // Clés de job d'un rendu (une par op tirée, 3 au plus) — MÊMES clés dans render-worker/worker.mjs (reservationJob).
-// Décupleur : liens acceptés (MÊME motif que render-worker/decupleur.mjs, revérifié par le moteur)
-const DC_LIEN = /^https:\/\/(?:(?:www|m|vm|vt)\.)?(?:tiktok\.com|instagram\.com)\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]{1,400}$/
 const DC_COMPOSES = ['dc-fetch', 'dc-cut', 'decupleur']
 const cleRendu = (id: string) => ['render:' + id, 'render:' + id + '#1', 'render:' + id + '#2']
 const json = (body: unknown, status = 200) =>
@@ -321,6 +320,8 @@ serve(async (req: Request) => {
     // (jamais repris du client), chemins contrôlés (cheminSur), 3 jobs en cours au plus. Aucun tirage : owner / developer ne
     // débitent rien (spendCreditsFor). L'ouverture à tous ajoutera la réservation (0,5 cr / variante) comme les autres rendus.
     if (DC_COMPOSES.includes(String(body.action))) {
+      // À L'OUVERTURE (DECUPLEUR_OUVERT, Pro / Élite) : tirer ici la réservation de l'app (0,5 cr / variante) comme 'create'
+      // (ops désignées → draw_full_reservation → bind_reservation_job) AVANT d'accepter un compte non illimité.
       const _p = await requirePlan(user.id, [], 'Le Décupleur')
       if (!_p.ok) return json({ error: 'Le Décupleur est en test (compte développeur seulement)' }, 403)
       const _g = await billableGate({ userId: user.id, proxy: 'render-job-dc', requireDebit: false, rateMax: 30 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
@@ -335,10 +336,8 @@ serve(async (req: Request) => {
       let input: string | null
       let assets: { id: string; path: string; kind: string }[] = []
       if (body.action === 'dc-fetch') {
-        let u = String(body.url ?? '').trim().slice(0, 450)
-        if (!/^https?:\/\//i.test(u)) u = 'https://' + u
-        u = u.replace(/^http:\/\//i, 'https://')
-        if (!DC_LIEN.test(u)) return json({ error: 'Lien TikTok ou Instagram uniquement' }, 400)
+        const u = lienDecupleur(body.url)
+        if (!u) return json({ error: 'Lien TikTok ou Instagram uniquement' }, 400)
         plan = { __compose: 'dc-fetch', lien: u, duration: 1 }   // « lien » et pas « url » : aucune clé média du nettoyeur du moteur (assainirPlan)
         input = `${user.id}/dc-lien-${Date.now()}.mp4`   // clé réservée : le moteur lit le LIEN, jamais ce fichier
       } else {
@@ -347,13 +346,13 @@ serve(async (req: Request) => {
         const a = num(body.a), b = num(body.b)
         if (!(a >= 0) || !(b > a) || b - a < 1) return json({ error: 'passage invalide (1 s minimum)' }, 400)
         if (body.action === 'dc-cut') {
-          if (b - a > 15.05) return json({ error: 'Passage de 15 s maximum avec le changement de personnage' }, 400)
+          if (b - a > DC_PERSO_MAX + 0.05) return json({ error: `Passage de ${DC_PERSO_MAX} s maximum avec le changement de personnage` }, 400)
           plan = { __compose: 'dc-cut', a, b, duration: b - a }
         } else {
           const n = Number(body.n)
-          if (![5, 10, 20, 50].includes(n)) return json({ error: 'nombre de variantes invalide' }, 400)
-          if (b - a > 60.05) return json({ error: 'Passage de 60 s maximum' }, 400)
-          if (n * (b - a) > 901) return json({ error: `Trop long pour ×${n} : garde ${Math.floor(900 / n)} s maximum` }, 400)
+          if (!DC_VARIANTES.includes(n)) return json({ error: 'nombre de variantes invalide' }, 400)
+          if (b - a > DC_PASSAGE_MAX + 0.05) return json({ error: `Passage de ${DC_PASSAGE_MAX} s maximum` }, 400)
+          if (n * (b - a) > DC_BUDGET_S + 1) return json({ error: `Trop long pour ×${n} : garde ${Math.floor(DC_BUDGET_S / n)} s maximum` }, 400)
           const al = (body.alt && typeof body.alt === 'object' && !Array.isArray(body.alt)) ? body.alt as Record<string, unknown> : {}
           const alt = { mirror: al.mirror === true, pixels: al.pixels === true, tint: al.tint === true, audio: al.audio === true, text: al.text === true }
           const textPos = ['Haut', 'Centre', 'Bas', 'Aléatoire'].includes(String(body.textPos)) ? String(body.textPos) : 'Aléatoire'
