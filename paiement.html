@@ -92,16 +92,15 @@ input,select{font-family:inherit;color:inherit}
 .pay-veil.ap{justify-content:flex-start;padding:6px 17px 0}
 .pay-run{position:sticky;bottom:calc(20px + env(safe-area-inset-bottom));pointer-events:auto}
 .pay-veil.ap .pay-run{position:static}
-/* texte au centre exact de la case, roue juste à sa gauche (Axel 24/10) : 3 colonnes égales, la 3e vide fait contrepoids */
+/* roue + texte centrés ensemble dans la case (Axel 24/10, version B choisie parmi 4) */
 .pay-run b{width:100%;height:58px;border-radius:999px;background:#FFC107;color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);
-  display:grid;grid-template-columns:minmax(19px,1fr) auto minmax(19px,1fr);align-items:center;column-gap:12px;font-size:18px;font-weight:500;white-space:nowrap}
-.pay-run b::after{content:""}
+  display:flex;align-items:center;justify-content:center;gap:12px;font-size:18px;font-weight:500;white-space:nowrap}
 .pay-veil.ap .pay-run b{height:52px;border-radius:8px;background:#000;color:#fff;box-shadow:none;font-size:17px}
-.pay-run i{justify-self:end;width:19px;height:19px;border-radius:50%;border:2.4px solid rgba(26,19,0,.22);border-top-color:#1A1300;animation:spin .8s linear infinite}
+.pay-run i{flex:none;width:19px;height:19px;border-radius:50%;border:2.4px solid rgba(26,19,0,.22);border-top-color:#1A1300;animation:spin .8s linear infinite}
 .pay-veil.ap .pay-run i{border-color:rgba(255,255,255,.3);border-top-color:#fff}
 /* iPhone : un cran plus petit pour que la roue garde de l'air au bord de la case */
-@media(max-width:400px){.pay-run b,.pay-veil.ap .pay-run b{font-size:17px;column-gap:10px}.pay-run i{width:18px;height:18px}}
-@media(max-width:360px){.pay-run b,.pay-veil.ap .pay-run b{font-size:14px;column-gap:8px}.pay-run i{width:16px;height:16px}}
+@media(max-width:400px){.pay-run b,.pay-veil.ap .pay-run b{font-size:17px;gap:10px}.pay-run i{width:18px;height:18px}}
+@media(max-width:360px){.pay-run b,.pay-veil.ap .pay-run b{font-size:14px;gap:8px}.pay-run i{width:16px;height:16px}}
 .wait-step{font-size:13px;color:var(--text-2);min-height:1.2em}
 /* « Réduire les animations » (iPhone d'Axel) : la roue tourne quand même, et le texte des étapes avance */
 @media (prefers-reduced-motion:reduce){.pay-run i,.whop-wait i{animation:spin .8s linear infinite!important}.pay-step,.wait-step{animation:pulse 1.6s ease-in-out infinite}}
@@ -319,8 +318,9 @@ function etapes(){ clearInterval(_etapesT); let k=0; const maj=()=>{ document.qu
 // change de taille (message d'erreur : carte refusée), notification Whop affichée, 8 s après un clic sans paiement lancé
 // (feuille Apple Pay fermée), 60 s après le lancement. Jamais pendant l'étape bancaire (fenêtre Whop au-dessus de tout).
 let _voile=null, _demandeA=0, _demandeT=0;
-// conditions Whop sous le bouton de la carte : ~147 px sur un module de 335 px de large, ~124 px à 520 px (mesuré le 24/10)
-const basCarte=w=>Math.round(Math.min(160,Math.max(110,147-.124*(w-335))));
+// conditions Whop sous le bouton de la carte (mesuré au pixel le 24/10, de 280 à 520 px de large) : 5 lignes jusqu'à
+// 460 px → bouton à 147 px du bas du module ; 3 lignes dès 480 px (ordinateur : 520) → 115 px
+const basCarte=w=>w>=470?115:147;
 // quel bouton vient d'être pressé : celui qui est à l'écran ("" = les deux, on tranche au lancement du paiement)
 function lieuPaiement(){
   const f=document.querySelector("#co .whop-mount iframe"); if(!f) return "carte";
