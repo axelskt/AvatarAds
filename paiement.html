@@ -92,11 +92,16 @@ input,select{font-family:inherit;color:inherit}
 .pay-veil.ap{justify-content:flex-start;padding:6px 17px 0}
 .pay-run{position:sticky;bottom:calc(20px + env(safe-area-inset-bottom));pointer-events:auto}
 .pay-veil.ap .pay-run{position:static}
+/* texte au centre exact de la case, roue juste à sa gauche (Axel 24/10) : 3 colonnes égales, la 3e vide fait contrepoids */
 .pay-run b{width:100%;height:58px;border-radius:999px;background:#FFC107;color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);
-  display:flex;align-items:center;justify-content:center;gap:12px;font-size:18px;font-weight:500}
+  display:grid;grid-template-columns:minmax(19px,1fr) auto minmax(19px,1fr);align-items:center;column-gap:12px;font-size:18px;font-weight:500;white-space:nowrap}
+.pay-run b::after{content:""}
 .pay-veil.ap .pay-run b{height:52px;border-radius:8px;background:#000;color:#fff;box-shadow:none;font-size:17px}
-.pay-run i{flex:none;width:19px;height:19px;border-radius:50%;border:2.4px solid rgba(26,19,0,.22);border-top-color:#1A1300;animation:spin .8s linear infinite}
+.pay-run i{justify-self:end;width:19px;height:19px;border-radius:50%;border:2.4px solid rgba(26,19,0,.22);border-top-color:#1A1300;animation:spin .8s linear infinite}
 .pay-veil.ap .pay-run i{border-color:rgba(255,255,255,.3);border-top-color:#fff}
+/* iPhone : un cran plus petit pour que la roue garde de l'air au bord de la case */
+@media(max-width:400px){.pay-run b,.pay-veil.ap .pay-run b{font-size:17px;column-gap:10px}.pay-run i{width:18px;height:18px}}
+@media(max-width:360px){.pay-run b,.pay-veil.ap .pay-run b{font-size:14px;column-gap:8px}.pay-run i{width:16px;height:16px}}
 .wait-step{font-size:13px;color:var(--text-2);min-height:1.2em}
 /* « Réduire les animations » (iPhone d'Axel) : la roue tourne quand même, et le texte des étapes avance */
 @media (prefers-reduced-motion:reduce){.pay-run i,.whop-wait i{animation:spin .8s linear infinite!important}.pay-step,.wait-step{animation:pulse 1.6s ease-in-out infinite}}
@@ -305,7 +310,7 @@ let _co=null,_seq=0;
 function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null; jeterVoile();}
 function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span><small class="wait-step" aria-live="polite"></small></div>`}
 // étapes affichées sous la roue : on voit que ça avance même quand l'iPhone coupe les animations (Axel 24/10)
-const ETAPES=["Validation par ta banque…","Activation de ton accès…","Encore quelques secondes…"];
+const ETAPES=["Validation bancaire…","Activation de ton accès…","Encore un instant…"];   // courts : tiennent dans le bouton sur iPhone
 let _etapesT=0;
 function etapes(){ clearInterval(_etapesT); let k=0; const maj=()=>{ document.querySelectorAll(".wait-step,.pay-step").forEach(el=>{ el.textContent=ETAPES[Math.min(k,ETAPES.length-1)] }); k++; };
   _etapesT=setInterval(maj,2500); }
