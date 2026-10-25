@@ -428,7 +428,7 @@ serve(async (req: Request) => {
       const id = String(body.job_id || '')
       if (!id) return json({ error: 'job_id manquant' }, 400)
       const { data: job, error } = await service.from('render_jobs')
-        .select('id, user_id, status, output_url, error, plan, input_video, assets, avatar_clips, progress').eq('id', id).single()
+        .select('id, user_id, status, output_url, error, plan, input_video, assets, avatar_clips, progress, created_at').eq('id', id).single()
       if (error || !job) return json({ error: 'job introuvable' }, 404)
       if (job.user_id !== user.id) return json({ error: 'acces refuse' }, 403)
       let url: string | null = null
@@ -472,7 +472,8 @@ serve(async (req: Request) => {
         const [dl, af, zp, pl] = await Promise.all([
           vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.fichier}`), 7200, { download: true }) : Promise.resolve({ data: [] }),
           vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.affiche}`), 7200) : Promise.resolve({ data: [] }),
-          man.zip ? st.createSignedUrl(`${prefixe}/variantes.zip`, 7200, { download: 'variantes.zip' }) : Promise.resolve({ data: null }),
+          // 25/10 : ZIP nommé comme le dossier (Safari l'ouvre en dossier « AvatarAds-variantes-JJ-MM-HHhMM »), heure de Paris
+          man.zip ? st.createSignedUrl(`${prefixe}/variantes.zip`, 7200, { download: 'AvatarAds-variantes-' + new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(job.created_at || Date.now())).replace(/\//g, '-').replace(/\s+/g, '-').replace(':', 'h') + '.zip' }) : Promise.resolve({ data: null }),
           vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.fichier}`), 7200) : Promise.resolve({ data: [] }),   // 25/10 : lecture
         ])
         dc = { variants: vs.map((v, i) => ({ n: Number(v.fichier.slice(1, 3)), url: (dl.data ?? [])[i]?.signedUrl ?? null, play: (pl.data ?? [])[i]?.signedUrl ?? null,

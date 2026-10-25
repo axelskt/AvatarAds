@@ -15,7 +15,12 @@ try{
   var _recent=_born && (Date.now()-_born < 14*86400000);
   var _oauth=/(?:[#&?])(access_token|code|error|provider_token)=/.test((location.hash||'')+(location.search||''));
   var _cap=(location.hash||'').indexOf('#capture=')===0;
-  if(!_hasTok && !_recent && !_oauth && !_cap){ location.replace('/connexion.html'); }
+  /* 25/10 (Axel) : la langue = l'ADRESSE. /en/app/ (copie faite par deploy.yml, <base href="/app/">) = anglais : connexion
+     /en/connexion.html, Express parle anglais, sous-titres en anglais ; /app/ = français. Retour de Google lancé depuis la
+     connexion anglaise (aa_oauth_en, posé par en/connexion.html, valable 10 min) → on repasse sur /en/app/ avec le jeton. */
+  var _en=location.pathname.indexOf('/en/')===0;
+  try{ var _oe=+localStorage.getItem('aa_oauth_en')||0; if(_oe){ localStorage.removeItem('aa_oauth_en'); if(!_en && _oauth && Date.now()-_oe<6e5){ location.replace('/en/app/'+location.search+location.hash); } } }catch(e){}
+  if(!_hasTok && !_recent && !_oauth && !_cap){ location.replace(_en?'/en/connexion.html':'/connexion.html'); }
 }catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Chargé par /app/consent.js (pas de bandeau, refus possible depuis /confidentialite.html) ; et jamais tant que l'URL porte un jeton de connexion (SITE-02). -->
@@ -5081,7 +5086,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     var oauth = /(?:[#&?])(access_token|code|error|provider_token)=/.test((location.hash||'')+(location.search||''));
     var capture = (location.hash||'').indexOf('#capture=')===0;   // outil interne de capture (visiteur déconnecté) — ne pas rediriger
     if(recent || hasTok || oauth || capture){ var ov=document.getElementById('loginOverlay'); if(ov) ov.style.display='none'; }
-    else { location.replace('/connexion.html'); }
+    else { location.replace(location.pathname.indexOf('/en/')===0?'/en/connexion.html':'/connexion.html'); }   // 25/10 : la langue = l'adresse
   }catch(e){}
 })();
 /* 15/10 (Axel : « je me connecte et la barre n'est pas chargée ») : filet INDÉPENDANT du gros script de l'app. Si celui-ci
@@ -6038,7 +6043,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-25-1500'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-25-1600'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -7223,7 +7228,7 @@ async function authGoogle(){
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + window.location.pathname,
+      redirectTo: _aaOauthBack(),   // 25/10 : toujours /app/ (adresse autorisée), relais vers /en/app/ dans l'app anglaise
       queryParams: { access_type: 'offline', prompt: 'consent' }
     }
   });
@@ -7991,7 +7996,7 @@ async function confirmDeleteAccount(){
     // réglages du compte) et la session — Audit 02/10 : recensement complet dans _aaPurgeAccountStorage
     window._resetting = true;   // plus aucune sauvegarde auto ne ré-écrit ce qu'on efface
     _aaPurgeAccountStorage(true, (typeof currentMember!=='undefined'&&currentMember&&currentMember.id)||_aaSessionUid());
-    window.location.href='/connexion.html';
+    window.location.href=_aaLoginUrl();
   }catch(e){ show('Connexion impossible — réessaie.'); }
 }
 // ── Audit 02/10 : effacement des données LOCALES du compte (déconnexion, suppression du compte) ──────────────────────
@@ -8032,8 +8037,8 @@ async function authLogout(){
   _aaPurgeAccountStorage(false);
   // On revient sur la page de connexion dédiée (connexion.html), qui s'affiche dans le thème du
   // tunnel (aa_theme conservé) → cohérent clair↔clair / sombre↔sombre. (Avant : reload = login
-  // intégré, que le thème pouvait rendre incohérent avec le tunnel.)
-  window.location.href = '/connexion.html';
+  // intégré, que le thème pouvait rendre incohérent avec le tunnel.) 25/10 : dans la langue de l'app (/en/app/ → /en/).
+  window.location.href = _aaLoginUrl();
 }
 
 // ── ACCOUNT MENU ──
@@ -8641,7 +8646,7 @@ const _WHOP_PAGE_PAIEMENT = {
 };
 function _whopCheckout(url){
   const pid = _whopPlanId(url);
-  if(pid && _WHOP_PAGE_PAIEMENT[pid]){ location.href = '/paiement.html?' + _WHOP_PAGE_PAIEMENT[pid]; return; }
+  if(pid && _WHOP_PAGE_PAIEMENT[pid]){ location.href = _aaSitePath('/paiement.html') + '?' + _WHOP_PAGE_PAIEMENT[pid]; return; }   // 25/10 : /en/ dans l'app anglaise
   const body = document.getElementById('whopCoBody');
   // pas d'ID de plan reconnu OU conteneur absent → page de paiement Whop
   if(!pid || !body){ if(url) window.open(_whopHostedUrl(url), '_blank', 'noopener'); return; }
@@ -9396,6 +9401,17 @@ function openAccountSettings(){
   //  vue dédiée v-connectclaude — nav('connectclaude') fait le refresh)
 }
 function closeAccountSettings(){ const ov=document.getElementById('accountOverlay'); ov.style.display='none'; ov.classList.remove('aa-sous-verre'); }
+
+// ── 25/10 (Axel) : la langue de l'app = son ADRESSE — /en/app/ en anglais, /app/ en français (aucun réglage) ─────────────
+// Anglais : Express parle anglais, sous-titres transcrits en anglais, connexion et pages du site en /en/. L'interface reste
+// en français pour l'instant (app bilingue : étape suivante). /en/app/ = copie de app/index.html faite par deploy.yml.
+const AA_LANG = location.pathname.indexOf('/en/') === 0 ? 'en' : 'fr';
+function _aaVidLang(){ return AA_LANG; }
+function _aaSitePath(p){ return AA_LANG === 'en' ? '/en' + p : p; }   // page du site dans la langue de l'app
+function _aaLoginUrl(){ return _aaSitePath('/connexion.html'); }
+// retour d'une connexion Google / YouTube : toujours /app/ (adresse déjà déclarée chez Supabase et Google) ; depuis l'app
+// anglaise, aa_oauth_en (10 min) fait repasser la garde du <head> sur /en/app/ avec le jeton
+function _aaOauthBack(){ if(AA_LANG === 'en'){ try{ localStorage.setItem('aa_oauth_en', String(Date.now())); }catch(_){} } return location.origin + '/app/'; }
 
 // ── Thème du studio (clair / sombre) — toggle « Mon compte », persistant (aa_theme) ──
 // Le bootstrap du <head> pose déjà l'attribut avant le paint ; ici : bascule au clic +
@@ -14777,12 +14793,35 @@ function _dcLiveHTML(mob){
     +   '</div>'
     + '</div></div>';
 }
-// ZIP si le moteur l'a fait (≤ 250 Mo) ; sinon les variantes une par une (le navigateur peut demander l'autorisation)
-function _dcDownload(){
+// 25/10 (Axel : « tout dans un dossier directement ») : Chrome / Edge sur ordinateur → on choisit un dossier, un sous-dossier
+// « AvatarAds variantes JJ-MM HHhMM » y est créé avec toutes les variantes. Ailleurs (Safari, téléphone) : le ZIP du moteur
+// (≤ 250 Mo), au même nom — Safari l'ouvre tout seul en dossier ; sinon les variantes une par une.
+function _dcStamp(){ const d = new Date(), p = (x) => String(x).padStart(2, '0'); return p(d.getDate()) + '-' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + 'h' + p(d.getMinutes()); }
+async function _dcDownload(){
   const r = _dc.res;
   if(!r || !r.variants.length){ toast('Aucune variante à télécharger'); return; }
-  const go = (url, nom) => { const a = document.createElement('a'); a.href = url; a.download = nom; document.body.appendChild(a); a.click(); a.remove(); };
-  if(r.zip){ go(r.zip, 'variantes.zip'); return; }
+  const nom = 'AvatarAds variantes ' + _dcStamp();
+  if(window.showDirectoryPicker && !_dcMob()){
+    let dir = null;
+    try{ dir = await window.showDirectoryPicker({ id: 'aa-decupleur', mode: 'readwrite', startIn: 'downloads' }); }
+    catch(e){ if(e && e.name === 'AbortError') return; dir = null; }
+    if(dir){
+      try{
+        const sub = await dir.getDirectoryHandle(nom, { create: true });
+        toast('Enregistrement de ' + r.variants.length + ' variantes…');
+        let k = 0;
+        for(let i = 0; i < r.variants.length; i++){
+          const v = r.variants[i]; if(!v.url) continue;
+          const resp = await fetch(v.url); if(!resp.ok) throw new Error('HTTP ' + resp.status);
+          const fh = await sub.getFileHandle('variante-' + String(i + 1).padStart(2, '0') + '.mp4', { create: true });
+          await resp.body.pipeTo(await fh.createWritable()); k++;
+        }
+        toast(k + ' variantes dans le dossier « ' + nom + ' »'); return;
+      }catch(e){ console.warn('[décupleur] dossier', e); toast('Écriture dans le dossier impossible : téléchargement du ZIP à la place'); }
+    }
+  }
+  const go = (url, n) => { const a = document.createElement('a'); a.href = url; a.download = n; document.body.appendChild(a); a.click(); a.remove(); };
+  if(r.zip){ go(r.zip, nom + '.zip'); return; }
   r.variants.forEach((v, i) => { if(v.url) setTimeout(() => go(v.url, 'variante-' + String(i+1).padStart(2,'0') + '.mp4'), i * 450); });
 }
 
@@ -23941,7 +23980,7 @@ async function _whisperTranscribeRun(W){
     const fd = new FormData();
     fd.append('file', audioSrc, audioSrc.name || 'audio.mp4');
     fd.append('model', 'whisper-1');
-    fd.append('language', 'fr');
+    fd.append('language', _aaVidLang());   // 25/10 : langue de l'app (/en/app/ = anglais)
     fd.append('response_format', 'verbose_json');
     fd.append('timestamp_granularities[]', 'word');
     fd.append('temperature', '0'); // déterministe = calage plus stable
@@ -33250,7 +33289,7 @@ function ytConnected(){
 function connectYoutube(){
   const clientId = ytClientId();
   if(!clientId){ openSetup(); toast('Saisis d\'abord ton YouTube Client ID dans Connexions'); return; }
-  const redirect = window.location.origin + window.location.pathname;
+  const redirect = _aaOauthBack();   // 25/10 : /app/ (adresse déclarée chez Google), relais vers /en/app/ si besoin
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirect,
@@ -35906,6 +35945,13 @@ const _EXP_PRODUCTLOCK = '. PRODUCT FIDELITY (CRITICAL): if a product, object or
 // un modèle vidéo lit mal la négation et le nom de l'accent l'y attire. On décrit UNIQUEMENT l'accent voulu, sans jamais nommer les autres.
 const _EXP_FRENCH = 'LANGUAGE RULE (absolute priority): every spoken word in this video is in FRENCH from FRANCE, spoken by a native Parisian — standard metropolitan French with the natural, neutral accent of Paris, the way a young French content creator from Paris talks on social media: crisp, short, pure French vowels and a light Parisian intonation, natural spoken French — never English, never any other language, even if the description below is written in English; translate any dialogue into natural French before speaking it. ';
 const _EXP_FRENCH_END = ' REMINDER: the person speaks ONLY French from France, as a native Parisian with the neutral accent of Paris — no English word at all.';
+// 25/10 (Axel, app bilingue) : même règle en ANGLAIS dans l'app anglaise (/en/app/) ; le MCP garde le
+// français (tools/gen-express-prompts.mjs recopie _EXP_FRENCH tel quel). Les fonctions qui assemblent le prompt prennent
+// la règle de la langue choisie via _expLangRule() / _expLangRuleEnd() (constantes locales du même nom).
+const _EXP_ENGLISH = 'LANGUAGE RULE (absolute priority): every spoken word in this video is in ENGLISH, spoken by a native American English speaker — natural, casual American English with a neutral General American accent, the way a young US content creator talks on social media: relaxed, clear and conversational — never French, never any other language, even if the description below is written in French; translate any dialogue into natural English before speaking it. ';
+const _EXP_ENGLISH_END = ' REMINDER: the person speaks ONLY natural American English, with a neutral General American accent — no French word at all.';
+function _expLangRule(){ return _aaVidLang() === 'en' ? _EXP_ENGLISH : _EXP_FRENCH; }
+function _expLangRuleEnd(){ return _aaVidLang() === 'en' ? _EXP_ENGLISH_END : _EXP_FRENCH_END; }
 // Axel 02/10 : Omni Flash « plastifie » le visage au fil de la vidéo → verrou de fidélité AU PIXEL PRÈS, en TÊTE du prompt
 // Omni (Express, Voix native, MCP via tools/gen-express-prompts.mjs) : identité, peau, texture et grain identiques 1:1, sur toute la durée.
 const _EXP_PIXEL_LOCK = 'PIXEL-PERFECT FIDELITY (top priority, every frame): this video is the reference photo brought to life, nothing else. Keep the person 1:1 identical to the photo at the pixel level for the WHOLE clip — exact same identity, face, skin, skin texture, pores, fine lines, freckles, moles, stubble and individual hairs, exact same skin tone, exact same photographic grain, sensor noise, sharpness and lighting as the photo. The skin must NEVER become smoother, softer, waxier, shinier or more perfect than in the photo, not even slightly and not over time: no beautification, no airbrushing, no denoising, no plastic or CGI look, no AI-video sheen. COLOURS LOCKED TO THE PHOTO (Axel 02/10 : the video was adding a warm, saturated, contrasty filter): exact same white balance, colour temperature, exposure, brightness, contrast, saturation and skin hue as the reference photo — NO colour grading, NO filter, NO warming or orange skin, NO added contrast, vibrance, glow, haze, sharpening or cinematic look; the colours of frame 1 are the colours of the photo and they never drift. Frame 1 and the last frame must look like the same unedited phone camera. ';
@@ -36223,6 +36269,7 @@ async function _expRetouche(blob, imgB64, imgMime, onStep){
   return blob;
 }
 async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep, op){
+  const _EXP_FRENCH = _expLangRule();   // 25/10 : règle de langue de l'app (français, ou anglais sur /en/app/)
   const step=(v,t)=>{ try{ onStep && onStep(v,t); }catch(_){} };
   const { data:{ user } } = await sb.auth.getUser();
   if(!user) throw new Error('Session expirée — reconnecte-toi');
@@ -36408,6 +36455,7 @@ async function expressCreate(){
   }
 }
 async function _expressCreateOne(o){
+  const _EXP_FRENCH = _expLangRule(), _EXP_FRENCH_END = _expLangRuleEnd();   // 25/10 : langue de l'app (français ou anglais)
   o = o || null;   // o = UNE vidéo d'un lot (Nombre) : { idx, prompt, dur, imgs, onSpent } ; absent = Express classique
   const _spent=(v)=>{ if(o && o.onSpent){ try{ o.onSpent(v); }catch(_){} o.onSpent=null; } };
   const _oImgs = o ? o.imgs : (window._expImgs||[]);
@@ -36905,7 +36953,7 @@ async function _expBurnSubs(){
     const fd=new FormData();
     fd.append('file', raw, 'video.mp4');
     fd.append('model','whisper-1');
-    fd.append('language','fr');
+    fd.append('language',_aaVidLang());   // 25/10 : langue de l'app (/en/app/ = anglais)
     fd.append('response_format','verbose_json');
     fd.append('timestamp_granularities[]','word');
     const wr=await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions',{ method:'POST', headers: await getAuthHeader(), body: fd });
@@ -37583,7 +37631,7 @@ async function expressWhisper(){
     const fd = new FormData();
     const fname = _expressVideoFile.name.replace(/\.(mov|webm|avi|mkv)$/i,'.mp4');
     fd.append('file', _expressVideoFile, fname);
-    fd.append('model','whisper-1'); fd.append('language','fr');
+    fd.append('model','whisper-1'); fd.append('language',_aaVidLang());   // 25/10 : langue de l'app (/en/app/ = anglais)
     fd.append('response_format','verbose_json');
     fd.append('timestamp_granularities[]','word');
     const resp = await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions', {

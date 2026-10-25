@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-CogQRK7+2fLA9q2ITxjyTt/89QMrlOxnyjpgNXWCCos='; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-AtW53aqU6QDfIryice7CPnTJNaJm3OGHmnwtnvQ0b/4='; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Payment confirmed — AvatarAds</title>
 <link rel="icon" href="/assets/avatarads-logo-96.png">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -164,7 +164,7 @@ const otp=(corps,tok)=>fetch(SB_URL+"/functions/v1/auth-otp",{method:"POST",head
 const etat=action=>appel({action:action||"etat",nonce:NONCE}).catch(()=>null);
 // sans paiement confirmé : retour à la page de paiement d'où l'on vient
 function quitter(){ location.replace(lire("aa_pay_from")||"/en/tarifs.html"); }
-$("back").onclick=()=>{ location.href=compte()?"/app/":"/en/"; };
+$("back").onclick=()=>{ location.href=compte()?"/en/app/":"/en/"; };
 
 let R=null, AUTO=false, EMAIL="";
 // lien de vérification (?apercu, ?apercu=abo, ?apercu=code, ?apercu=achat) : commande d'exemple, aucun appel au serveur,
@@ -329,7 +329,7 @@ $("open").onclick=()=>{
   const acc=compte();
   if(!acc) return location.href="/en/connexion.html";
   const acheteur=AUTO||R.compte==="connecte";   // la session de ce navigateur est bien celle de l'acheteur
-  if(!acheteur||R.mdp!==false||R.google) return location.href="/app/";
+  if(!acheteur||R.mdp!==false||R.google) return location.href="/en/app/";
   motDePasse(AUTO?"direct":"code",acc.email);
 };
 
@@ -375,7 +375,7 @@ function codeAchat(){
     if(!s) return location.replace("/en/connexion.html");
     AUTO=true; EMAIL=j.email||(s.user&&s.user.email)||EMAIL; try{ sessionStorage.setItem("aa_pay_auto",NONCE) }catch(_){}
     if(j.mdp===false&&!j.google) return motDePasse("direct",EMAIL);
-    location.replace("/app/");
+    location.replace("/en/app/");
   };
   setTimeout(()=>{ try{ c.focus() }catch(_){} },300);
 }
@@ -397,7 +397,7 @@ function motDePasse(mode,email){
     <button class="cta" type="submit" id="pwBtn"><span>Create my password</span>${FLECHE}</button>
    </form>
    ${code?`<button class="pw-link" type="button" id="pwResend">Resend the code</button>`:""}
-   <a class="pw-link" href="/app/">Later — open my dashboard</a>`;
+   <a class="pw-link" href="/en/app/">Later — open my dashboard</a>`;
   const a=$("pw1"), b=$("pw2"), h=$("pwHint"), c=$("pwCode"), btn=$("pwBtn");
   const dire=(t,k)=>{ h.textContent=t; h.className="pw-hint"+(k?" "+k:""); };
   const verif=()=>{ if(!a.value&&!b.value){ dire(""); return false }
@@ -434,7 +434,7 @@ function motDePasse(mode,email){
     // le serveur d'authentification ferme les sessions au changement de mot de passe : reconnexion avec le nouveau
     try{ const t=await fetch(SB_URL+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({email:j.email||email,password:a.value})});
       const tj=await t.json(); if(!(t.ok&&tj.access_token&&garderSession(tj))) return location.replace("/en/connexion.html"); }catch(_){ return location.replace("/en/connexion.html"); }
-    location.replace("/app/");
+    location.replace("/en/app/");
   };
   setTimeout(()=>{ try{ (c||a).focus() }catch(_){} },300);
 }

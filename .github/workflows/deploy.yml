@@ -64,9 +64,19 @@ jobs:
                 --include='/tiktok*.txt' --include='/5d8b40c34d4e9c7964421c785bfedb1a.txt' \
                 --exclude='*' \
                 ./ _site/
+          # 25/10 (Axel) : l'app en anglais = la MÊME app servie sous /en/app/ (sa langue se lit dans l'adresse : Express parle
+          # anglais, sous-titres en anglais, connexion /en/). Copie faite ici, rien n'est dupliqué dans le dépôt ;
+          # <base href="/app/"> : ses fichiers relatifs (scripts, sons, aperçus, version.txt) restent ceux de /app/.
+          mkdir -p _site/en/app
+          python3 - <<'PY'
+          import pathlib
+          s = pathlib.Path('_site/app/index.html').read_text(encoding='utf-8')
+          i = s.index('<head>') + len('<head>')
+          pathlib.Path('_site/en/app/index.html').write_text(s[:i] + '\n<base href="/app/">' + s[i:], encoding='utf-8')
+          PY
           # Garde-fou 1 : un fichier vital absent = on s'arrête AVANT d'écraser le site en ligne
           # (le run échoue, Pages garde la version précédente).
-          for f in CNAME index.html connexion.html en/index.html en/connexion.html r.html app/index.html app/version.txt \
+          for f in CNAME index.html connexion.html en/index.html en/connexion.html en/app/index.html r.html app/index.html app/version.txt \
                    factory-v2.html factory-v2/cf-ui.js usine/coherence.js usine/hook-liaison.js; do
             [ -f "_site/$f" ] || { echo "::error::$f absent de _site : liste blanche de deploy.yml à corriger"; exit 1; }
           done

@@ -175,7 +175,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </a>
       <div class="row gap12">
         <a href="/en/" class="btn btn-quiet btn-sm">← Home</a>
-        <a href="/app/" class="btn btn-primary btn-sm">Get started <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="/en/app/" class="btn btn-primary btn-sm">Get started <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       </div>
     </div>
   </div>
@@ -224,7 +224,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     </a>
     <div class="row" style="gap:22px;flex-wrap:wrap">
       <a href="/en/" class="faint" style="font-size:13px">Home</a>
-      <a href="/app/" class="faint" style="font-size:13px">Open the app</a>
+      <a href="/en/app/" class="faint" style="font-size:13px">Open the app</a>
       <a href="/en/claude.html" class="faint" style="font-size:13px">Connect Claude</a>
       <a href="mailto:contact@avatarads.fr" class="faint" style="font-size:13px">Contact</a>
       <a href="/en/cgv.html" class="faint" style="font-size:13px">Terms</a>
@@ -427,9 +427,9 @@ function _aaCompte(){
 }
 function _whopPaidPanel(){
   var acc=_aaCompte();
-  if(acc) return _whopPanel(_WHOP_OK,'Payment confirmed','Your plan and credits are on their way to your AvatarAds account <b style="color:var(--text)">'+_whopEsc(acc.email)+'</b>.','/app/','Open my dashboard');
+  if(acc) return _whopPanel(_WHOP_OK,'Payment confirmed','Your plan and credits are on their way to your AvatarAds account <b style="color:var(--text)">'+_whopEsc(acc.email)+'</b>.','/en/app/','Open my dashboard');
   // Axel 20/10 : le compte est désormais CRÉÉ au paiement (whop-webhook) avec l'e-mail saisi chez Whop → on dit de se connecter avec celui-là
-  _whopPanel(_WHOP_OK,'Payment confirmed','Your AvatarAds account is ready with <b style="color:var(--text)">the email you just entered</b>: log in with that address (code sent by email, or Google) — your plan and credits are already there.','/app/','Log in');
+  _whopPanel(_WHOP_OK,'Payment confirmed','Your AvatarAds account is ready with <b style="color:var(--text)">the email you just entered</b>: log in with that address (code sent by email, or Google) — your plan and credits are already there.','/en/app/','Log in');
 }
 function _whopFallback(url){
   _whopDestroy();
@@ -486,10 +486,10 @@ function closeWhopCheckout(){ window._whopSeq=(window._whopSeq||0)+1; _whopDestr
   var mk=null; try{ mk=JSON.parse(sessionStorage.getItem('aa_whop_co')||'null'); sessionStorage.removeItem('aa_whop_co'); }catch(_){}
   if(mk && !(Date.now()-(mk.t||0) < 3*3600e3)) mk=null;
   var show=function(){
-    if(!mk) _whopPanel(_WHOP_LOCK,'Just paid?','Create your AvatarAds account (or log in) with the email you used to pay: your plan activates as soon as Whop confirms it.','/app/','Go to my dashboard');
+    if(!mk) _whopPanel(_WHOP_LOCK,'Just paid?','Create your AvatarAds account (or log in) with the email you used to pay: your plan activates as soon as Whop confirms it.','/en/app/','Go to my dashboard');
     else if(st==='succeeded') _whopPaidPanel();
     else if(st==='failed'||st==='canceled') _whopPanel(_WHOP_LOCK,'The payment didn’t go through','You haven’t been charged. You can try again from the pricing page.','','');
-    else _whopPanel(_WHOP_LOCK,'Payment being confirmed','As soon as your bank approves it, your plan will be waiting: create your AvatarAds account (or log in) with <b style="color:var(--text)">the same email you used to pay</b>.','/app/','Go to my dashboard');
+    else _whopPanel(_WHOP_LOCK,'Payment being confirmed','As soon as your bank approves it, your plan will be waiting: create your AvatarAds account (or log in) with <b style="color:var(--text)">the same email you used to pay</b>.','/en/app/','Go to my dashboard');
     _whopOpenModal();
   };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',show); else show();

@@ -439,7 +439,7 @@ function garde(){
   if(!ACTUEL.palier) return "";
   const cur=PLANS[ACTUEL.palier], rc=RANG[ACTUEL.palier], rn=RANG[S.plan];
   if(ACTUEL.exact&&rn===rc) return `<div class="pack-login"><p class="step-p">You’re already subscribed to the <b>${cur.n}</b> plan${ACTUEL.bill?(ACTUEL.bill==="y"?" (yearly)":" (monthly)"):""}: nothing to pay here. Your subscription is managed from your dashboard${NEXT[S.base]&&S.plan===S.base?", or choose a higher plan above":""}.</p>
-   <a class="cta" href="/app/"><span>Open my dashboard</span>${FLECHE}</a></div>`;
+   <a class="cta" href="/en/app/"><span>Open my dashboard</span>${FLECHE}</a></div>`;
   const flou=!ACTUEL.exact&&rn>=rc;   // « elite » sans plan Whop connu : Elite, Elite 60 ou Elite 90
   if((rn<rc||flou)&&S.basOk!==S.plan) return `<div class="pack-login"><p class="step-p">${flou?`You already have a <b>${cur.n}</b> plan. By changing plans`:`Your current plan is <b>${cur.n}</b>. By switching to the <b>${PLANS[S.plan].n}</b> plan`}, the remaining credits of your current plan disappear as soon as you pay (credits you bought stay on your account), and the period already paid is not refunded.</p>
    <button class="cta" type="button" data-act="bas-ok"><span>Got it, continue</span>${FLECHE}</button></div>`;
@@ -529,7 +529,7 @@ function tarde(r){
   const h=`<div class="pack-login"><p class="step-p">${r&&r.paid?"Payment received. Your AvatarAds account is being created":"Your payment is being confirmed"}: don’t pay a second time.
    ${acc?"Your credits will reach your account within a few minutes.":"Check your emails, then log in with the address you entered at checkout."}
    If nothing arrives, write to us at <a href="mailto:bonjour@avatarads.fr">bonjour@avatarads.fr</a>${cmd?`, quoting order <b>${esc(cmd)}</b>`:""}.</p>
-   <a class="cta" href="${acc?"/app/":"/en/connexion.html"}"><span>${acc?"Open my dashboard":"Log in"}</span>${FLECHE}</a></div>`;
+   <a class="cta" href="${acc?"/en/app/":"/en/connexion.html"}"><span>${acc?"Open my dashboard":"Log in"}</span>${FLECHE}</a></div>`;
   if(h===_tarde) return; _tarde=h;
   ++_seq; destroyAll(); $("co").innerHTML=h;
 }

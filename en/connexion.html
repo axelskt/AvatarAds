@@ -10,7 +10,7 @@
      La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
      est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
      app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-1AUNpviU9xZGvpXDXlHwZV58I9ZXTjETcgIEfwoKIK0=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-UHyUrVmC0xYtDnX0cJnDto5taREF2fGccdgqv9Ps+/c=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-1AUNpviU9xZGvpXDXlHwZV58I9ZXTjETcgIEfwoKIK0=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-t56iCEAnTy4LKyvpJQAjl+HSC/o/yduv5cimRMWlS3E=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -296,7 +296,7 @@ function Login({ go }) {
     /* Audit 04/10 (SITE-02) : plus d'access_type « offline » (ni prompt « consent », qui ne servait qu'à l'obtenir) : le
        retour sur /app/ ne porte plus de jeton de rafraîchissement Google (provider_refresh_token, jamais utilisé par
        AvatarAds) dans l'URL. « select_account » garde le choix du compte Google à chaque connexion. */
-    try {const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + "/app/", queryParams: { prompt: "select_account" } } });if (error) setErr("Google is unavailable, try again.");}
+    try {const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: (function () {try {localStorage.setItem("aa_oauth_en", String(Date.now()));} catch (_) {}return location.origin + "/app/";})(), queryParams: { prompt: "select_account" } } });if (error) setErr("Google is unavailable, try again.");}
     catch (e) {setErr("Google is unavailable, try again.");}
   }
   async function authSend() {
@@ -332,7 +332,7 @@ function Login({ go }) {
     try {localStorage.setItem("aa_login_at", String(Date.now()));} catch (_) {}
     clearTimeout(navTimer.current);
     navTimer.current = setTimeout(() => {runRef.current = false;setBusy(false);setOpening(false);setErr("Logged in, but the app is slow to open: tap the button again.");}, 8000);
-    try {location.replace("/app/");} catch (_) {location.href = "/app/";}
+    try {location.replace("/en/app/");} catch (_) {location.href = "/en/app/";}
   }
   async function authVerify(codeStr) {
     if (doneRef.current) {openApp();return;} // session déjà ouverte par cette page : on rouvre seulement l'app
@@ -633,7 +633,7 @@ function Revert({ token }) {
 /* ── routing : retour LP = /v2.html · app = studio ── */
 function go(view) {
   if (view === "landing") {location.href = "/en/";} // la LP (ex-v2) est désormais la page principale à la racine
-  else {location.href = "/app/";}
+  else {location.href = "/en/app/";}
 }
 ReactDOM.createRoot(document.getElementById('root')).render(_REVERT_TOKEN ? React.createElement(Revert, { token: _REVERT_TOKEN }) : React.createElement(Login, { go: go }));
 </script>
