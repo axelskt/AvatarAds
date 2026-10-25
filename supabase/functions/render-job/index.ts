@@ -10,6 +10,8 @@
 //   { action:'create', plan:{...}, input_video:'<uid>/in-x.mp4', assets:[{id,path,kind}], avatar_clips?:['<uid>/av0.mp4',…] } -> { ok, job_id }
 //   (kind: 'image' | 'video' — #111 ; avatar_clips = scenes lipsync #119, ordre = plan.avatarSegments)
 //   { action:'status', job_id } -> { ok, status, url?, error?, progress? [, variants, zip, controle (Décupleur)] }
+//     25/10 : Décupleur en cours → variants = celles DÉJÀ envoyées par le moteur ({ n, url, play, poster }), n_total ;
+//     chaque variante a un lien de lecture (play, sans téléchargement) en plus du lien de téléchargement (url)
 //   Décupleur (24/10, developer / owner) : { action:'dc-fetch', url } · { action:'dc-cut', input_video, a, b }
 //     · { action:'decupleur', input_video, a, b, n, alt, textPos, master? } -> { ok, job_id }
 
@@ -467,14 +469,34 @@ serve(async (req: Request) => {
         let man: { variantes?: { fichier: string; affiche: string; distOriginal?: number; distMin?: number }[]; zip?: boolean; controle?: string; faibles?: number; passage?: number } = {}
         try { const { data: f } = await st.download(job.output_url); if (f) man = JSON.parse(await f.text()) } catch (_) { man = {} }
         const vs = (man.variantes ?? []).filter((v) => /^v\d{2}\.mp4$/.test(v.fichier) && /^v\d{2}\.jpg$/.test(v.affiche)).slice(0, 50)
-        const [dl, af, zp] = await Promise.all([
+        const [dl, af, zp, pl] = await Promise.all([
           vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.fichier}`), 7200, { download: true }) : Promise.resolve({ data: [] }),
           vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.affiche}`), 7200) : Promise.resolve({ data: [] }),
           man.zip ? st.createSignedUrl(`${prefixe}/variantes.zip`, 7200, { download: 'variantes.zip' }) : Promise.resolve({ data: null }),
+          vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.fichier}`), 7200) : Promise.resolve({ data: [] }),   // 25/10 : lecture
         ])
-        dc = { variants: vs.map((v, i) => ({ url: (dl.data ?? [])[i]?.signedUrl ?? null, poster: (af.data ?? [])[i]?.signedUrl ?? null,
-            distOriginal: v.distOriginal ?? null, distMin: v.distMin ?? null })),
-          zip: (zp.data as { signedUrl?: string } | null)?.signedUrl ?? null, controle: man.controle ?? null, faibles: man.faibles ?? 0, passage: man.passage ?? null }
+        dc = { variants: vs.map((v, i) => ({ n: Number(v.fichier.slice(1, 3)), url: (dl.data ?? [])[i]?.signedUrl ?? null, play: (pl.data ?? [])[i]?.signedUrl ?? null,
+            poster: (af.data ?? [])[i]?.signedUrl ?? null, distOriginal: v.distOriginal ?? null, distMin: v.distMin ?? null })),
+          zip: (zp.data as { signedUrl?: string } | null)?.signedUrl ?? null, controle: man.controle ?? null, faibles: man.faibles ?? 0, passage: man.passage ?? null,
+          n_total: vs.length }
+      } else if (cmp === 'decupleur' && job.status !== 'done' && job.status !== 'failed') {
+        // 25/10 (Axel) : lot EN COURS — les variantes déjà envoyées par le moteur (vNN.mp4 + vNN.jpg sous <uid>/dc-<job>/),
+        // pour que l'app les montre (et les fasse lire) pendant que les suivantes se fabriquent. Dossier du compte seulement.
+        const prefixe = `${user.id}/dc-${job.id}`, st = service.storage.from('render-media')
+        const { data: objs } = await st.list(prefixe, { limit: 200 })
+        const noms = new Set((objs ?? []).map((o) => o.name))
+        const prets = [...noms].filter((f) => /^v\d{2}\.mp4$/.test(f)).sort().slice(0, 50)
+        const nTot = Number((job.plan as { n?: number } | null)?.n) || null
+        if (prets.length) {
+          const affs = prets.map((f) => f.replace(/\.mp4$/, '.jpg'))
+          const [dl, pl, af] = await Promise.all([
+            st.createSignedUrls(prets.map((f) => `${prefixe}/${f}`), 7200, { download: true }),
+            st.createSignedUrls(prets.map((f) => `${prefixe}/${f}`), 7200),
+            st.createSignedUrls(affs.map((f) => `${prefixe}/${f}`), 7200),
+          ])
+          dc = { variants: prets.map((f, i) => ({ n: Number(f.slice(1, 3)), url: (dl.data ?? [])[i]?.signedUrl ?? null, play: (pl.data ?? [])[i]?.signedUrl ?? null,
+            poster: noms.has(affs[i]) ? (af.data ?? [])[i]?.signedUrl ?? null : null })), n_total: nTot }
+        } else dc = { variants: [], n_total: nTot }
       }
       // plan/input/assets/clips : ce qu'il faut pour RÉGÉNÉRER avec des
       // personnalisations sans que le client ait à garder d'état local

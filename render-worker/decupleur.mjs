@@ -9,9 +9,13 @@
 // Contrôle : empreinte visuelle (dHash 64 bits sur 6 images) de chaque variante comparée à l'original ET aux autres ;
 // trop proche → re-tirée une fois plus fort ; le résultat (distances) est écrit dans dc.json.
 // ffmpeg seul (textes choc = PNG pré-rendus, tools/decupleur/textes-choc.py : aucune dépendance à drawtext).
+// 25/10 (Axel : « c'est normal c'est aussi long ? ») : chaque variante part dès qu'elle est prête (onVariante → le moteur
+// l'envoie, l'app l'affiche) ; empreinte en UNE lecture (au lieu de 6 recherches) ; filtres moins coûteux à rendu égal
+// (flou 3×3 sur la luminance au lieu de gblur, grain sur la luminance, netteté 3×3). Rotation gardée sur toutes les
+// variantes : sans elle, deux variantes miroir tombaient au seuil d'écart entre elles (3 au lieu de 6,8).
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, statSync, existsSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { tmpdir, availableParallelism } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -171,16 +175,23 @@ export function tirerParametres(n, alt, textPos, seed, nbTextes, len) {
 
 // ── empreinte visuelle (dHash 9×8 → 64 bits) ──────────────────────────────────────────────────────────────────
 const POSITIONS = [0.1, 0.25, 0.4, 0.55, 0.7, 0.85]
-function dhashImage(file, t) {
-  const buf = execFileSync('ffmpeg', ['-v', 'error', '-ss', t.toFixed(3), '-i', file, '-frames:v', '1', '-vf', 'scale=9:8:flags=area,format=gray', '-f', 'rawvideo', '-'],
-    { timeout: 60000, maxBuffer: 1 << 20 })
-  if (buf.length < 72) return null
+function bitsDe(buf, o) {
   const bits = []
-  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) bits.push(buf[y * 9 + x] > buf[y * 9 + x + 1] ? 1 : 0)
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) bits.push(buf[o + y * 9 + x] > buf[o + y * 9 + x + 1] ? 1 : 0)
   return bits
 }
+// 25/10 : les 6 images en UNE lecture du passage (select : la 1re image à 10 %, puis une tous les 15 %) — avant, 6 ffmpeg
+// qui redécodaient chacun depuis l'image clé précédente (jusqu'à 150 images par recherche)
 function empreinte(file, debut, duree) {
-  return POSITIONS.map((q) => dhashImage(file, debut + q * duree))
+  const pas = 0.15 * duree, t1 = 0.1 * duree
+  const sel = `select='if(isnan(prev_selected_t)\\,gte(t\\,${t1.toFixed(3)})\\,gte(t-prev_selected_t\\,${(pas - 0.02).toFixed(3)}))'`
+  let buf = Buffer.alloc(0)
+  try {
+    buf = execFileSync('ffmpeg', ['-v', 'error', '-ss', debut.toFixed(3), '-t', duree.toFixed(3), '-i', file, '-an',
+      '-vf', `${sel},scale=9:8:flags=area,format=gray`, '-fps_mode', 'passthrough', '-frames:v', String(POSITIONS.length), '-f', 'rawvideo', '-'],
+      { timeout: 120000, maxBuffer: 1 << 20 })
+  } catch (e) { console.warn('empreinte :', String(e.message || e).slice(0, 200)) }
+  return POSITIONS.map((_, k) => buf.length >= (k + 1) * 72 ? bitsDe(buf, k * 72) : null)
 }
 function distance(e1, e2) {
   let s = 0, k = 0
@@ -207,9 +218,11 @@ function filtres(v, W, H, textePng, src) {
   vf.push(`scale=${ZW}:${ZH}:flags=bicubic`, `crop=${W}:${H}:${Math.floor((ZW - W) * v.ox)}:${Math.floor((ZH - H) * v.oy)}`)
   if (v.reechant) vf.push(`scale=${pair(W * v.reechant)}:${pair(H * v.reechant)}:flags=bilinear`, `scale=${W}:${H}:flags=bicubic`)
   if (v.teinte != null) vf.push(`hue=h=${v.teinte}:s=${v.saturation}`, `eq=brightness=${v.lumiere}:contrast=${v.contraste}:gamma=${v.gamma}`)
-  if (v.bruit) vf.push(`noise=alls=${v.bruit}:allf=t`)
-  if (v.nettete && v.nettete.flou) vf.push(`gblur=sigma=${v.nettete.flou}`)
-  if (v.nettete && v.nettete.net) vf.push(`unsharp=5:5:${v.nettete.net}:5:5:0`)
+  // 25/10 : grain sur la luminance seule (pas de tavelures de couleur, un tiers de calcul en moins), flou 3×3 sur la
+  // luminance (gblur coûtait 5 fois plus pour un flou de 0,35 à 0,6 px), netteté 3×3
+  if (v.bruit) vf.push(`noise=c0s=${v.bruit}:c0f=t`)
+  if (v.nettete && v.nettete.flou) vf.push('avgblur=sizeX=1:planes=1')
+  if (v.nettete && v.nettete.net) vf.push(`unsharp=3:3:${v.nettete.net}:3:3:0`)
   if (v.vitesse) vf.push(`setpts=PTS/${v.vitesse}`)
   vf.push('setsar=1', 'format=yuv420p')
   let fc = `[0:v]${vf.join(',')}[v0]`
@@ -253,7 +266,9 @@ async function rendreVariante({ v, vSrc, vDebut, aSrc, aDebut, len, W, H, src, t
 // Les N variantes de la vidéo, dans outDir (v01.mp4…, v01.jpg…, dc.json, variantes.zip si ≤ 250 Mo).
 // master = vidéo du changement de personnage (déjà limitée au passage : sa piste vidéo remplace celle de src, le son reste
 // celui de src). onProgress(0–100) est attendu entre deux variantes (battement du job + barre de l'app).
-export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {}, textPos = 'Aléatoire', seed = Date.now(), onProgress = async () => {} }) {
+// 25/10 : onVariante(nom) est attendu dès qu'une variante est finie (MP4 + affiche) : le moteur l'envoie tout de suite et
+// l'app l'affiche pendant que les suivantes se fabriquent. Une erreur d'envoi n'arrête rien (renvoi à la fin).
+export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {}, textPos = 'Aléatoire', seed = Date.now(), onProgress = async () => {}, onVariante = async () => {} }) {
   if (!DC_VARIANTES.includes(n)) throw new Error('nombre de variantes invalide')
   mkdirSync(outDir, { recursive: true })
   const pSrc = dcProbe(src)
@@ -270,13 +285,15 @@ export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {
   const liste = JSON.parse(readFileSync(join(TEXTES_DIR, 'textes.json'), 'utf8'))
   const ref = empreinte(vSrc, vDebut, lenV)
   await onProgress(5)
+  console.log(`▶ décupleur ×${n} (${lenV.toFixed(1)} s, ${W}×${H}) sur ${availableParallelism()} cœur(s)`)
 
   const params = tirerParametres(n, alt, textPos, Number(seed) >>> 0, liste.length, lenV)
   const faites = []   // { v, nom, emp }
   for (const v0 of params) {
-    let v = v0, emp = null, dOrig = 0, dMin = 64
-    const nom = 'v' + String(v.i + 1).padStart(2, '0')
+    let v = v0, emp = null, dOrig = 0, dMin = 64, essais = 0
+    const nom = 'v' + String(v.i + 1).padStart(2, '0'), tV = Date.now()
     for (let essai = 0; essai < 2; essai++) {
+      essais = essai + 1
       const textePng = v.texte != null ? join(TEXTES_DIR, liste[v.texte].fichier) : null
       await rendreVariante({ v, vSrc, vDebut, aSrc: src, aDebut: a, len: lenV, W, H, src: info, textePng, out: join(outDir, nom + '.mp4') })
       const d = dcProbe(join(outDir, nom + '.mp4')).dur || lenV
@@ -291,6 +308,8 @@ export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '0.5', '-i', join(outDir, nom + '.mp4'), '-frames:v', '1', '-vf', 'scale=360:-2', '-q:v', '4', join(outDir, nom + '.jpg')], { timeout: 60000 })
     } catch (e) { console.warn('affiche', nom, e.message) }
     faites.push({ v, nom, emp, dOrig: +dOrig.toFixed(1), dMin: +dMin.toFixed(1) })
+    console.log(`  ${nom} ${((Date.now() - tV) / 1000).toFixed(1)} s${essais > 1 ? ' (re-tirée)' : ''}`)
+    try { await onVariante(nom) } catch (e) { console.warn('envoi', nom, String(e.message || e).slice(0, 200)) }
     await onProgress(Math.round(5 + 85 * faites.length / n))
   }
 

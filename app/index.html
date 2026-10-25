@@ -6038,7 +6038,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-25-1120'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-25-1500'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -13942,7 +13942,9 @@ const _dc = {
   variants:10,
   face:false, faceImg:null,   // { name, url, file }
   master:null,                // résultat du changement de personnage gardé : { sig, cutKey, masterKey, cutDur, url }
-  res:null,                   // dernier lot : { variants:[{url,poster}], zip, controle, faibles, keep, master }
+  res:null,                   // dernier lot : { variants:[{n,url,play,poster}], zip, controle, faibles, keep, master }
+  live:null,                  // 25/10 : lot EN COURS montré en grille : { n, t0, keep, ready:{ [n]:{url,play,poster,at} } }
+  play:null,                  // 25/10 : variante ouverte dans le lecteur (numéro 1…n)
   modal:null,                 // 'face' | 'adv'
   alt:{ mirror:true, pixels:true, tint:true, audio:true, text:true },
   textPos:'Aléatoire',
@@ -13965,9 +13967,12 @@ function _dcOn(){ const v = document.getElementById('v-decupleur'); return !!(v 
 function _dcRender(){
   const root = document.getElementById('dcRoot'); if(!root) return;
   clearInterval(_dc._tick); _dc._tick = null;
+  clearInterval(_dc._runIv); _dc._runIv = null;
   const mob = _dcMob();
-  if(_dc.phase === 'running'){ root.innerHTML = _dcRunningHTML(); _dcRunPaint(); return; }
-  if(_dc.phase === 'done'){ root.innerHTML = _dcDoneHTML(mob); return; }
+  // 25/10 : minuteur (écoulé) pendant l'attente, et temps estimé de chaque variante en cours dans la grille
+  if(_dc.phase === 'running' || _dc.phase === 'live') _dc._runIv = setInterval(_dcTickTimers, 1000);
+  if(_dc.phase === 'running'){ root.innerHTML = _dcRunningHTML(); _dcRunPaint(); _dcTickTimers(); return; }
+  if(_dc.phase === 'live' || _dc.phase === 'done'){ root.innerHTML = _dcDoneHTML(mob); _dcTickTimers(); return; }
   root.innerHTML =
     '<div class="scroll-y" style="flex:1;min-height:0;padding:'+(mob?'20px 16px 28px':'26px 40px')+'">'
     + '<div class="col" style="max-width:640px;margin:0 auto;gap:16px">'
@@ -14283,7 +14288,7 @@ async function _dcApi(body){
   return j;
 }
 // Crée le job puis le suit jusqu'au bout → statut final (+ job_id). alive() faux = abandon (Annuler) ; onProgress(0–100).
-async function _dcJob(body, alive, onProgress, maxMin, onCreated){
+async function _dcJob(body, alive, onProgress, maxMin, onCreated, onStatus){
   const { job_id } = await _dcApi(body);
   if(typeof onCreated === 'function'){ try{ onCreated(job_id); }catch(_){} }
   const t0 = Date.now(), maxMs = (maxMin || 40) * 60000;
@@ -14294,6 +14299,7 @@ async function _dcJob(body, alive, onProgress, maxMin, onCreated){
     try{ st = await _dcApi({ action:'status', job_id }); }
     catch(e){ if(e && [403, 404].includes(e._http)) throw e; continue; }   // coupure réseau / hoquet : tour suivant
     if(typeof onProgress === 'function' && st.progress != null){ try{ onProgress(Number(st.progress) || 0); }catch(_){} }
+    if(typeof onStatus === 'function'){ try{ onStatus(st); }catch(_){} }   // 25/10 : variantes déjà prêtes (lot en cours)
     if(st.status === 'done') return Object.assign(st, { job_id });
     if(st.status === 'failed') throw new Error(st.error || 'échec du traitement');
   }
@@ -14446,10 +14452,10 @@ function _dcStages(){
 }
 async function _dcRun(){
   const run = _dc.runId = Date.now();
-  _dc.phase = 'running'; _dc.pct = 0; _dc.stageIdx = 0; _dc.modal = null; _dc.res = null;
+  _dc.phase = 'running'; _dc.pct = 0; _dc.stageIdx = 0; _dc.modal = null; _dc.res = null; _dc.live = null; _dc.play = null; _dc.t0 = Date.now();
   const v = document.getElementById('dcVid'); if(v) v.pause();
   _dcRender();
-  const alive = () => _dc.runId === run && _dc.phase === 'running';
+  const alive = () => _dc.runId === run && (_dc.phase === 'running' || _dc.phase === 'live');   // 25/10 : grille en cours comprise
   const stages = _dcStages(), nv = _dc.variants;
   const etape = (nom, pct) => { if(!alive()) return; const k = stages.indexOf(nom); if(k >= 0) _dc.stageIdx = k; _dc.pct = Math.max(_dc.pct, Math.min(100, pct)); _dcRunPaint(); };
   try{
@@ -14508,9 +14514,10 @@ async function _dcRun(){
     let cree = false;
     let st;
     try{
+      _dcLiveStart(nv, b - a, alive);
       st = await _dcJob({ action:'decupleur', input_video: input, a, b, n: nv, alt: { ..._dc.alt }, textPos: _dc.textPos, master, ops: opVar ? [opVar] : [] }, alive,
         (p) => etape(p >= 92 ? 'Contrôle des empreintes' : 'Génération des ' + nv + ' variantes', base + (99 - base) * p / 100), 45,
-        (id) => { cree = true; _dcJobGarder(id, nv, b - a); });
+        (id) => { cree = true; _dcJobGarder(id, nv, b - a); }, (s) => _dcLiveStatus(s, alive));
     }catch(err){
       if(!cree && opVar) await creditsFlowRefund('décupleur variantes', [opVar]);
       else if(cree && err && !err._dcAnnule && !err._dcLent) _dcJobGarder(null);   // échec net : le serveur a rendu les crédits
@@ -14518,8 +14525,8 @@ async function _dcRun(){
     }
     _dcJobGarder(null);
     if(!alive()) return;
-    _dc.res = { variants: st.variants || [], zip: st.zip || null, controle: st.controle, faibles: st.faibles || 0, keep: b - a, master: _dc.face ? _dc.master : null };
-    _dc.pct = 100; _dc.phase = 'done'; _dcRender();
+    _dc.res = { variants: _dcKeepUrls(st.variants || []), zip: st.zip || null, controle: st.controle, faibles: st.faibles || 0, keep: b - a, master: _dc.face ? _dc.master : null };
+    _dc.pct = 100; _dc.phase = 'done'; _dc.live = null; _dcRender();
   }catch(e){
     if(!alive() || (e && e._dcAnnule)) return;
     console.warn('[décupleur]', e);
@@ -14528,8 +14535,8 @@ async function _dcRun(){
   }
 }
 function _dcCancel(){
-  const etapeNom = _dc.phase === 'running' ? _dcStages()[_dc.stageIdx] : '';
-  _dc.runId = 0; clearInterval(_dc._runIv); _dc.phase = 'idle'; _dcRender();
+  const etapeNom = _dc.phase === 'running' ? _dcStages()[_dc.stageIdx] : _dc.phase === 'live' ? 'Génération' : '';
+  _dc.runId = 0; clearInterval(_dc._runIv); _dc.phase = 'idle'; _dc.live = null; _dc.play = null; _dcRender();
   if(etapeNom === 'Changement du personnage') toast('Le changement de personnage continue côté serveur : il arrivera dans ta Bibliothèque');
   else if(/^Génération|^Contrôle/.test(etapeNom || '')) toast('Le décuplage continue sur le serveur : reviens sur le Décupleur pour récupérer tes variantes');
 }
@@ -14542,21 +14549,23 @@ async function _dcReprise(){
   try{ j = JSON.parse(localStorage.getItem('aa_dc_job') || 'null'); }catch(_){ j = null; }
   if(!j || !j.id || Date.now() - (j.t || 0) > 3 * 3600 * 1000 || _dc.phase !== 'idle'){ if(j && Date.now() - (j.t || 0) > 3 * 3600 * 1000) _dcJobGarder(null); return; }
   const run = _dc.runId = Date.now();
-  _dc.variants = j.n || _dc.variants; _dc.phase = 'running'; _dc.pct = 10; _dc.stageIdx = Math.max(0, _dcStages().length - 2); _dcRender();
-  const alive = () => _dc.runId === run && _dc.phase === 'running';
+  _dc.variants = j.n || _dc.variants; _dc.phase = 'running'; _dc.pct = 10; _dc.stageIdx = Math.max(0, _dcStages().length - 2); _dc.t0 = j.t || Date.now(); _dcRender();
+  const alive = () => _dc.runId === run && (_dc.phase === 'running' || _dc.phase === 'live');
+  _dcLiveStart(j.n || _dc.variants, j.keep || 0, alive, j.t);
   try{
     let st = null;
     for(let i = 0; i < 1080 && alive(); i++){
       try{ st = await _dcApi({ action:'status', job_id: j.id }); }catch(e){ if(e && [403, 404].includes(e._http)){ _dcJobGarder(null); throw e; } }
       if(st && st.progress != null){ _dc.pct = Math.max(_dc.pct, 10 + 89 * st.progress / 100); _dcRunPaint(); }
+      if(st) _dcLiveStatus(st, alive);
       if(st && (st.status === 'done' || st.status === 'failed')) break;
       await new Promise(r => setTimeout(r, 2500));
     }
     if(!alive()) return;
     _dcJobGarder(null);
     if(!st || st.status !== 'done') throw new Error((st && st.error) || 'Le décuplage a échoué — crédits rendus');
-    _dc.res = { variants: st.variants || [], zip: st.zip || null, controle: st.controle, faibles: st.faibles || 0, keep: st.passage || j.keep || 0, master: null };
-    _dc.pct = 100; _dc.phase = 'done'; _dcRender();
+    _dc.res = { variants: _dcKeepUrls(st.variants || []), zip: st.zip || null, controle: st.controle, faibles: st.faibles || 0, keep: st.passage || j.keep || 0, master: null };
+    _dc.pct = 100; _dc.phase = 'done'; _dc.live = null; _dcRender();
   }catch(e){
     if(!alive()) return;
     _dc.phase = 'idle'; _dcRender(); toast((e && e.message) || 'Le décuplage a échoué');
@@ -14570,6 +14579,7 @@ function _dcRunningHTML(){
     + '<div style="width:100%;max-width:420px;height:8px;border-radius:8px;background:var(--surface-2);overflow:hidden;margin-top:24px">'
     +   '<div id="dcRunBar" style="height:100%;width:0%;border-radius:8px;transition:width .15s;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div></div>'
     + '<div class="display accent" style="font-size:32px;font-weight:800;margin-top:12px"><span id="dcRunPct">0</span><span style="font-size:15px">%</span></div>'
+    + '<div id="dcRunTime" class="mono faint" style="font-size:12.5px;margin-top:4px"></div>'
     + '<div id="dcRunList" class="col" style="gap:8px;margin-top:20px;width:100%;max-width:420px;text-align:left"></div>'
     + '<button class="btn-quiet btn-sm" style="margin-top:22px" onclick="_dcCancel()">Annuler</button>'
     + '</div>';
@@ -14587,15 +14597,113 @@ function _dcRunPaint(){
     + '<span style="color:'+(i<=st?'var(--text)':'var(--text-3)')+'">'+s+'</span></div>').join('');
 }
 
+/* ---------- 25/10 (Axel) : lot en cours en grille, minuteur, lecteur ---------- */
+// La grille remplace l'écran d'attente dès la 1re variante prête, ou 30 s après le début des variantes. Chaque case en
+// attente montre un rond de chargement et son temps estimé (moyenne des variantes déjà sorties ; avant la 1re : ~3 s de
+// calcul par seconde gardée, mesuré le 25/10). Les liens reçus d'une variante sont gardés (pas de rechargement à chaque
+// relève, render-job les signe à nouveau à chaque fois).
+function _dcLiveStart(n, keep, alive, t0){
+  _dc.live = { n: n || _dc.variants, keep: keep || 0, t0: t0 || Date.now(), ready: {} };
+  clearTimeout(_dc._liveT);
+  _dc._liveT = setTimeout(() => { if(alive() && _dc.phase === 'running' && _dc.live){ _dc.phase = 'live'; _dcRender(); } }, 30000);
+}
+function _dcLiveStatus(st, alive){
+  const L = _dc.live; if(!L || !alive() || !st || !Array.isArray(st.variants) || st.status === 'done') return;
+  if(st.n_total) L.n = st.n_total;
+  let neuf = false;
+  for(const v of st.variants){
+    const k = Number(v && v.n); if(!(k >= 1 && k <= 50)) continue;
+    const o = L.ready[k];
+    if(!o){ L.ready[k] = { url: v.url || null, play: v.play || v.url || null, poster: v.poster || null, at: Date.now() }; neuf = true; }
+    else if(!o.poster && v.poster){ o.poster = v.poster; neuf = true; }
+  }
+  if(neuf && _dc.phase === 'running') _dc.phase = 'live';
+  if(neuf && _dc.phase === 'live') _dcRender();
+}
+// fin du lot : les liens déjà montrés restent (affiches et lecteur ne rechargent pas)
+function _dcKeepUrls(vs){
+  const R = (_dc.live && _dc.live.ready) || {};
+  return vs.map((v, i) => { const k = Number(v.n) || i + 1, o = R[k]; return o ? Object.assign({}, v, { n: k, play: o.play || v.play, poster: o.poster || v.poster }) : Object.assign({ n: k }, v); });
+}
+function _dcVar(k){
+  if(_dc.res && _dc.res.variants) return _dc.res.variants.find((v) => Number(v.n) === k) || _dc.res.variants[k - 1] || null;
+  return (_dc.live && _dc.live.ready[k]) || null;
+}
+// secondes restantes estimées pour la variante k (les variantes sortent dans l'ordre)
+function _dcEta(k){
+  const L = _dc.live; if(!L) return 0;
+  const prets = Object.values(L.ready).sort((x, y) => x.at - y.at), nr = prets.length;
+  const moy = nr ? (prets[nr - 1].at - L.t0) / nr / 1000 : Math.max(8, (L.keep || 10) * 3);
+  let rang = 0; for(let j = 1; j <= k; j++) if(!L.ready[j]) rang++;
+  return Math.max(0, ((nr ? prets[nr - 1].at : L.t0) + moy * rang * 1000 - Date.now()) / 1000);
+}
+function _dcTickTimers(){
+  const $ = (id) => document.getElementById(id), now = Date.now();
+  if($('dcRunTime') && _dc.t0) $('dcRunTime').textContent = _dcT((now - _dc.t0) / 1000) + ' écoulées';
+  const L = _dc.live; if(_dc.phase !== 'live' || !L) return;
+  if($('dcLiveTime')) $('dcLiveTime').textContent = _dcT((now - (_dc.t0 || L.t0)) / 1000);
+  for(let k = 1; k <= L.n; k++){
+    const el = $('dcEta' + k); if(!el) continue;
+    const s = _dcEta(k);
+    el.textContent = s < 4 ? 'presque prête' : '≈ ' + _dcT(s);
+  }
+}
+// lecteur : posé sur <body> (une nouvelle variante qui redessine la grille ne coupe pas la lecture)
+function _dcPlayOpen(k){
+  const v = _dcVar(k); if(!v || !(v.play || v.url)) return;
+  _dc.play = k;
+  let el = document.getElementById('dcPlayer');
+  if(!el){ el = document.createElement('div'); el.id = 'dcPlayer'; document.body.appendChild(el); }
+  const nums = []; const tot = _dc.res ? _dc.res.variants.length : (_dc.live ? _dc.live.n : 0);
+  for(let j = 1; j <= tot; j++) if(_dcVar(j)) nums.push(j);
+  const at = nums.indexOf(k), prev = at > 0 ? nums[at - 1] : null, next = at >= 0 && at < nums.length - 1 ? nums[at + 1] : null;
+  const nom = 'variante-' + String(k).padStart(2, '0') + '.mp4';
+  const nav = (x, ic, lbl) => '<button class="btn btn-ghost btn-sm" '+(x ? 'onclick="_dcPlayOpen('+x+')"' : 'disabled style="opacity:.35"')+' aria-label="'+lbl+'">'+ic+'</button>';
+  el.innerHTML = '<div role="dialog" aria-modal="true" aria-label="Variante '+String(k).padStart(2, '0')+'" onclick="if(event.target===this)_dcPlayClose()" style="position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.85)">'
+    + '<div class="col" style="align-items:center;gap:12px;max-width:100%">'
+    +   '<video src="'+_dcEsc(v.play || v.url)+'" controls autoplay playsinline style="display:block;max-height:calc(100dvh - 130px);max-width:min(92vw,480px);border-radius:16px;background:#000"></video>'
+    +   '<div class="row gap10" style="align-items:center;flex-wrap:wrap;justify-content:center">'
+    +     nav(prev, '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>', 'Variante précédente')
+    +     '<span class="mono" style="font-size:13px;color:#fff;min-width:70px;text-align:center">#'+String(k).padStart(2, '0')+' / '+String(tot).padStart(2, '0')+'</span>'
+    +     nav(next, '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>', 'Variante suivante')
+    +     (v.url ? '<a class="btn btn-primary btn-sm" href="'+_dcEsc(v.url)+'" download="'+nom+'" style="text-decoration:none">'+_dcI('download', 14)+'<span>Télécharger</span></a>' : '')
+    +     '<button class="btn btn-ghost btn-sm" onclick="_dcPlayClose()" aria-label="Fermer">'+_dcI('close', 14)+'<span>Fermer</span></button>'
+    +   '</div>'
+    + '</div></div>';
+  if(!_dc._playKey){
+    _dc._playKey = (e) => {
+      if(_dc.play == null) return;
+      if(e.key === 'Escape') _dcPlayClose();
+      else if(e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+        const tot2 = _dc.res ? _dc.res.variants.length : (_dc.live ? _dc.live.n : 0), dir = e.key === 'ArrowRight' ? 1 : -1;
+        for(let j = _dc.play + dir; j >= 1 && j <= tot2; j += dir) if(_dcVar(j)){ _dcPlayOpen(j); break; }
+      }
+    };
+    document.addEventListener('keydown', _dc._playKey);
+  }
+}
+function _dcPlayClose(){ _dc.play = null; const el = document.getElementById('dcPlayer'); if(el){ const v = el.querySelector('video'); if(v) try{ v.pause(); }catch(_){} el.innerHTML = ''; } }
+
 /* ---------- résultat ---------- */
 function _dcTile(i){
-  const v = _dc.res && _dc.res.variants && _dc.res.variants[i];
+  const v = _dcVar(i + 1);
   const num = '<span class="mono" style="position:absolute;left:6px;top:6px;font-size:9.5px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:5px">#'+String(i+1).padStart(2,'0')+'</span>';
-  if(v){   // vraie variante : son affiche, et le téléchargement du MP4 (URL signée 2 h)
-    return '<div style="position:relative;aspect-ratio:9 / 16;border-radius:12px;overflow:hidden;border:1px solid var(--border-2);background:var(--surface-2)'+(v.poster ? ' url(\''+v.poster+'\') center/cover' : '')+'">'
+  if(v){   // vraie variante : son affiche, lecture au clic (25/10), et le téléchargement du MP4 (URL signée 2 h)
+    return '<div role="button" tabindex="0" aria-label="Lire la variante '+String(i+1).padStart(2,'0')+'" onclick="_dcPlayOpen('+(i+1)+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();_dcPlayOpen('+(i+1)+')}" style="position:relative;aspect-ratio:9 / 16;border-radius:12px;overflow:hidden;border:1px solid var(--border-2);cursor:pointer;background:var(--surface-2)'+(v.poster ? ' url(\''+_dcEsc(v.poster)+'\') center/cover' : '')+'">'
       + num
-      + (v.url ? '<a href="'+_dcEsc(v.url)+'" download="variante-'+String(i+1).padStart(2,'0')+'.mp4" title="Télécharger" style="position:absolute;right:6px;bottom:6px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff">'+_dcI('download', 13)+'</a>' : '')
+      + '<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.35)">'+_dcI('play', 16, 'color:#fff;margin-left:2px')+'</span>'
+      + (v.url ? '<a href="'+_dcEsc(v.url)+'" download="variante-'+String(i+1).padStart(2,'0')+'.mp4" title="Télécharger" onclick="event.stopPropagation()" style="position:absolute;right:6px;bottom:6px;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff">'+_dcI('download', 14)+'</a>' : '')
       + '</div>';
+  }
+  if(_dc.phase === 'live' && _dc.live){   // 25/10 : pas encore prête — rond de chargement et temps estimé
+    const th = _dc.src && _dc.src.thumbs && _dc.src.thumbs.length ? _dc.src.thumbs[Math.min(_dc.src.thumbs.length - 1, i % _dc.src.thumbs.length)] : null;
+    return '<div aria-label="Variante '+String(i+1).padStart(2,'0')+' en cours" style="position:relative;aspect-ratio:9 / 16;border-radius:12px;overflow:hidden;border:1px solid var(--border-2);background:var(--surface-2)">'
+      + (th ? '<div style="position:absolute;inset:-8px;background:url('+th+') center/cover;filter:blur(8px) saturate(.6);opacity:.35"></div>' : '')
+      + num
+      + '<div class="col" style="position:absolute;inset:0;align-items:center;justify-content:center;gap:8px">'
+      +   '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:var(--accent-2);animation:spin 1s linear infinite"><path d="M12 3a9 9 0 109 9"/></svg>'
+      +   '<span id="dcEta'+(i+1)+'" class="mono" style="font-size:11px;color:var(--text-2)"></span>'
+      + '</div></div>';
   }
   const s = _dc.src, hue = s ? s.hue : 18;
   const mirror = _dc.alt.mirror && i % 2 === 1, shift = _dc.alt.tint ? (i * 23) % 60 - 30 : 0, txt = _dc.alt.text && i % 3 === 0;
@@ -14615,6 +14723,7 @@ function _dcTile(i){
     + '</div>';
 }
 function _dcDoneHTML(mob){
+  if(_dc.phase === 'live' && _dc.live && !_dc.res) return _dcLiveHTML(mob);
   const r = _dc.res, n = r && r.variants.length ? r.variants.length : _dc.variants, cols = mob ? 3 : (n >= 20 ? 8 : 5);
   const keep = r ? r.keep : (_dc.b - _dc.a);
   // contrôle des empreintes : « toutes différentes » seulement s'il passe ; sinon on dit combien restent trop proches
@@ -14638,6 +14747,31 @@ function _dcDoneHTML(mob){
     +       '<button class="btn btn-primary btn-sm" onclick="_dcDownload()">'+_dcI('download', 14)+'<span>Tout télécharger</span></button>'
     +     '</div>'
     +   '</div>'
+    +   (r && r.variants.length ? '<p class="faint" style="font-size:12.5px;margin:-8px 0 14px">Touche une vidéo pour la regarder.</p>' : '')
+    +   '<div style="display:grid;grid-template-columns:repeat('+cols+',minmax(0,1fr));gap:'+(mob?8:12)+'px">'
+    +     Array.from({length:n}).map((_, i) => _dcTile(i)).join('')
+    +   '</div>'
+    + '</div></div>';
+}
+// 25/10 (Axel) : lot en cours — « X vidéo(s) prête(s) », « X vidéo(s) en cours », minuteur ; chaque prête se lit au clic
+function _dcLiveHTML(mob){
+  const L = _dc.live, n = L.n, prets = Object.keys(L.ready).length, reste = Math.max(0, n - prets), cols = mob ? 3 : (n >= 20 ? 8 : 5);
+  const pl = (x, s, p) => x + ' ' + (x > 1 ? p : s);
+  return '<div class="scroll-y" style="flex:1;min-height:0;padding:'+(mob?'20px 16px 28px':'28px 40px')+'">'
+    + '<div style="max-width:1080px;margin:0 auto">'
+    +   '<div class="row" style="justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px">'
+    +     '<div class="row gap12" style="align-items:center">'
+    +       '<span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:var(--accent-2);animation:spin 1s linear infinite"><path d="M12 3a9 9 0 109 9"/></svg></span>'
+    +       '<div class="col" style="line-height:1.25">'
+    +         '<span class="display" style="font-size:'+(mob?20:24)+'px;font-weight:800">'+(prets ? pl(prets, 'vidéo prête', 'vidéos prêtes') : 'Tes vidéos arrivent')+'</span>'
+    +         '<span class="faint" style="font-size:12.5px">'+(reste ? pl(reste, 'vidéo en cours', 'vidéos en cours') : 'Contrôle des empreintes…')+' · <span id="dcLiveTime" class="mono"></span></span>'
+    +       '</div>'
+    +     '</div>'
+    +     '<div class="row gap10" style="flex-wrap:wrap">'
+    +       '<button class="btn btn-ghost btn-sm" onclick="_dcCancel()">'+_dcI('close', 14)+'<span>Arrêter d’attendre</span></button>'
+    +     '</div>'
+    +   '</div>'
+    +   (prets ? '<p class="faint" style="font-size:12.5px;margin:-8px 0 14px">Touche une vidéo pour la regarder. « Tout télécharger » arrive à la fin du lot.</p>' : '')
     +   '<div style="display:grid;grid-template-columns:repeat('+cols+',minmax(0,1fr));gap:'+(mob?8:12)+'px">'
     +     Array.from({length:n}).map((_, i) => _dcTile(i)).join('')
     +   '</div>'

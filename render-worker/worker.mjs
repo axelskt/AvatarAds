@@ -1012,7 +1012,7 @@ function construireBaseSansVoix(plan, jobDir, basePath, fps) {
   console.log(`▶ Musique sans voix : base = ${R > 0.3 ? `réaction ${R} s + ` : ''}${seq.length} plan(s) de visuels → ${t} s`)
 }
 
-export async function renderJob(jobDir, outPath, { draft = false, userId = null, onProgress = null } = {}) {
+export async function renderJob(jobDir, outPath, { draft = false, userId = null, onProgress = null, onVariante = null } = {}) {
   RENDER_USER = userId || null
   const t0 = Date.now()
   const plan = JSON.parse(readFileSync(join(jobDir, 'plan.json'), 'utf8'))
@@ -1064,7 +1064,9 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null,
     const master = join(jobDir, 'assets', 'master.mp4')
     await dcVariantes({ src: join(jobDir, 'base.mp4'), master: existsSync(master) ? master : null, outDir: join(jobDir, 'dc-out'),
       a: plan.a, b: plan.b, n: Number(plan.n), alt: plan.alt || {}, textPos: plan.textPos, seed: plan.seed,
-      onProgress: typeof onProgress === 'function' ? onProgress : async () => {} })
+      onProgress: typeof onProgress === 'function' ? onProgress : async () => {},
+      // 25/10 : chaque variante part dès qu'elle est finie (render-job la montre à l'app pendant que les suivantes se font)
+      onVariante: typeof onVariante === 'function' ? onVariante : async () => {} })
     return
   }
 
@@ -3636,7 +3638,20 @@ async function pollLoop() {
         const out = join(jobDir, 'final.mp4')
         // Décupleur : avancement écrit entre deux variantes (barre de l'app + battement du job pendant un long lot)
         const surProgres = async (p) => { try { await sb.from('render_jobs').update({ progress: p, updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'rendering') } catch (_) { /* best-effort */ } }
-        await renderJob(jobDir, out, { userId: job.user_id || null, onProgress: surProgres })
+        // 25/10 (Axel) : Décupleur — chaque variante envoyée dès qu'elle est finie, affiche PUIS MP4 (render-job affiche une
+        // variante dès que son MP4 est là, affiche comprise) ; la fin n'envoie plus que ce qui manque (ZIP, manifeste, ratés)
+        const dcEnvoyes = new Set()
+        const surVariante = async (nom) => {
+          if (!(job.plan && job.plan.__compose === 'decupleur') || !/^v\d{2}$/.test(nom)) return
+          const dir = join(jobDir, 'dc-out'), prefixe = `${job.user_id}/dc-${job.id}`
+          for (const f of [nom + '.jpg', nom + '.mp4']) {
+            if (!existsSync(join(dir, f))) continue
+            const { error } = await sb.storage.from('render-media').upload(`${prefixe}/${f}`, readFileSync(join(dir, f)), { contentType: f.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg', upsert: true })
+            if (error) throw new Error('upload ' + f + ': ' + error.message)
+            dcEnvoyes.add(f)
+          }
+        }
+        await renderJob(jobDir, out, { userId: job.user_id || null, onProgress: surProgres, onVariante: surVariante })
         // contrôle qualité d'un MONTAGE (pas des compositions) : noté dans la trace du job, jamais bloquant
         if (!(job.plan && job.plan.__compose)) {
           try { const qc = qcMontage(out); if (qc.ok) console.log(`✓ QC montage : rien à signaler (${qc.duree} s)`); else console.warn(`⚠ QC montage : ${qc.defauts.join(' · ')}`) } catch (e) { console.warn('QC montage :', e.message) }
@@ -3663,7 +3678,7 @@ async function pollLoop() {
           const TYPES = { mp4: 'video/mp4', jpg: 'image/jpeg', json: 'application/json', zip: 'application/zip' }
           for (const f of readdirSync(dir).sort((x, y) => (x === 'dc.json') - (y === 'dc.json'))) {   // manifeste en DERNIER
             const ext = extname(f).slice(1)
-            if (!TYPES[ext]) continue
+            if (!TYPES[ext] || dcEnvoyes.has(f)) continue   // 25/10 : déjà envoyée pendant le lot
             const { error: upErr } = await sb.storage.from('render-media').upload(`${prefixe}/${f}`, readFileSync(join(dir, f)), { contentType: TYPES[ext], upsert: true })
             if (upErr) throw new Error('upload ' + f + ': ' + upErr.message)
           }
