@@ -26,8 +26,10 @@
 //                                                                                     refused : motif obligatoire)
 //                         → { ok, file_deleted } (17/10, audit BRIDGE-2) : true = copie supprimée du stockage BloxAI,
 //                           false = pas supprimée (nouvel essai automatique côté BloxAI), null = BloxAI ne l'a pas dit
-//       identity_url      { id }   → { url } URL signée (300 s) de la pièce d'identité, bucket privé BloxAI, hôte de
-//                                     BLOXAI_FACTORY_URL seulement (17/10, audit BRIDGE-3)
+//                         25/10 : kind: 'address' (justificatif de domicile) → ni date de naissance ni nom obligatoires
+//                         (nom facultatif) ; BloxAI relit le vrai type de la demande et exige date + nom pour une pièce
+//       identity_url      { id }   → { url, url_back } URLs signées (300 s) du recto et, 25/10, du verso (null : passeport,
+//                                     justificatif), bucket privé BloxAI, hôte de BLOXAI_FACTORY_URL seulement (17/10, BRIDGE-3)
 //       admin_mission     { vf, decision: retire|reopen }
 //       admin_payout_cancel { id, reason }   (18/10, round 7, R7-5) : « Annuler ce versement » → bx_admin_payout_cancel de
 //                                            BloxAI (payout 'cancelled', motif gardé, le solde revient au diffuseur) ;
@@ -70,7 +72,7 @@ const MAX_BODY = 4096
 let cache: { at: number, body: Record<string, unknown> } | null = null
 const ACTIVE = ['todo', 'scheduled', 'published']   // un post du kit qui « tient » sa vidéo
 // 18/10 (round 7, R7-7) : version minimale du tableau de bord pour les actions d'argent et d'identité
-const DASH_MIN = 89
+const DASH_MIN = 99   // 25/10 : recto + verso et justificatif de domicile (cf-ui.js v99)
 const DASH_GUARD = ['admin_payout_paid', 'admin_identity', 'admin_payout_cancel', 'admin_freeze']
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function dashOk(b: Record<string, unknown>): boolean {
@@ -202,6 +204,12 @@ function buildAction(b: Record<string, unknown>): { action: string, args: Record
     const id = posId(b.id), st = b.status
     if (!id) return { error: 'identifiant de pièce invalide' }
     if (st !== 'verified' && st !== 'refused') return { error: 'statut invalide (verified ou refused)' }
+    if (st === 'verified' && b.kind === 'address') {
+      // 25/10 : justificatif de domicile — pas de date de naissance ; nom lu facultatif (même contrôle s'il est donné)
+      const name = b.name == null || b.name === '' ? null : nameOf(b.name)
+      if (b.name != null && b.name !== '' && !name) return { error: 'nom lu invalide (2 à 120 caractères, au moins une lettre)' }
+      return { action: op, args: name ? { id, status: st, name } : { id, status: st } }
+    }
     if (st === 'verified') {
       const bd = birth(b.birthdate)
       if (!bd) return { error: 'date de naissance obligatoire (AAAA-MM-JJ, réelle)' }
@@ -394,7 +402,11 @@ Deno.serve(async (req) => {
   if (built.action === 'identity_url') {
     const url = signedUrl(r.body)
     if (!url) return json({ error: 'BloxAI : URL signée absente ou refusée' }, 502)
-    return json({ ok: true, url })
+    // 25/10 : verso (carte, titre de séjour) — mêmes contrôles que le recto ; absent = null
+    const rb = r.body?.url_back ?? r.body?.data?.url_back
+    const back = rb == null ? null : signedUrl({ url: rb })
+    if (rb != null && !back) return json({ error: 'BloxAI : URL signée du verso refusée' }, 502)
+    return json({ ok: true, url, url_back: back })
   }
   // Une décision change les chiffres : la prochaine lecture repart de BloxAI.
   cache = null

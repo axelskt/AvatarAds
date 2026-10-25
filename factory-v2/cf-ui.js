@@ -3141,7 +3141,7 @@
   // ── 05 · pièces d'identité (avant le premier versement) et versements ──
   function bxIdHTML(D) {
     var L = D.identity;
-    var head = bxHead('Pièces d’identité', 'âge (18 ans révolus) et identité vérifiés à la main avant le premier versement · pièce comparée au nom légal déclaré à la 1re acceptation des conditions · nom lu sur la pièce comparé au titulaire de chaque versement · copie supprimée après la décision', L ? L.length : null)
+    var head = bxHead('Pièces et justificatifs', 'au premier retrait : pièce d’identité (recto + verso, ou passeport), puis IBAN au nom de la fiche, puis justificatif de domicile · âge (18 ans révolus) et nom vérifiés à la main · la pièce doit contenir le nom de la fiche · copies supprimées après la décision', L ? L.length : null)
       + (D.identityUndeleted ? '<div class="cf-bx-why is-warn">' + esc(D.identityUndeleted + ' ' + plural(D.identityUndeleted, 'copie déjà décidée', 'copies déjà décidées') + ' encore dans le stockage BloxAI : nouvel essai automatique') + '</div>' : '');
     if (!L) return '<section class="cf-card" data-block="bx-id">' + head + emptyLine('—', 'pièces d’identité ' + BX_NR) + '</section>';
     if (!L.length) return '<section class="cf-card" data-block="bx-id">' + head + '<div class="cf-empty-s cf-dashed">Aucune pièce à vérifier.</div></section>';
@@ -3149,13 +3149,31 @@
       var k = 'id:' + x.id, dis = bxDis(k), kv = bxDis('idv:' + x.id), t = x.created != null ? new Date(x.created) : null;
       // 18/10 (round 6, R2) : nom légal déclaré à la 1re acceptation des conditions (non modifiable) et nom déclaré actuel,
       // à comparer avec la pièce avant « Valider »
-      return '<div class="cf-bx-row is-id" data-idrow="' + esc(x.id) + '"><span class="cf-bx-main"><b>' + esc(x.name || 'diffuseur') + '</b>'
-        + '<span class="cf-meta">' + esc([x.email || 'e-mail inconnu', t ? 'déposée le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue'].join(' · ')) + '</span>'
-        + bxDeclLines(x) + '</span>'
+      return '<div class="cf-bx-row is-id" data-idrow="' + esc(x.id) + '" data-kind="' + esc(x.kind) + '"><span class="cf-bx-main"><b>' + esc(x.name || 'diffuseur') + '</b>'
+        + '<span class="cf-meta">' + esc([bxIdLabel(x), x.email || 'e-mail inconnu', t ? 'déposé le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue'].join(' · ')) + '</span>'
+        + bxDeclLines(x) + bxIdExtra(x) + '</span>'
         + '<span class="cf-bx-acts"><button type="button" class="cf-btn is-sm" data-act="bx-id-view" data-id="' + esc(x.id) + '"' + kv + '>' + svg(IC.eye, 12) + (ui.bx.busy['idv:' + x.id] ? 'Ouverture…' : 'Voir') + '</button>'
         + '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-id-ko" data-id="' + esc(x.id) + '"' + dis + '>Refuser</button>'
         + '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-id-ok" data-id="' + esc(x.id) + '"' + dis + '>' + svg(IC.check, 12) + (ui.bx.busy[k] ? 'Enregistrement…' : 'Valider') + '</button></span></div>';
     }).join('') + '</div></section>';
+  }
+  // 25/10 : type de la demande (pièce d'identité recto + verso / passeport, ou justificatif de domicile)
+  function bxIdLabel(x) {
+    if (x.kind === 'address') return 'Justificatif de domicile';
+    return x.docType === 'passeport' ? 'Passeport' : (x.docType === 'titre de séjour' ? 'Titre de séjour' : 'Carte d’identité') + (x.twoSides ? ' recto + verso' : '');
+  }
+  // 25/10 : justificatif → adresse de la fiche à comparer ; pièce → titulaire de l'IBAN déjà donné (= nom de la fiche)
+  function bxIdExtra(x) {
+    if (x.kind === 'address') return '<span class="cf-bx-how" data-addr="1">' + esc('adresse de la fiche : ' + (x.address || '—')) + '</span>'
+      + (x.idVerified ? '' : '<span class="cf-bx-why is-warn">pièce d’identité pas encore validée : valide-la d’abord</span>');
+    return x.ibanHolder ? '<span class="cf-bx-how">' + esc('IBAN au nom de : ' + x.ibanHolder + (x.ibanEnd ? ' (…' + x.ibanEnd + ')' : '')) + '</span>' : '';
+  }
+  // 25/10 : même règle que BloxAI (bx_name_within) — chaque mot du nom de la fiche se retrouve dans le nom lu (prénoms en
+  // plus permis), au moins 2 mots
+  function bxNameWithin(part, full) {
+    var a = bxNameWords(part), b = bxNameWords(full);
+    if (a.length < 2) return false;
+    return a.every(function (w) { var i = b.indexOf(w); if (i < 0) return false; b.splice(i, 1); return true; });
   }
   // nom légal déclaré à la 1re acceptation, nom déclaré actuel, nom réécrit depuis (onglet BloxAI et Accueil, 18/10)
   function bxDeclLines(x) {
@@ -3178,11 +3196,12 @@
     return /\.pdf$/.test(path) ? 'pdf' : /\.(heic|heif)$/.test(path) ? 'heic' : 'img';
   }
   function bxIdPrevGet(id, keep) {
-    var e = { state: 'loading', url: keep && keep.url || null, kind: keep && keep.kind || null, at: Date.now() };
+    var e = { state: 'loading', url: keep && keep.url || null, kind: keep && keep.kind || null, back: keep && keep.back || null, kindBack: keep && keep.kindBack || null, at: Date.now() };
     ui.bx.idPrev[id] = e;
     CF.bxIdentityUrl(id).then(function (r) {
       if (ui.bx.idPrev[id] !== e) return;   // décision prise entre-temps : rien n'est gardé
-      ui.bx.idPrev[id] = r && r.ok ? { state: 'ok', url: r.url, kind: bxIdPrevKind(r.url), at: Date.now() } : { state: 'err', error: (r && r.error) || 'erreur inconnue', at: Date.now() };
+      ui.bx.idPrev[id] = r && r.ok ? { state: 'ok', url: r.url, kind: bxIdPrevKind(r.url), back: r.back || null, kindBack: r.back ? bxIdPrevKind(r.back) : null, at: Date.now() }
+        : { state: 'err', error: (r && r.error) || 'erreur inconnue', at: Date.now() };
       schedule();
     });
   }
@@ -3198,14 +3217,20 @@
   }
   function homeIdRow(x) {
     var k = 'id:' + x.id, dis = bxDis(k), kv = bxDis('idv:' + x.id), t = x.created != null ? new Date(x.created) : null, P = ui.bx.idPrev[x.id], who = x.name || 'diffuseur', prev;
-    if (P && P.url && P.kind === 'img' && (P.state === 'ok' || P.state === 'loading')) prev = '<img class="cf-idh-img" src="' + esc(P.url) + '" alt="' + esc('Pièce d’identité de ' + who) + '" data-idimg="' + esc(x.id) + '" referrerpolicy="no-referrer" decoding="async">';
-    else if (P && P.url && (P.state === 'ok' || P.state === 'loading')) prev = '<div class="cf-idh-ph" data-prev="' + P.kind + '">' + svg(IC.eye, 18) + esc((P.kind === 'pdf' ? 'Pièce en PDF' : 'Photo HEIC') + ' : pas d’aperçu dans la page, ouvre-la') + '</div>';
+    // 25/10 : recto et verso côte à côte (carte, titre de séjour) ; une seule image pour un passeport ou un justificatif
+    var side = function (u, kd, lbl) {
+      return kd === 'img' ? '<img class="cf-idh-img" src="' + esc(u) + '" alt="' + esc(lbl + ' · ' + who) + '" data-idimg="' + esc(x.id) + '" referrerpolicy="no-referrer" decoding="async">'
+        : '<div class="cf-idh-ph" data-prev="' + kd + '">' + svg(IC.eye, 18) + esc(lbl + ' en ' + (kd === 'pdf' ? 'PDF' : 'HEIC') + ' : pas d’aperçu dans la page, ouvre-la') + '</div>';
+    };
+    if (P && P.url && (P.state === 'ok' || P.state === 'loading')) prev = P.back
+      ? '<div class="cf-idh-two">' + side(P.url, P.kind, 'Recto') + side(P.back, P.kindBack, 'Verso') + '</div>'
+      : side(P.url, P.kind, bxIdLabel(x));
     else if (P && (P.state === 'err' || P.state === 'imgerr')) prev = '<div class="cf-idh-ph is-err" data-prev="' + P.state + '">' + esc(P.state === 'err' ? 'Aperçu indisponible : ' + P.error : 'Aperçu illisible (lien expiré ou format non affiché)')
       + '<button type="button" class="cf-link-btn" data-act="bx-id-prev" data-id="' + esc(x.id) + '">Réessayer</button></div>';
     else prev = '<div class="cf-idh-ph" data-prev="loading"><span class="cf-spin" aria-hidden="true"></span>Chargement de l’aperçu…</div>';
     return '<div class="cf-idh-row" data-hid="' + esc(x.id) + '"><div class="cf-idh-prev">' + prev + '</div>'
-      + '<div class="cf-bx-main"><b>' + esc(who) + '</b><span class="cf-meta">' + esc([x.email || 'e-mail inconnu', t ? 'déposée le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue'].join(' · ')) + '</span>'
-      + bxDeclLines(x)
+      + '<div class="cf-bx-main"><b>' + esc(who) + '</b><span class="cf-meta">' + esc([bxIdLabel(x), x.email || 'e-mail inconnu', t ? 'déposé le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue'].join(' · ')) + '</span>'
+      + bxDeclLines(x) + bxIdExtra(x)
       + '<span class="cf-bx-acts cf-idh-acts"><button type="button" class="cf-btn is-sm" data-act="bx-id-view" data-id="' + esc(x.id) + '"' + kv + '>' + svg(IC.external, 12) + (ui.bx.busy['idv:' + x.id] ? 'Ouverture…' : 'Ouvrir en grand') + '</button>'
       + '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-id-ko" data-id="' + esc(x.id) + '"' + dis + '>Refuser</button>'
       + '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-id-ok" data-id="' + esc(x.id) + '"' + dis + '>' + svg(IC.check, 12) + (ui.bx.busy[k] ? 'Enregistrement…' : 'Valider') + '</button></span></div></div>';
@@ -3223,12 +3248,12 @@
         + '<span>' + esc(d.head + ' · ' + (ok ? 'image détruite' : d.fd === false ? 'image pas encore détruite : suppression en attente, nouvel essai automatique côté BloxAI (vérifie qu’elle disparaît)'
           : 'destruction de l’image non confirmée par BloxAI : vérifie que la copie a disparu')) + '</span></div>';
     }).join('') + '</div>' : '';
-    return '<section class="cf-card cf-idh" data-block="home-id" aria-labelledby="cfIdhT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfIdhT">Pièces d’identité à vérifier <span class="cf-badge">' + n + '</span></h2>'
-      + '<span class="cf-meta">' + esc('âge (18 ans révolus) et identité, à la main, avant le premier versement : compare la pièce avec le nom légal déclaré à la 1re acceptation des conditions, puis Valider (date de naissance et nom lus sur la pièce) ou Refuser (motif). L’image est détruite dès ta décision.') + '</span></div></div>'
+    return '<section class="cf-card cf-idh" data-block="home-id" aria-labelledby="cfIdhT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfIdhT">Pièces à vérifier <span class="cf-badge">' + n + '</span></h2>'
+      + '<span class="cf-meta">' + esc('au premier retrait : pièce d’identité (recto + verso) puis justificatif de domicile. Pièce : compare avec le nom de la fiche, puis Valider (date de naissance et nom lus) ou Refuser (motif). Justificatif : moins de 3 mois, au nom et à l’adresse de la fiche. L’image est détruite dès ta décision.') + '</span></div></div>'
       + msg + doneH
       + (n ? '<div class="cf-idh-list">' + L.slice(0, BX_PREV_MAX).map(homeIdRow).join('') + '</div>'
-        + (n > BX_PREV_MAX ? '<button type="button" class="cf-link-btn" data-act="home-go" data-tab="trackads">' + esc('+ ' + (n - BX_PREV_MAX) + ' ' + plural(n - BX_PREV_MAX, 'autre pièce', 'autres pièces') + ' dans l’onglet BloxAI') + '</button>' : '')
-        : '<div class="cf-empty-s cf-dashed">Plus aucune pièce à vérifier.</div>')
+        + (n > BX_PREV_MAX ? '<button type="button" class="cf-link-btn" data-act="home-go" data-tab="trackads">' + esc('+ ' + (n - BX_PREV_MAX) + ' ' + plural(n - BX_PREV_MAX, 'autre', 'autres') + ' dans l’onglet BloxAI') + '</button>' : '')
+        : '<div class="cf-empty-s cf-dashed">Plus rien à vérifier.</div>')
       + '</section>';
   }
   function bxIban(s) { return String(s).replace(/(.{4})(?=.)/g, '$1 '); }
@@ -3727,7 +3752,22 @@
   function bxIdDecide(id, d) {
     var D = CF.bx.data, x = D && bxDlg(bxFind(D.identity, id));   // 18/10 (R7-10) : noms nettoyés pour les fenêtres
     if (!x) return;
-    var who = x.name || 'ce diffuseur', K = 'id:' + id;
+    var who = x.name || 'ce diffuseur', K = 'id:' + id, fiche = x.declaredCurrent || x.declaredFirst || '';
+    // 25/10 : justificatif de domicile — ni date ni nom à taper : comparer le document au nom et à l'adresse de la fiche
+    if (x.kind === 'address') {
+      if (d === 'verified') {
+        if (!x.idVerified) { bxSay(false, 'Justificatif de ' + who + ' : valide d’abord sa pièce d’identité.', K); return; }
+        if (!window.confirm('Valider le justificatif de domicile de ' + who + ' ?\nNom de la fiche : ' + (fiche || '—') + '\nAdresse de la fiche : ' + (x.address || '—')
+          + '\n\nVérifie : document de moins de 3 mois (facture, avis d’impôt, quittance, attestation d’assurance), au nom ET à l’adresse de la fiche.')) return;
+        bxRun(K, { op: 'admin_identity', id: id, status: 'verified', kind: 'address' }, bxIdAfter(id, 'Justificatif validé pour ' + who));
+      } else {
+        var wa = bxAsk('Refuser le justificatif de domicile de ' + who + '.\nMotif (le diffuseur le verra) :', 'Justificatif de plus de 3 mois, illisible, ou pas à ton nom et à ton adresse');
+        if (wa == null) return;
+        if (!wa) { bxSay(false, 'Motif obligatoire pour refuser.', K); return; }
+        bxRun(K, { op: 'admin_identity', id: id, status: 'refused', reason: wa.slice(0, 300) }, bxIdAfter(id, 'Justificatif refusé pour ' + who));
+      }
+      return;
+    }
     if (d === 'verified') {
       // 18/10 (round 6, R2) : les deux noms déclarés, à comparer avec la pièce AVANT de valider (un voleur de session peut
       // envoyer SA pièce ; le nom de la 1re acceptation des conditions, lui, ne se réécrit pas)
@@ -3751,13 +3791,15 @@
       if (nm == null) return;
       nm = nm.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ').replace(/\s+/g, ' ').trim();   // 17/10 : mêmes caractères écartés que factory
       if (nm.length < 2 || nm.length > 120 || !/\p{L}/u.test(nm)) { bxSay(false, 'Nom lu sur la pièce obligatoire pour valider (2 à 120 caractères), par exemple : Léa Martin.', K); return; }
+      // 25/10 : la pièce doit contenir le nom de la fiche (BloxAI refuse sinon, BX_NAME) → refuser avec ce motif
+      if (fiche && !bxNameWithin(fiche, nm)) { bxSay(false, 'Le nom lu (' + nm + ') ne contient pas le nom de la fiche (' + fiche + ') : refuse la pièce avec le motif « Ta pièce doit être au nom de ta fiche ».', K); return; }
       // 18/10 (round 6, R2) : nom lu ≠ nom légal de la 1re acceptation (sans accents, casse ni ordre des mots) → confirmation
       if (x.declaredFirst && !bxNameSame(nm, x.declaredFirst)
         && !window.confirm('ATTENTION : le nom lu sur la pièce (' + nm + ') ne correspond pas au nom légal déclaré à la 1re acceptation des conditions (' + x.declaredFirst + ').\n'
           + 'Pièce d’une autre personne (session volée ?) : dans le doute, Annuler puis Refuser la pièce. Un prénom en plus ou en moins sur la pièce peut être normal : vérifie.\n\nValider quand même ?')) return;
       bxRun(K, { op: 'admin_identity', id: id, status: 'verified', birthdate: iso, name: nm }, bxIdAfter(id, 'Pièce validée pour ' + who + ' (' + age + ' ans)'));
     } else {
-      var why = bxAsk('Refuser la pièce d’identité de ' + who + '.\nMotif (le diffuseur le verra) :');
+      var why = bxAsk('Refuser la pièce d’identité de ' + who + '.\nMotif (le diffuseur le verra) :', fiche ? 'Ta pièce doit être au nom de ta fiche (' + fiche + '), lisible, recto et verso' : '');
       if (why == null) return;
       if (!why) { bxSay(false, 'Motif obligatoire pour refuser.', K); return; }
       bxRun(K, { op: 'admin_identity', id: id, status: 'refused', reason: why.slice(0, 300) }, bxIdAfter(id, 'Pièce refusée pour ' + who));
@@ -3790,7 +3832,12 @@
     ui.bx.busy[k] = 1; ui.bx.msg = null; schedule();
     CF.bxIdentityUrl(id).then(function (r) {
       delete ui.bx.busy[k];
-      if (r && r.ok) { try { w.location.replace(r.url); } catch (e) { w.location.href = r.url; } }
+      // 25/10 : recto + verso → une page simple avec les deux faces (images) ou leurs liens (PDF, HEIC), sans script ni style
+      if (r && r.ok && r.back) {
+        var one = function (u, lbl) { return bxIdPrevKind(u) === 'img' ? '<h2>' + lbl + '</h2><p><img src="' + esc(u) + '" alt="' + lbl + '" width="100%" referrerpolicy="no-referrer"></p>' : '<h2>' + lbl + '</h2><p><a href="' + esc(u) + '" rel="noreferrer">Ouvrir le ' + lbl.toLowerCase() + '</a></p>'; };
+        try { w.document.open(); w.document.write('<!doctype html><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Pièce d’identité</title>' + one(r.url, 'Recto') + one(r.back, 'Verso')); w.document.close(); }
+        catch (e) { try { w.location.replace(r.url); } catch (e2) { w.location.href = r.url; } }
+      } else if (r && r.ok) { try { w.location.replace(r.url); } catch (e) { w.location.href = r.url; } }
       else { try { w.close(); } catch (e) { /* rien */ } bxSay(false, 'Pièce illisible : ' + ((r && r.error) || 'erreur inconnue'), k); }
       schedule();
     });

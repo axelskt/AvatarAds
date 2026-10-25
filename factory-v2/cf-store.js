@@ -919,9 +919,14 @@
         var id = bxId(x.id);
         // 18/10 (round 6, R2) : nom légal déclaré à la 1re acceptation des conditions (declared_name_first, non modifiable)
         // et nom déclaré actuel (declared_name_current) : Axel les compare à la pièce avant « Valider »
+        // 25/10 : kind = pièce d'identité ('identity' : carte / titre de séjour recto + verso, ou passeport) ou justificatif
+        // de domicile ('address') ; titulaire de l'IBAN (= nom de la Fiche), 4 derniers caractères de l'IBAN, adresse de la Fiche
         return id ? { id: id, userId: bxUid(x.user_id), name: txt(x.name, 60), email: bxMail(x.email), created: ms(x.created_at),
           declaredFirst: txt(x.declared_name_first, 120), declaredCurrent: txt(x.declared_name_current, 120),
-          declaredKnown: Object.prototype.hasOwnProperty.call(x, 'declared_name_first') } : null;
+          declaredKnown: Object.prototype.hasOwnProperty.call(x, 'declared_name_first'),
+          kind: x.kind === 'address' ? 'address' : 'identity', docType: bxIn(x.document_type, ['carte', 'passeport', 'titre de séjour']),
+          twoSides: x.two_sides === true, ibanHolder: txt(x.iban_holder, 120), ibanEnd: /^[A-Z0-9]{4}$/.test(String(x.iban_end || '')) ? String(x.iban_end) : null,
+          address: txt(x.postal_address, 300), idVerified: x.identity_verified === true } : null;
       }).filter(Boolean) : null,
       toCheck: Array.isArray(b.to_check) ? bxArr(b.to_check, 300).map(function (x) {
         x = bxObj(x);
@@ -1040,11 +1045,15 @@
     });
   }
   // URL signée (300 s) d'une pièce d'identité : lien de lecture du stockage privé BloxAI, rien d'autre.
+  // 25/10 : { url, back } — back = verso (carte, titre de séjour), null pour un passeport ou un justificatif de domicile
   function bxIdentityUrl(id) {
+    var good = function (u) { return typeof u === 'string' && BX_SIGNED.test(u) && u.length <= 2000 && !/[\s"'<>\\]/.test(u); };
     return bxPost({ op: 'identity_url', id: String(id || '') }).then(function (r) {
       if (!r.ok) return r;
-      var u = r.body && typeof r.body.url === 'string' ? r.body.url : '';
-      return BX_SIGNED.test(u) && u.length <= 2000 && !/[\s"'<>\\]/.test(u) ? { ok: true, url: u } : { ok: false, error: 'URL signée absente ou refusée' };
+      var u = r.body && r.body.url, b = r.body && r.body.url_back;
+      if (!good(u)) return { ok: false, error: 'URL signée absente ou refusée' };
+      if (b != null && !good(b)) return { ok: false, error: 'URL signée du verso refusée' };
+      return { ok: true, url: u, back: b || null };
     });
   }
 
