@@ -6038,7 +6038,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-25-0100'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-25-1120'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -14105,17 +14105,17 @@ function _dcTrimPaint(onlyHead){
   if($('dcLk')) $('dcLk').textContent = 'Passage gardé · ' + _dcT(_dc.b - _dc.a);
   if(_dc.face) _dcCtaRender();   // le prix du changement de personnage suit la durée gardée
 }
-// Poignées début / fin + fenêtre déplaçable en entier (minimum 1 s gardée)
+// Poignées début / fin + fenêtre déplaçable en entier (minimum 1 s gardée, maximum _dcMaxKeep)
 function _dcDrag(which, e){
   e.preventDefault(); e.stopPropagation();
   const band = document.getElementById('dcBand'); if(!band || !_dc.src) return;
-  const r = band.getBoundingClientRect(), dur = _dc.src.dur, min = Math.min(1, dur);
+  const r = band.getBoundingClientRect(), dur = _dc.src.dur, min = Math.min(1, dur), max = Math.min(dur, _dcMaxKeep());
   const at = (x) => Math.max(0, Math.min(dur, ((x - r.left) / r.width) * dur));
   const x0 = e.clientX, a0 = _dc.a, b0 = _dc.b;
   const mv = (ev) => {
     const prevA = _dc.a;
-    if(which === 'a') _dc.a = Math.max(0, Math.min(at(ev.clientX), b0 - min));
-    else if(which === 'b') _dc.b = Math.min(dur, Math.max(at(ev.clientX), a0 + min));
+    if(which === 'a') _dc.a = Math.max(0, b0 - max, Math.min(at(ev.clientX), b0 - min));
+    else if(which === 'b') _dc.b = Math.min(dur, a0 + max, Math.max(at(ev.clientX), a0 + min));
     else { const d = ((ev.clientX - x0) / r.width) * dur, len = b0 - a0;
       const na = Math.max(0, Math.min(dur - len, a0 + d)); _dc.a = na; _dc.b = na + len; }
     if(_dc.a !== prevA){   // maquette : la lecture repart du début du passage dès qu'il bouge
@@ -14159,7 +14159,21 @@ function _dcLoadFile(f){
 function _dcSetSrc(src){
   _dcFreeSrc();
   _dc.src = src; _dc.a = 0; _dc.b = src.dur; _dc.t = 0; _dc.play = true; _dc.master = null; _dc.res = null;
+  _dcClampKeep();
   _dcSrcRender(); _dcCtaRender();
+}
+// Passage gardé borné (Axel 25/10) : 15 s avec le changement de personnage (limite du moteur), 60 s sinon. Une vidéo plus
+// longue part sur ses 15 / 60 premières secondes ; les poignées ne dépassent pas la borne, on peut garder moins et faire
+// glisser la fenêtre.
+const _dcMaxKeep = () => _dc.face ? 15 : 60;
+function _dcClampKeep(){
+  const s = _dc.src; if(!s) return;
+  const max = Math.min(s.dur, _dcMaxKeep());
+  if(_dc.b - _dc.a > max + 0.001){ _dc.b = _dc.a + max; if(_dc.b > s.dur){ _dc.b = s.dur; _dc.a = s.dur - max; } }
+  if(_dc.t < _dc.a || _dc.t > _dc.b){
+    _dc.t = _dc.a;
+    const v = document.getElementById('dcVid'); if(v && !v.seeking){ try{ v.currentTime = _dc.a; }catch(_){} }
+  }
 }
 function _dcFreeSrc(){ if(_dc.src && _dc.src.url && /^blob:/.test(_dc.src.url)){ try{ URL.revokeObjectURL(_dc.src.url); }catch(_){} } }
 // 12 vignettes de la bande, lues dans la vraie vidéo (un lecteur à part : l'aperçu continue de tourner)
@@ -14402,13 +14416,13 @@ function _dcModalRender(){
     +   body
     + '</div></div>';
 }
-function _dcFaceToggle(){ _dc.face = !_dc.face; _dcModalRender(); _dcCardsRender(); _dcCtaRender(); }
+function _dcFaceToggle(){ _dc.face = !_dc.face; _dcClampKeep(); _dcTrimPaint(); _dcModalRender(); _dcCardsRender(); _dcCtaRender(); }
 function _dcPickFace(inp){
   const f = inp.files && inp.files[0]; inp.value = ''; if(!f) return;
   if(!/^image\/(jpeg|png)$/.test(f.type) && !/\.(jpe?g|png)$/i.test(f.name)){ toast('Photo JPG ou PNG'); return; }
   if(_dc.faceImg){ try{ URL.revokeObjectURL(_dc.faceImg.url); }catch(_){} }
   _dc.faceImg = { name:f.name, url:URL.createObjectURL(f), file:f }; _dc.face = true;
-  _dcModalRender(); _dcCardsRender(); _dcCtaRender();
+  _dcClampKeep(); _dcTrimPaint(); _dcModalRender(); _dcCardsRender(); _dcCtaRender();
 }
 function _dcAltToggle(id){ _dc.alt[id] = !_dc.alt[id]; _dcModalRender(); _dcCardsRender(); }
 function _dcTextPos(p){ _dc.textPos = p; _dcModalRender(); }
