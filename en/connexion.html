@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Audit 02/10 : CSP (scripts : PLUS de 'unsafe-inline' depuis que le JSX est précompilé (Babel retiré) — les 5 scripts
+     inline sont autorisés par leur empreinte sha256, dans l'ordre de la page : anti-iframe, thème, ressources, parrainage,
+     page ; scripts externes = les 3 fichiers exacts React, ReactDOM, supabase-js ; appels réseau : notre Supabase
+     seulement ; images et vidéos de la vitrine). Modifier un script inline ou une version de script externe = mettre à
+     jour la CSP (Chrome donne l'empreinte attendue dans la console ; deploy.yml la vérifie et refuse de publier sinon).
+     La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
+     est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
+     app/index.html. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-1AUNpviU9xZGvpXDXlHwZV58I9ZXTjETcgIEfwoKIK0=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-UHyUrVmC0xYtDnX0cJnDto5taREF2fGccdgqv9Ps+/c=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta name="theme-color" content="#EDF1F4">
+<meta name="color-scheme" content="light">
+<!-- Héritage du thème par le tunnel : cette page de connexion est CLAIRE. À la 1re venue
+     (aucune préférence encore), on ensemence aa_theme=clair pour que l'app démarre en clair.
+     Partagé même-origine avec /app/. Un choix explicite (toggle Mon compte) prime toujours. -->
+<script>/* Tunnel v1 = clair par défaut, mais connexion s'ADAPTE : si on vient du tunnel v2 (aa_theme=dark
+   déjà posé), on rend la connexion en sombre. Sinon on ensemence clair. La préférence prime. */
+try{var _t=localStorage.getItem('aa_theme');if(!_t){_t='light';localStorage.setItem('aa_theme','light');}if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<title>Log in — AvatarAds</title>
+<link rel="icon" href="/assets/avatarads-logo-96.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0B0D;--bg-grad:#0E0D10;--panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
+  --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.14);
+  --text:#F6F4F1;--text-2:#A7A39E;--text-3:#6B6862;
+  --accent:#FF5A1F;--accent-2:#FF8042;
+  --accent-soft:color-mix(in srgb,var(--accent) 14%, transparent);
+  --accent-line:color-mix(in srgb,var(--accent) 32%, transparent);
+  --accent-glow:color-mix(in srgb,var(--accent) 48%, transparent);
+  --amber:#FFB020;--green:#28C795;--violet:#9A7CFF;--blue:#4dabf7;
+  --r-sm:10px;--r:14px;--r-lg:20px;--r-xl:28px;
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 20px 50px -20px rgba(0,0,0,.7);
+  --maxw:1320px;font-synthesis:none;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+html,body{background:radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)}
+html[data-theme="dark"],html[data-theme="dark"] body{background:radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.11), transparent 60%), linear-gradient(160deg,#0B0B0D,#141117)}
+body{color:var(--text);font-family:"Hanken Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:hidden}
+#root{min-height:100%}
+.mono{font-family:"JetBrains Mono",monospace;}
+.display{font-family:"Bricolage Grotesque",sans-serif;letter-spacing:-.02em;line-height:.98;}
+::selection{background:var(--accent);color:#0B0B0D}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:15px;border-radius:var(--r);padding:13px 20px;transition:transform .15s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s,border-color .2s;white-space:nowrap;}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 12px 30px -10px var(--accent-glow);}
+.btn-primary:hover{box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 16px 40px -10px var(--accent-glow);transform:translateY(-1px)}
+.btn-quiet{background:transparent;color:var(--text-2)}
+.btn-quiet:hover{color:var(--text)}
+.btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
+/* layout helpers */
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}
+.grow{flex:1}
+.muted{color:var(--text-2)}
+.faint{color:var(--text-3)}
+.accent{color:var(--accent)}
+.center{text-align:center}
+.brandmark{display:grid;place-items:center;color:#fff;flex:0 0 auto}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.rise{animation:none}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<!-- Audit 02/10 : scripts tiers en version EXACTE + intégrité (SRI, fichiers npm exacts) : un fichier modifié sur le CDN
+     n'est pas exécuté. supabase.js = le fichier du paquet (le .min.js de jsDelivr est généré à la volée, donc impropre au
+     SRI ; même code) ; 2.117.2 = la version que servait @2 au 03/10/2026. -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
+<script>window.__resources={brandLogo:"/assets/avatarads-logo.png"};</script>
+<script>/* parrainage / code promo : ?ref=CODE et ?promo=CODE gardés pour l'app (même origine) — posés par l'app après la connexion */
+try{var _q=new URLSearchParams(location.search),_r=_q.get('ref'),_p=_q.get('promo');if(_r&&/^[A-Za-z0-9_-]{4,40}$/.test(_r))localStorage.setItem('aa_ref',_r.toUpperCase());if(_p&&/^[A-Za-z0-9_-]{2,40}$/.test(_p.trim()))localStorage.setItem('aa_promo',_p.trim().toUpperCase());}catch(e){}</script>
+
+<script>
+/* Audit 02/10 : JSX PRÉCOMPILÉ en JS ordinaire (React.createElement, même rendu) : plus de Babel dans le navigateur
+   (650 Ko compressés et une compilation avant l'affichage) ni de 'unsafe-inline' dans la CSP. On l'édite directement
+   (JSX d'origine : git show 78bcb221:connexion.html). Toute modification d'un script inline de cette page change son
+   empreinte : mettre à jour le 'sha256-…' de la CSP en tête de page (le déploiement refuse sinon et donne la valeur). */
+/* ── icônes + logo (extrait du handoff) ── */
+const Ic = ({ d, size = 20, fill = false, sw = 1.8, children, ...p }) =>
+React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: fill ? "currentColor" : "none",
+  stroke: "currentColor", strokeWidth: sw, strokeLinecap: "round", strokeLinejoin: "round", ...p },
+d ? React.createElement("path", { d: d }) : children
+);
+
+const Logo = ({ size = 22 }) =>
+React.createElement("img", { src: window.__resources && window.__resources.brandLogo || "/assets/avatarads-logo.png", alt: "AvatarAds", width: size, height: size,
+  style: { borderRadius: size * 0.26, display: "block", flex: "0 0 auto" } });
+
+const Icons = {
+  star: (p) => React.createElement(Ic, { ...p, fill: true, sw: 0 }, React.createElement("path", { d: "M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z" })),
+  arrow: (p) => React.createElement(Ic, { ...p, d: "M5 12h14M13 6l6 6-6 6" }),
+  lock: (p) => React.createElement(Ic, { ...p }, React.createElement("rect", { x: "4", y: "11", width: "16", height: "10", rx: "2" }), React.createElement("path", { d: "M8 11V7a4 4 0 018 0v4" }))
+};
+
+/* ── useIsMobile (extrait de app.jsx) ── */
+function useIsMobile(bp = 760) {
+  const force = typeof window !== "undefined" && (localStorage.getItem("aa_force_mobile") === "1" || /[?&]mobile=1/.test(location.search));
+  const [m, setM] = React.useState(() => force || typeof window !== "undefined" && window.innerWidth <= bp);
+  React.useEffect(() => {
+    const on = () => setM(force || window.innerWidth <= bp);
+    window.addEventListener("resize", on);on();
+    return () => window.removeEventListener("resize", on);
+  }, [bp, force]);
+  return m;
+}
+window.useIsMobile = useIsMobile;
+const { useState: useStateA } = React;
+/* Thème de la connexion : sombre si on arrive du tunnel v2 (aa_theme=dark), clair sinon.
+   Lu une fois — l'utilisateur ne bascule pas le thème sur l'écran de login. */
+const _AA_DARK = (() => {try {return localStorage.getItem('aa_theme') === 'dark';} catch (e) {return false;}})();
+
+/* Audit 04/10 (CC-1) : lien « Ce n'est pas moi » envoyé à l'ANCIENNE adresse après un changement d'adresse
+   (#annuler-adresse=<jeton>). Jeton lu puis retiré tout de suite de l'URL (historique, capture d'écran) ; rien ne part
+   sans un clic sur le bouton (les robots qui ouvrent les liens des e-mails ne déclenchent rien). */
+const _REVERT_TOKEN = (() => {try {const m = /^#annuler-adresse=([0-9a-f]{64})$/i.exec(location.hash || "");if (!m) return "";history.replaceState(null, "", location.pathname + location.search);return m[1].toLowerCase();} catch (e) {return "";}})();
+
+/* ── Auth réelle (même projet Supabase que /app/, session partagée same-origin) ── */
+const SUPABASE_URL = "https://guvwgiejzkiodghywpwj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck";
+/* 12/10 (Axel : « Se connecter » ne fait rien en fenêtre normale, marche en navigation privée) : supabase-js prend par
+   défaut un verrou navigator.locks PARTAGÉ par tous les onglets avatarads.fr ; un onglet de l'app gelé en arrière-plan le
+   garde et la connexion attend sans fin. Verrou propre à cette page (file en mémoire, 5 s au plus par opération). */
+let _lockChain = Promise.resolve();
+function _pageLock(name, acquireTimeout, fn) {
+  const run = Promise.race([_lockChain, new Promise((ok) => setTimeout(ok, 5000))]).then(() => fn());
+  _lockChain = run.catch(() => {});
+  return run;
+}
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: _pageLock } });
+const AUTH_OTP_FN = SUPABASE_URL + "/functions/v1/auth-otp";
+/* 23/10 (Axel : « bloqué ~10 s sur Connexion…, ça marche au 2e clic ») : journaux Supabase → ni la requête du 1er clic ni
+   sa jumelle de 2,5 s ne sont jamais arrivées ; celle du 2e clic, si. Supabase répond en HTTP/3 (connexion UDP) : après une
+   minute sans échange (page de connexion ouverte pendant qu'on cherche son mot de passe), la connexion meurt sans bruit,
+   Safari la croit vivante et y envoie TOUTES les requêtes jusqu'à s'en apercevoir. Parade : la garder vivante tant que la
+   page est affichée — un petit appel au chargement, au retour sur l'onglet, à la saisie, puis toutes les 20 s. Sans clé
+   d'API (refusé à l'entrée, sans toucher au serveur d'authentification) : seule la connexion compte. */
+let _pingAt = 0;
+function garderConnexion(force) {
+  if (document.hidden || !force && Date.now() - _pingAt < 15000) return;
+  _pingAt = Date.now();
+  try {fetch(SUPABASE_URL + "/auth/v1/health", { mode: "no-cors", cache: "no-store" }).catch(() => {});} catch (_) {}
+}
+garderConnexion(true);
+setInterval(() => garderConnexion(true), 20000);
+document.addEventListener("visibilitychange", () => garderConnexion(true));
+window.addEventListener("pageshow", () => garderConnexion(true));
+window.addEventListener("focus", () => garderConnexion(false));
+document.addEventListener("focusin", (e) => {if (e.target && e.target.tagName === "INPUT") garderConnexion(false);});
+/* 15/10 (Axel : bouton figé sur « Connexion… », Safari / navigation privée) : TOUT appel réseau de la page est borné, corps de
+   la réponse compris. AbortController (AbortSignal.timeout n'existe pas avant Safari 16) + course contre un minuteur, au cas
+   où la requête n'honorerait pas l'annulation. Rejette sur délai dépassé, erreur réseau ou réponse illisible (page HTML 502). */
+function fetchJson(url, opts, ms) {
+  const ctl = typeof AbortController === "function" ? new AbortController() : null;
+  let t;
+  const stop = new Promise((_, ko) => {t = setTimeout(() => {try {if (ctl) ctl.abort();} catch (_) {}ko(new Error("timeout"));}, ms);});
+  const run = fetch(url, { ...opts, signal: ctl ? ctl.signal : undefined }).then((r) => r.json().then((j) => ({ ok: r.ok, status: r.status, j: j && typeof j === "object" ? j : {} })));
+  return Promise.race([run, stop]).finally(() => clearTimeout(t));
+}
+async function otpCall(payload) {
+  // 15 s au plus ; 60 s pour « Ce n'est pas moi » (le serveur ferme les sessions et retire des accès : couper trop tôt
+  // annoncerait un échec alors que c'est fait, et le lien, déjà consommé, ne resservirait plus)
+  const ms = payload && payload.action === "email_change_revert" ? 60000 : 15000;
+  try {return (await fetchJson(AUTH_OTP_FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, ms)).j;}
+  catch (e) {return { error: "network" };}
+}
+
+function GoogleG({ size = 18 }) {
+  return (
+    React.createElement("svg", { width: size, height: size, viewBox: "0 0 48 48" },
+    React.createElement("path", { fill: "#FFC107", d: "M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.4-3.5z" }),
+    React.createElement("path", { fill: "#FF3D00", d: "M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 16.3 4.5 9.7 8.9 6.3 14.7z" }),
+    React.createElement("path", { fill: "#4CAF50", d: "M24 43.5c5.5 0 10.3-1.9 13.8-5.1l-6.4-5.4C29.4 34.6 26.9 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.6 39 16.2 43.5 24 43.5z" }),
+    React.createElement("path", { fill: "#1976D2", d: "M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.4 5.4C41 36.9 43.5 31 43.5 24c0-1.2-.1-2.3-.4-3.5z" })
+    ));
+
+}
+
+/* vitrine plein cadre : le rendu d'un modèle, carrousel en bas (vidéos réelles) */
+function ShowcaseVideo({ mob }) {
+  const models = [
+  // ordre voulu par Axel (25/09) : Express, Omni, Motion Control, Image IA, Montage IA
+  { n: "EXPRESS", d: "Your avatar talking to the camera, your product in hand", hue: 18, vid: "/assets/lp/v2/connexion/express.mp4?v=8" },
+  { n: "OMNI", d: "Transform any object in one click", hue: 200, vid: "/assets/lp/v2/connexion/omni.mp4?v=1" },
+  { n: "MOTION CONTROL", d: "Your character reproduces the motion of a video", hue: 150, vid: "/assets/lp/v2/connexion/motion-control.mp4?v=3" },
+  { n: "AI IMAGE", d: "Hyper-realism, natural 4K quality", hue: 330, src: "/assets/lp/v2/connexion/image-ia.jpg", pos: "50% 20%" },
+  { n: "AI EDITING", d: "Your original video becomes an edited, captioned, well-paced video", hue: 265, vid: "/assets/lp/v2/connexion/montage.mp4?v=5" }];
+
+  const [i, setI] = useStateA(0);
+  // auto-rotation : le timer se RÉINITIALISE à chaque changement de slide (clic inclus) → chaque vidéo a ses 4,2 s pleines
+  React.useEffect(() => {const t = setInterval(() => setI((v) => (v + 1) % models.length), 4200);return () => clearInterval(t);}, [i]);
+  const m = models[i];
+  return (
+    React.createElement("div", { style: { position: "relative", height: "100%", minHeight: mob ? 300 : 520, borderRadius: 20, overflow: "hidden", border: "1px solid var(--border-2)",
+        background: `radial-gradient(120% 90% at 70% 10%, oklch(0.42 0.14 ${m.hue}), #0b0910 72%)`, transition: "background .8s" } },
+    m.src && React.createElement("img", { src: m.src, alt: "", style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: m.pos || "50% 50%" } }),
+    m.vid && !m.phone && React.createElement("video", { key: m.vid, src: m.vid, autoPlay: true, muted: true, loop: true, playsInline: true, preload: "auto", onLoadedData: (e) => e.target.play && e.target.play().catch(() => {}), style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: m.pos || "50% 50%", background: "#000" } }),
+    !m.src && !m.vid && React.createElement("div", { style: { position: "absolute", inset: 0, opacity: .5, transition: "opacity .8s",
+        background: `repeating-linear-gradient(${45 + i * 20}deg, rgba(255,255,255,.06) 0 22px, transparent 22px 44px)` } }),
+    !m.src && !m.vid && React.createElement("div", { style: { position: "absolute", right: "-8%", top: "14%", width: "52%", aspectRatio: "1", borderRadius: "50%",
+        background: `radial-gradient(circle at 40% 35%, oklch(0.7 0.16 ${m.hue}), transparent 68%)`, filter: "blur(6px)", transition: "all .8s" } }),
+    React.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,.72))" } }),
+    m.vid && m.phone && React.createElement("div", { style: { position: "absolute", top: "6%", left: "50%", transform: "translateX(-50%)", height: "70%", aspectRatio: "9/16", borderRadius: 26, overflow: "hidden", background: "#000", boxShadow: "0 26px 60px -16px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.09)" } },
+    React.createElement("video", { key: m.vid, src: m.vid, autoPlay: true, muted: true, loop: true, playsInline: true, preload: "auto", onLoadedData: (e) => e.target.play && e.target.play().catch(() => {}), style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" } })
+    ),
+
+    React.createElement("div", { style: { position: "absolute", left: mob ? 18 : 28, right: mob ? 18 : 28, bottom: mob ? 58 : 70 } },
+    React.createElement("div", { className: "display", style: { fontSize: mob ? "26px" : "clamp(30px,3vw,46px)", fontWeight: 800, color: "#fff", letterSpacing: "-.01em" } }, m.n),
+    React.createElement("div", { style: { fontSize: mob ? 13 : 15, color: "rgba(255,255,255,.7)", marginTop: 6 } }, m.d)
+    ),
+
+    React.createElement("div", { className: "row", style: { position: "absolute", left: mob ? 14 : 20, right: mob ? 14 : 20, bottom: mob ? 14 : 20, gap: mob ? 8 : 14 } },
+    models.map((x, j) =>
+    React.createElement("button", { key: j, onClick: () => setI(j), className: "col", style: { flex: 1, gap: 7, alignItems: "stretch", textAlign: "left" } },
+    React.createElement("div", { style: { height: 3, borderRadius: 3, background: j === i ? "#fff" : "rgba(255,255,255,.22)", transition: ".3s" } }),
+    !mob && React.createElement("span", { style: { fontSize: 11.5, fontWeight: 600, color: j === i ? "#fff" : "rgba(255,255,255,.5)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, x.n)
+    )
+    )
+    )
+    ));
+
+}
+
+function Login({ go }) {
+  const mob = window.useIsMobile ? window.useIsMobile() : false;
+  const [email, setEmail] = useStateA("");
+  // mode mot de passe ; 12/10 (Axel) : RETENU dans ce navigateur (aa_login_pw) → les 2 champs sont là dès l'arrivée, Safari remplit
+  // e-mail + mot de passe à l'empreinte et la connexion part toute seule (voir autoGo)
+  const _pwPref = (() => {try {return localStorage.getItem("aa_login_pw") === "1";} catch (_) {return false;}})();
+  const [pw, setPw] = useStateA(_pwPref);
+  const [pwVal, setPwVal] = useStateA("");
+  // 12/10 (Axel) : identifiant enregistré choisi au trousseau / à l'empreinte depuis le mode « code » → Safari remplit aussi
+  // le mot de passe (champ invisible) → on passe en mode mot de passe et on se connecte directement, sans clic de plus.
+  const [autoGo, setAutoGo] = useStateA(false);
+  React.useEffect(() => {if (autoGo && pw && pwVal) {setAutoGo(false);authPassword();}}, [autoGo, pw, pwVal]);
+  // 15/10 : le trousseau peut remplir l'e-mail SANS événement ; au rendu suivant, React remet le champ contrôlé à sa valeur
+  // d'état (vide) AVANT que la connexion automatique ne le relise (« Entre un email valide ») → on le recopie dans l'état
+  // au moment où l'on détecte le remplissage
+  const grabEmail = () => {const m = document.querySelector('input[name="email"]');if (m && m.value) setEmail(m.value);};
+  // Safari remplit parfois le mot de passe SANS événement (React ne le voit pas) : on relit le champ toutes les 400 ms
+  // tant qu'il est vide côté page → rempli d'un coup = trousseau / empreinte → connexion directe
+  React.useEffect(() => {
+    if (!pw || pwVal) return;
+    const t = setInterval(() => {const x = document.querySelector('input[name="password"]');if (x && x.value) {clearInterval(t);grabEmail();setPwVal(x.value);setAutoGo(true);}}, 400);
+    return () => clearInterval(t);
+  }, [pw, pwVal]);
+  const hiddenPw = (st) => React.createElement("input", { type: "password", name: "password", autoComplete: "current-password", tabIndex: -1, "aria-hidden": "true",
+    style: { position: "absolute", left: 0, top: 0, width: 1, height: 1, opacity: 0, border: 0, padding: 0, pointerEvents: "none" },
+    onChange: (e) => {if (e.target.value) {grabEmail();setPwVal(e.target.value);setPw(true);setAutoGo(true);}} });
+  const [sent, setSent] = useStateA(false); // code OTP envoyé
+  const [show, setShow] = useStateA(false); // visibilité mot de passe
+  const [busy, setBusy] = useStateA(false);
+  const [err, setErr] = useStateA("");
+  const [sentInfo, setSentInfo] = useStateA(""); // Audit 04/10 (CC-3) : écran du code ouvert sans nouvel envoi
+  // 15/10 (Axel : « le bouton reste sur Connexion… ») : l'envoi du code a son PROPRE état (il partageait « busy » avec la
+  // connexion : passer en mode mot de passe pendant un envoi lent affichait « Connexion… » et « Se connecter » sortait sans
+  // rien faire) ; « opening » = connexion réussie, app en cours d'ouverture (le bouton le dit au lieu de « Connexion… »)
+  const [sending, setSending] = useStateA(false);
+  const [opening, setOpening] = useStateA(false);
+  // verrous SYNCHRONES (l'état « busy » relu dans une fermeture périmée laissait partir 2 requêtes : trousseau + relecture
+  // 400 ms + clic + Entrée) : connexion en cours, envoi de code en cours, session déjà obtenue par cette page (un nouveau
+  // clic rouvre seulement l'app) ; minuteur du filet d'ouverture de l'app
+  const runRef = React.useRef(false);
+  const sendRef = React.useRef(false);
+  const doneRef = React.useRef(false);
+  const navTimer = React.useRef(0);
+  // Retour arrière (bfcache Safari) : la page revient GELÉE dans l'état d'avant la navigation (busy à true, verrou pris,
+  // bouton sur « Connexion… » qui ne répond plus) → on la rend utilisable ; un nouveau clic refait une connexion normale
+  React.useEffect(() => {
+    const onShow = (ev) => {if (ev && ev.persisted) {clearTimeout(navTimer.current);runRef.current = false;sendRef.current = false;doneRef.current = false;setBusy(false);setSending(false);setOpening(false);setErr("");}};
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
+  const validEmail = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+  async function authGoogle() {
+    setErr("");
+    /* Audit 04/10 (SITE-02) : plus d'access_type « offline » (ni prompt « consent », qui ne servait qu'à l'obtenir) : le
+       retour sur /app/ ne porte plus de jeton de rafraîchissement Google (provider_refresh_token, jamais utilisé par
+       AvatarAds) dans l'URL. « select_account » garde le choix du compte Google à chaque connexion. */
+    try {const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + "/app/", queryParams: { prompt: "select_account" } } });if (error) setErr("Google is unavailable, try again.");}
+    catch (e) {setErr("Google is unavailable, try again.");}
+  }
+  async function authSend() {
+    // 15/10 : verrou synchrone (double clic, Entrée + clic, « Renvoyer » = UN seul code) et état propre « sending » (plus
+    // « busy », voir plus haut) ; e-mail rempli par le trousseau SANS événement : relu dans le champ et recopié dans l'état
+    // (la vérification du code lit l'état)
+    if (sendRef.current) return;
+    const m = document.querySelector('input[name="email"]');
+    const e = (email || (m ? m.value : "") || "").trim().toLowerCase();
+    if (!validEmail(e)) {setErr("Enter a valid email.");return;}
+    if (!email) setEmail(e);
+    sendRef.current = true;setSending(true);setErr("");
+    let res;
+    try {res = await otpCall({ action: "send", mode: "login", email: e, firstName: "" });}
+    finally {sendRef.current = false;setSending(false);}
+    /* Audit 04/10 (CC-3) : plafond d'envoi atteint (ou code parti il y a moins de 30 s) → l'écran du code s'ouvre quand
+       même : un code reçu il y a moins de 10 minutes reste valable. Message explicite au lieu de « Envoi impossible ». */
+    /* Axel 24/10 : 3 codes puis 10 min d'attente, au 5e code pause de 24 h (auth-otp, par adresse + appareil) : on dit combien attendre */
+    if (res && res.error === "codes_10min") {const m = Math.max(1, Math.ceil((Number(res.wait) || 600) / 60));setSentInfo("You’ve already requested 3 codes: wait " + m + " min before requesting another one. If you received a code, enter it here.");setSent(true);return;}
+    if (res && res.error === "codes_24h") {const h = Math.max(1, Math.round((Number(res.wait) || 86400) / 3600));setSentInfo("You’ve requested 5 codes today: you can request a new one in " + h + " h. If you received a code, enter it here, or continue with Google.");setSent(true);return;}
+    if (res && res.error === "too_many_codes") {setSentInfo("Too many codes requested for this address. If you received a code less than 10 minutes ago, enter it here; otherwise, try again later or continue with Google.");setSent(true);return;}
+    if (res && res.error === "cooldown") {setSentInfo("A code was just sent to your email: enter the 6 digits you received" + (res.wait > 0 ? " (you can resend in " + Math.ceil(res.wait) + " s)." : "."));setSent(true);return;}
+    if (res && res.error) {setErr("Couldn’t send the code, try again in a moment.");return;}
+    setSentInfo("");setSent(true);
+  }
+  // 15/10 : connexion réussie → ouverture de l'app. replace : la page de connexion ne reste pas dans l'historique (un retour
+  // arrière depuis l'app ne ramène plus un bouton figé sur « Connexion… »). Filet : si 8 s plus tard la page est toujours
+  // affichée (navigation lente ou annulée), le bouton redevient cliquable avec un message ; un nouveau clic rouvre seulement
+  // l'app (doneRef). aa_login_at daté ici comme le faisait l'ancien login intégré de l'app : une date de plus de 14 jours
+  // laissée par une session précédente faisait déconnecter la NOUVELLE session par initAuth (retour muet à la connexion).
+  function openApp() {
+    doneRef.current = true;setBusy(true);setOpening(true);setErr("");
+    try {localStorage.setItem("aa_login_at", String(Date.now()));} catch (_) {}
+    clearTimeout(navTimer.current);
+    navTimer.current = setTimeout(() => {runRef.current = false;setBusy(false);setOpening(false);setErr("Logged in, but the app is slow to open: tap the button again.");}, 8000);
+    try {location.replace("/app/");} catch (_) {location.href = "/app/";}
+  }
+  async function authVerify(codeStr) {
+    if (doneRef.current) {openApp();return;} // session déjà ouverte par cette page : on rouvre seulement l'app
+    const c = (codeStr || "").replace(/\D/g, "").slice(0, 6);
+    if (c.length !== 6) {setErr("Enter the 6 digits you received.");return;}
+    if (runRef.current) return; // 6e chiffre tapé + clic sur « Entrer dans l'app » = une seule vérification
+    runRef.current = true;setBusy(true);setErr("");
+    let ouvre = false;
+    try {
+      const res = await otpCall({ action: "verify", email: (email || "").trim().toLowerCase(), code: c });
+      /* Audit 04/10 (CC-1) : adresse retirée d'un compte il y a moins de 72 h → pas de nouveau compte avec elle. */
+      if (res && res.error === "email_recently_changed") {setErr("This address was just removed from an AvatarAds account. If you didn’t make this change, open the “Ce n’est pas moi” (“It wasn’t me”) link we emailed to this address; otherwise, write to us at bonjour@avatarads.fr.");return;}
+      if (res && res.error === "too_many_attempts") {setErr("Too many attempts: wait a few minutes, then request a new code.");return;}
+      if (res && res.error === "network") {setErr("The server isn’t responding. Check your internet connection and try again.");return;}
+      if (!res || res.error || !res.token_hash) {setErr("Invalid or expired code.");return;}
+      // supabase-js : 15 s au plus (sa requête interne n'a aucun délai maximal)
+      let v;
+      try {v = await Promise.race([sb.auth.verifyOtp({ type: "magiclink", token_hash: res.token_hash }), new Promise((_, ko) => setTimeout(() => ko(new Error("timeout")), 15000))]);}
+      catch (_) {setErr("The server isn’t responding. Reload the page and request a new code.");return;}
+      if (!v || v.error) {setErr("Invalid or expired code.");return;}
+      ouvre = true;openApp();
+    } finally {
+      if (!ouvre) {runRef.current = false;setBusy(false);}
+    }
+  }
+  async function authPassword() {
+    if (doneRef.current) {openApp();return;} // session déjà ouverte par cette page : on rouvre seulement l'app
+    if (runRef.current) return; // 15/10 : verrou synchrone — trousseau + relecture + clic + Entrée = UNE requête
+    // 12/10 (Axel) : remplissage par le trousseau / empreinte → on relit aussi les champs (React ne voit pas toujours l'autofill)
+    const dom = (n) => {const x = document.querySelector('input[name="' + n + '"]');return x ? x.value : "";};
+    const e = (email || dom("email") || "").trim().toLowerCase();
+    const pwV = pwVal || dom("password");
+    if (!validEmail(e)) {setErr("Enter a valid email.");return;}
+    if (!pwV) {setErr("Enter your password.");return;}
+    runRef.current = true;setBusy(true);setErr("");
+    let ouvre = false;
+    try {
+      // 12/10 (Axel : « Se connecter bloqué ») : connexion SANS passer par supabase-js (son initialisation / son verrou pouvaient
+      // rester bloqués dans Safari → aucun appel ne partait). Appel direct du serveur d'authentification ; 15/10 : 12 s au plus,
+      // corps compris, dans TOUS les navigateurs (fetchJson), et chaque issue rend le bouton (finally) sauf l'ouverture de l'app.
+      // 19/10 (Axel : « le bouton reste sur Connexion… », un 2e clic marchait) : journaux Supabase → la 1re requête n'était JAMAIS
+      // arrivée (Safari l'avait mise sur une connexion morte). Coupée à 6 s puis relancée seule une fois (connexion neuve), 10 s.
+      // 23/10 (Axel : « bloqué sur Connexion… tous les jours, j'ai spammé le bouton et ça a marché ») : au lieu d'attendre 6 s
+      // la 1re requête, d'autres partent EN PARALLÈLE (2,5 s, 6 s, 10 s — tout de suite si celles en cours ont échoué) ; la
+      // 1re réponse gagne. Plusieurs connexions réussies = plusieurs sessions valides, sans effet : seule la 1re est gardée.
+      // 23/10 (bis) : deux essais ne suffisaient pas quand la connexion était déjà morte (voir garderConnexion) — ils
+      // partaient tous les deux dedans ; les essais de 6 et 10 s arrivent une fois que Safari l'a remplacée.
+      const tryOnce = () => fetchJson(SUPABASE_URL + "/auth/v1/token?grant_type=password", { method: "POST",
+        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: e, password: pwV }) }, 10000);
+      let x;
+      try {
+        x = await new Promise((ok, ko) => {
+          const DEPARTS = [0, 2500, 6000, 10000];
+          let fini = false, lances = 0, echecs = 0;
+          const minuteurs = [];
+          const lance = () => {
+            if (fini || lances >= DEPARTS.length) return;
+            lances++;
+            tryOnce().then((v) => {if (!fini) {fini = true;minuteurs.forEach(clearTimeout);ok(v);}}, (er) => {
+              echecs++;
+              if (fini) return;
+              if (echecs >= DEPARTS.length) {fini = true;ko(er);} else if (echecs >= lances) lance();
+            });
+          };
+          DEPARTS.forEach((d) => minuteurs.push(setTimeout(lance, d)));
+        });
+      } catch (_) {setErr("The server isn’t responding. Check your internet connection and try again.");return;}
+      const j = x.j, code = String(j.error_code || j.error || "");
+      if (!x.ok || !j.access_token || !j.refresh_token) {
+        setErr(x.status === 429 || /rate_limit/.test(code) ? "Too many attempts: wait a minute, then try again." :
+        code === "email_not_confirmed" ? "Address not confirmed yet: get a code by email instead." :
+        x.status >= 500 ? "The server isn’t responding. Try again in a moment." : "Incorrect email or password.");
+        return;
+      }
+      if (!j.expires_at && j.expires_in) j.expires_at = Math.floor(Date.now() / 1000) + Number(j.expires_in);
+      // session écrite là où l'app la lit (clé de stockage standard de supabase-js) puis RELUE : 15/10, une écriture refusée
+      // (stockage plein ou bloqué) était avalée → l'app ne trouvait aucune session et renvoyait ici sans un mot
+      const KEY = "sb-guvwgiejzkiodghywpwj-auth-token";
+      let ecrit = false;
+      try {localStorage.setItem(KEY, JSON.stringify(j));ecrit = localStorage.getItem(KEY) !== null;} catch (_) {}
+      if (!ecrit) {setErr("Your browser won’t save the login (storage full or blocked). Try again in a normal window or another browser.");return;}
+      try {localStorage.setItem("aa_login_pw", "1");} catch (_) {}
+      ouvre = true;openApp();
+    } finally {
+      if (!ouvre) {runRef.current = false;setBusy(false);}
+    }
+  }
+  function onOtpInput(e) {
+    e.target.value = e.target.value.replace(/\D/g, "").slice(0, 1);
+    if (e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus();
+    const c = [...e.target.parentElement.children].filter((x) => x.tagName === "INPUT").map((b) => b.value).join("");
+    if (c.length === 6) authVerify(c);
+  }
+  function onOtpKey(e) {if (e.key === "Backspace" && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus();}
+  function onOtpPaste(e) {const t = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6);if (!t) return;e.preventDefault();const boxes = [...e.target.parentElement.children].filter((x) => x.tagName === "INPUT");boxes.forEach((b, i) => {b.value = t[i] || "";});(boxes[Math.min(t.length, 5)] || e.target).focus();if (t.length === 6) authVerify(t);}
+  const errLine = err ? React.createElement("p", { className: "center", style: { fontSize: 12.5, color: "#c0341d", marginTop: 2, width: "100%" } }, err) : null;
+
+  const L = _AA_DARK ?
+  { ink: "#F6F4F1", sub: "#A7A39E", line: "rgba(255,255,255,.12)", field: "#171519", fieldLine: "rgba(255,255,255,.18)", btn: "#1E1B21" } :
+  { ink: "#141013", sub: "#5b5750", line: "rgba(0,0,0,.1)", field: "#fff", fieldLine: "rgba(0,0,0,.14)", btn: "#fff" };
+  const panel =
+  React.createElement("div", { className: "rise col", style: { width: "100%", maxWidth: 380, alignItems: "center" } },
+  React.createElement("div", { className: "brandmark", style: { marginBottom: 22, color: L.ink } }, React.createElement(Logo, { size: 40 })),
+  React.createElement("h2", { className: "display center", style: { fontSize: mob ? 24 : 28, fontWeight: 800, color: L.ink } }, "Log in to AvatarAds"),
+  React.createElement("p", { className: "center", style: { marginTop: 9, fontSize: 14.5, maxWidth: 320, color: L.sub } }, "Choose how you want to log in to get started."),
+
+  React.createElement("button", { className: "btn", style: { width: "100%", marginTop: 26, background: "#fff", color: "#1a1a1a", fontWeight: 600, fontSize: 15, padding: "15px 20px", border: "1.5px solid rgba(0,0,0,.28)" }, onClick: authGoogle },
+  React.createElement(GoogleG, null), " Continue with Google"
+  ),
+
+  React.createElement("div", { className: "row gap16", style: { width: "100%", margin: "20px 0", alignItems: "center" } },
+  React.createElement("div", { style: { flex: 1, height: 1, background: L.line } }),
+  React.createElement("span", { className: "mono", style: { fontSize: 10.5, letterSpacing: ".14em", color: L.sub } }, "OR WITH EMAIL"),
+  React.createElement("div", { style: { flex: 1, height: 1, background: L.line } })
+  ),
+
+  sent ?
+  React.createElement("div", { className: "col rise", style: { width: "100%", gap: 11, alignItems: "center" } },
+  React.createElement("p", { className: "center", style: { fontSize: 13.5, maxWidth: 300, color: L.sub } }, sentInfo || "Code sent to your email. Enter the 6 digits you received."),
+  React.createElement("div", { id: "otpbox", className: "row", style: { gap: 8, justifyContent: "center" } },
+  [0, 1, 2, 3, 4, 5].map((k) =>
+  React.createElement("input", { key: k, maxLength: 1, inputMode: "numeric", style: { width: 44, height: 52, textAlign: "center", fontSize: 20, fontWeight: 800, padding: 0, borderRadius: 12, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, outline: "none" },
+    onInput: onOtpInput, onKeyDown: onOtpKey, onPaste: onOtpPaste })
+  )
+  ),
+  React.createElement("button", { className: "btn btn-primary", style: { width: "100%", marginTop: 6, padding: "15px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => authVerify([...document.querySelectorAll('#otpbox input')].map((b) => b.value).join('')) }, busy ? (opening ? "Opening the app… " : "Verifying… ") : "Enter the app ",
+  React.createElement(Icons.arrow, { size: 16 })
+  ),
+  React.createElement("button", { className: "btn btn-quiet btn-sm", style: { fontSize: 13, color: L.sub }, onClick: () => setSent(false) }, "← Change email"),
+  React.createElement("span", { style: { fontSize: 12, color: L.sub } }, "Didn’t get it? ", React.createElement("span", { className: "accent", style: { cursor: "pointer", fontWeight: 600 }, onClick: authSend }, "Resend"))
+  ) :
+  React.createElement("form", { style: { display: "contents" }, onSubmit: (e) => {e.preventDefault();pw ? authPassword() : authSend();} },
+  React.createElement("input", { type: "email", name: "email", autoComplete: "username", placeholder: "you@email.com", value: email, onChange: (e) => setEmail(e.target.value), style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
+  pw &&
+  React.createElement("div", { style: { position: "relative", width: "100%", marginTop: 11 } },
+  React.createElement("input", { type: show ? "text" : "password", name: "password", autoComplete: "current-password", placeholder: "••••••••", value: pwVal, onChange: (e) => {const v = e.target.value;grabEmail();if (v.length - pwVal.length > 1) setAutoGo(true);setPwVal(v);}, onKeyDown: (e) => {if (e.key === "Enter") {e.preventDefault();authPassword();}}, style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
+  React.createElement("button", { type: "button", onClick: () => setShow(!show), style: { position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: L.sub } }, show ? "Hide" : "Show")
+  ),
+  !pw && hiddenPw(),
+
+  React.createElement("button", { type: "button", className: "btn btn-primary", style: { width: "100%", marginTop: 11, padding: "15px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
+  pw ? (busy ? (opening ? "Opening the app…" : "Logging in…") : "Log in") : (sending ? "Sending code…" : "Get my code"), " ", React.createElement(Icons.arrow, { size: 16 })
+  ),
+  React.createElement("button", { type: "button", className: "btn", style: { width: "100%", marginTop: 9, padding: "13px 20px", fontSize: 13.5, background: L.btn, border: "1px solid " + L.fieldLine, color: L.ink, fontWeight: 600 }, onClick: () => {try {localStorage.setItem("aa_login_pw", pw ? "0" : "1");} catch (_) {}setPw(!pw);setErr("");} },
+  pw ? "Get a code by email instead" : "I’d rather enter my password"
+  )
+  ),
+  errLine,
+
+  React.createElement("p", { className: "center", style: { marginTop: 26, fontSize: 12.5, lineHeight: 1.6, maxWidth: 320, color: L.sub } }, "By continuing, you accept the ",
+  React.createElement("span", { style: { textDecoration: "underline", cursor: "pointer" } }, "Terms"), " and the ", React.createElement("span", { style: { textDecoration: "underline", cursor: "pointer" } }, "Privacy Policy"), "."
+  ),
+  React.createElement("div", { className: "row gap16", style: { alignItems: "center", marginTop: 22 } },
+  React.createElement("span", { className: "row gap6", style: { padding: "7px 13px", borderRadius: 999, border: "1px solid " + L.fieldLine, background: L.btn, alignItems: "center" } }, React.createElement(Icons.star, { size: 13, style: { color: "var(--amber)" } }), " ", React.createElement("b", { style: { color: L.ink } }, "4.9/5")),
+  React.createElement("span", { className: "row gap8", style: { fontSize: 13, color: L.sub } }, React.createElement(Icons.lock, { size: 13 }), " Secure login")
+  )
+  );
+
+
+  const back =
+  React.createElement("button", { onClick: () => go("landing"),
+    style: { position: "absolute", top: 24, left: 24, zIndex: 2, width: 40, height: 40, borderRadius: 12, padding: 0, border: "1px solid " + L.fieldLine, background: L.btn, color: L.ink, display: "grid", placeItems: "center" } },
+  React.createElement(Icons.arrow, { size: 17, style: { transform: "rotate(180deg)" } })
+  );
+
+
+  const lightBg = _AA_DARK ?
+  "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.12), transparent 60%), linear-gradient(160deg,#0B0B0D,#151319)" :
+  "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)";
+
+  if (mob) {
+    const D = _AA_DARK ?
+    { card: "rgba(22,20,25,.72)", line: "rgba(255,255,255,.12)", ink: "#F6F4F1", sub: "#A7A39E", field: "#171519", btn: "#1E1B21" } :
+    { card: "rgba(255,255,255,.72)", line: "rgba(0,0,0,.12)", ink: "#141013", sub: "#5b5750", field: "#fff", btn: "#fff" };
+    return (
+      React.createElement("div", { style: { minHeight: "100dvh", display: "flex", flexDirection: "column", justifyContent: "center", padding: "64px 16px 28px", position: "relative",
+          background: _AA_DARK ? "radial-gradient(120% 80% at 50% 0%, #17151b, #0e0d10 55%, #0b0b0d)" : "radial-gradient(120% 80% at 50% 0%, #ffffff, #eceaf0 55%, #e2e0e6)" } },
+      React.createElement("button", { onClick: () => go("landing"), className: "row gap8", style: { position: "absolute", top: 22, left: 18, zIndex: 2, color: D.sub, fontSize: 15, fontWeight: 600, alignItems: "center" } },
+      React.createElement(Icons.arrow, { size: 17, style: { transform: "rotate(180deg)" } }), " Back"
+      ),
+      React.createElement("div", { style: { background: D.card, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid " + D.line, borderRadius: 26, padding: "30px 22px 26px" } },
+      React.createElement("div", { className: "brandmark", style: { marginBottom: 20, color: D.ink } }, React.createElement(Logo, { size: 34 })),
+      React.createElement("h1", { className: "display", style: { fontSize: 34, fontWeight: 800, lineHeight: 1.02, color: D.ink } }, "Log in to", React.createElement("br", null), React.createElement("span", { style: { color: D.sub } }, "AvatarAds")),
+      React.createElement("div", { className: "mono", style: { fontSize: 11.5, letterSpacing: ".12em", color: D.sub, margin: "16px 0 20px" } }, "+50,000 CREATORS ALREADY SIGNED UP"),
+
+      React.createElement("button", { className: "btn", style: { width: "100%", background: "#fff", color: "#1a1a1a", fontWeight: 600, fontSize: 15, padding: "15px 20px", border: "1.5px solid rgba(0,0,0,.28)" }, onClick: authGoogle },
+      React.createElement(GoogleG, null), " Continue with Google"
+      ),
+
+      sent ?
+      React.createElement("div", { className: "col", style: { gap: 11, marginTop: 14 } },
+      React.createElement("p", { style: { fontSize: 13.5, color: D.sub } }, sentInfo || "Code sent. Enter the 6 digits you received."),
+      React.createElement("div", { id: "otpbox", className: "row", style: { gap: 8 } },
+      [0, 1, 2, 3, 4, 5].map((k) =>
+      React.createElement("input", { key: k, maxLength: 1, inputMode: "numeric", style: { flex: 1, minWidth: 0, height: 52, textAlign: "center", fontSize: 20, fontWeight: 800, padding: 0, borderRadius: 12, border: "1px solid " + D.line, background: D.field, color: D.ink, outline: "none" },
+        onInput: onOtpInput, onKeyDown: onOtpKey, onPaste: onOtpPaste })
+      )
+      ),
+      React.createElement("button", { className: "btn btn-primary", style: { width: "100%", padding: "16px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => authVerify([...document.querySelectorAll('#otpbox input')].map((b) => b.value).join('')) }, busy ? (opening ? "Opening the app… " : "Verifying… ") : "Enter the app ", React.createElement(Icons.arrow, { size: 16 })),
+      React.createElement("button", { onClick: () => setSent(false), style: { fontSize: 13, color: D.sub, fontWeight: 600 } }, "← Change email")
+      ) :
+
+      React.createElement("form", { className: "col", style: { gap: 11, marginTop: 14 }, onSubmit: (e) => {e.preventDefault();pw ? authPassword() : authSend();} },
+      React.createElement("input", { type: "email", name: "email", autoComplete: "username", placeholder: "you@email.com", value: email, onChange: (e) => setEmail(e.target.value), style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
+      pw &&
+      React.createElement("div", { style: { position: "relative" } },
+      React.createElement("input", { type: show ? "text" : "password", name: "password", autoComplete: "current-password", placeholder: "••••••••", value: pwVal, onChange: (e) => {const v = e.target.value;grabEmail();if (v.length - pwVal.length > 1) setAutoGo(true);setPwVal(v);}, onKeyDown: (e) => {if (e.key === "Enter") {e.preventDefault();authPassword();}}, style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
+      React.createElement("button", { type: "button", onClick: () => setShow(!show), style: { position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: D.sub } }, show ? "Hide" : "Show")
+      ),
+      !pw && hiddenPw(),
+
+      React.createElement("button", { type: "button", className: "btn btn-primary", style: { width: "100%", padding: "16px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
+      pw ? (busy ? (opening ? "Opening the app…" : "Logging in…") : "Log in") : (sending ? "Sending code…" : "Get my code"), " ", React.createElement(Icons.arrow, { size: 16 })
+      ),
+      React.createElement("button", { type: "button", onClick: () => {try {localStorage.setItem("aa_login_pw", pw ? "0" : "1");} catch (_) {}setPw(!pw);setErr("");}, className: "btn", style: { width: "100%", padding: "13px 20px", fontSize: 13.5, background: D.field, border: "1px solid " + D.line, color: D.ink, fontWeight: 600 } },
+      pw ? "Get a code by email instead" : "I’d rather enter my password"
+      )
+      ),
+
+      errLine,
+
+      React.createElement("p", { style: { fontSize: 12.5, lineHeight: 1.6, color: D.sub, marginTop: 20 } }, "By continuing, you accept the ",
+      React.createElement("span", { style: { textDecoration: "underline" } }, "Terms"), " and the ", React.createElement("span", { style: { textDecoration: "underline" } }, "Privacy Policy"), "."
+      ),
+      React.createElement("div", { className: "row", style: { alignItems: "center", marginTop: 18, gap: 16, justifyContent: "space-between" } },
+      React.createElement("span", { className: "row gap6", style: { padding: "6px 12px", borderRadius: 999, border: "1px solid " + D.line, background: D.btn, alignItems: "center" } }, React.createElement(Icons.star, { size: 13, style: { color: "var(--amber)" } }), " ", React.createElement("b", { style: { color: D.ink, fontSize: 13 } }, "4.9/5")),
+      React.createElement("span", { className: "row gap8", style: { fontSize: 13, color: D.sub } }, React.createElement(Icons.lock, { size: 13 }), " Secure login")
+      )
+      )
+      ));
+
+  }
+
+  return (
+    React.createElement("div", { style: { minHeight: "100vh", display: "grid", gridTemplateColumns: "1fr 1.15fr", background: lightBg } },
+    React.createElement("div", { style: { position: "relative", display: "grid", placeItems: "center", padding: "40px 48px" } },
+    back, panel
+    ),
+    React.createElement("div", { style: { padding: 16 } }, React.createElement(ShowcaseVideo, null))
+    ));
+
+}
+
+/* Audit 04/10 (CC-1) : écran « Ce n'est pas moi » — rétablit l'adresse de connexion (POST auth-otp email_change_revert,
+   sans session : la preuve est le jeton reçu à l'ancienne adresse). Le serveur rétablit l'adresse, ferme toutes les
+   sessions, retire mot de passe / compte Google / double authentification ajoutés depuis le changement et coupe Claude. */
+function Revert({ token }) {
+  const mob = window.useIsMobile ? window.useIsMobile() : false;
+  const [etat, setEtat] = useStateA("idle"); // idle | busy | done | fin (lien inutilisable)
+  const [msg, setMsg] = useStateA("");
+  const [adr, setAdr] = useStateA("");
+  const [verrou, setVerrou] = useStateA(true); // Audit 04/10 (relecture) : sessions_closed renvoyé par le serveur
+  const C = _AA_DARK ?
+  { card: "rgba(22,20,25,.78)", line: "rgba(255,255,255,.12)", ink: "#F6F4F1", sub: "#A7A39E", btn: "#1E1B21" } :
+  { card: "rgba(255,255,255,.82)", line: "rgba(0,0,0,.12)", ink: "#141013", sub: "#5b5750", btn: "#fff" };
+  async function retablir() {
+    if (etat === "busy") return;
+    setEtat("busy");setMsg("");
+    const res = await otpCall({ action: "email_change_revert", token: token });
+    if (res && res.ok) {
+      setAdr(typeof res.email === "string" ? res.email : "");
+      // Audit 04/10 (relecture) : verrouillage non confirmé (sessions_closed:false) → ne jamais affirmer que tout est déconnecté.
+      if (res.sessions_closed === false) {setVerrou(false);setMsg("We couldn’t confirm that your open sessions were logged out. Write to us right away at bonjour@avatarads.fr so we can secure your account.");}
+      try {await Promise.race([sb.auth.signOut({ scope: "local" }), new Promise((ok) => setTimeout(ok, 3000))]);} catch (e) {}
+      try {localStorage.removeItem("sb-guvwgiejzkiodghywpwj-auth-token");} catch (e) {}
+      setEtat("done");return;
+    }
+    const e = res && res.error;
+    if (e === "expired") {setMsg("This link has expired (it’s valid for 72 hours) or has already been used. If someone has taken over your account, write to us right away at bonjour@avatarads.fr.");setEtat("fin");return;}
+    if (e === "email_taken") {setMsg("Your previous address is already used by another account: write to us at bonjour@avatarads.fr and we’ll restore your access.");setEtat("fin");return;}
+    setMsg(e === "too_many_attempts" ? "Too many attempts from this network: try again in an hour." : e === "network" ? "The server’s response didn’t arrive: the restore may already have happened. Try logging in with your previous address; otherwise write to us at bonjour@avatarads.fr." : "The restore didn’t go through. Try again in a moment; if it keeps happening, write to us at bonjour@avatarads.fr.");
+    setEtat("idle");
+  }
+  const titre = etat === "done" ? "Address restored" : "Restore your login address";
+  const texte = etat === "done" ? verrou ?
+  "Your login address is once again " + (adr || "your previous address") + ". All open sessions have been logged out and Claude’s access to your account has been cut. Log in again with an email code." :
+  "Your login address is once again " + (adr || "your previous address") + ". Log in again with an email code." :
+  "The email address of your AvatarAds account was just changed. If it wasn’t you, restore your address: all open sessions will be logged out, any password or Google account added since will be removed, and Claude’s access to your account will be cut.";
+  const card =
+  React.createElement("div", { className: "rise col", style: { width: "100%", maxWidth: 400, alignItems: "center", background: C.card, border: "1px solid " + C.line, borderRadius: 24, padding: mob ? "28px 20px 24px" : "34px 30px 28px", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" } },
+  React.createElement("div", { className: "brandmark", style: { marginBottom: 20, color: C.ink } }, React.createElement(Logo, { size: 36 })),
+  React.createElement("h1", { className: "display center", style: { fontSize: mob ? 24 : 27, fontWeight: 800, color: C.ink, lineHeight: 1.1 } }, titre),
+  React.createElement("p", { className: "center", style: { marginTop: 12, fontSize: 14.5, lineHeight: 1.6, color: C.sub } }, texte),
+  etat === "fin" ? null :
+  React.createElement("button", { className: "btn btn-primary", disabled: etat === "busy", style: { width: "100%", marginTop: 22, padding: "15px 20px", fontSize: 15, fontWeight: 800, opacity: etat === "busy" ? .7 : 1 },
+    onClick: () => etat === "done" ? location.href = "/en/connexion.html" : retablir() },
+  etat === "done" ? "Log in" : etat === "busy" ? "Restoring…" : "Restore my address", " ", React.createElement(Icons.arrow, { size: 16 })),
+  msg ? React.createElement("p", { className: "center", style: { fontSize: 13, lineHeight: 1.55, color: "#c0341d", marginTop: 14 } }, msg) : null,
+  etat === "idle" || etat === "fin" ?
+  React.createElement("button", { className: "btn", style: { width: "100%", marginTop: 10, padding: "13px 20px", fontSize: 13.5, background: C.btn, border: "1px solid " + C.line, color: C.ink, fontWeight: 600 }, onClick: () => {location.href = "/en/connexion.html";} },
+  etat === "fin" ? "Go to login" : "It was me: ignore") : null
+  );
+  return (
+    React.createElement("div", { style: { minHeight: "100dvh", display: "grid", placeItems: "center", padding: mob ? "40px 16px" : "48px 24px",
+        background: _AA_DARK ? "radial-gradient(120% 80% at 50% 0%, #17151b, #0e0d10 55%, #0b0b0d)" : "radial-gradient(120% 80% at 50% 0%, #ffffff, #eceaf0 55%, #e2e0e6)" } }, card));
+}
+
+/* ── routing : retour LP = /v2.html · app = studio ── */
+function go(view) {
+  if (view === "landing") {location.href = "/en/";} // la LP (ex-v2) est désormais la page principale à la racine
+  else {location.href = "/app/";}
+}
+ReactDOM.createRoot(document.getElementById('root')).render(_REVERT_TOKEN ? React.createElement(Revert, { token: _REVERT_TOKEN }) : React.createElement(Login, { go: go }));
+</script>
+</body>
+</html>

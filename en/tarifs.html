@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Audit 02/10 : CSP = celle de la LP (index.html, éprouvée avec le checkout Whop) : SCRIPTS limités à cette page,
+     Whop (loader + iframe de paiement whop.com) et Clarity ; le reste (iframe, appels de Whop) reste ouvert pour ne pas
+     casser le paiement. frame-ancestors est ignoré dans une balise meta → filet JS anti-iframe juste dessous. -->
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://*.whop.com https://pay.google.com https://applepay.cdn-apple.com https://js.braintreegateway.com https://www.paypal.com https://c.paypal.com; object-src 'none'; base-uri 'self'">
+<script>/* Audit 02/10 — anti-clickjacking : la page de tarifs (checkout Whop) ne doit jamais être encadrée */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Chargé par /app/consent.js (pas de bandeau, refus possible depuis /confidentialite.html). -->
+<script src="/app/consent.js?v=2026-10-04-3" defer></script>
+<title>Pricing — AvatarAds · Choose your plan</title>
+<meta name="description" content="Starter, Pro or Elite: choose your AvatarAds plan. No commitment, cancel in 1 click. AI avatar, cloned voice, captions — all included.">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="theme-color" content="#EEF2F3">
+<meta name="author" content="AvatarAds">
+<link rel="canonical" href="https://avatarads.fr/en/tarifs.html">
+<link rel="alternate" hreflang="fr" href="https://avatarads.fr/tarifs.html">
+<link rel="alternate" hreflang="en" href="https://avatarads.fr/en/tarifs.html">
+<link rel="alternate" hreflang="x-default" href="https://avatarads.fr/tarifs.html">
+<meta property="og:title" content="Pricing — AvatarAds · Choose your plan">
+<meta property="og:description" content="Starter, Pro or Elite: AI avatar, cloned voice, captions and AI Editing included. No commitment, cancel in 1 click.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://avatarads.fr/en/tarifs.html">
+<meta property="og:site_name" content="AvatarAds">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:secure_url" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AvatarAds — viral AI videos without showing your face">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pricing — AvatarAds · Choose your plan">
+<meta name="twitter:description" content="Starter, Pro or Elite: AI avatar, cloned voice, captions and AI Editing included. No commitment.">
+<meta name="twitter:image" content="https://avatarads.fr/og-image.jpg">
+<meta name="twitter:image:alt" content="AvatarAds — viral AI videos without showing your face">
+<meta name="twitter:site" content="@avatarads">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="shortcut icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fonts non bloquantes (preload + bascule media=print→all à l'onload) — même pattern que la LP -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet"></noscript>
+<!-- Whop Elements (checkout) — script chargé à la demande -->
+<link rel="preconnect" href="https://whop.com" crossorigin>
+<link rel="preconnect" href="https://cdn.whop.com" crossorigin>
+<link rel="dns-prefetch" href="https://whop.com">
+<style>
+:root{
+  /* Axel 20/10 : page Tarifs CLAIRE, palette de la LP (index.html, #v2-light-theme) */
+  --bg:#E2E8EC;--bg-grad:#EAEEF2;   /* Axel 20/10 : « une touche de gris » → fond = dégradé du hero LP (body), cartes blanches posées dessus */
+  --panel-1:#FFFFFF;--surface:#FFFFFF;--surface-2:#F1F5F8;--surface-3:#E3E9EE;
+  --border:rgba(16,24,32,.10);--border-2:rgba(16,24,32,.16);
+  --text:#0E1319;--text-2:#59636E;--text-3:#8A939D;
+  --accent:#FF5A1F;--accent-2:#FF8042;
+  --accent-soft:color-mix(in srgb,var(--accent) 14%,transparent);
+  --accent-line:color-mix(in srgb,var(--accent) 32%,transparent);
+  --accent-glow:color-mix(in srgb,var(--accent) 48%,transparent);
+  --amber:#FFB020;--green:#28C795;--violet:#9A7CFF;
+  --r-sm:10px;--r:14px;--r-lg:20px;
+  --maxw:1320px;
+  --font:'Hanken Grotesk',system-ui,sans-serif;
+  --display:'Bricolage Grotesque',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-x:clip;max-width:100vw;scroll-behavior:smooth;background:var(--bg);color-scheme:light}
+body{
+  /* Axel 20/10 : la touche de gris = le dégradé gris-bleu du hero de la LP (index.html .v2hero::before), sur toute la page */
+  /* Axel 20/10 : dégradé « aller-retour » sur la hauteur de la page — clair en haut, gris-bleu au milieu, de nouveau clair au pied de page */
+  background:linear-gradient(to bottom,#eef2f3 0%,#e2e8ec 14%,#ccd7df 34%,#b4c3cd 52%,#ccd7df 72%,#e2e8ec 88%,#eef2f3 100%),var(--bg);
+  color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:clip;
+}
+.mono{font-family:var(--mono)}
+.display{font-family:var(--display);letter-spacing:-.02em;line-height:.98}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3)}
+::selection{background:var(--accent);color:#fff}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:10px}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:20px;border:3px solid transparent;background-clip:padding-box}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:15px;border-radius:var(--r);padding:13px 20px;transition:transform .15s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s,border-color .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)}
+.btn-primary:hover{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 40px -10px var(--accent-glow);transform:translateY(-1px)}
+.btn-ghost{background:var(--surface-2);border:1px solid var(--border-2);color:var(--text)}
+.btn-ghost:hover{background:var(--surface-3)}
+.btn-quiet{background:transparent;color:var(--text-2)}
+.btn-quiet:hover{color:var(--text)}
+.btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+.glass{background:rgba(238,242,243,.82);backdrop-filter:blur(12px)}
+footer .faint,footer .muted{color:#4a5560}   /* pied de page lisible sur le bas du dégradé */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}
+.grow{flex:1}
+.muted{color:var(--text-2)}
+.faint{color:var(--text-3)}
+.accent{color:var(--accent)}
+.center{text-align:center}
+.brandmark{display:grid;place-items:center;flex:0 0 auto}
+.logo-wordmark{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.02em}
+input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none}
+.elite-range{height:6px;border-radius:6px}
+input[type=range].elite-range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
+input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85);cursor:pointer}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.rise{animation:none}}
+@media (max-width:900px){
+  .wrap{padding:0 18px}
+  .grid-3{grid-template-columns:1fr !important}
+  .hide-mobile{display:none !important}
+}
+</style>
+<!-- Données structurées (SEO) : WebPage + Product/Offer avec les prix mensuels
+     RÉELLEMENT affichés (Starter/Pro/Élite palier 1100 cr). Ne JAMAIS inventer
+     de notes/avis (aggregateRating interdit sans vraies données). -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://avatarads.fr/en/tarifs.html#webpage",
+      "url": "https://avatarads.fr/en/tarifs.html",
+      "name": "Pricing — AvatarAds · Choose your plan",
+      "description": "Starter, Pro or Elite: choose your AvatarAds plan. No commitment, cancel in 1 click. AI avatar, cloned voice, captions — all included.",
+      "inLanguage": "en",
+      "isPartOf": { "@id": "https://avatarads.fr/en/#website" },
+      "breadcrumb": { "@id": "https://avatarads.fr/en/tarifs.html#breadcrumb" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://avatarads.fr/en/tarifs.html#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://avatarads.fr/en/" },
+        { "@type": "ListItem", "position": 2, "name": "Pricing", "item": "https://avatarads.fr/en/tarifs.html" }
+      ]
+    },
+    {
+      "@type": "Product",
+      "@id": "https://avatarads.fr/en/tarifs.html#product",
+      "name": "AvatarAds",
+      "description": "AI video and image generator: lip-sync AI avatar, cloned voice, animated captions, AI Editing — without showing your face.",
+      "brand": { "@type": "Brand", "name": "AvatarAds" },
+      "url": "https://avatarads.fr/en/",
+      "offers": [
+        { "@type": "Offer", "name": "Starter — monthly", "price": "29.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/en/tarifs.html" },
+        { "@type": "Offer", "name": "Pro — monthly", "price": "49.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/en/tarifs.html" },
+        { "@type": "Offer", "name": "Elite — monthly", "price": "89.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/en/tarifs.html" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<!-- NAV -->
+<div style="position:sticky;top:0;z-index:50">
+  <div class="glass" style="border-bottom:1px solid var(--border)">
+    <div class="wrap row" style="height:68px;justify-content:space-between">
+      <a href="/en/" class="row gap10" style="align-items:center">
+        <span class="brandmark"><img src="/assets/avatarads-logo.png" alt="AvatarAds" width="26" height="26" style="border-radius:7px;display:block"></span>
+        <span class="logo-wordmark">AvatarAds</span>
+      </a>
+      <div class="row gap12">
+        <a href="/en/" class="btn btn-quiet btn-sm">← Home</a>
+        <a href="/app/" class="btn btn-primary btn-sm">Get started <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TARIFS -->
+<section id="tarifs" class="wrap" style="padding-top:56px;padding-bottom:60px">
+  <div class="center rise" style="margin-bottom:34px">
+    <h1 class="display" style="font-size:clamp(34px,4.6vw,60px);font-weight:800;line-height:1.02">Choose your plan.<br><span class="accent">Scale your content.</span></h1>
+  </div>
+  <div class="row" style="gap:12px;justify-content:center;margin:0 0 34px;align-items:center">
+    <span id="label-monthly" style="font-weight:700;color:var(--text)">Monthly</span>
+    <button id="annual-toggle" onclick="toggleAnnual()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:#9AA8B4;display:flex;justify-content:flex-start;border:none;cursor:pointer"><div id="toggle-thumb" style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button>
+    <span id="label-annual" style="font-weight:500;color:var(--text-2)">Yearly</span>
+    <div class="pill" style="background:#1FB386;border-color:#1FB386;color:#fff;font-weight:800;font-size:12.5px;box-shadow:0 6px 16px -8px rgba(31,179,134,.8)">-25%</div>
+  </div>
+  <div id="pricing-grid" class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;max-width:1180px;margin:0 auto"></div>
+  <p class="muted" style="max-width:1180px;margin:22px auto 0;text-align:center;font-size:15px;padding:0 20px">No commitment. Cancel in 1 click.</p>
+  <div style="max-width:1180px;margin:6px auto 0;text-align:center;font-size:12px;color:var(--text-3);line-height:1.5;padding:0 20px">
+    <span style="color:var(--accent)">*</span> Average estimate with <b style="color:var(--text-2)">AI&nbsp;Editing</b>. The actual number depends on the length of your videos.
+  </div>
+  <div class="row" style="justify-content:center;gap:clamp(10px,3vw,22px);margin-top:28px;flex-wrap:nowrap;white-space:nowrap">
+    <span class="faint mono" style="font-size:clamp(10px,2.9vw,12px)">✓ Secure payment via Whop</span>
+    <span class="faint mono" style="font-size:clamp(10px,2.9vw,12px)">↻ Cancel anytime</span>
+  </div>
+  <div class="card" style="max-width:1180px;margin:40px auto 0;padding:26px 30px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap">
+    <div style="max-width:680px">
+      <h2 class="display" style="font-size:20px;font-weight:700;display:flex;align-items:center;gap:9px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;opacity:.9" aria-hidden="true"><path d="M3 21h18M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1"/></svg>Are you an agency?</h2>
+      <p class="muted" style="margin-top:8px;font-size:14px">Multiple seats, custom quotas, white label, business invoicing, priority support. We build the offer around your needs.</p>
+      <div class="row" style="gap:18px;margin-top:12px;flex-wrap:wrap">
+        <span class="row faint gap8" style="font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>From €150/month</span>
+        <span class="row faint gap8" style="font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>3–10 seats</span>
+        <span class="row faint gap8" style="font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>White label</span>
+      </div>
+    </div>
+    <a href="mailto:contact@avatarads.fr" class="btn btn-ghost" style="flex:0 0 auto">Contact us →</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="border-top:1px solid var(--border);margin-top:30px">
+  <div class="wrap" style="padding:30px 32px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap">
+    <a href="/en/" class="row gap10">
+      <img src="/assets/avatarads-logo.png" alt="" width="20" height="20" loading="lazy" decoding="async" style="border-radius:6px;display:block">
+      <span class="logo-wordmark" style="font-size:16px">AvatarAds</span>
+    </a>
+    <div class="row" style="gap:22px;flex-wrap:wrap">
+      <a href="/en/" class="faint" style="font-size:13px">Home</a>
+      <a href="/app/" class="faint" style="font-size:13px">Open the app</a>
+      <a href="/en/claude.html" class="faint" style="font-size:13px">Connect Claude</a>
+      <a href="mailto:contact@avatarads.fr" class="faint" style="font-size:13px">Contact</a>
+      <a href="/en/cgv.html" class="faint" style="font-size:13px">Terms</a>
+      <a href="/en/confidentialite.html" class="faint" style="font-size:13px">Privacy</a>
+    </div>
+    <span class="mono faint" style="font-size:11.5px">© 2026 AvatarAds · IA Manager</span>
+  </div>
+</footer>
+
+<script>
+/* ══════════ TARIFS — design proto Claude, prix & plans Whop INCHANGÉS ══════════ */
+let isAnnual=false;
+const CHECKOUT={
+  starter:{ m:'https://whop.com/checkout/plan_YKcdyPT6RRQSi', a:'https://whop.com/checkout/plan_cNydK89X39PLE' },
+  pro:    { m:'https://whop.com/checkout/plan_g4BVtDmk6hgjQ', a:'https://whop.com/checkout/plan_P7WIywSa6YrxT' },
+  elite:  { m:'https://whop.com/checkout/plan_w8lh5zpEJFOQR', a:'https://whop.com/checkout/plan_OvRwm5CW3xcNh' },
+  elite60:{ m:'https://whop.com/checkout/plan_pZmWh1dVdmIWT', a:'https://whop.com/checkout/plan_uWTkJDl1GvxNR' },
+  elite90:{ m:'https://whop.com/checkout/plan_63PGeG3MesbJR', a:'https://whop.com/checkout/plan_x2kDWR6ur2W5E' },
+};
+// Axel 23/10 : les abonnements se paient sur la page de paiement (paiement.html : options pack / upgrade / rendu prioritaire,
+// Apple Pay + carte) ; CHECKOUT ne sert plus qu'au repli si la page manquait d'un palier
+function payUrl(id){ return '/en/paiement.html?plan='+encodeURIComponent(id)+(isAnnual?'&bill=y':''); }
+function perDay(p){ return (parseFloat(String(p).replace(',','.'))/30).toFixed(2); }
+var eliteSlider=0;
+const ELITE_TIERS=[
+  {avatars:30, credits:1100, price:'89.99', annual:'66.67', checkoutId:'elite'},
+  {avatars:60, credits:2200, price:'158.99',annual:'119.99',checkoutId:'elite60'},
+  {avatars:90, credits:3300, price:'224.99',annual:'157.99',checkoutId:'elite90'},
+];
+const PLANS=[
+  { id:'starter', name:'STARTER', tagline:'Get started without breaking the bank.',
+    price:'29.99', annual:'20.83', annualStrike:'29.99', accent:'var(--text)',
+    credits:150, equiv:'150 seconds of video', extra:'Standard images/video', bonus:'+25', note:'no commitment',
+    listHead:'INCLUDED:', feats:['Lip-sync AI avatar','Audio Cleanup','Standard images/video','Animated captions','Video editor + <b style="color:var(--accent)">AI Editing</b><span style="float:right;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:4px;padding:1px 5px;margin-top:1px">NEW</span>'] },
+  { id:'pro', name:'PRO', tagline:'For creators who want to scale.',
+    price:'49.99', annual:'37.50', strike:'64.99', annualStrike:'48.75', accent:'var(--accent)', popular:true,
+    credits:550, equiv:'550 seconds of video', extra:'Premium images/video', bonus:'+50', note:'i.e. €1.67/day',
+    listHead:'EVERYTHING IN STARTER, PLUS:', feats:['AvatarAds × Claude<span style="float:right;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:4px;padding:1px 5px;margin-top:1px">EXCLUSIVE</span>','Advanced AI Editing','Premium quality images & videos','Motion Control Pro','Priority support'] },
+  { id:'elite', name:'ELITE ✦', tagline:'The max for the most ambitious.',
+    accent:'var(--violet)',
+    note:'monthly payment · no commitment',
+    listHead:'EVERYTHING IN PRO, PLUS:', feats:['Priority video generation','4K video + image export','Access to the latest generation models','Lowest cost per credit','Priority support + early access'] },
+];
+// ≈ contenus/jour : Starter (<1/j) = 'tous les N jours' ; sinon plancher→plafond 'X à Y'
+// (Pro 2,7→'2 à 3', Élite selon le slider 5 / 9 à 10 / 14). Basé sur le mois boosté.
+function _pdLine(videos, id, credits){
+  if(id==='starter') return '1 piece of content every 2 days';
+  // Élite : plages fixées par palier (Axel 23/08) — 'contenus' incluant les images (moins
+  // chères), donc légitimement au-dessus du ÷8 'vidéos' du titre. Socle ~9,5→6,3 cr/contenu.
+  var ELITE_PD={1100:'4 to 6',2200:'8 to 12',3300:'12 to 18'};
+  if(id==='elite' && ELITE_PD[credits]) return ELITE_PD[credits]+' pieces of content per day';
+  var pd=videos/30, lo=Math.floor(pd), hi=Math.ceil(pd);
+  return (lo===hi?lo:lo+' to '+hi)+' pieces of content per day';
+}
+function _quotaBox(pl, tier){
+  var violet = pl.id==='elite';
+  var bd = violet ? 'rgba(154,124,255,.35)' : 'var(--border-2)';
+  var bg = violet ? 'rgba(154,124,255,.07)' : 'var(--panel-1)';
+  var av    = tier ? tier.credits : pl.credits;
+  var equiv = tier ? (tier.credits + ' seconds of video') : pl.equiv;
+  var _bn = violet ? 75 : (parseInt(pl.bonus)||0);   // crédits offerts (1er mois)
+  var videos = Math.round((av+_bn)/8/10)*10;   // ~8 crédits/vidéo, arrondi à la dizaine → on VEND des vidéos
+  var perDay = _pdLine(videos, pl.id, av);   // ≈ 1 contenu tous les 2 jours (Starter) / plage Élite / N à M
+  var bonus = violet ? '+75' : (pl.bonus || '');
+  var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
+    +'<div class="row" style="gap:9px;align-items:baseline;flex-wrap:wrap">'
+    +'<span'+(violet?' id="lpEliteAv"':'')+' class="display" style="font-size:27px;font-weight:800;color:'+(violet?'var(--violet)':'var(--text)')+'">'+av+'</span>'
+    +'<span style="font-weight:700;font-size:15px">credits / month</span>'
+    +(bonus?'<span style="margin-left:auto;display:flex;gap:7px;align-items:baseline;white-space:nowrap"><span class="display" style="font-size:27px;font-weight:800;color:var(--green)">'+bonus+'</span><span style="font-weight:700;font-size:15px">free</span></span>':'')
+    +'</div>'
+    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px"><b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>up to '+videos+' videos / month</span><sup style="font-size:.55em;color:var(--text-3);font-weight:400;margin-left:1px">*</sup></b></div>'
+    +'<div class="mono muted" style="font-size:11.5px;margin-top:5px;opacity:.72">≈ <span'+(violet?' id="lpEliteSec"':'')+'>'+perDay+'</span></div>';
+  if(violet){
+    var idx=eliteSlider, pct=idx/(ELITE_TIERS.length-1)*100, marks='';
+    for(var t=0;t<ELITE_TIERS.length;t++){
+      var act=t===idx;
+      marks+='<button id="lpEliteMark'+t+'" onclick="setEliteSlider('+t+')" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:'+(act?'var(--violet)':'var(--text-3)')+';font-weight:'+(act?'700':'400')+'">'+Math.round(ELITE_TIERS[t].credits/5)+'</button>';
+    }
+    h+='<input id="lpEliteRange" type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+idx+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;margin-top:12px;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
+      +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>';
+  } else {
+    // Réserve invisible = même hauteur que le slider d'Élite → les 3 boîtes crédits ont la même hauteur (prix/boutons alignés, tous navigateurs)
+    h+='<div aria-hidden="true" style="visibility:hidden;pointer-events:none"><input type="range" class="elite-range" style="width:100%;margin-top:12px" tabindex="-1"><div style="display:flex;justify-content:space-between;margin-top:6px"><span style="font-family:var(--mono);font-size:11px">30</span><span style="font-family:var(--mono);font-size:11px">60</span><span style="font-family:var(--mono);font-size:11px">90</span></div></div>';
+  }
+  return h+'</div>';
+}
+function renderPricing(){
+  var html='';
+  for(var i=0;i<PLANS.length;i++){
+    var pl=PLANS[i], pop=!!pl.popular, elite=pl.id==='elite';
+    var tier=elite?ELITE_TIERS[eliteSlider]:null;
+    var price=tier?(isAnnual?tier.annual:tier.price):(isAnnual?pl.annual:pl.price);
+    var strike = isAnnual ? (tier ? tier.price : (pl.annualStrike||'')) : (pl.strike||'');   // annuel : on barre le prix mensuel
+    var note='i.e. \u20ac'+perDay(price)+'/day'+(isAnnual?' \u00b7 billed annually':'')+' \u00b7 no commitment';
+    var checkoutId=tier?tier.checkoutId:pl.id;
+    var checkoutUrl=CHECKOUT[checkoutId]?payUrl(checkoutId):'https://whop.com/avatarads/';
+    var borderColor=pop?'var(--accent)':(elite?'rgba(154,124,255,.35)':'var(--border)');
+    var bg=pop?'radial-gradient(500px 220px at 50% 0,rgba(255,90,31,.10),var(--surface))':(elite?'radial-gradient(500px 220px at 50% 0,rgba(154,124,255,.08),var(--surface))':'var(--surface)');
+    var shadow=pop?'0 0 0 3px var(--accent-soft),0 40px 70px -34px var(--accent-glow)':'none';
+    var badge=pop?'<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-size:11px;font-weight:800;padding:5px 15px;border-radius:999px;white-space:nowrap">⚡ MOST POPULAR</div>':'';
+    // CTA
+    var ctaLabel='Choose &nbsp;'+(elite?'Elite':pl.name)+' →';
+    var ctaCls=pop?'btn btn-primary':'btn btn-ghost';
+    var ctaStyle='width:100%;display:flex;justify-content:center;text-decoration:none;font-weight:800;';
+    if(elite){ ctaCls='btn'; ctaStyle+='background:var(--violet);color:#140F2A;box-shadow:0 12px 30px -12px rgba(154,124,255,.6);'; }
+    // Liste features
+    var feats='<div class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--text-3);margin:22px 0 12px">'+pl.listHead+'</div><div class="col" style="gap:11px">';
+    for(var k=0;k<pl.feats.length;k++){
+      feats+='<div class="row" style="gap:10px;font-size:14px;align-items:flex-start"><span style="flex:0 0 auto;color:var(--green);font-size:14px;line-height:1.45;font-weight:800">✓</span><span style="line-height:1.45;flex:1">'+pl.feats[k]+'</span></div>';
+    }
+    feats+='</div>';
+    html+='<div class="card" style="padding:26px 24px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+'">'
+      +badge
+      +'<div class="mono" style="font-size:13px;letter-spacing:.16em;font-weight:600;color:'+pl.accent+'">'+pl.name+'</div>'
+      +'<p class="muted" style="margin-top:9px;font-size:14.5px;line-height:1.45;min-height:42px">'+pl.tagline+'</p>'
+      +_quotaBox(pl,tier)
+      +'<div class="row" style="align-items:baseline;gap:5px;flex-wrap:wrap">'
+      +(elite
+          ? '<span id="lpEliteStrike" class="faint" style="font-size:20px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:4px;'+(strike?'':'display:none')+'">'+(strike?'€'+strike:'')+'</span>'
+          : (strike?'<span class="faint" style="font-size:20px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:4px">€'+strike+'</span>':''))
+      +'<span'+(elite?' id="lpElitePrice"':'')+' class="display" style="font-size:42px;font-weight:800">€'+price+'</span>'
+      +'<span class="faint" style="font-size:15px">/month</span></div>'
+      +'<div'+(elite?' id="lpEliteNote"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+(isAnnual?'var(--green)':'var(--text-3)')+'">'+note+'</div>'
+      +'<a'+(elite?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" class="'+ctaCls+'" style="'+ctaStyle+'margin-top:18px">'+ctaLabel+'</a>'
+      +feats
+      +'</div>';
+  }
+  document.getElementById('pricing-grid').innerHTML=html;
+}
+function setEliteSlider(idx){
+  eliteSlider=idx;
+  var tier=ELITE_TIERS[idx]; if(!tier) return;
+  var pct=idx/(ELITE_TIERS.length-1)*100;
+  var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.credits;
+  var _v=Math.round((tier.credits+75)/8/10)*10; var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent='up to '+_v+' videos / month';
+  var sec=document.getElementById('lpEliteSec'); if(sec){ sec.textContent=_pdLine(_v,'elite',tier.credits); }
+  var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
+  for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
+  var price=document.getElementById('lpElitePrice'); if(price) price.textContent='€'+(isAnnual?tier.annual:tier.price);
+  var strk=document.getElementById('lpEliteStrike'); if(strk){ if(isAnnual){ strk.textContent='\u20ac'+tier.price; strk.style.display=''; } else strk.style.display='none'; }
+  var note=document.getElementById('lpEliteNote'); if(note) note.textContent='i.e. \u20ac'+perDay(isAnnual?tier.annual:tier.price)+'/day'+(isAnnual?' \u00b7 billed annually':'')+' \u00b7 no commitment';
+  var cta=document.getElementById('lpEliteCta'); if(cta){ cta.href=CHECKOUT[tier.checkoutId]?payUrl(tier.checkoutId):'https://whop.com/avatarads/'; }
+}
+renderPricing();
+function toggleAnnual(){
+  isAnnual=!isAnnual;
+  const t=document.getElementById('annual-toggle');
+  t.style.background=isAnnual?'var(--accent)':'#9AA8B4';
+  t.style.justifyContent=isAnnual?'flex-end':'flex-start';
+  document.getElementById('label-monthly').style.cssText=`font-weight:${isAnnual?500:700};color:${isAnnual?'var(--text-2)':'var(--text)'}`;
+  document.getElementById('label-annual').style.cssText=`font-weight:${isAnnual?700:500};color:${isAnnual?'var(--text)':'var(--text-2)'}`;
+  renderPricing();
+}
+
+/* ══════════ Checkout Whop : WHOP ELEMENTS (09/10/2026) ══════════
+   Whop coupe l'ancien checkout embarqué (loader js.whop.com + iframes whop.com/embedded) le 21/10/2026 → Whop Elements.
+   Même logique que l'app (app/index.html, _whopCheckout) : script cdn.whop.com chargé à la demande, module monté dans la
+   modale, repli sur la page Whop hébergée si le module ne peut pas s'afficher. Ici le visiteur n'est pas connecté : il
+   crée ensuite son compte avec l'e-mail du paiement (le webhook garde le plan en attente sur cet e-mail). */
+var WHOP_ELEMENTS_SRC='https://cdn.whop.com/elements/amber/elements.js';
+function _whopPlanId(u){var m=String(u||'').match(/plan_[A-Za-z0-9]+/);return m?m[0]:null;}
+var _whopElP=null,_whopEl=null,_whopCo=null;
+function _whopElementsReady(){
+  if(_whopEl) return Promise.resolve(_whopEl);
+  if(_whopElP) return _whopElP;
+  _whopElP=new Promise(function(ok,ko){
+    var sc=null;
+    var drop=function(why){ try{ if(sc) sc.remove(); }catch(_){} ko(new Error(why)); };
+    var done=function(){ try{ if(typeof window.WhopElements!=='function') return drop('WhopElements absent'); _whopEl=window.WhopElements({locale:'en'}); ok(_whopEl); }catch(e){ ko(e); } };
+    if(typeof window.WhopElements==='function') return done();
+    sc=document.querySelector('script[data-whop-elements]');
+    if(!sc){ sc=document.createElement('script'); sc.src=WHOP_ELEMENTS_SRC; sc.async=true; sc.setAttribute('data-whop-elements',''); document.head.appendChild(sc); }
+    sc.addEventListener('load',done,{once:true});
+    sc.addEventListener('error',function(){ drop('script Whop bloqué'); },{once:true});
+    setTimeout(function(){ if(!_whopEl) drop('script Whop trop long'); },15000);
+  }).catch(function(e){ _whopElP=null; throw e; });
+  return _whopElP;
+}
+function _whopEsc(t){ return String(t||'').replace(/[&<>"']/g,function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function _whopDestroy(){ try{ if(_whopCo) _whopCo.destroy(); }catch(_){} _whopCo=null; }
+var _WHOP_LOCK='<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+var _WHOP_OK='<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>';
+function _whopPanel(icon,title,text,btnHref,btnLabel){
+  var b=document.getElementById('whopCoBody'); if(!b) return;
+  b.innerHTML='<div style="padding:40px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px">'+icon
+    +'<div style="font-weight:800;font-size:16px;color:var(--text)">'+title+'</div>'
+    +'<div style="font-size:13px;line-height:1.5;color:var(--text-2)">'+text+'</div>'
+    +(btnHref?'<a href="'+_whopEsc(btnHref)+'"'+(/^https:\/\/whop\.com/.test(btnHref)?' target="_blank" rel="noopener"':'')+' style="margin-top:6px;display:inline-block;background:var(--accent);color:#fff;font-weight:800;font-size:14px;padding:12px 22px;border-radius:12px;text-decoration:none">'+btnLabel+'</a>':'')
+    +'</div>';
+}
+function _whopOpenModal(){ var m=document.getElementById('whopCoModal'); if(m) m.style.display='flex'; document.body.style.overflow='hidden'; }
+// Paiement validé : le compte se crée (ou se connecte) avec l'e-mail du paiement → le plan l'attend déjà
+// Axel 20/10 : quelqu'un déjà connecté à son compte AvatarAds dans ce navigateur (/app/, même origine) paie SUR CE COMPTE :
+// e-mail repris, verrouillé et grisé chez Whop (pas de bandeau : la zone grise suffit) + identifiant du compte (metadata aa_user_id, lu en premier par whop-webhook).
+// Sans ça, une autre adresse saisie chez Whop créait un 2e compte et le sien restait en Free.
+function _aaCompte(){
+  try{ var s=JSON.parse(localStorage.getItem('sb-guvwgiejzkiodghywpwj-auth-token')||'null'), u=s&&(s.user||(s.currentSession&&s.currentSession.user));
+    if(u&&u.id&&u.email) return { id:String(u.id), email:String(u.email) }; }catch(_){}
+  return null;
+}
+function _whopPaidPanel(){
+  var acc=_aaCompte();
+  if(acc) return _whopPanel(_WHOP_OK,'Payment confirmed','Your plan and credits are on their way to your AvatarAds account <b style="color:var(--text)">'+_whopEsc(acc.email)+'</b>.','/app/','Open my dashboard');
+  // Axel 20/10 : le compte est désormais CRÉÉ au paiement (whop-webhook) avec l'e-mail saisi chez Whop → on dit de se connecter avec celui-là
+  _whopPanel(_WHOP_OK,'Payment confirmed','Your AvatarAds account is ready with <b style="color:var(--text)">the email you just entered</b>: log in with that address (code sent by email, or Google) — your plan and credits are already there.','/app/','Log in');
+}
+function _whopFallback(url){
+  _whopDestroy();
+  _whopPanel(_WHOP_LOCK,'The payment form isn’t showing here','An ad blocker or your network is stopping the Whop module from loading. You can pay on Whop’s secure page.',url,'Pay on Whop');
+}
+// Préchauffe : charge le script au survol d'un bouton → le clic ouvre le paiement sans attendre (l'URL n'est plus utilisée)
+function _whopPrewarm(url){ _whopElementsReady().catch(function(){}); }
+// Marqueur de session : « Paiement confirmé » au retour d'étape bancaire seulement si CE navigateur a ouvert un paiement
+// (un lien piégé ?whop=retour&status=succeeded n'affiche qu'un message neutre)
+function _whopMarkPending(pid){ try{ sessionStorage.setItem('aa_whop_co', JSON.stringify({ pid:pid, t:Date.now() })); }catch(_){} }
+function _whopCheckout(url){
+  var pid=_whopPlanId(url), body=document.getElementById('whopCoBody');
+  if(!pid||!body){ if(url) window.open(url,'_blank','noopener'); return; }
+  var seq=window._whopSeq=(window._whopSeq||0)+1;
+  _whopMarkPending(pid);
+  _whopDestroy(); body.innerHTML='';
+  var wrap=document.createElement('div'); wrap.style.cssText='position:relative;min-height:560px';
+  var sp=document.createElement('div'); sp.className='whop-loading';
+  sp.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0;padding:0 24px;text-align:center';
+  sp.innerHTML='<div class="whop-spin"></div><div class="mono" style="font-size:11px">Loading payment…</div>'
+    +'<a class="whop-slow" href="'+_whopEsc(url)+'" target="_blank" rel="noopener" style="display:none;font-size:12px;color:var(--accent-2);text-decoration:underline">Payment taking a while? Open the Whop page</a>';
+  var mount=document.createElement('div'); mount.style.cssText='position:relative;z-index:1';
+  wrap.appendChild(sp); wrap.appendChild(mount); body.appendChild(wrap);
+  _whopOpenModal();
+  var ready=false;
+  var slowT=setTimeout(function(){ if(seq===window._whopSeq){ var a=sp.querySelector('.whop-slow'); if(a) a.style.display='block'; } },12000);
+  // le lien « tarde » ouvre la page Whop → le module d'ici est détruit : jamais deux paiements ouverts en même temps
+  (function(){ var a=sp.querySelector('.whop-slow'); if(a) a.addEventListener('click',function(){ window._whopSeq=(window._whopSeq||0)+1; clearTimeout(slowT); _whopFallback(url); }); })();
+  var fail=function(why){ clearTimeout(slowT); if(seq!==window._whopSeq) return; console.warn('[whop] repli page Whop :',why); _whopFallback(url); };
+  _whopElementsReady().then(function(W){
+    if(seq!==window._whopSeq) return;
+    var acc=_aaCompte();
+    _whopCo=W.checkout.create(Object.assign({
+      plan:pid,
+      returnUrl:location.origin+location.pathname+'?whop=retour',
+      appearance:{ theme:{ appearance:'light', accentColor:'orange', grayColor:'auto' }, classes:Object.assign({ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' }, 'whop-CheckoutExpressGooglePay':{ display:'none' } }, acc?{ 'whop-EmailInput':{ backgroundColor:'#EEF1F4', color:'#6B7785' } }:{}) },   // Google Pay masqué (Axel 09/10)
+      onComplete:function(p){ if(p&&p.result==='payment'&&seq===window._whopSeq) setTimeout(function(){ if(seq===window._whopSeq){ _whopDestroy(); _whopPaidPanel(); } },1800); }
+    }, acc?{ metadata:{ aa_user_id:acc.id } }:{}));
+    _whopCo.create('checkout',Object.assign(acc?{ buyerEmail:acc.email, lockBuyerEmail:true }:{},{
+      onReady:function(){ ready=true; clearTimeout(slowT); sp.style.display='none'; },
+      // erreur APRÈS l'affichage (ex. 3D Secure) : jamais remplacé par « Payer sur Whop » (double paiement possible)
+      onError:function(e){ var why=(e&&(e.code||e.message))||'erreur'; if(ready){ console.warn('[whop] erreur du module après affichage :',why); return; } fail(why); }
+    })).mount(mount);
+  }).catch(function(e){ fail(e&&e.message); });
+}
+function closeWhopCheckout(){ window._whopSeq=(window._whopSeq||0)+1; _whopDestroy(); clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }
+// Retour après une étape bancaire hors page (3D Secure) : Whop ajoute ?payment=…&status=… à returnUrl. Simple affichage —
+// le plan n'est activé que par le webhook (n'importe qui peut taper status=succeeded dans l'URL).
+(function(){
+  var q; try{ q=new URLSearchParams(location.search); }catch(_){ return; }
+  if(q.get('whop')!=='retour') return;
+  var st=q.get('status')||'';
+  try{ ['whop','payment','status'].forEach(function(k){ q.delete(k); }); var rest=q.toString(); history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+location.hash); }catch(_){}
+  var mk=null; try{ mk=JSON.parse(sessionStorage.getItem('aa_whop_co')||'null'); sessionStorage.removeItem('aa_whop_co'); }catch(_){}
+  if(mk && !(Date.now()-(mk.t||0) < 3*3600e3)) mk=null;
+  var show=function(){
+    if(!mk) _whopPanel(_WHOP_LOCK,'Just paid?','Create your AvatarAds account (or log in) with the email you used to pay: your plan activates as soon as Whop confirms it.','/app/','Go to my dashboard');
+    else if(st==='succeeded') _whopPaidPanel();
+    else if(st==='failed'||st==='canceled') _whopPanel(_WHOP_LOCK,'The payment didn’t go through','You haven’t been charged. You can try again from the pricing page.','','');
+    else _whopPanel(_WHOP_LOCK,'Payment being confirmed','As soon as your bank approves it, your plan will be waiting: create your AvatarAds account (or log in) with <b style="color:var(--text)">the same email you used to pay</b>.','/app/','Go to my dashboard');
+    _whopOpenModal();
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',show); else show();
+})();
+</script>
+
+<style>.whop-spin{width:34px;height:34px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:whopspin .8s linear infinite}@keyframes whopspin{to{transform:rotate(360deg)}}</style>
+<div id="whopCoModal" style="display:none;position:fixed;inset:0;z-index:950;align-items:center;justify-content:center">
+  <div onclick="closeWhopCheckout()" style="position:absolute;inset:0;background:rgba(14,19,25,.45);backdrop-filter:blur(10px)"></div>
+  <div style="position:relative;width:100%;max-width:440px;max-height:94vh;margin:12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 90px rgba(0,0,0,.75)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex:0 0 auto">
+      <div style="font-family:'Montserrat',var(--font),sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:var(--text)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>SECURE PAYMENT · WHOP</div>
+      <button onclick="closeWhopCheckout()" style="background:var(--surface-2);border:1px solid var(--border-2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);font-size:14px">✕</button>
+    </div>
+    <div id="whopCoBody" style="flex:1;min-height:0;overflow:auto;background:var(--panel-1)"></div>
+    <div class="mono" style="flex:0 0 auto;text-align:center;padding:9px;font-size:9.5px;color:var(--text-3);border-top:1px solid var(--border)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Payment processed by Whop · Cancel anytime</div>
+  </div>
+</div>
+</body>
+</html>

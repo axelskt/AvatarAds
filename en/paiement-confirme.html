@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob:; style-src * 'unsafe-inline'; script-src 'sha256-CogQRK7+2fLA9q2ITxjyTt/89QMrlOxnyjpgNXWCCos='; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>Payment confirmed — AvatarAds</title>
+<link rel="icon" href="/assets/avatarads-logo-96.png">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Page « Paiement confirmé » (Axel 23/10) : maquette Claude Design « post-paiement-handoff » reproduite au pixel près, pour
+     les abonnements comme pour les packs de crédits. Affichée seulement si le serveur confirme le paiement (paiement-compte,
+     même identifiant que la page de paiement) ; reçu = commande, moyen de paiement et montant encaissés chez Whop. -->
+<style>
+:root{--bg:#fff;--line:#E8EAED;--text:#14171A;--text-2:#5B626B;--mono:#8A9BA6;--accent:#FF5A1F;--accent-2:#FF8042;--green:#22A06B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hanken Grotesk",system-ui,sans-serif;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--text);text-decoration:underline}a:hover{color:var(--accent)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.top{display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 28px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:5}
+.back{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text-2)}
+.logo{width:30px;height:30px;border-radius:9px;display:block}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:calc(100vh - 64px)}
+.wrap.seul{grid-template-columns:minmax(0,1fr)}
+.col-l{position:relative;padding:56px 28px;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);min-width:0;overflow:hidden}
+.col-r{position:relative;padding:56px 28px 40px;display:flex;align-items:flex-start;justify-content:center;min-width:0;overflow:hidden;background:#F6F7F8}
+
+/* gauche */
+.done{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:420px}
+.ok{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:#E9F7F0;border:1px solid #C9EBDA;margin-bottom:22px;animation:pop .5s cubic-bezier(.2,1.5,.4,1) both}
+.ok svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:draw .45s .35s ease forwards}
+h1{font-family:"Bricolage Grotesque";font-size:30px;font-weight:700;letter-spacing:-.01em;animation:rise .5s .15s both}
+.sub{font-size:15.5px;color:var(--text-2);margin-top:10px;line-height:1.5;animation:rise .5s .25s both}
+.sub b{color:var(--text)}
+.cta{margin-top:28px;width:100%;max-width:340px;height:58px;border-radius:999px;background:linear-gradient(180deg,#FFD43B,#FFC107);color:#1A1300;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 28px;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);animation:rise .5s .35s both;transition:transform .15s}
+.cta:hover{transform:translateY(-1px)}
+.cta .ar{display:flex;align-items:center;gap:18px}.cta .ar::before{content:"";width:1px;height:24px;background:rgba(26,19,0,.25)}
+.cta:hover .ar svg{animation:nudge .9s cubic-bezier(.2,.8,.2,1) infinite}
+
+/* imprimante + ticket */
+.printer{position:relative;z-index:2;width:330px;display:flex;flex-direction:column;align-items:center;margin-top:3vh}
+.slot{position:relative;z-index:3;width:330px;height:30px;border-radius:15px;background:linear-gradient(180deg,#F3F4F6,#C9CDD2);box-shadow:0 10px 24px -10px rgba(0,0,0,.35),inset 0 1px 0 #fff}
+.slot::after{content:"";position:absolute;left:14px;right:14px;top:13px;height:5px;border-radius:5px;background:#2A2D31;box-shadow:inset 0 2px 2px rgba(0,0,0,.6)}
+.feed{position:relative;width:282px;margin-top:-16px;overflow:hidden;height:0;animation:feed 2.6s .5s cubic-bezier(.45,.05,.3,1) forwards}
+.receipt{position:absolute;left:0;right:0;bottom:0;background:#fff;padding:30px 22px 26px;font-family:"JetBrains Mono",monospace;color:#1d1f22;
+  box-shadow:inset 0 14px 14px -12px rgba(0,0,0,.25);
+  -webkit-mask:radial-gradient(circle 7px at 50% 100%,transparent 6.5px,#000 7px) 0 100%/16px 14px repeat-x,linear-gradient(#000,#000) 0 0/100% calc(100% - 13px) no-repeat;
+  mask:radial-gradient(circle 7px at 50% 100%,transparent 6.5px,#000 7px) 0 100%/16px 14px repeat-x,linear-gradient(#000,#000) 0 0/100% calc(100% - 13px) no-repeat}
+.dots{border-top:2px dotted #1d1f22;margin:12px 0}
+.r-title{font-family:"Bricolage Grotesque";font-weight:800;font-size:23px;text-align:center;letter-spacing:.02em}
+.r-logo{display:flex;justify-content:center;margin-bottom:8px}.r-logo img{width:26px;height:26px;border-radius:7px;filter:grayscale(1) contrast(1.3)}
+.r-meta{font-size:11px;line-height:1.6;color:#3a3d42}
+.r-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;line-height:1.75}
+.r-row.b{font-weight:700;font-size:13.5px}
+.thanks{text-align:center;font-family:"Bricolage Grotesque";font-weight:700;font-size:17px;letter-spacing:.12em;margin:14px 0 10px}
+.barcode{height:40px;background:repeating-linear-gradient(90deg,#1d1f22 0 2px,transparent 2px 3px,#1d1f22 3px 4px,transparent 4px 7px,#1d1f22 7px 10px,transparent 10px 11px,#1d1f22 11px 12px,transparent 12px 15px)}
+.code{text-align:center;font-size:10px;letter-spacing:.3em;margin-top:5px;color:#3a3d42}
+.shadow{position:absolute;z-index:1;bottom:-22px;left:50%;transform:translateX(-50%);width:250px;height:30px;border-radius:50%;background:rgba(0,0,0,.18);filter:blur(14px);opacity:0;animation:fade .6s 2.8s forwards}
+
+/* confettis */
+.confetti{position:absolute;inset:0;pointer-events:none;z-index:1}
+.confetti i{position:absolute;top:-20px;display:block;border-radius:1px;opacity:0;animation:fall linear forwards}
+
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes nudge{0%,100%{transform:translateX(0)}45%{transform:translateX(6px)}}
+@keyframes feed{0%{height:0}15%{height:70px}22%{height:70px}40%{height:220px}48%{height:220px}100%{height:var(--h)}}
+@keyframes fade{to{opacity:1}}
+@keyframes fall{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){.feed{animation:none;height:var(--h)}.confetti{display:none}*{animation-duration:.01ms!important;animation-delay:0s!important}}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;min-height:0;align-content:start}
+  .col-l{border-right:none;border-bottom:1px solid var(--line);padding:44px 22px}
+  .col-r{padding:40px 16px 56px}
+  .printer,.slot{width:300px}.feed{width:256px}
+  h1{font-size:26px}
+}
+
+/* ── hors maquette : attente de la confirmation serveur, valeurs longues du ticket, 1er mot de passe ── */
+.wrap[hidden]{display:none}
+.attente{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:30vh;color:var(--text-2,#5B626B);font-size:15px;text-align:center}
+/* « Réduire les animations » (Axel l'a activé) : ticket et confettis figés, mais l'indicateur d'attente continue (sinon la page
+   paraît bloquée) — sélecteurs par identifiant, plus forts que la règle globale ci-dessus */
+@media (prefers-reduced-motion:reduce){#attente i{animation:spin .8s linear infinite!important}#attenteTxt{animation:pulse 1.6s ease-in-out infinite!important}}
+@keyframes pulse{50%{opacity:.55}}
+.attente i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.r-row span:last-child{text-align:right;min-width:0;overflow-wrap:anywhere}
+.pw{width:100%;max-width:340px;margin-top:24px;text-align:left;animation:rise .5s .3s both}
+.pw label{display:block;font-size:13.5px;color:var(--text-2);margin:14px 0 7px 4px}
+.pw input{width:100%;height:54px;border-radius:999px;border:1px solid var(--line);background:#F6F7F8;padding:0 22px;font-family:inherit;font-size:16px;color:var(--text);outline:none;transition:border-color .15s,background .15s}
+.pw input:focus{border-color:#C9CED4;background:#fff}
+.pw-hint{min-height:18px;font-size:13px;line-height:1.4;color:var(--text-2);margin:10px 0 0 4px}
+.pw-hint.ko{color:#C2410C}.pw-hint.bon{color:#15803D}   /* pas « .ok » : c'est le rond vert de l'icône (Axel 24/10 : texte enfermé dans un cercle) */
+.pw .cta{max-width:none;margin-top:14px;animation:none}
+.pw .cta:disabled{opacity:.7;cursor:default;transform:none}
+.pw-link{margin-top:16px;font-size:14px;color:var(--text-2);text-decoration:underline;text-underline-offset:3px;animation:rise .5s .4s both}
+.pw-link:hover{color:var(--text)}
+.pw-link+.pw-link{margin-top:10px}
+</style>
+</head>
+<body>
+<div class="top">
+  <button class="back" id="back" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>Back</button>
+  <img class="logo" src="/assets/avatarads-logo.png" alt="AvatarAds">
+</div>
+
+<div class="attente" id="attente"><i></i><span id="attenteTxt">Confirming your payment…</span></div>
+<div class="wrap" id="page" hidden>
+  <div class="col-l">
+    <div class="confetti" id="cL"></div>
+    <div class="done" id="done">
+      <div class="ok"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22A06B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h1>Payment confirmed</h1>
+      <p class="sub" id="sub"></p>
+      <button class="cta" id="open" type="button">Open my dashboard<span class="ar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+    </div>
+  </div>
+
+  <div class="col-r">
+    <div class="confetti" id="cR"></div>
+    <div class="printer">
+      <div class="slot"></div>
+      <div class="feed" id="feed">
+        <div class="receipt" id="rc"></div>
+      </div>
+      <div class="shadow"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL="https://guvwgiejzkiodghywpwj.supabase.co", SB_KEY="sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck", SB_SESSION="sb-guvwgiejzkiodghywpwj-auth-token";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const eur = (v) => { const r = Math.round(v*100)/100; return "€" + (Number.isInteger(r) ? String(r) : r.toFixed(2)); };
+const pad = (n) => String(n).padStart(2,"0");
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+const lire=k=>{ try{ return sessionStorage.getItem(k) }catch(_){ return null } };
+const FLECHE='<span class="ar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+// identifiant joint au paiement par la page de paiement (même onglet) + panier payé, tel qu'affiché au moment de payer
+// (aa_pay_nonce : arrivée ici sans passer par la bascule de la page de paiement, ex. retour depuis whop.com)
+const NONCE=lire("aa_pay_ok")||lire("aa_pay_nonce");
+try{ if(NONCE&&!lire("aa_pay_ok")){ sessionStorage.setItem("aa_pay_ok",NONCE); sessionStorage.removeItem("aa_pay_nonce"); } }catch(_){}
+let PANIER=(()=>{ try{ return JSON.parse(lire("aa_pay_order")||"null") }catch(_){ return null } })();
+function compte(){try{const s=JSON.parse(localStorage.getItem(SB_SESSION)||"null"),u=s&&(s.user||(s.currentSession&&s.currentSession.user));
+  if(u&&u.id&&u.email) return {id:String(u.id),email:String(u.email)};}catch(_){} return null}
+// session écrite là où l'app la lit (clé standard de supabase-js, comme connexion.html)
+function garderSession(j){ try{ if(!j.expires_at&&j.expires_in) j.expires_at=Math.floor(Date.now()/1000)+Number(j.expires_in);
+  localStorage.setItem(SB_SESSION,JSON.stringify(j)); localStorage.setItem("aa_login_at",String(Date.now())); return !!localStorage.getItem(SB_SESSION); }catch(_){ return false } }
+// jeton d'accès encore valable (rafraîchi s'il expire dans la minute : l'app n'est pas ouverte dans cet onglet)
+async function jeton(){
+  let s=null; try{ s=JSON.parse(localStorage.getItem(SB_SESSION)||"null") }catch(_){}
+  if(!s||!s.access_token) return "";
+  if(!s.refresh_token||(s.expires_at&&s.expires_at*1000-Date.now()>60e3)) return s.access_token;
+  try{ const t=await fetch(SB_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})});
+    const j=await t.json(); if(t.ok&&j.access_token&&garderSession(j)) return j.access_token; }catch(_){}
+  return s.access_token;
+}
+const appel=(corps,tok)=>fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},tok?{Authorization:"Bearer "+tok}:{}),body:JSON.stringify(corps)}).then(r=>r.json());
+const otp=(corps,tok)=>fetch(SB_URL+"/functions/v1/auth-otp",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+tok},body:JSON.stringify(corps)}).then(r=>r.json().catch(()=>({error:"server_error"})));
+const etat=action=>appel({action:action||"etat",nonce:NONCE}).catch(()=>null);
+// sans paiement confirmé : retour à la page de paiement d'où l'on vient
+function quitter(){ location.replace(lire("aa_pay_from")||"/en/tarifs.html"); }
+$("back").onclick=()=>{ location.href=compte()?"/app/":"/en/"; };
+
+let R=null, AUTO=false, EMAIL="";
+// lien de vérification (?apercu, ?apercu=abo, ?apercu=code, ?apercu=achat) : commande d'exemple, aucun appel au serveur,
+// rien n'est enregistré (« achat » : acheteur sans compte, écran du code reçu à l'adresse de l'achat)
+const APERCU=new URLSearchParams(location.search).get("apercu");
+(async()=>{
+  if(APERCU!==null){
+    const abo=APERCU==="abo"||APERCU==="code", achat=APERCU==="achat", acc=compte();
+    PANIER={lines:abo?[{n:"Pro plan",q:1,p:49.99},{n:"Credit pack M",q:1,p:27.99}]:[{n:"Credit pack M",q:1,p:34.99}],promo:null};
+    R={ok:true,paid:true,compte:achat?"nouveau":"connecte",mdp:false,google:false,recu:{commande:"APERCU-0001",methode:"Card",last4:"4242",total:abo?77.98:34.99,date:new Date().toISOString()}};
+    if(achat) R.email="yo•••@example.com";
+    EMAIL=achat?R.email:acc?acc.email:"test@example.com";
+    try{ await Promise.race([document.fonts.ready,pause(1500)]) }catch(_){}
+    return afficher();
+  }
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(NONCE||"")) return venuDeWhop()?sansSuivi():quitter();
+  // le compte d'un acheteur sans compte et le reçu (paiement Whop) arrivent quelques secondes après l'activation.
+  // Axel 24/10 (« un petit freeze de 2-3 s ») : la page s'affiche dès que le paiement est validé et le compte prêt ; le reçu
+  // (n° de commande, carte, montant encaissé) se complète ensuite sur le ticket (completerRecu), sans attendre ici.
+  for(let i=0;i<24;i++){
+    R=await etat()||R;
+    const pret=R&&R.paid&&R.compte!=="attente";
+    if(pret&&(R.recu&&R.recu.total!=null||i>=1)) break;
+    // retour direct de Whop (adresse de retour) : le webhook peut arriver quelques secondes APRÈS l'onglet → on attend ~25 s
+    if(R&&R.ok&&!R.paid&&i>=20) break;
+    const t=document.getElementById("attenteTxt"); if(t) t.textContent=i<3?"Confirming your payment…":i<8?"Activating your access…":"Just a few more seconds…";
+    await pause(pret?700:1200);
+  }
+  if(R&&R.ok&&!R.paid) return quitter();
+  R=R||{};
+  // nouvel acheteur (compte créé par l'achat) : rien n'est ouvert à l'arrivée. Audit 23/10 : l'adresse saisie chez Whop n'est
+  // pas vérifiée, « Ouvrir mon espace » envoie d'abord un code à cette adresse (codeAchat) ; déjà ouvert dans cet onglet → AUTO
+  AUTO=lire("aa_pay_auto")===NONCE;
+  const acc=compte();
+  EMAIL=EMAIL||((R.compte==="connecte"||AUTO)&&acc?acc.email:"")||R.email||(PANIER&&PANIER.email)||"";
+  // polices du ticket chargées AVANT de le mesurer (sinon la hauteur d'impression est fausse de quelques pixels)
+  try{ await Promise.race([Promise.all(['800 23px "Bricolage Grotesque"','700 17px "Bricolage Grotesque"','700 30px "Bricolage Grotesque"','400 12px "JetBrains Mono"',
+    '700 13.5px "JetBrains Mono"','400 15.5px "Hanken Grotesk"','600 17px "Hanken Grotesk"'].map(f=>document.fonts.load(f))),pause(900)]) }catch(_){}
+  afficher();
+  if(!(R.recu&&R.recu.total!=null)) completerRecu();
+})();
+// reçu arrivé après l'affichage : le ticket est réécrit en place (même hauteur mesurée à nouveau), sans rejouer l'animation
+async function completerRecu(){
+  for(let j=0;j<12;j++){
+    await pause(1500);
+    const r=await etat(); if(!r||!r.recu||r.recu.total==null) continue;
+    R.recu=r.recu; ticket();
+    try{ $("feed").style.setProperty("--h", Math.ceil($("rc").getBoundingClientRect().height) + "px") }catch(_){}
+    return;
+  }
+}
+
+// Achat fait sur la page Whop (lien whop.com) puis renvoyé ici par Whop (« URL de redirection de succès ») : aucun
+// identifiant de cet onglet, donc ni reçu ni ouverture du compte par code. Axel 24/10 : plus de renvoi vers les tarifs —
+// « Paiement confirmé » sans ticket, « Ouvrir mon espace » (connexion habituelle avec l'adresse payée). Seulement si la
+// visite vient bien de Whop (page d'origine whop.com ou paramètre de paiement Whop) : sinon retour aux tarifs comme avant.
+function venuDeWhop(){
+  try{ if(/(^|\.)whop\.com$/i.test(new URL(document.referrer).hostname)) return true }catch(_){}
+  const q=new URLSearchParams(location.search);
+  for(const [k,v] of q) if(/^(payment|membership|receipt|checkout|session|plan)_?id$/i.test(k)||/^(pay|mem|plan|ch|rcpt)_[A-Za-z0-9]+$/.test(v)) return true;
+  return false;
+}
+function sansSuivi(){
+  R={ok:true,paid:true,compte:"whop"};
+  const acc=compte();
+  $("sub").innerHTML=acc?`Your access is on its way to your account <b>${esc(acc.email)}</b>.`
+    :"Your access is on its way to your AvatarAds account: log in with the address you used to pay.";
+  document.querySelector(".col-r").remove();
+  $("page").classList.add("seul");
+  $("attente").remove(); $("page").hidden=false;
+  play();
+}
+
+function afficher(){
+  ticket();
+  $("attente").remove(); $("page").hidden=false;
+  // hauteur finale du ticket pour l'animation d'impression
+  const mesurer=()=>$("feed").style.setProperty("--h", Math.ceil($("rc").getBoundingClientRect().height) + "px");
+  mesurer(); play();
+  try{ document.fonts.ready.then(mesurer) }catch(_){}
+}
+function ticket(){
+  const rc=R.recu||{}, o=PANIER||{};
+  const lines=Array.isArray(o.lines)&&o.lines.length?o.lines:[{n:"AvatarAds",q:1,p:Number(rc.total)||0}];
+  const sous=lines.reduce((s,l)=>s+l.p*l.q,0);
+  const total=rc.total!=null?Number(rc.total):o.total!=null?Number(o.total):sous;
+  const ecart=Math.round((total-sous)*100)/100;
+  // devise réellement encaissée (Whop peut facturer dans la devise de l'acheteur) : montants du paiement affichés avec elle
+  const dev=rc.total!=null&&/^[a-z]{3}$/.test(String(rc.devise||""))?String(rc.devise):"eur";
+  const argent=v=>dev==="eur"?eur(v):(Math.round(v*100)/100).toFixed(2)+" "+dev.toUpperCase();
+  const libRemise=o.promo?"Code "+esc(String(o.promo).toUpperCase()):"Discount";
+  // remise et taxes lues sur le paiement réel (paiement-compte) ; sans elles, l'écart total − lignes reste sur UNE ligne
+  let detail="", apres="";
+  if(rc.total!=null&&typeof rc.remise==="number"){
+    const remise=Number(rc.remise)||0, taxes=Number(rc.taxes)||0, incl=!!rc.taxes_incluses;
+    if(remise>0) detail+=`<div class="r-row"><span>${libRemise}</span><span>−${argent(remise)}</span></div>`;
+    if(taxes>0&&!incl) detail+=`<div class="r-row"><span>Taxes</span><span>${argent(taxes)}</span></div>`;
+    const reste=dev==="eur"?Math.round((total-(sous-remise+(incl?0:taxes)))*100)/100:0;
+    if(Math.abs(reste)>=0.01) detail+=`<div class="r-row"><span>Adjustment</span><span>${reste<0?"−":""}${argent(Math.abs(reste))}</span></div>`;
+    if(taxes>0&&incl) apres=`<div class="r-row"><span>Incl. taxes</span><span>${argent(taxes)}</span></div>`;
+  } else if(ecart<0) detail=`<div class="r-row"><span>${o.promo?libRemise:"Adjustment"}</span><span>−${eur(-ecart)}</span></div>`;
+  else if(ecart>0) detail=`<div class="r-row"><span>Adjustment</span><span>${eur(ecart)}</span></div>`;
+  const ref=rc.commande||"—", d=rc.date?new Date(rc.date):new Date();
+  const kind=lines.some(l=>/cr[eé]dit/i.test(l.n))?"Your credits are on their way":"Your access is active";
+  $("sub").innerHTML=`${kind} on your${EMAIL?` <b>${esc(EMAIL)}</b>`:" AvatarAds"} account.`;
+  $("rc").innerHTML = `
+  <div class="r-logo"><img src="/assets/avatarads-logo.png" alt=""></div>
+  <div class="r-title">AVATARADS</div>
+  <div class="r-meta" style="text-align:center;margin-top:6px">avatarads.fr<br>${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}</div>
+  <div class="dots"></div>
+  <div class="r-row"><span>Order</span><span>${esc(ref)}</span></div>
+  ${EMAIL?`<div class="r-row"><span>Customer</span><span>${esc(EMAIL)}</span></div>`:""}
+  <div class="dots"></div>
+  ${lines.map(l=>`<div class="r-row"><span>${l.q} × ${esc(l.n)}</span><span>${eur(l.p*l.q)}</span></div>`).join("")}
+  <div class="dots"></div>
+  <div class="r-row"><span>Subtotal</span><span>${eur(sous)}</span></div>
+  ${detail}
+  <div class="r-row"><span>Fees</span><span>€0</span></div>
+  <div class="r-row b"><span>TOTAL</span><span>${argent(total)}</span></div>
+  ${apres}
+  <div class="dots"></div>
+  <div class="r-row"><span>${esc(rc.methode||"Card")}</span><span>${rc.last4?"•••• "+esc(rc.last4):""}</span></div>
+  <div class="r-row"><span>Status</span><span>PAID</span></div>
+  <div class="dots"></div>
+  <div class="thanks">THANK YOU!</div>
+  <div class="barcode"></div>
+  <div class="code">${esc(ref)}</div>`;
+}
+
+// confettis
+function burst(id, n, delay, colors){
+  const host = document.getElementById(id); if(!host) return;
+  const w = host.clientWidth;
+  for(let i=0;i<n;i++){
+    const el = document.createElement("i");
+    const s = 5 + Math.random()*8;
+    el.style.left = (Math.random()*w) + "px";
+    el.style.width = s + "px"; el.style.height = (s*(.4+Math.random()*.8)) + "px";
+    el.style.background = colors[i % colors.length];
+    el.style.setProperty("--dx", (Math.random()*160-80) + "px");
+    el.style.setProperty("--dy", (420 + Math.random()*420) + "px");
+    el.style.setProperty("--r", (Math.random()*720-360) + "deg");
+    el.style.animationDuration = (2.2 + Math.random()*1.8) + "s";
+    el.style.animationDelay = (delay + Math.random()*.6) + "s";
+    host.appendChild(el);
+  }
+}
+function play(){
+  document.getElementById("cL").innerHTML = ""; const cR = document.getElementById("cR"); if (cR) cR.innerHTML = "";
+  document.querySelectorAll(".ok,.ok svg path,h1,.sub,.cta,.feed,.shadow").forEach(el=>{
+    el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
+  });
+  burst("cL", 90, .1, ["#FF5A1F","#FFC107","#1C252B","#FF8042"]);
+  burst("cR", 70, 2.9, ["#FF5A1F","#FFC107","#22A06B","#FF8042"]);
+}
+
+// « Ouvrir mon espace » : compte créé par l'achat → code reçu à son adresse d'abord ; compte sans mot de passe (et sans
+// Google) → on le crée ; sinon le studio ; pas de session dans ce navigateur (compte déjà existant) → connexion habituelle
+$("open").onclick=()=>{
+  if(APERCU!==null) return APERCU==="achat"?codeAchat():motDePasse(APERCU==="code"?"code":"direct",EMAIL);
+  if(R.compte==="nouveau"&&!AUTO) return codeAchat();
+  const acc=compte();
+  if(!acc) return location.href="/en/connexion.html";
+  const acheteur=AUTO||R.compte==="connecte";   // la session de ce navigateur est bien celle de l'acheteur
+  if(!acheteur||R.mdp!==false||R.google) return location.href="/app/";
+  motDePasse(AUTO?"direct":"code",acc.email);
+};
+
+// Acheteur sans compte (audit 23/10) : Whop ne vérifie pas l'adresse saisie au paiement. Code à 6 chiffres envoyé à cette
+// adresse (paiement-compte, action « code ») ; l'action « connexion » ne remet le jeton qu'avec le bon code. Ensuite, comme
+// avant : session dans ce navigateur, puis 1er mot de passe
+function codeAchat(){
+  $("done").innerHTML=`
+   <div class="ok"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22A06B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M4.5 7.5l7.5 5.5 7.5-5.5"/></svg></div>
+   <h1>Confirm your address</h1>
+   <p class="sub">A 6-digit code is on its way to <b>${esc(R.email||EMAIL||"your email address")}</b>: it opens your dashboard and confirms this address is really yours.</p>
+   <form class="pw" id="cdForm" autocomplete="on" novalidate>
+    <label for="cdCode">Code received by email</label><input id="cdCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 digits">
+    <div class="pw-hint" id="cdHint" role="status"></div>
+    <button class="cta" type="submit" id="cdBtn"><span>Open my dashboard</span>${FLECHE}</button>
+   </form>
+   <button class="pw-link" type="button" id="cdResend">Resend the code</button>
+   <a class="pw-link" href="/en/connexion.html">Log in another way</a>`;
+  const c=$("cdCode"), h=$("cdHint"), btn=$("cdBtn");
+  const dire=(t,k)=>{ h.textContent=t; h.className="pw-hint"+(k?" "+k:""); };
+  c.oninput=()=>{ c.value=c.value.replace(/\D/g,"").slice(0,6) };
+  const ouvert="This account is already open: log in with your email address.";
+  const envoyer=async()=>{ if(APERCU!==null) return dire("Preview: no code is sent.");
+    const out=await appel({action:"code",nonce:NONCE}).catch(()=>null);
+    if(out&&out.ok&&out.envoye) return dire("Code sent. Remember to check your spam folder.");
+    dire(out&&out.compte&&out.compte!=="nouveau"?ouvert:out&&out.error==="cooldown"?`Wait ${out.wait||30} s before requesting another code.`
+      :out&&out.error==="too_many_codes"?"Too many codes requested, try again in an hour.":"Couldn’t send the code right now, try again.","ko"); };
+  envoyer(); $("cdResend").onclick=envoyer;
+  const erreur=j=>j&&j.compte&&j.compte!=="nouveau"?ouvert:!j?"Couldn’t verify right now, try again."
+    :j.error==="wrong_code"?"Incorrect code, check it.":j.error==="expired"?"Code expired: request a new one."
+    :j.error==="too_many_attempts"?"Too many attempts: request a new code in a few minutes.":"Couldn’t verify right now, try again.";
+  $("cdForm").onsubmit=async ev=>{
+    ev.preventDefault();
+    if(!/^\d{6}$/.test(c.value)) return dire("Enter the 6-digit code you received by email","ko");
+    if(APERCU!==null) return dire("Preview: nothing is checked.","bon");
+    btn.disabled=true; btn.firstElementChild.textContent="Checking…";
+    let j=null; try{ j=await appel({action:"connexion",nonce:NONCE,code:c.value}); }catch(_){}
+    if(!j||!j.token_hash){ btn.disabled=false; btn.firstElementChild.textContent="Open my dashboard"; return dire(erreur(j),"ko"); }
+    // jeton à usage unique → session écrite là où l'app la lit (comme la connexion par code)
+    let s=null;
+    try{ const v=await fetch(SB_URL+"/auth/v1/verify",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({type:"magiclink",token_hash:j.token_hash})});
+      s=await v.json(); if(!(v.ok&&s.access_token&&s.refresh_token&&garderSession(s))) s=null; }catch(_){ s=null }
+    if(!s) return location.replace("/en/connexion.html");
+    AUTO=true; EMAIL=j.email||(s.user&&s.user.email)||EMAIL; try{ sessionStorage.setItem("aa_pay_auto",NONCE) }catch(_){}
+    if(j.mdp===false&&!j.google) return motDePasse("direct",EMAIL);
+    location.replace("/app/");
+  };
+  setTimeout(()=>{ try{ c.focus() }catch(_){} },300);
+}
+
+// 1er mot de passe. « direct » : compte ouvert par l'achat (le serveur le sait, paiement-compte) ; « code » : compte déjà
+// utilisé, preuve par un code envoyé à son adresse (même chemin que Mon compte, auth-otp)
+function motDePasse(mode,email){
+  const code=mode==="code";
+  $("done").innerHTML=`
+   <div class="ok"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22A06B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg></div>
+   <h1>Create your password</h1>
+   <p class="sub">${code?`A 6-digit code is on its way to <b>${esc(email)}</b> to confirm it’s really you.`:`So you can easily log back in to your <b>${esc(email)}</b> account.`}</p>
+   <form class="pw" id="pwForm" autocomplete="on" novalidate>
+    <input type="email" name="username" autocomplete="username" value="${esc(email)}" hidden>
+    ${code?`<label for="pwCode">Code received by email</label><input id="pwCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 digits">`:""}
+    <label for="pw1">Password</label><input id="pw1" type="password" autocomplete="new-password" placeholder="8 characters minimum">
+    <label for="pw2">Confirm the password</label><input id="pw2" type="password" autocomplete="new-password" placeholder="Type it again">
+    <div class="pw-hint" id="pwHint"></div>
+    <button class="cta" type="submit" id="pwBtn"><span>Create my password</span>${FLECHE}</button>
+   </form>
+   ${code?`<button class="pw-link" type="button" id="pwResend">Resend the code</button>`:""}
+   <a class="pw-link" href="/app/">Later — open my dashboard</a>`;
+  const a=$("pw1"), b=$("pw2"), h=$("pwHint"), c=$("pwCode"), btn=$("pwBtn");
+  const dire=(t,k)=>{ h.textContent=t; h.className="pw-hint"+(k?" "+k:""); };
+  const verif=()=>{ if(!a.value&&!b.value){ dire(""); return false }
+    if(a.value.length<8){ dire("8 characters minimum"); return false }
+    if(!b.value){ dire("Type it again to confirm"); return false }
+    if(a.value!==b.value){ dire("The two passwords don’t match","ko"); return false }
+    dire("Both match","bon"); return true };
+  a.oninput=verif; b.oninput=verif;
+  if(c) c.oninput=()=>{ c.value=c.value.replace(/\D/g,"").slice(0,6) };
+  const envoyer=async()=>{ if(APERCU!==null) return dire("Preview: no code is sent.");
+    const out=await otp({action:"password_change_send"},await jeton()).catch(()=>({error:"network"}));
+    if(out&&out.ok) return dire("Code sent. Remember to check your spam folder.");
+    dire(out&&out.error==="cooldown"?`Wait ${out.wait||60} s before requesting another code.`:out&&out.error==="too_many_codes"?"Too many codes requested, try again in an hour."
+      :"Couldn’t send the code right now, try again.","ko"); };
+  if(code){ envoyer(); $("pwResend").onclick=envoyer; }
+  const erreur=e=>e==="weak_password"?"Password too simple: mix letters, numbers and symbols.":e==="password_too_long"?"72 characters maximum"
+    :e==="wrong_code"?"Incorrect code, check it.":e==="expired"?"Code expired: request a new one.":e==="too_many_attempts"?"Too many attempts: request a new code."
+    :"Couldn’t save it right now, try again.";
+  $("pwForm").onsubmit=async ev=>{
+    ev.preventDefault();
+    if(code&&!/^\d{6}$/.test(c.value)) return dire("Enter the 6-digit code you received by email","ko");
+    if(!verif()) return dire(a.value.length<8?"8 characters minimum":h.textContent||"Type it again to confirm","ko");
+    if(new TextEncoder().encode(a.value).length>72) return dire("72 characters maximum","ko");
+    if(APERCU!==null) return dire("Preview: nothing is saved.","bon");
+    btn.disabled=true; btn.firstElementChild.textContent="Saving…";
+    const tok=await jeton();
+    let j=null;
+    try{ j=code?await otp({action:"password_change_verify",code:c.value,password:a.value},tok):await appel({action:"mot_de_passe",password:a.value},tok); }catch(_){}
+    if(!j||!j.ok){
+      btn.disabled=false; btn.firstElementChild.textContent="Create my password";
+      if(!code&&j&&j.error==="refuse") return motDePasse("code",email);   // le serveur ne le reconnaît plus comme compte neuf
+      return dire(erreur(j&&j.error),"ko");
+    }
+    // le serveur d'authentification ferme les sessions au changement de mot de passe : reconnexion avec le nouveau
+    try{ const t=await fetch(SB_URL+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({email:j.email||email,password:a.value})});
+      const tj=await t.json(); if(!(t.ok&&tj.access_token&&garderSession(tj))) return location.replace("/en/connexion.html"); }catch(_){ return location.replace("/en/connexion.html"); }
+    location.replace("/app/");
+  };
+  setTimeout(()=>{ try{ (c||a).focus() }catch(_){} },300);
+}
+</script>
+</body>
+</html>

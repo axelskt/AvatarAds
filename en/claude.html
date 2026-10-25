@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Audit 02/10 : CSP (scripts : cette page + Clarity ; appels réseau : Clarity seulement ; vidéo du tuto locale).
+     frame-ancestors est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe dessous. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.clarity.ms https://*.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; media-src 'self' blob: https:; connect-src 'self' https://*.clarity.ms; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<script>/* Audit 02/10 — anti-clickjacking : page publique, jamais encadrée par un autre site */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Chargé par /app/consent.js (pas de bandeau, refus possible depuis /confidentialite.html). -->
+<script src="/app/consent.js?v=2026-10-04-3" defer></script>
+<title>Connect Claude — AvatarAds · Generate your videos from Claude</title>
+<meta name="description" content="Connect AvatarAds to Claude and generate your images and videos with a single sentence, right from your conversations — using your AvatarAds credits.">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="theme-color" content="#FBFAF8">
+<meta name="author" content="AvatarAds">
+<meta property="og:title" content="Connect Claude — AvatarAds">
+<meta property="og:description" content="Generate your AvatarAds images and videos right from Claude, with a single sentence.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://avatarads.fr/en/claude.html">
+<meta property="og:image" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:secure_url" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AvatarAds — generate your AI videos and images from Claude">
+<meta property="og:site_name" content="AvatarAds">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Connect Claude — AvatarAds">
+<meta name="twitter:description" content="Generate your AvatarAds images and videos right from Claude, with a single sentence.">
+<meta name="twitter:image" content="https://avatarads.fr/og-image.jpg">
+<meta name="twitter:image:alt" content="AvatarAds — generate your AI videos and images from Claude">
+<meta name="twitter:site" content="@avatarads">
+<link rel="canonical" href="https://avatarads.fr/en/claude.html">
+<link rel="alternate" hreflang="fr" href="https://avatarads.fr/claude.html">
+<link rel="alternate" hreflang="en" href="https://avatarads.fr/en/claude.html">
+<link rel="alternate" hreflang="x-default" href="https://avatarads.fr/claude.html">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="shortcut icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fonts non bloquantes (preload + bascule media=print→all à l'onload) — même pattern que la LP -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+<style>
+/* ══════════ DESIGN SYSTEM (repris de la LP — 1:1) ══════════ */
+:root{
+  /* Axel 18/09 : page passée en CLAIR (comme le reste du site) — mêmes rôles de tokens, valeurs inversées */
+  --bg:#FBFAF8;--bg-grad:#F3F1ED;
+  --panel-1:#FFFFFF;--surface:#FFFFFF;--surface-2:#F4F2EF;--surface-3:#ECE9E4;
+  --border:rgba(20,16,12,.09);--border-2:rgba(20,16,12,.16);
+  --text:#1A1714;--text-2:#5B564F;--text-3:#8A847B;
+  --accent:#FF5A1F;--accent-2:#FF8042;
+  --accent-soft:color-mix(in srgb,var(--accent) 14%,transparent);
+  --accent-line:color-mix(in srgb,var(--accent) 32%,transparent);
+  --accent-glow:color-mix(in srgb,var(--accent) 48%,transparent);
+  --amber:#FFB020;--green:#28C795;--violet:#9A7CFF;
+  --r-sm:10px;--r:14px;--r-lg:20px;
+  --maxw:1320px;
+  --font:'Hanken Grotesk',system-ui,sans-serif;
+  --display:'Bricolage Grotesque',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  font-synthesis:none;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-x:clip;max-width:100vw;scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.09),transparent 60%),
+    radial-gradient(900px 600px at 0% 100%,rgba(255,90,31,.05),transparent 55%),
+    var(--bg);
+  color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:clip;
+}
+.mono{font-family:var(--mono)}
+.display{font-family:var(--display);letter-spacing:-.02em;line-height:.98}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3)}
+::selection{background:var(--accent);color:#0B0B0D}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:20px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:15px;border-radius:var(--r);padding:13px 20px;transition:transform .15s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s,border-color .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)}
+.btn-primary:hover{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 40px -10px var(--accent-glow);transform:translateY(-1px)}
+.btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{background:var(--surface-2);border-color:var(--border-2)}
+.btn-quiet{background:transparent;color:var(--text-2)}
+.btn-quiet:hover{color:var(--text)}
+.btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
+.btn-lg{padding:16px 26px;font-size:16.5px}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent-glow)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,.5));backdrop-filter:blur(12px)}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}
+.grow{flex:1}
+.muted{color:var(--text-2)}
+.faint{color:var(--text-3)}
+.accent{color:var(--accent)}
+.center{text-align:center}
+.brandmark{display:grid;place-items:center;flex:0 0 auto}
+.logo-wordmark{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.02em}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.rise{animation:none}}
+/* pastille d'étape (reprise de l'écran « Connecter Claude » de l'app) */
+.mcp-step{width:28px;height:28px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--accent-2);background:var(--accent-soft);border:1px solid var(--accent-line)}
+/* « Voir les réglages exacts » repliable (repris de l'écran in-app) */
+.adv summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);user-select:none;width:fit-content}
+.adv summary::-webkit-details-marker{display:none}
+.adv .adv-caret{transition:transform .2s}
+.adv[open] .adv-caret{transform:rotate(180deg)}
+.step-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch}
+.foot-link{transition:.15s;text-decoration:underline;text-decoration-color:transparent}
+.foot-link:hover{color:var(--text);text-decoration-color:var(--text-3)}
+/* responsive */
+@media (max-width:900px){
+  .wrap{padding:0 18px}
+  .step-grid{grid-template-columns:1fr}
+  .hide-mobile{display:none !important}
+}
+/* Le tuto en vidéo (02/09) */
+.tuto-frame{position:relative;width:100%;max-width:1100px;margin:0 auto;aspect-ratio:16/9;border-radius:24px;overflow:hidden;border:1px solid var(--border-2);box-shadow:0 40px 80px -40px rgba(20,16,12,.28),0 0 60px -30px var(--accent-glow);background:var(--bg-grad)}
+.tuto-frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+</style>
+<!-- Données structurées (SEO) : WebPage simple, description réelle de la page. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://avatarads.fr/en/claude.html#webpage",
+      "url": "https://avatarads.fr/en/claude.html",
+      "name": "Connect Claude — AvatarAds",
+      "description": "Connect AvatarAds to Claude and generate your images and videos with a single sentence, right from your conversations — using your AvatarAds credits.",
+      "inLanguage": "en",
+      "isPartOf": { "@id": "https://avatarads.fr/en/#website" },
+      "breadcrumb": { "@id": "https://avatarads.fr/en/claude.html#breadcrumb" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://avatarads.fr/en/claude.html#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://avatarads.fr/en/" },
+        { "@type": "ListItem", "position": 2, "name": "Connect Claude", "item": "https://avatarads.fr/en/claude.html" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<!-- ══════════ NAV (même gabarit que tarifs.html) ══════════ -->
+<div style="position:sticky;top:0;z-index:50">
+  <div class="glass" style="border-bottom:1px solid var(--border)">
+    <div class="wrap row" style="height:68px;justify-content:space-between">
+      <a href="/en/" class="row gap10" style="align-items:center">
+        <span class="brandmark"><img src="/assets/avatarads-logo-96.png" alt="AvatarAds" width="26" height="26" style="border-radius:7px;display:block"></span>
+        <span class="logo-wordmark">AvatarAds</span>
+      </a>
+      <div class="row gap12">
+        <a href="/en/" class="btn btn-quiet btn-sm hide-mobile">← Home</a>
+        <a href="/app/#connecter-claude" class="btn btn-primary btn-sm">Log in <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<!-- ══════════ HERO — sobre, texte uniquement (garde-fou de marque : aucun logo
+     ni visuel laissant croire à un partenariat officiel Anthropic) ══════════ -->
+<section class="wrap center" style="padding-top:72px;padding-bottom:56px;max-width:920px">
+  <h1 class="display rise" style="font-size:clamp(40px,5.4vw,76px);font-weight:800;line-height:1.02;text-wrap:balance">
+    AvatarAds <span class="accent">×</span> Claude
+  </h1>
+  <p class="muted rise" style="font-size:clamp(16px,1.4vw,19px);max-width:600px;margin:20px auto 0;line-height:1.55">
+    Create your AvatarAds videos and images right from Claude.
+  </p>
+</section>
+
+<!-- tuto video a venir : décommenter et remplir quand la vidéo existe.
+<section class="wrap" style="padding-bottom:64px;max-width:920px">
+  <div class="card" style="position:relative;aspect-ratio:16/9;overflow:hidden">
+    <video src="/assets/lp/tuto-claude.mp4" poster="/assets/lp/tuto-claude.webp" controls playsinline preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+  </div>
+</section>
+-->
+
+<!-- ══════════ LES 3 ÉTAPES (contenu repris de l'écran « Connecter Claude » de l'app) ══════════ -->
+<section class="wrap" style="padding-bottom:96px;max-width:1160px">
+  <div class="center" style="margin-bottom:36px">
+    <h2 class="display" style="font-size:clamp(26px,3.4vw,42px);font-weight:800;line-height:1.04">Connected in <span class="accent">3 steps</span></h2>
+  </div>
+
+  <div class="step-grid">
+
+    <!-- ① relier (aligné sur l'écran in-app : étape encadrée + bouton « Relier à Claude ») -->
+    <div class="card" style="padding:20px;display:flex;flex-direction:column">
+      <div class="row gap10" style="align-items:center;margin-bottom:12px">
+        <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Link your account</span>
+      </div>
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 12px">No key to paste: you authorise AvatarAds in one click. In Claude, open:</p>
+      <div class="card mono faint" style="padding:11px 12px;background:var(--panel-1);font-size:11.5px;line-height:1.6">Customize → Connectors<br>→ “Add custom connector”</div>
+      <p class="faint" style="font-size:12.5px;line-height:1.55;margin:12px 0 8px">Then paste this address:</p>
+      <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:auto">
+        <input type="text" id="mcpUrl" readonly value="https://mcp.avatarads.fr" onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:13px;border:none;background:none;color:var(--text);font-weight:700;padding:0">
+        <button class="btn btn-sm" onclick="copyMcpUrl(this)" title="Copy the address" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+        </button>
+      </div>
+      <a href="/app/#connecter-claude" class="btn btn-primary" style="width:100%;margin-top:12px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+        Link to Claude
+      </a>
+    </div>
+
+    <!-- ② autoriser (réglages exacts repliables, comme l'écran in-app) -->
+    <div class="card" style="padding:20px;display:flex;flex-direction:column">
+      <div class="row gap10" style="align-items:center;margin-bottom:12px">
+        <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Authorise AvatarAds</span>
+      </div>
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 8px">On the “Add custom connector” screen, enter the AvatarAds settings.</p>
+      <details class="adv" style="margin:0 0 10px">
+        <summary>
+          <svg class="adv-caret" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 9l6 6 6-6"/></svg>
+          See the exact settings
+        </summary>
+        <div class="card" style="padding:10px 12px;margin-top:10px;background:var(--panel-1);display:flex;flex-direction:column;gap:6px;font-size:12.5px;line-height:1.5">
+          <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Name</span><b style="text-align:right">AvatarAds</b></div>
+          <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">MCP server URL</span><b class="mono" style="text-align:right;font-size:11.5px;word-break:break-all">https://mcp.avatarads.fr</b></div>
+          <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Authentication</span><b style="text-align:right">Sign in now</b></div>
+          <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">OAuth client</span><b style="text-align:right">Use Claude’s published identity (recommended)</b></div>
+        </div>
+      </details>
+      <p class="faint" style="font-size:12.5px;line-height:1.55;margin:10px 0 0">Click <b style="color:var(--text-2)">Add</b>, then <b style="color:var(--text-2)">Connect</b>: you approve access on AvatarAds, and you’re done.</p>
+      <p class="faint" style="font-size:11.5px;line-height:1.5;margin:8px 0 14px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Claude says it couldn’t verify the server? Not a blocker: click <b style="color:var(--text-2)">Next</b> and keep these settings.</p>
+      <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:auto">
+        Open Claude → Connectors
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <!-- ③ générer (bouton « Commencer », comme l'écran in-app) -->
+    <div class="card" style="padding:20px;display:flex;flex-direction:column">
+      <div class="row gap10" style="align-items:center;margin-bottom:12px">
+        <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Generate</span>
+      </div>
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Turn on AvatarAds in your conversation. Describe what you want — the generation runs straight on your AvatarAds credits.</p>
+      <div class="row card" style="padding:12px 14px;gap:10px;align-items:flex-start;background:var(--panel-1);margin-top:auto">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto;margin-top:2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+        <span class="faint mono" style="font-size:11.5px;line-height:1.6;text-align:left">“Generate an image of my product on a marble background, in 9:16”</span>
+      </div>
+      <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;margin-top:12px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+        Get started
+      </a>
+    </div>
+  </div>
+
+  <div class="center" style="margin-top:36px">
+    <a href="https://avatarads.fr/app/#connecter-claude" class="btn btn-primary btn-lg" style="font-weight:800;border-radius:16px;padding:17px 34px">
+      Log in
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- ══════════ LE TUTO EN VIDÉO (Axel 02/09) ══════════ -->
+<section class="wrap" style="padding-bottom:96px;max-width:1160px">
+  <div class="center" style="margin-bottom:28px">
+    <h2 class="display" style="font-size:clamp(26px,3.4vw,42px);font-weight:800;line-height:1.04">Create several videos <span class="accent">from a single prompt</span></h2>
+  </div>
+  <div class="tuto-frame" id="claudeTuto">
+    <video src="/assets/lp/tuto-claude.mp4" poster="/assets/lp/tuto-claude.jpg" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Tutorial: connect AvatarAds to Claude and generate two videos from a single prompt"></video>
+  </div>
+</section>
+
+</main>
+
+<!-- ══════════ FOOTER (même gabarit que tarifs.html) ══════════ -->
+<footer style="border-top:1px solid var(--border)">
+  <div class="wrap" style="padding:30px 32px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap">
+    <a href="/en/" class="row gap10">
+      <img src="/assets/avatarads-logo-96.png" alt="" width="20" height="20" loading="lazy" decoding="async" style="border-radius:6px;display:block">
+      <span class="logo-wordmark" style="font-size:16px">AvatarAds</span>
+    </a>
+    <div class="row" style="gap:22px;flex-wrap:wrap">
+      <a href="/en/" class="faint foot-link" style="font-size:13px">Home</a>
+      <a href="/en/tarifs.html" class="faint foot-link" style="font-size:13px">Pricing</a>
+      <a href="/app/" class="faint foot-link" style="font-size:13px">Open the app</a>
+      <a href="mailto:contact@avatarads.fr" class="faint foot-link" style="font-size:13px">Contact</a>
+      <a href="/en/cgv.html" class="faint foot-link" style="font-size:13px">Terms</a>
+      <a href="/en/confidentialite.html" class="faint foot-link" style="font-size:13px">Privacy</a>
+    </div>
+    <span class="mono faint" style="font-size:11.5px">© 2026 AvatarAds · by IA Manager</span>
+  </div>
+</footer>
+
+<script>
+/* copie de l'adresse du connecteur — retour visuel SVG (pas d'émoji) */
+function copyMcpUrl(btn){
+  var inp=document.getElementById('mcpUrl');
+  var done=function(){
+    var old=btn.innerHTML;
+    btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+    setTimeout(function(){ btn.innerHTML=old; },1600);
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(inp.value).then(done,function(){ inp.select(); document.execCommand('copy'); done(); });
+    }else{ inp.select(); document.execCommand('copy'); done(); }
+  }catch(_){ try{ inp.select(); }catch(__){} }
+}
+</script>
+
+<script>
+/* Le tuto tourne (muet, en boucle) quand il est visible, pause sinon */
+(function(){
+  var box=document.getElementById('claudeTuto'); if(!box) return; var v=box.querySelector('video'); if(!v) return;
+  if(!('IntersectionObserver' in window)){ v.play().catch(function(){}); return; }
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting) v.play().catch(function(){}); else v.pause(); }); }, { threshold: 0.35 });
+  io.observe(box);
+})();
+</script>
+</body>
+</html>

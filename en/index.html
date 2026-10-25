@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://*.whop.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
+<script>/* Audit 02/10 — anti-clickjacking : la LP (checkout Whop) ne doit jamais être encadrée par un autre site ; frame-ancestors est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête). */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- LP PRINCIPALE = porte CLAIRE (chemin v1). À la 1re venue (aucune préférence), on ensemence
+     aa_theme=clair pour que tout le chemin (connexion + app) reste clair. Partagé même-origine avec
+     /app/. Un choix explicite (toggle Mon compte) prime toujours. -->
+<script>try{if(!localStorage.getItem('aa_theme'))localStorage.setItem('aa_theme','light');}catch(e){}</script>
+<!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Chargé par /app/consent.js (pas de bandeau, refus possible depuis /confidentialite.html) ; data-lazy : toujours après le rendu (load + idle). -->
+<script src="/app/consent.js?v=2026-10-04-3" defer data-lazy="1"></script>
+<title>AvatarAds · AI Video & Image Generator</title>
+<meta name="description" content="Create videos without showing your face: AI viral video generator, AI avatars and UGC ready to post in minutes. No camera, no editing.">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="theme-color" content="#EDF1F4">
+<meta name="author" content="AvatarAds">
+<link rel="canonical" href="https://avatarads.fr/en/">
+<link rel="alternate" hreflang="fr" href="https://avatarads.fr/">
+<link rel="alternate" hreflang="en" href="https://avatarads.fr/en/">
+<link rel="alternate" hreflang="x-default" href="https://avatarads.fr/">
+<meta property="og:title" content="AvatarAds · AI Video &amp; Image Generator">
+<meta property="og:description" content="Create videos without showing your face: AI viral video generator, AI avatars and UGC ready to post in minutes. No camera, no editing.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://avatarads.fr/en/">
+<meta property="og:image" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:secure_url" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AvatarAds — viral AI videos without showing your face">
+<meta property="og:site_name" content="AvatarAds">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AvatarAds · AI Video &amp; Image Generator">
+<meta name="twitter:description" content="Create videos without showing your face: AI viral video generator, AI avatars and UGC ready to post in minutes. No camera, no editing.">
+<meta name="twitter:image" content="https://avatarads.fr/og-image.jpg">
+<meta name="twitter:image:alt" content="AvatarAds — viral AI videos without showing your face">
+<meta name="twitter:site" content="@avatarads">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="shortcut icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fonts NON bloquantes (PageSpeed : « requêtes de blocage du rendu ») : preload + bascule
+     media=print→all à l'onload. display=swap déjà dans l'URL → texte visible immédiatement
+     en police système, puis swap. Rendu final strictement identique. -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+<!-- Image LCP du hero (téléphone central = hero-homme) : préchargée en priorité haute, responsive -->
+<!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
+<link rel="preconnect" href="https://whop.com" crossorigin>
+<link rel="preconnect" href="https://cdn.whop.com" crossorigin>
+<link rel="dns-prefetch" href="https://whop.com">
+<script>/* Whop checkout chargé au repos après le rendu (non utilisé sur la LP → hors chemin critique) */
+window.addEventListener('load',function(){(window.requestIdleCallback||function(f){setTimeout(f,1200)})(function(){var l=document.createElement('link');l.rel='prefetch';l.as='script';l.href='https://cdn.whop.com/elements/amber/elements.js';document.head.appendChild(l);});});</script>
+<style>
+/* Polices de repli aux métriques calquées — supprime le CLS du swap Google Fonts (le H1 est le LCP). Overrides mesurés sur les woff2 réels (upm 1000). */
+@font-face{font-family:'Bricolage Fallback';src:local('Arimo'),local('Arial'),local('Liberation Sans'),local('Helvetica Neue'),local('Roboto');size-adjust:98.26%;ascent-override:94.65%;descent-override:27.48%;line-gap-override:0%}
+@font-face{font-family:'Hanken Fallback';src:local('Arimo'),local('Arial'),local('Liberation Sans'),local('Helvetica Neue'),local('Roboto');size-adjust:101.22%;ascent-override:98.80%;descent-override:29.94%;line-gap-override:0%}
+/* ══════════ DESIGN SYSTEM (handoff Claude Design — 1:1) ══════════ */
+:root{
+  --bg:#0B0B0D;--bg-grad:#0E0D10;
+  --panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
+  --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.14);
+  --text:#F6F4F1;--text-2:#A7A39E;--text-3:#807C76; /* 4,7:1 sur le fond — l'ancien #6B6862 ratait le seuil de contraste (3,6:1) */
+  --accent:#FF5A1F;--accent-2:#FF8042;
+  --accent-soft:color-mix(in srgb,var(--accent) 14%,transparent);
+  --accent-line:color-mix(in srgb,var(--accent) 32%,transparent);
+  --accent-glow:color-mix(in srgb,var(--accent) 48%,transparent);
+  --amber:#FFB020;--green:#28C795;--violet:#9A7CFF;
+  --r-sm:10px;--r:14px;--r-lg:20px;--r-xl:28px;
+  --maxw:1320px;
+  --font:'Hanken Grotesk','Hanken Fallback',system-ui,sans-serif;
+  --display:'Bricolage Grotesque','Bricolage Fallback',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  font-synthesis:none;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* overflow-x:clip (pas hidden) : hidden casserait position:sticky sur Safari (card-stack) */
+html{overflow-x:clip;max-width:100vw;scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.10),transparent 60%),
+    radial-gradient(900px 600px at 0% 100%,rgba(255,90,31,.05),transparent 55%),
+    var(--bg);
+  color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:clip;
+}
+.mono{font-family:var(--mono)}
+.display{font-family:var(--display);letter-spacing:-.02em;line-height:.98}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3)}
+::selection{background:var(--accent);color:#0B0B0D}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:20px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:15px;border-radius:var(--r);padding:13px 20px;transition:transform .15s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s,border-color .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)}
+.btn-primary:hover{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 40px -10px var(--accent-glow);transform:translateY(-1px)}
+.btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{background:var(--surface-2);border-color:var(--border-2)}
+.btn-quiet{background:transparent;color:var(--text-2)}
+.btn-quiet:hover{color:var(--text)}
+.btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
+.btn-lg{padding:16px 26px;font-size:16.5px}
+/* chips & pills */
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent-glow)}
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));backdrop-filter:blur(12px)}
+/* ══ Header : TRANSPARENT pleine largeur en haut → PILULE flottante au scroll (LP claire ET sombre) ══
+   ⚠️ scopé à .aa-hdr : .glass sert AUSSI aux badges de contenu (« 2,1M vues » sur les iPhones) — à NE PAS toucher. */
+#stickyCta{display:none!important}   /* plus de barre-doublon : la pilule flottante EST la barre persistante */
+.aa-hdr .glass{background:transparent!important;border-bottom-color:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transition:padding .4s cubic-bezier(.4,0,.2,1)}
+.aa-hdr .glass>.wrap{transition:max-width .4s cubic-bezier(.4,0,.2,1),background .45s ease,border-radius .4s ease,box-shadow .45s ease,padding .4s ease,-webkit-backdrop-filter .45s ease,backdrop-filter .45s ease;border:1px solid transparent;border-radius:999px}
+body.aa-nav-float .aa-hdr .glass{padding:12px 16px 0}
+/* PILULE liquid-glass au scroll — theme-aware (var --surface/--border) : translucide + fort blur/saturate + liseré interne (sheen verre) */
+body.aa-nav-float .aa-hdr .glass>.wrap{max-width:1180px;background:color-mix(in srgb,var(--surface) 58%,transparent);border:1px solid var(--border);border-radius:999px;box-shadow:0 20px 46px -22px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.55);padding-left:22px;padding-right:12px;-webkit-backdrop-filter:saturate(1.8) blur(28px);backdrop-filter:saturate(1.8) blur(28px)}
+/* layout helpers */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}.gap24{gap:24px}
+.grow{flex:1}
+.muted{color:var(--text-2)}
+.faint{color:var(--text-3)}
+.accent{color:var(--accent)}
+.center{text-align:center}
+.brandmark{display:grid;place-items:center;color:#fff;flex:0 0 auto}
+.logo-wordmark{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.02em}
+.logo-mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--border-2);flex:0 0 auto}
+/* animations */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-33.33%)}}
+@keyframes lipTalk{0%,100%{height:6px}50%{height:14px}}
+/* le pulse animait box-shadow (recalcul de peinture à chaque frame — « animation
+   non composée » chez PageSpeed) : le halo vit sur un ::after et n'anime plus
+   qu'opacity + transform, composés par le GPU — même rendu, zéro paint */
+@keyframes ctaHalo{0%,100%{opacity:0;transform:scale(.94)}50%{opacity:.6;transform:scale(1.04)}}
+.cta-hero{font-size:18px;font-weight:800;padding:18px 32px;border-radius:16px;letter-spacing:.005em;position:relative;box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 14px 36px -10px var(--accent-glow)}
+.cta-hero::after{content:'';position:absolute;inset:-3px;border-radius:19px;box-shadow:0 0 0 8px var(--accent-glow),0 16px 44px -8px var(--accent-glow);opacity:0;animation:ctaHalo 2.6s ease-in-out infinite;pointer-events:none;will-change:opacity,transform}
+.cta-hero:hover{transform:translateY(-2px) scale(1.015)}
+.rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+/* scroll reveal */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.2,.8,.2,1),transform .7s cubic-bezier(.2,.8,.2,1)}
+.reveal.in{opacity:1;transform:none}
+.reveal-2{transition-delay:.09s}
+.reveal-3{transition-delay:.18s}
+.reveal-4{transition-delay:.27s}
+@media (prefers-reduced-motion:reduce){
+  .rise{animation:none}
+  .cta-hero{animation:none}
+  .reveal{opacity:1 !important;transform:none !important;transition:none}
+}
+.seg{display:inline-flex;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:4px}
+.seg button{padding:8px 13px;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-3);transition:.18s;white-space:nowrap}
+.seg button.on{background:var(--surface-2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
+.divider{height:1px;background:var(--border)}
+.ph{background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 10px,rgba(255,255,255,0) 10px 20px),var(--panel-1);border:1px dashed var(--border-2);display:grid;place-items:center;color:var(--text-3);font-family:var(--mono);font-size:11px;letter-spacing:.05em;border-radius:var(--r)}
+input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 8px var(--accent-glow)}
+.elite-range{height:6px;border-radius:6px}
+input[type=range].elite-range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
+input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85);cursor:pointer}
+/* nav */
+.nav-link{font-size:14.5px;font-weight:500;color:var(--text-2);cursor:pointer;transition:.2s;background:none;border:none;padding:0}
+.nav-link:hover{color:var(--text)}
+/* iPhone frame (titane sombre + Dynamic Island) */
+.aa-iphone{position:absolute;border-radius:38px;background:linear-gradient(135deg,#26242c,#3a3843,#201e26 60%,#2c2a33);padding:4px;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 30px 60px -28px rgba(0,0,0,.8)}
+.aa-iphone .scr{position:absolute;inset:4px;border-radius:34px;overflow:hidden;background:#0c0a0e}
+.aa-iphone .scr img{width:100%;height:100%;object-fit:cover;display:block}
+.aa-iphone .di{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:58px;height:17px;border-radius:11px;background:#000;z-index:6;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.aa-iphone .refl{position:absolute;inset:4px;border-radius:34px;pointer-events:none;z-index:5;background:linear-gradient(125deg,rgba(255,255,255,.16),transparent 26%,transparent 82%,rgba(255,255,255,.08))}
+.aa-iphone .btns-l{position:absolute;left:-2px;top:20%;display:flex;flex-direction:column;gap:9px;z-index:2}
+.aa-iphone .btns-l i{display:block;width:3px;border-radius:3px 0 0 3px;background:linear-gradient(90deg,#15151a,#4c4c58);box-shadow:-1px 0 1px rgba(0,0,0,.5)}
+.aa-iphone .btns-l .b1{height:13px}
+.aa-iphone .btns-l .b2{height:30px;margin-top:5px}
+.aa-iphone .btns-l .b3{height:30px}
+.aa-iphone .btns-r{position:absolute;right:-2px;top:27%;width:3px;height:48px;border-radius:0 3px 3px 0;background:linear-gradient(270deg,#15151a,#4c4c58);box-shadow:1px 0 1px rgba(0,0,0,.5);z-index:2}
+/* rail TikTok sur téléphones */
+.ph-rail{position:absolute;right:9px;bottom:16px;display:flex;flex-direction:column;gap:13px;align-items:center;color:#fff;z-index:3}
+.ph-rail .it{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ph-rail .it span{font-family:var(--mono);font-size:8px;opacity:.9}
+/* showcase media tilt */
+.sc-media{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:16/10;border:1px solid rgba(255,255,255,.1);transform:perspective(1600px) rotateY(-7deg) rotateX(2deg);transform-style:preserve-3d;box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 70px -24px var(--accent-glow)}
+.sc-media.flip{transform:perspective(1600px) rotateY(7deg) rotateX(2deg)}
+.sc-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.sc-play{position:absolute;inset:0;display:grid;place-items:center;z-index:2;pointer-events:none}
+.sc-play>div{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+/* features tabs */
+.feat-tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:5px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.feat-tabs::-webkit-scrollbar{display:none}
+.feat-tabs button{padding:11px 20px;border-radius:10px;font-size:14.5px;font-weight:600;white-space:nowrap;transition:.18s;color:var(--text-2)}
+.feat-tabs button.on{background:var(--surface-2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
+.feat-mock{position:absolute;inset:0;display:none;place-items:center;padding:28px}
+.feat-mock.on{display:grid}
+/* onglet Montage IA en pleine largeur : carte 1 colonne, vidéo plein écran en haut, texte dessous */
+/* Vidéos features 16:9 : remplissent la colonne mock sans s'effondrer (largeur définie par la colonne, hauteur par le ratio) */
+.feat-mock .feat-demo.vidwrap{aspect-ratio:auto;max-width:none;width:100%;height:auto;background:none;border:none;box-shadow:none}
+.feat-vid{position:relative;width:100%;max-width:none;height:auto;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)}
+.feat-vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.feat-photo{position:relative;height:100%;max-width:100%;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -30px rgba(0,0,0,.8)}
+.feat-photo img{display:block;height:100%;width:100%;object-fit:cover}
+.feat-demo{position:relative;height:100%;aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -30px rgba(0,0,0,.8);background:radial-gradient(420px 220px at 50% 0%,rgba(255,90,31,.10),transparent),var(--bg-grad)}
+/* testimonials */
+.tst-grid{column-count:3;column-gap:18px}
+.tst-card{padding:26px;margin-bottom:18px;break-inside:avoid;display:flex;flex-direction:column}
+.tst-fade{position:absolute;left:0;right:0;bottom:0;height:230px;pointer-events:none;background:linear-gradient(180deg,transparent,var(--bg) 82%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px}
+#tstWrap:not(.open) .tst-more{display:none}
+#tstWrap.open .tst-fade{display:none}
+/* FAQ */
+.faq-item{border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;transition:border-color .2s;background:var(--surface)}
+.faq-item.open{border-color:var(--accent-line)}
+.faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;padding:20px 22px;text-align:left;gap:16px;background:none;border:none;cursor:pointer;color:var(--text)}
+.faq-a{display:none;padding:0 22px 22px;font-size:14.5px;line-height:1.6;color:var(--text-2);max-width:720px}
+.faq-item.open .faq-a{display:block}
+.faq-icon{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2);transition:.2s;flex:0 0 auto}
+.faq-item.open .faq-icon{background:var(--accent);color:#1A0A02;transform:rotate(45deg)}
+/* hero grid */
+.hero2-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center}
+/* la rangée de réassurance se pose sous la vitrine (colonne 2), pas sous le texte.
+   `align-self:start` sur les deux (le handoff §3) : la grille est en
+   align-items:center, donc chacune se centrait dans SA hauteur de cellule. Tant
+   que les deux font une ligne ça ne se voit pas ; dès que « Rejoins » wrappe en
+   deux lignes (tablette), la colonne droite descend de la moitié de l'écart.
+   Callées en haut, elles restent sur la même ligne optique à toute largeur. */
+.trust-row{grid-column:1;align-self:start}
+.hero-reassure{grid-column:2;align-self:start}
+/* AvatarAds ✕ Claude — cadre vidéo du tuto (remplace le card-stack « Comment ça marche ») */
+.tuto-frame{position:relative;width:100%;max-width:1100px;margin:0 auto;aspect-ratio:16/9;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 60px -26px rgba(124,92,255,.35);background:#0E0D10}
+.tuto-frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+/* menu mobile (burger) — indépendant des anims rise/reveal : visible dès l'ajout de .open.
+   V2 (réf. remakeit) : sheet arrondie sur ~la moitié haute de l'écran, page visible
+   FLOUTÉE derrière (backdrop-filter sur l'overlay), un seul CTA « Commencer ». */
+.nav-burger{display:none;width:40px;height:40px;border-radius:10px;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text);flex:0 0 auto}
+.mob-menu{position:fixed;inset:0;z-index:80;display:none;padding:10px;background:rgba(11,11,13,.45);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.mob-menu.open{display:block}
+.mm-panel{position:relative;width:100%;max-height:calc(100vh - 20px);border-radius:24px;border:1px solid var(--border-2);overflow:auto;display:flex;flex-direction:column;background:radial-gradient(700px 420px at 80% -10%,rgba(255,90,31,.12),transparent 60%),var(--bg);box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+.mm-close{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text);flex:0 0 auto}
+.mm-link{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text);padding:0;background:none;border:none;text-align:center;line-height:1.2}
+.mm-link:active{color:var(--accent-2)}
+/* responsive */
+.only-mobile{display:none}
+@media (max-width:1060px){ .nav-center{display:none !important} .nav-burger{display:grid} }
+/* grille d'avatars UGC (onglet Avatar IA) — 3×2, cellules ~3:4.
+   Positionnée en absolu : height:100% sur un item de grid à rangée auto ne se
+   résout pas (la grille débordait de la zone de 400px) — top/bottom la bornent. */
+.avatar-grid{position:absolute;top:16px;bottom:16px;left:50%;transform:translateX(-50%);aspect-ratio:8/7;max-width:calc(100% - 32px);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:10px}
+.avatar-grid img{width:100%;height:100%;min-height:0;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.1);display:block}
+@media (max-width:900px){
+  .grid-3{grid-template-columns:1fr !important}
+}
+@media (max-width:760px){
+  .wrap{padding:0 18px}
+  .only-mobile{display:flex}
+  .hide-mobile{display:none !important}
+  .hero2-grid{grid-template-columns:minmax(0,1fr);gap:0}
+  /* ── HERO MOBILE — recopié du handoff (HeroV2, branche `mob`). Ce n'est pas le
+     desktop rétréci : l'ordre change (les trois atouts remontent AU-DESSUS du
+     champ), les libellés raccourcissent et le paragraphe perd sa première ligne. */
+  .hero-sec{padding-top:30px !important;padding-bottom:24px !important}
+  .hero-left{order:1;display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0;width:100%}
+  .trust-row{order:2} .hero2-show{order:3}
+  .hero-reassure{display:none !important}          /* remplacée par .hero-reassure-m */
+  .hero-left .pill .mono{font-size:10.5px !important;white-space:normal}
+  .hero-left h1{font-size:38px !important;margin-top:18px !important;line-height:1.02 !important}
+  .hero-left p{margin-top:16px !important;margin-bottom:8px !important;font-size:15px !important}
+  /* en mobile la phrase n'est plus mise en avant : tout le paragraphe est en gris */
+  .hero-left p b{color:var(--text-2) !important;font-weight:400 !important}
+  /* Sélecteur de modèle (remplace l'ancien form) — dimensions mobiles pour ne pas déborder */
+  .hero-left .rise{max-width:100% !important;margin-top:18px !important}
+  /* les 3 atouts (100% automatique / formats courts / prêt à poster) passent SOUS la barre sur mobile */
+  .hero-left .hero-reassure-m{order:1}
+  .hero-left .rise>button{padding:5px 5px 5px 8px !important}
+  .hero-left .pb-ico{width:34px !important;height:34px !important}
+  .hero-left .pb-ico svg{width:16px !important;height:16px !important}
+  .hero-left .hp-input{font-size:13.5px !important;padding:0 10px !important}
+  .hero-left .pb-go{padding:13px 18px !important;font-size:14.5px !important}
+  .trust-row{grid-column:1;flex-wrap:wrap !important;justify-content:center;align-items:center;gap:10px !important;margin-top:20px !important}
+  .trust-row .pill{padding:6px 11px !important;gap:6px !important}
+  .trust-row .pill svg{width:12px;height:12px}
+  .trust-row .pill span,.trust-row .pill b{font-size:11.5px !important}
+  .trust-row>div:last-child{font-size:11.5px !important;white-space:nowrap}
+  /* Hero showcase — vraie variante mobile (proto k=.72) : 500×0,72 + 16 de marge haute */
+  .hero2-show{height:376px !important;width:100%;max-width:360px;margin:18px auto 0 !important;padding-top:0;animation:none !important}
+  section.wrap:not(.hero-sec){padding-top:25px !important;padding-bottom:25px !important}
+  #scWrap{padding-top:0 !important}
+  #scHeader{padding-top:20px !important;padding-bottom:20px !important}
+  /* 380px sur un écran de 375 → 3 px de débordement horizontal : on borne au viewport */
+  .hp-glow{width:min(380px,96vw) !important;height:min(380px,96vw) !important}
+  /* Positions exactes du handoff (k=0,72 · paddingTop 16) : S(78)+16=72, S(96)+16=85,
+     18+16=34. Les miennes étaient toutes 24 px plus bas, et le badge des vues
+     chevauchait le téléphone au lieu de se poser au-dessus, sans inclinaison. */
+  .hp-left{left:2% !important;top:72px !important;width:121px !important;height:242px !important}
+  .hp-right{right:2% !important;top:85px !important;width:121px !important;height:242px !important}
+  .hp-center{top:34px !important;width:144px !important;height:294px !important}
+  .hp-center .ph-rail{transform:scale(.72);transform-origin:right bottom}
+  .hp-views{top:30px !important;left:2% !important;transform:none !important}
+  .hp-ready{display:none !important}
+  .sc-sec{padding-bottom:56px !important}
+  .sc-grid{grid-template-columns:1fr !important;gap:24px !important}
+  .sc-grid .sc-text{order:2}
+  .sc-grid .sc-text h2{font-size:26px !important}
+  .sc-grid .sc-text p{font-size:15px !important}
+  .sc-grid .sc-mediawrap{order:1}
+  .gen-sec{padding-bottom:60px !important}
+  .gen-sec .gen-head{margin-bottom:14px !important}
+  .gen-sec .gen-head p{font-size:15px !important}
+  .foot-wordmark{font-size:clamp(34px,9vw,64px) !important;white-space:nowrap}
+  .feat-card-grid{grid-template-columns:1fr !important}
+  .feat-mockwrap{min-height:260px !important;border-right:none !important;border-bottom:1px solid var(--border)}
+  .tst-grid{column-count:auto;display:flex;flex-direction:column;gap:14px}
+  .tst-card{margin-bottom:0}
+  #tstWrap:not(.open) .tst-mid{display:none}
+  .tst-fade{height:190px;padding-bottom:6px}
+  .mob-scroll{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -18px;padding:0 18px 14px}
+  .mob-scroll::-webkit-scrollbar{display:none}
+}
+/* LOT C — allègement mobile téléphone (≤640, après le bloc 760 pour gagner en
+   cascade). Axel trouve le mobile trop chargé : on retire la preuve sociale
+   « Rejoins +50K · +2 milliards » et on remonte la vitrine (3 iPhones) sous le
+   champ. Desktop et palier tablette 641-760 INCHANGÉS (rangée conservée). */
+@media (max-width:640px){
+  .trust-row{display:none !important}
+  .hero2-show{margin-top:8px !important}
+}
+</style>
+  <script>/* parrainage : ?ref=CODE mémorisé pour l'inscription dans /app/ (même origine → même localStorage) */
+  try{ var _r=new URLSearchParams(location.search).get('ref'); if(_r && /^[A-Za-z0-9_-]{4,32}$/.test(_r)) localStorage.setItem('aa_ref', _r.toUpperCase()); }catch(e){}</script>
+<!-- Données structurées (SEO) : Organization + WebSite + SoftwareApplication.
+     Prix = ceux affichés sur /tarifs.html (Starter/Pro/Élite mensuels) — ne JAMAIS inventer
+     de notes/avis (aggregateRating interdit sans vraies données). -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://avatarads.fr/en/#organization",
+      "name": "AvatarAds",
+      "url": "https://avatarads.fr/en/",
+      "logo": "https://avatarads.fr/favicon.png",
+      "email": "contact@avatarads.fr",
+      "sameAs": ["https://whop.com/avatarads/","https://www.tiktok.com/@avatarads","https://www.instagram.com/avataradss/"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://avatarads.fr/en/#website",
+      "name": "AvatarAds",
+      "url": "https://avatarads.fr/en/",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://avatarads.fr/en/#organization" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://avatarads.fr/en/#app",
+      "name": "AvatarAds",
+      "url": "https://avatarads.fr/en/",
+      "description": "AI viral video generator: AI avatars and UGC content without showing your face, ready to post.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://avatarads.fr/en/#organization" },
+      "offers": [
+        { "@type": "Offer", "name": "Starter", "price": "29.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/en/tarifs.html" },
+        { "@type": "Offer", "name": "Pro", "price": "49.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/en/tarifs.html" },
+        { "@type": "Offer", "name": "Elite", "price": "89.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/en/tarifs.html" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://avatarads.fr/en/#faq",
+      "inLanguage": "en",
+      "mainEntity": [
+        { "@type": "Question", "name": "What exactly is AvatarAds?", "acceptedAnswer": { "@type": "Answer", "text": "A faceless video generator: you write a script (or let the AI write it), pick an AI avatar and a voice, and the tool produces a vertical video (TikTok, Reels, Shorts) ready to post in minutes — without ever showing your face or filming anything." } },
+        { "@type": "Question", "name": "Can people tell it's AI?", "acceptedAnswer": { "@type": "Answer", "text": "No — and that's the whole point. The lip-sync and the voice are ultra-realistic: the vast majority of viewers can't tell the difference from a real creator on camera. Your videos stay natural and engaging." } },
+        { "@type": "Question", "name": "Which tools are included in AvatarAds?", "acceptedAnswer": { "@type": "Answer", "text": "Everything is in one place: the Generator (AI avatar + your voice + animated captions), Express (a video from plain text), Motion Control (animates a still image), AI Images (visuals and product ads in 4K), AI Editing (your audio becomes an edited video) and Audio Cleanup — plus an editor. One interface, one subscription, instead of stacking five separate tools." } },
+        { "@type": "Question", "name": "How long until I get my first video?", "acceptedAnswer": { "@type": "Answer", "text": "About 2 minutes. You describe your video, the AI generates the avatar, the voice and the captions, then you export in 9:16, ready to publish. Most creators produce 3 to 5 videos a day." } },
+        { "@type": "Question", "name": "What kind of business is it for?", "acceptedAnswer": { "@type": "Answer", "text": "Dropshipping, e-commerce, coaches, info products, SMMA agencies, faceless niche accounts, affiliate marketing… If you need to publish lots of video content regularly without filming yourself, AvatarAds is made for you." } },
+        { "@type": "Question", "name": "How do I access the interface for free?", "acceptedAnswer": { "@type": "Answer", "text": "Just create an account — with your email or with Google, no credit card required. You switch to a plan when you want to generate and publish your videos; cancel in 1 click, no commitment." } }
+      ]
+    }
+  ]
+}
+</script>
+
+<style id="v2-light-theme">
+/* ══ V2 = LP CLAIRE façon Qoves : on SURCHARGE le thème sombre par un thème blanc/gris ══
+   (variables définies après le :root sombre d'index → elles gagnent). Le header pilule est
+   dans index.html (scopé .aa-hdr, theme-aware) → hérité ici, rien à redéfinir. */
+:root{
+  --bg:#EDF1F4; --bg-grad:#F4F7F9;
+  --panel-1:#FFFFFF; --surface:#FFFFFF; --surface-2:#F1F5F8; --surface-3:#E6ECF1;
+  --border:rgba(16,24,32,.10); --border-2:rgba(16,24,32,.16);
+  --text:#0E1319; --text-2:#59636E; --text-3:#8A939D;
+  --rail:rgba(16,24,32,.055);
+}
+html{background:var(--bg);color-scheme:light}
+/* formulaires : la LP sombre hérite color-scheme dark → iOS peint un fond de champ gris sous le placeholder. On force clair + apparence neutre. */
+textarea{color-scheme:light;-webkit-appearance:none;appearance:none}
+#genPrompt,#genPromptM{background:transparent!important}
+#genPrompt::placeholder,#genPromptM::placeholder{color:var(--text-3);opacity:1}
+/* fond clair + RAILS VERTICAUX façon Qoves : 2 traits fins encadrant la colonne de contenu (--maxw 1320 → ±660px), pleine hauteur, derrière le contenu */
+body{background-color:var(--bg);color:var(--text);
+  background-image:
+    linear-gradient(90deg,transparent calc(50% - 661px),var(--rail) calc(50% - 661px),var(--rail) calc(50% - 660px),transparent calc(50% - 660px)),
+    linear-gradient(90deg,transparent calc(50% + 660px),var(--rail) calc(50% + 660px),var(--rail) calc(50% + 661px),transparent calc(50% + 661px))}
+/* ── SÉPARATEURS DE SECTIONS façon Qoves (Axel 12/09) : une ligne fine au-dessus de chaque bloc ; le bandeau
+   « Propulsé par » est ENCADRÉ par deux lignes avec un fond opaque → les rails ne le traversent plus. Les sections
+   sans padding-top reçoivent 64px pour que la ligne respire (sur mobile la LP impose 25px en !important). ── */
+:root{--sep:rgba(16,24,32,.11)}
+main>section.wrap{border-top:1px solid var(--sep)}
+main>section.wrap:not(#etapes):not(#toutEnUn):not(#faq){padding-top:64px}
+#scWrap{padding-bottom:64px}
+main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);background:var(--bg);padding:22px 0!important;position:relative;z-index:1}
+/* ── FOOTER : accordéons repliables (clic sur la flèche) AUSSI sur desktop (Axel) — remplace le force-open ── */
+@media(min-width:761px){
+  footer .foot-grid{display:block!important;grid-template-columns:none!important;max-width:720px}
+  footer .foot-col{border-top:1px solid var(--border)}
+  footer .foot-col>summary{cursor:pointer!important;pointer-events:auto!important;display:flex!important;align-items:center;justify-content:space-between;margin:0;padding:15px 2px}
+  footer .foot-col>summary::after{content:'+';font-size:22px;font-weight:400;color:var(--violet)}
+  footer .foot-col[open]>summary::after{content:'\2212'}
+  footer .foot-col>*:not(summary){display:none!important}
+  footer .foot-col[open]>*:not(summary){display:block!important;padding:0 2px 16px}
+}
+</style>
+<style id="v2hero-css">
+/* HERO plein cadre : le fond prend TOUTE LA LARGEUR, dégradé VERTICAL calé sur celui du clip
+   (clair #EDF1F4 en haut → slate #A9BAC6 en bas) → la vidéo se fond SANS bord visible (mask). */
+/* DESKTOP = l'ANCIENNE version validée (copy sombre centrée à gauche, vidéo à droite fondue dans le fond)
+   + retouches Axel 12/09 (cadre rouge) : la vidéo est calée sur la HAUTEUR du hero (165 % = l'entre-deux entre
+   l'ancien zoom « trop fort » et les 120 % « pas assez »), son bord DROIT est aligné sur le conteneur (plus collée
+   au bord de l'écran), et SANS FLOU : plus de fondu large ni de fondu du buste. Le raccord invisible vient du FOND :
+   ::before reproduit EXACTEMENT le dégradé vertical du clip (mesuré image par image : #eef2f3 en haut → #9cb0bb en
+   bas) dans le MÊME repère que la vidéo (même top:1 %, même hauteur 120 %) → les bords gauche/droit de la vidéo sont
+   mathématiquement de la même couleur que la page (Δ ≤ 5). Donc AUCUN masque latéral : les bords sont invisibles au
+   lieu d'être flous (retour Axel 12/09 : les fondus gauche/droit = « flou », à supprimer). Seul masque restant = un
+   fondu bas très court (12 %) pour poser le buste sur le fond. Le « un peu plus foncé » façon Qoves = voile sombre
+   progressif (::after) posé sur TOUT le hero (vidéo comprise, donc sans raccord), quasi nul sur le visage. */
+.v2hero{position:relative;overflow:hidden;padding:0;min-height:min(780px,calc(100vh - 76px));display:flex;align-items:center;background:#eef2f3}
+.v2hero::before{content:"";position:absolute;left:0;right:0;top:1%;height:145%;z-index:0;pointer-events:none;
+  background:linear-gradient(to bottom,#eef2f3 0%,#ebf0f3 5%,#eaeef4 10%,#e7ecf0 15%,#e5ebf0 20%,#e2e8ec 25%,#dce3ea 30%,#d8e0e7 35%,#d2dbe1 40%,#ccd7df 45%,#c7d2da 50%,#a0b2be 95%,#9cb0bb 100%)}
+.v2hero::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(14,19,25,.04) 0%,rgba(14,19,25,.06) 40%,rgba(14,19,25,.2) 100%)}
+.v2hero-grid{position:relative;z-index:3;width:100%}
+.v2hero-copy{display:flex;flex-direction:column;align-items:flex-start;max-width:540px;padding:34px 0}
+.v2hero-h1{font-size:clamp(44px,5.2vw,82px);font-weight:800;margin-top:22px;line-height:1.02;text-wrap:balance;overflow-wrap:break-word;color:var(--text)}
+.v2hero-h1 .accent{color:#5d6d7a}
+.v2hero-sub{font-size:clamp(16px,1.4vw,20px);max-width:460px;margin-top:22px;line-height:1.5;color:#2f3a45}
+.v2hero-sub b{color:var(--text);font-weight:600}
+.v2hero-cta{position:relative;margin-top:30px;max-width:520px;width:100%}
+.v2hero-trust .pill svg{display:none!important}   /* étoile retirée (Axel) */
+.v2hero-pill{position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:#fff;border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 26px 55px -30px rgba(16,24,32,.55),0 0 0 4px var(--accent-soft)}
+.v2hero-pill .pb-ico{width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)}
+.v2hero-pill .hp-input{flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2hero-pill .pb-go{flex:0 0 auto;padding:16px 30px;font-size:17px;font-weight:800;border-radius:999px}
+/* vidéo = boîte calée sur la HAUTEUR du hero (120 %, largeur auto au ratio 9:16 → aucun recadrage horizontal, zoom
+   constant quelle que soit la largeur d'écran). Cadrage TÊTE + ÉPAULES + poitrine façon Qoves : à 120 % on voit
+   ~81 % du clip (contre 58 % à 165 %) → les épaules sont bien visibles, le visage est BEAUCOUP moins zoomé (retour
+   Axel 12/09 : « beaucoup trop zoomé encore, dézoome pour voir les épaules »). top:1 % = visage remonté avec un peu
+   de headroom (la tête commence à 2-6 % du clip → jamais coupée). Position = CENTRE-DROIT (bord droit = bord du
+   conteneur .wrap, max 1320 + 32 de padding, floor 12 % du viewport) = le cadre rouge d'Axel, PAS collée au bord de
+   l'écran. Fondu latéral SUBTIL 16 % des 2 côtés (Axel : « le flou est beaucoup trop fort, diminue ») + fondu bas
+   9 % : à ce cadrage les épaules touchent les 2 bords, un fondu court les fond sur le fond assorti sans bande floue. */
+.v2hero-media{position:absolute;top:1%;right:max(12%,calc((100% - 1320px) / 2 + 32px));bottom:auto;left:auto;height:145%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
+.v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 12%,#000 88%,transparent 100%),linear-gradient(to top,transparent 0,rgba(0,0,0,.4) 22%,#000 36%,#000 100%);
+  mask-image:linear-gradient(to right,transparent 0,#000 12%,#000 88%,transparent 100%),linear-gradient(to top,transparent 0,rgba(0,0,0,.4) 22%,#000 36%,#000 100%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+/* iOS « Économie d'énergie » (Axel 23/10) : jamais le gros bouton play de Safari sur une vidéo de la page (lecture refusée) */
+video::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}
+video::-webkit-media-controls-overlay-play-button{display:none!important}
+video::-webkit-media-controls{display:none!important}
+.v2hero-img{pointer-events:none}
+@media(max-width:768px){
+  /* MOBILE = hero CINÉMA façon Qoves (en mieux) : vidéo PLEIN CADRE avec le visage dégagé en haut (headroom),
+     DÉGRADÉ SOMBRE pleine largeur en bas (sur ::after du média, pas sur le texte → pas de marges), texte BLANC posé dessus,
+     accroche « Rejoins +50K créateurs » au-dessus du titre. */
+  .v2hero{position:relative;display:block;padding:0!important;min-height:calc(100svh - 72px);overflow:hidden;background:#e9eef2}   /* !important : .hero-sec impose un padding mobile en !important */
+  .v2hero::before,.v2hero::after{content:none}   /* dégradé de raccord + voile sombre = DESKTOP only (mobile = vidéo plein cadre + scrim sur le média) */
+  .v2hero-media{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
+  .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%;-webkit-mask-image:none;mask-image:none}
+  .v2hero-media::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to top,rgba(10,14,20,.97) 0%,rgba(10,14,20,.9) 16%,rgba(10,14,20,.62) 34%,rgba(10,14,20,.22) 50%,rgba(10,14,20,0) 63%)}
+  .v2hero-grid{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:flex-end;min-height:calc(100svh - 72px);padding:0!important;max-width:none;width:100%}
+  .v2hbadge{display:none!important}
+  .v2hero-copy{display:flex;flex-direction:column;align-items:flex-start;padding:0 22px 30px;max-width:100%;width:100%;background:none}
+  /* accroche sociale au-dessus du titre (comme « Join 50,000+ people ») */
+  .v2hero-trust{display:flex!important;order:-1;margin:0 0 14px!important;gap:8px!important;font-size:13.5px}
+  .v2hero-trust .pill{background:none!important;border:0!important;padding:0!important;box-shadow:none!important;gap:7px}
+  .v2hero-trust span{color:rgba(255,255,255,.74)!important}
+  .v2hero-trust b{color:#fff!important}
+  .v2hero-trust>.row{display:none!important}
+  .v2hero-h1{font-size:38px;line-height:1.02;margin-top:0;color:#fff;letter-spacing:-.012em;text-shadow:0 2px 26px rgba(0,0,0,.28)}
+  .v2hero-h1 .accent{color:#b9c7d3}
+  .v2hero-sub{margin-top:14px;font-size:15.5px;line-height:1.5;color:rgba(255,255,255,.8);max-width:100%}
+  .v2hero-sub b{color:rgba(255,255,255,.9);font-weight:500}
+  .v2hero-cta{max-width:100%;margin-top:22px}
+  /* pilule mobile : « Choose a model » EN ENTIER → le bouton devient une pastille flèche (la pilule entière ouvre le sélecteur) */
+  .v2hero-pill{padding:6px 6px 6px 8px;background:#fff;border-color:rgba(255,255,255,.4);box-shadow:0 24px 54px -22px rgba(0,0,0,.75),0 0 0 3px rgba(255,255,255,.12)}
+  .v2hero-pill .pb-ico{width:38px;height:38px}
+  .v2hero-pill .hp-input{font-size:15.5px;padding:0 10px 0 11px;color:#3a444f}
+  .v2hero-pill .pb-go{width:44px;height:44px;min-width:44px;padding:0;border-radius:50%;flex:0 0 auto;display:block;position:relative;overflow:hidden;text-indent:-9999px;white-space:nowrap}
+  .v2hero-pill .pb-go svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;margin:0;text-indent:0}
+  .v2hero-trust{display:none}
+  /* mobile : PAS de rails verticaux (ils traversaient « Propulsé par » — Axel) ; la structure vient des SÉPARATEURS horizontaux */
+  body{background-image:none}
+  main>.pw-sec{padding:18px 0!important}
+}
+</style>
+</head>
+<body>
+
+<!-- Repère de scroll pour la barre sticky (lu par IntersectionObserver, sans lecture de scrollY → zéro reflow forcé) -->
+<div id="stickyCtaSentinel" aria-hidden="true" style="position:absolute;top:620px;left:0;width:1px;height:1px;pointer-events:none"></div>
+
+<!-- ══════════ 1 · STICKY CTA (apparaît au scroll) ══════════ -->
+<div id="stickyCta" style="position:fixed;left:0;right:0;top:0;z-index:55;transform:translateY(-110%);transition:transform .28s cubic-bezier(.2,.8,.2,1);pointer-events:none">
+  <div class="glass" style="border-bottom:1px solid var(--border);background:rgba(14,13,16,.9)">
+    <div class="wrap row" style="height:60px;justify-content:space-between;gap:12px">
+      <div class="row gap10" style="min-width:0">
+        <img src="/assets/avatarads-logo-96.png" alt="" width="19" height="19" style="border-radius:5px;display:block">
+        <span class="logo-wordmark" style="font-size:16px">AvatarAds</span>
+      </div>
+      <a href="/app/" class="btn btn-primary btn-sm" style="white-space:nowrap">Get started <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 2 · NAV ══════════ -->
+<div class="aa-hdr" style="position:sticky;top:0;z-index:50">
+  <div class="glass" style="border-bottom:1px solid var(--border)">
+    <div class="wrap row" style="height:72px;justify-content:space-between">
+      <div class="row gap12">
+        <div class="brandmark"><img src="/assets/avatarads-logo-96.png" alt="AvatarAds" width="22" height="22" style="border-radius:6px;display:block"></div>
+        <div class="col" style="line-height:1">
+          <span class="logo-wordmark">AvatarAds</span>
+          <span class="mono" style="color:var(--text-2);font-size:9.5px;letter-spacing:.1em;margin-top:3px">BY IA MANAGER</span>
+        </div>
+      </div>
+      <div class="row gap24 nav-center" style="position:absolute;left:50%;transform:translateX(-50%)">
+        <button class="nav-link" onclick="document.getElementById('etapes').scrollIntoView({behavior:'smooth'})">How it works</button>
+        <a class="nav-link" href="/app/" style="display:inline-flex;align-items:center">Referral program</a>
+        <button class="nav-link" onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})">FAQ</button>
+        <a class="nav-link" href="/en/claude.html" style="display:inline-flex;align-items:center">MCP</a>
+      </div>
+      <div class="row gap12">
+        <a href="/en/tarifs.html" class="btn btn-quiet btn-sm hide-mobile nav-tarifs-btn">See pricing</a>
+        <a href="/en/connexion.html" class="btn btn-quiet btn-sm hide-mobile">Log in</a>
+        <a href="/app/" class="btn btn-primary btn-sm">Get started <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <button class="nav-burger" aria-label="Open menu" onclick="mobMenuOpen()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 2b · MENU MOBILE (burger ≤1060px) ══════════ -->
+<div id="mobMenu" class="mob-menu" role="dialog" aria-modal="true" aria-label="Menu" onclick="if(event.target===this)mobMenuClose()">
+  <div class="mm-panel">
+    <div class="row" style="justify-content:space-between;padding:14px 14px 0 20px">
+      <div class="row gap10">
+        <img src="/assets/avatarads-logo-96.png" alt="" width="22" height="22" style="border-radius:6px;display:block">
+        <span class="logo-wordmark">AvatarAds</span>
+      </div>
+      <button class="mm-close" aria-label="Close menu" onclick="mobMenuClose()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="col" style="align-items:center;gap:28px;padding:22px 20px 6px">
+      <button class="mm-link" onclick="mobMenuGo('etapes')">How it works</button>
+      <a class="mm-link" href="/app/" onclick="mobMenuClose()">Referral program</a>
+      <button class="mm-link" onclick="mobMenuGo('faq')">FAQ</button>
+      <a class="mm-link" href="/en/claude.html" onclick="mobMenuClose()">MCP</a>
+      <a class="mm-link" href="/en/tarifs.html" onclick="mobMenuClose()">Pricing</a>
+    </div>
+    <div style="padding:22px 18px calc(18px + env(safe-area-inset-bottom))">
+      <a href="/app/" class="btn btn-primary" style="width:100%" onclick="mobMenuClose()">Get started <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a href="/en/connexion.html" class="btn btn-quiet btn-sm" style="width:100%;margin-top:10px" onclick="mobMenuClose()">Log in</a>
+    </div>
+  </div>
+</div>
+
+<!-- <main> : repère principal (audit accessibilité « document sans landmark ») — aucun impact visuel -->
+<main>
+
+<!-- ══════════ 3 · HERO V2 (animé — casting vivant, A/B) ══════════ -->
+<section class="hero-sec v2hero">
+  <div class="v2hero-media">
+    <video id="v2heroVid" class="v2hero-vid" src="/assets/lp/v2/hero-cutnet.mp4?v=srgb1" poster="/assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" fetchpriority="high" aria-label="AI avatars generated by AvatarAds — a live casting"></video>
+  </div>
+  <div class="wrap v2hero-grid">
+    <div class="v2hero-copy">
+      <div class="v2hbadge rise" style="display:inline-flex"><div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 AI TOOL · CONTENT CREATION</span></div></div>
+      <h1 class="display v2hero-h1">Create <span class="accent">ultra-realistic</span> viral videos</h1>
+      <p class="muted rise v2hero-sub"><b>One AI tool for your ads, your images and your video content, in just a few clicks.</b></p>
+      <div class="rise v2hero-cta">
+        <button type="button" onclick="openModelPicker()" aria-label="Choose a model" class="row v2hero-pill">
+          <span class="pb-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg></span>
+          <span class="hp-input">Choose a model</span>
+          <span class="btn btn-primary pb-go">Get started <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </button>
+      </div>
+      <div class="row rise trust-row v2hero-trust" style="gap:22px;margin-top:20px;flex-wrap:wrap">
+        <div class="pill" style="padding:8px 14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg><span style="color:var(--text-2)">Join</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span style="color:var(--text-2)">creators</span></div>
+        <div class="row" style="font-size:13.5px;gap:5px"><b style="color:var(--text)"><span data-countup="+2">+2</span>&nbsp;billion</b><span style="color:var(--text-2)">views</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 3b · PROPULSÉ PAR — bandeau logos défilants (transition hero → showcases) ══════════ -->
+<section class="pw-sec" aria-label="Powered by">
+  <div class="pw-label">Powered by:</div>
+  <div class="pw-marquee">
+    <div class="pw-track">
+      <div class="pw-seq">
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><span>Claude</span></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg><span>OpenAI</span></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c.76 6.28 5.72 11.24 12 12-6.28.76-11.24 5.72-12 12-.76-6.28-5.72-11.24-12-12C6.28 11.24 11.24 6.28 12 0Z"/></svg><span>Gemini</span></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.6" y="5.6" width="4.4" height="12.8" rx="2.2" transform="rotate(-21 4.8 12)"/><rect x="9.8" y="5.6" width="4.4" height="12.8" rx="2.2" transform="rotate(-21 12 12)"/><rect x="17" y="5.6" width="4.4" height="12.8" rx="2.2" transform="rotate(-21 19.2 12)"/></svg><span>Whop</span></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="7.1" y="4" width="3.5" height="16" rx="1"/><rect x="13.4" y="4" width="3.5" height="16" rx="1"/></svg><span>ElevenLabs</span></div>        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-.9-8.9 7 7 0 0 0-13.2 2.4A4.2 4.2 0 0 0 6.2 19Z"/></svg><span>Google Cloud</span></div>
+      </div>
+      <div class="pw-seq" aria-hidden="true">
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><span>Claude</span></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg><span>OpenAI</span></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c.76 6.28 5.72 11.24 12 12-6.28.76-11.24 5.72-12 12-.76-6.28-5.72-11.24-12-12C6.28 11.24 11.24 6.28 12 0Z"/></svg><span>Gemini</span></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.6" y="5.6" width="4.4" height="12.8" rx="2.2" transform="rotate(-21 4.8 12)"/><rect x="9.8" y="5.6" width="4.4" height="12.8" rx="2.2" transform="rotate(-21 12 12)"/><rect x="17" y="5.6" width="4.4" height="12.8" rx="2.2" transform="rotate(-21 19.2 12)"/></svg><span>Whop</span></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="7.1" y="4" width="3.5" height="16" rx="1"/><rect x="13.4" y="4" width="3.5" height="16" rx="1"/></svg><span>ElevenLabs</span></div>        <div class="pw-item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg></div>
+        <div class="pw-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-.9-8.9 7 7 0 0 0-13.2 2.4A4.2 4.2 0 0 0 6.2 19Z"/></svg><span>Google Cloud</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 4 · SHOWCASES HÉROS (Lipsync · Images IA · Express) ══════════ -->
+<div id="scWrap" style="padding-top:20px">
+
+  <!-- Titre chapeau des showcases -->
+  <div id="scHeader" class="wrap center reveal" style="padding-top:8px;padding-bottom:40px">
+    <h2 class="display" style="font-size:clamp(28px,4.2vw,54px);font-weight:800;line-height:1.04;max-width:820px;margin-inline:auto">
+      Get more customers,<br><span class="accent">fast</span>
+    </h2>
+    <p class="muted" style="margin-top:16px;font-size:17px;max-width:560px;margin-inline:auto">Everything you need to post and sell.</p>
+  </div>
+
+  <!-- 🔜 ici : vidéo lipsync × Montage IA — un avatar présente les outils AvatarAds en ≤30 s (à produire) -->
+
+  <!-- Générateur (démo motion design, muette, en boucle) -->
+  <section class="wrap sc-sec" style="padding-bottom:88px">
+    <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
+      <div class="reveal sc-mediawrap" style="position:relative">
+        <div class="sc-media" style="aspect-ratio:16/9">
+          <video id="genVid" src="/assets/lp/generateur-lp.mp4" poster="/assets/lp/generateur-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" fetchpriority="low" aria-label="Generator demo: an avatar, your voice, a caption style — the video is ready" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+        </div>
+      </div>
+      <div class="reveal sc-text col" style="gap:16px;justify-content:center">
+        <h2 class="display" style="font-size:clamp(28px,3.2vw,40px);font-weight:800;line-height:1.06">Generator · Build your video</h2>
+        <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">Add images, audio and clips to create the perfect video, ready to post on social media.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Images IA — démo MCP (muette, en boucle, redémarre au scroll) -->
+  <section class="wrap sc-sec" style="padding-bottom:88px">
+    <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
+      <div class="reveal sc-text col" style="gap:16px;justify-content:center">
+        <h2 class="display" style="font-size:clamp(28px,3.2vw,40px);font-weight:800;line-height:1.06">Claude MCP · Image generation</h2>
+        <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">Create ultra-realistic images with exceptional detail.</p>
+      </div>
+      <div class="reveal sc-mediawrap" style="position:relative">
+        <div class="sc-media" style="aspect-ratio:16/9">
+          <video id="imagesIaVid" src="/assets/lp/images-ia-lp.mp4" poster="/assets/lp/images-ia-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" fetchpriority="low" aria-label="AI Images demo: from Claude, one product becomes dozens of product ads and UGC" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Express (démo écran, muette, en boucle) -->
+  <section class="wrap sc-sec" style="padding-bottom:88px">
+    <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
+      <div class="reveal sc-mediawrap" style="position:relative">
+        <div class="sc-media" style="aspect-ratio:16/9">
+          <video id="veoVid" src="/assets/lp/express-lp.mp4" poster="/assets/lp/express-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" fetchpriority="low" aria-label="Express demo: one prompt, several generated videos" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+        </div>
+      </div>
+      <div class="reveal sc-text col" style="gap:16px;justify-content:center">
+        <h2 class="display" style="font-size:clamp(28px,3.2vw,40px);font-weight:800;line-height:1.06">Express · Video generation</h2>
+        <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">Create realistic UGC videos that showcase your product from text or images.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════ 5 · FEATURES (onglets) ══════════ -->
+<section id="features" class="wrap" style="padding-bottom:100px">
+  <div class="center reveal" style="margin-bottom:40px">
+    <div class="eyebrow">Features</div>
+    <h2 class="display feat-h2" style="font-size:clamp(28px,4.6vw,56px);font-weight:800;margin-top:14px;line-height:1.02">
+      All the tools<br> in <span class="accent">one place</span>
+    </h2>
+  </div>
+  <div class="row" style="justify-content:center;margin-bottom:30px">
+    <div class="feat-tabs" id="featTabs"></div>
+  </div>
+  <div class="card feat-card-grid" style="display:grid;grid-template-columns:1.35fr 1fr;overflow:hidden;padding:0">
+    <div class="feat-mockwrap" style="position:relative;min-height:400px;border-right:1px solid var(--border);background:radial-gradient(500px 260px at 40% 0%,rgba(255,90,31,.09),transparent),var(--bg-grad)" id="featMockZone">
+      <!-- avatar IA — grille de 6 avatars UGC (vraies images générées par l'app,
+           dossiers « Image IA /Garçon + /Fille » — jamais de visuels externes) -->
+      <div class="feat-mock" data-feat="avatar" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="/assets/lp/avatar-ia-lp.mp4" poster="/assets/lp/avatar-ia-lp.webp" muted loop playsinline preload="metadata" aria-label="AI Avatar demo: realistic AI faces generated to present your product"></video></div>
+      </div></div>
+      <!-- motion control -->
+      <div class="feat-mock" data-feat="motion" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="/assets/lp/motion-control-lp.mp4" poster="/assets/lp/motion-control-lp.webp" muted loop playsinline preload="metadata" aria-label="Motion Control demo: a still image turned into a moving video"></video></div>
+      </div></div>
+      <!-- montage IA : avant/après vidéo (boucles muettes lancées ensemble à l'apparition) -->
+      <div class="feat-mock" data-feat="montage" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="/assets/lp/montage-ia-lp.mp4" poster="/assets/lp/montage-ia-lp.webp" muted loop playsinline preload="metadata" aria-label="AI Editing demo: the same video, raw and then edited by AI"></video></div>
+      </div></div>
+      <!-- nettoyage audio -->
+      <div class="feat-mock" data-feat="audio" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="/assets/lp/nettoyage-audio-lp.mp4" poster="/assets/lp/nettoyage-audio-lp.webp" muted loop playsinline preload="metadata" aria-label="Audio Cleanup demo: raw sound cleaned up (noise, volume, silences)"></video></div>
+      </div></div>
+      <!-- omni : transforme un objet d'une vidéo par un prompt (avant/après) -->
+      <div class="feat-mock" data-feat="omni" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="/assets/lp/omni-lp.mp4" poster="/assets/lp/omni-lp.webp" muted loop playsinline preload="metadata" aria-label="Omni demo: transform any object in a video with a simple prompt (before/after)"></video></div>
+      </div></div>
+      <!-- editeur -->
+      <!-- 🎬 À REMPLACER par la vidéo quand Axel l'envoie : <video src="/assets/lp/lipsync-montage.mp4" poster="/assets/lp/lipsync.jpg" muted loop playsinline …> -->
+      <div class="feat-mock" data-feat="editeur" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="/assets/lp/feat-editeur-720.webp" alt="Video editor" width="720" height="720" loading="lazy" decoding="async"></div></div>
+    </div>
+    <div class="col" style="padding:44px 40px;justify-content:center;gap:16px">
+      <h3 class="display" id="featTitle" style="font-size:30px;font-weight:700;line-height:1.08"></h3>
+      <p class="muted" id="featDesc" style="font-size:16.5px;line-height:1.55"></p>
+      <!-- lien visible uniquement sur l'onglet Claude (onglet par défaut) — géré par setFeat -->
+      <a id="featClaudeLink" href="/en/claude.html" class="row gap8" style="display:none;align-items:center;color:var(--accent-2);font-weight:600;font-size:14.5px;margin-top:2px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+        AvatarAds × Claude — see how to connect
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 6 · TÉMOIGNAGES ══════════ -->
+<section class="wrap" style="padding-bottom:100px">
+  <div class="center reveal" style="margin-bottom:48px">
+    <div class="eyebrow">Testimonials</div>
+    <h2 class="display" style="font-size:clamp(28px,4vw,52px);font-weight:700;margin-top:14px;line-height:1.05">
+      They're already <span class="accent">crushing it</span>
+    </h2>
+    <div class="row" style="justify-content:center;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
+      <span style="color:var(--amber);letter-spacing:2px;font-size:16px">★★★★★</span>
+      <span class="muted" style="font-size:16px"><b style="color:var(--text)">4.9/5</b> · <b style="color:var(--text)">+40K creators</b></span>
+    </div>
+  </div>
+  <div id="tstWrap" style="position:relative">
+    <div class="tst-grid" id="tstGrid"></div>
+    <div class="tst-fade">
+      <button class="btn btn-primary btn-lg" style="pointer-events:auto;border-radius:999px;padding:15px 34px;font-weight:800" onclick="tstToggle(true)">
+        See all reviews <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="center" id="tstLess" style="margin-top:28px;display:none">
+    <button class="btn btn-ghost" onclick="tstToggle(false)">Show less ↑</button>
+  </div>
+</section>
+
+<!-- ══════════ 7 · GÉNÉRATION IA (éventail) ══════════ -->
+<section class="wrap gen-sec" style="padding-bottom:96px">
+  <div class="center reveal gen-head" style="margin-bottom:16px">
+    <div class="eyebrow"><svg width="10" height="10" viewBox="0 0 48 48" fill="currentColor" style="vertical-align:-1px;margin-right:4px"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z"/></svg>AI Generation</div>
+    <h2 class="display" style="font-size:clamp(28px,4.6vw,58px);font-weight:800;margin-top:12px;line-height:1.02">
+      Generate <span class="accent">viral AI videos</span>
+    </h2>
+    <p class="muted" style="margin-top:10px;font-size:17px">With the best models on the market.</p>
+  </div>
+
+  <!-- desktop : arc + cartes chevauchantes -->
+  <div class="reveal hide-mobile" style="position:relative;max-width:1080px;margin:0 auto">
+    <div class="row" style="justify-content:center;align-items:flex-start;gap:0;padding-bottom:10px">
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(-14deg);flex:0 0 auto"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 26px 46px rgba(0,0,0,.5)"><img src="/assets/lp/gen-fan-1b.webp" srcset="/assets/lp/gen-fan-1b-240.webp 240w,/assets/lp/gen-fan-1b-330.webp 330w,/assets/lp/gen-fan-1b.webp 405w" sizes="(max-width: 767px) 140px, 232px" alt="AI image — footballers building a cinder-block wall on the pitch" width="405" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(-7deg);flex:0 0 auto"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 26px 46px rgba(0,0,0,.5)"><img src="/assets/lp/gen-fan-2.webp" srcset="/assets/lp/gen-fan-2-240.webp 240w,/assets/lp/gen-fan-2-330.webp 330w,/assets/lp/gen-fan-2.webp 480w" sizes="(max-width: 767px) 140px, 232px" alt="AI cartoon — strawberry and cucumber characters in a bedroom" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(0) rotate(0);flex:0 0 auto"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 26px 46px rgba(0,0,0,.5)"><img src="/assets/lp/gen-fan-1.webp" srcset="/assets/lp/gen-fan-1-240.webp 240w,/assets/lp/gen-fan-1-330.webp 330w,/assets/lp/gen-fan-1.webp 480w" sizes="(max-width: 767px) 140px, 232px" alt="AI image — a female fan in the stadium stands" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(7deg);flex:0 0 auto"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 26px 46px rgba(0,0,0,.5)"><img src="/assets/lp/gen-fan-4.webp" srcset="/assets/lp/gen-fan-4-240.webp 240w,/assets/lp/gen-fan-4-330.webp 330w,/assets/lp/gen-fan-4.webp 576w" sizes="(max-width: 767px) 140px, 232px" alt="AI video — a grandma on a scooter chased by the police" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(14deg);flex:0 0 auto"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 26px 46px rgba(0,0,0,.5)"><img src="/assets/lp/gen-fan-5.webp" srcset="/assets/lp/gen-fan-5-240.webp 240w,/assets/lp/gen-fan-5-330.webp 330w,/assets/lp/gen-fan-5.webp 480w" sizes="(max-width: 767px) 140px, 232px" alt="AI portrait — a woman on a Paris street" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+    </div>
+
+    <div class="row" style="gap:18px;margin-top:-80px;position:relative;z-index:6;align-items:flex-end;padding-inline:8px">
+      <div style="width:300px;height:268px;flex:0 0 auto;border-radius:22px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.12);box-shadow:0 34px 70px -30px rgba(0,0,0,.85)">
+        <img src="/assets/lp/gen-veo-720.webp" alt="Veo 3" width="720" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.72));pointer-events:none"></div>
+        <div style="position:absolute;left:18px;bottom:18px;right:18px;pointer-events:none">
+          <div class="display" style="font-size:24px;font-weight:800;color:#fff">Veo 3</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.82);margin-top:5px;line-height:1.35">Create AI videos quickly with a simple prompt.</div>
+        </div>
+      </div>
+      <div class="grow col" style="border-radius:22px;padding:26px;background:rgba(255,255,255,.6);backdrop-filter:blur(28px) saturate(1.6);-webkit-backdrop-filter:blur(28px) saturate(1.6);border:1px solid rgba(255,255,255,.65);box-shadow:0 30px 70px -30px rgba(0,0,0,.28),0 0 0 4px var(--accent-soft),inset 0 1px 0 rgba(255,255,255,.7);min-height:268px">
+        <textarea id="genPrompt" placeholder="Describe the video you want to create…" style="flex:1;min-height:140px;background:transparent;border:none;outline:none;color:var(--text);font-size:17px;line-height:1.5;resize:none;font-family:inherit;padding:2px 2px"></textarea>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:14px;position:relative;z-index:6;align-items:flex-end;gap:14px">
+      <div style="flex:0 0 auto;width:300px;position:relative;height:74px">
+        <div class="muted" style="position:absolute;left:10px;top:6px;font-size:14.5px;font-family:var(--display);font-weight:500;line-height:1.2;transform:rotate(-4deg);max-width:170px">Try our generation models for free</div>
+        <svg width="120" height="56" viewBox="0 0 120 56" fill="none" style="position:absolute;left:186px;top:-11px;width:117px;height:75px">
+          <path d="M6 10C34 6 74 14 104 44" stroke="var(--text-2)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+          <path d="M90 44l16 3M104 44l-4 -16" stroke="var(--text-2)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+      <button onclick="lpGenerateFrom('genPrompt')" class="btn btn-primary btn-lg grow" style="font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Generate <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
+    </div>
+  </div>
+
+  <!-- mobile -->
+  <div class="reveal only-mobile" style="flex-direction:column;gap:16px;max-width:460px;margin:0 auto">
+    <div class="row" style="gap:0;justify-content:center;align-items:center">
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(-9deg) translateY(10px)"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 18px 32px rgba(0,0,0,.5)"><img src="/assets/lp/gen-fan-2.webp" srcset="/assets/lp/gen-fan-2-240.webp 240w,/assets/lp/gen-fan-2-330.webp 330w,/assets/lp/gen-fan-2.webp 480w" sizes="(max-width: 767px) 140px, 232px" alt="AI cartoon — strawberry and cucumber characters in a bedroom" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:2;transform:rotate(0deg) translateY(0)"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 18px 32px rgba(0,0,0,.5)"><img src="/assets/lp/gen-fan-1.webp" srcset="/assets/lp/gen-fan-1-240.webp 240w,/assets/lp/gen-fan-1-330.webp 330w,/assets/lp/gen-fan-1.webp 480w" sizes="(max-width: 767px) 140px, 232px" alt="AI image — a female fan in the stadium stands" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(9deg) translateY(10px)"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 18px 32px rgba(0,0,0,.5)"><img src="/assets/lp/gen-fan-4.webp" srcset="/assets/lp/gen-fan-4-240.webp 240w,/assets/lp/gen-fan-4-330.webp 330w,/assets/lp/gen-fan-4.webp 576w" sizes="(max-width: 767px) 140px, 232px" alt="AI video — a grandma on a scooter chased by the police" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+    </div>
+    <div class="card col" style="padding:16px;border-color:var(--accent-line)">
+      <textarea id="genPromptM" placeholder="Describe the video you want to create…" style="min-height:84px;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;line-height:1.5;resize:none;font-family:inherit"></textarea>
+    </div>
+    <button onclick="lpGenerateFrom('genPromptM')" class="btn btn-primary btn-lg" style="width:100%;font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Generate <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
+    <p class="center faint mono" style="font-size:11.5px">Try our generation models for free</p>
+  </div>
+</section>
+
+<!-- ══════════ 8 · AVATARADS ✕ CLAUDE — le tuto en vidéo (remplace le card-stack « Comment ça marche », Axel 02/09) ══════════ -->
+<section id="etapes" class="wrap" style="display:flex;flex-direction:column;padding-top:70px;padding-bottom:80px">
+  <div class="center reveal" style="margin-bottom:34px">
+    <h2 class="display" style="font-size:clamp(32px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.03">AvatarAds <span class="accent">✕</span> Claude</h2>
+    <p class="muted" style="font-size:clamp(16px,1.6vw,19px);line-height:1.5;margin-top:14px;max-width:640px;margin-left:auto;margin-right:auto">Create several videos from a single prompt in Claude.</p>
+  </div>
+  <div class="reveal tuto-frame" id="claudeTuto">
+    <video src="/assets/lp/tuto-claude.mp4?v=2" poster="/assets/lp/tuto-claude.webp" width="1920" height="1080" muted loop playsinline autoplay preload="metadata" aria-label="Demo: AvatarAds connected to Claude, two videos generated from a single prompt"></video>
+  </div>
+</section>
+
+<!-- ══════════ 9 · TOUT EN UN ══════════ -->
+<section id="toutEnUn" class="wrap" style="padding-top:70px;padding-bottom:90px;position:relative">
+  <!-- étoiles décoratives : z-index sous le contenu → jamais sur l'image (opaque) ; placées sur les côtés.
+       ⚠️ MASQUÉES EN MOBILE : la grille passe sur une colonne et le texte s'aligne à gauche,
+       l'étoile de gauche tombait alors pile sur le « Tout » de « Tout en un ». -->
+  <div aria-hidden="true" class="lp-sparkles" style="position:absolute;inset:0;z-index:1;pointer-events:none">
+    <svg viewBox="0 0 48 48" width="14" height="14" style="position:absolute;left:9%;top:6%;opacity:.6;filter:drop-shadow(0 0 6px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
+    <svg viewBox="0 0 48 48" width="11" height="11" style="position:absolute;left:89%;top:5%;opacity:.5;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
+    <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:3%;top:46%;opacity:.45;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+    <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:96%;top:42%;opacity:.5;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
+    <svg viewBox="0 0 48 48" width="13" height="13" style="position:absolute;left:5%;top:72%;opacity:.5;filter:drop-shadow(0 0 6px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
+    <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:94%;top:76%;opacity:.45;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
+    <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:14%;top:92%;opacity:.4;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
+    <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:85%;top:94%;opacity:.4;filter:drop-shadow(0 0 4px rgba(255,255,255,.5))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+  </div>
+  <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;position:relative;z-index:2">
+    <div class="reveal col" style="gap:16px;justify-content:center">
+      <div class="eyebrow">All in one</div>
+      <h2 class="display" style="font-size:clamp(28px,3.4vw,44px);font-weight:800;line-height:1.06">
+        All your video tools,<br><span class="accent">together in one place</span>
+      </h2>
+      <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">No more separate subscriptions.</p>
+    </div>
+    <div class="reveal" style="border-radius:22px;overflow:hidden;box-shadow:0 26px 90px -34px rgba(255,107,53,.4)">
+      <img src="/assets/lp/tout-en-un.jpg" alt="All your video tools together in AvatarAds" width="1536" height="1024" loading="lazy" decoding="async" onerror="this.style.display='none'" style="display:block;width:100%;height:auto">
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 11 · FAQ ══════════ -->
+<section id="faq" class="wrap" style="padding-top:90px;padding-bottom:90px;max-width:920px">
+  <div class="center reveal" style="margin-bottom:46px">
+    <div class="eyebrow">FAQ</div>
+    <h2 class="display" style="font-size:clamp(30px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.02">Frequently asked <span class="accent">questions</span></h2>
+    <p class="muted" style="margin-top:14px;font-size:16.5px">Everything you need to know before you start.</p>
+  </div>
+  <!-- FAQ PRÉ-RENDUE (SEO) : les 6 Q/R vivent en HTML statique — même markup que
+       l'ancien rendu JS (faq-item/faq-q/faq-a). L'accordéon est porté par les
+       onclick inline : plus aucun JS de construction, pas de double rendu. -->
+  <div class="col" style="gap:12px" id="faq-list">
+    <div class="faq-item open"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">What exactly is AvatarAds?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">A faceless video generator: you write a script (or let the AI write it), pick an AI avatar and a voice, and the tool produces a vertical video (TikTok, Reels, Shorts) ready to post in minutes — without ever showing your face or filming anything.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Can people tell it's AI?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">No — and that's the whole point. The lip-sync and the voice are ultra-realistic: the vast majority of viewers can't tell the difference from a real creator on camera. Your videos stay natural and engaging.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Which tools are included in AvatarAds?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Everything is in one place: the Generator (AI avatar + your voice + animated captions), Express (a video from plain text), Motion Control (animates a still image), AI Images (visuals and product ads in 4K), AI Editing (your audio becomes an edited video) and Audio Cleanup — plus an editor. One interface, one subscription, instead of stacking five separate tools.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">How long until I get my first video?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">About 2 minutes. You describe your video, the AI generates the avatar, the voice and the captions, then you export in 9:16, ready to publish. Most creators produce 3 to 5 videos a day.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">What kind of business is it for?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Dropshipping, e-commerce, coaches, info products, SMMA agencies, faceless niche accounts, affiliate marketing… If you need to publish lots of video content regularly without filming yourself, AvatarAds is made for you.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">How do I access the interface for free?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Just create an account — with your email or with Google, no credit card required. You switch to a plan when you want to generate and publish your videos; cancel in 1 click, no commitment.</div></div>
+  </div>
+</section>
+
+<!-- ══════════ 12 · CTA FINAL (carte orange) ══════════ -->
+<section class="wrap" style="padding-bottom:100px">
+  <div class="card reveal" style="position:relative;overflow:hidden;text-align:center;padding:80px 32px;border-color:var(--accent-line);background:radial-gradient(700px 320px at 50% 0%,rgba(255,90,31,.18),var(--surface))">
+    <div style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:1">
+      <svg viewBox="0 0 48 48" width="26" height="26" style="position:absolute;left:30%;top:6%;opacity:1;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="14" height="14" style="position:absolute;left:52%;top:2%;opacity:.8;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="20" height="20" style="position:absolute;left:70%;top:12%;opacity:.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="22" height="22" style="position:absolute;left:92%;top:26%;opacity:.9;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="18" height="18" style="position:absolute;left:96%;top:58%;opacity:.85;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="24" height="24" style="position:absolute;left:84%;top:78%;opacity:.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:16%;top:82%;opacity:.55;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:60%;top:92%;opacity:.7;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+    </div>
+    <h2 class="display" style="position:relative;z-index:2;font-size:clamp(30px,5vw,64px);font-weight:800;line-height:1.02;max-width:780px;margin-inline:auto">
+      Ready to get your<br>first <span class="accent">millions of views</span>?
+    </h2>
+    <p class="muted" style="position:relative;z-index:2;margin-top:18px;font-size:18px">Join +40K creators who post without ever showing their face.</p>
+    <a href="/app/" class="btn btn-primary cta-hero" style="position:relative;z-index:2;margin-top:30px;display:inline-flex">Get started for free <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    <div class="row" style="position:relative;z-index:2;justify-content:center;gap:22px;margin-top:24px;flex-wrap:wrap">
+      <span class="row gap8 faint" style="font-size:13.5px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Secure payment</span>
+      <span class="row gap8 faint" style="font-size:13.5px">↻ Cancel in 1 click</span>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ══════════ 13 · FOOTER ══════════ -->
+<footer style="border-top:1px solid var(--border);background:linear-gradient(180deg,rgba(124,92,255,.05),transparent 40%),var(--bg);overflow:hidden">
+  <div class="wrap" style="padding-top:64px;padding-bottom:10px">
+    <div class="foot-grid" style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1.3fr 1.1fr;gap:36px">
+      <div>
+        <div class="row gap10" style="align-items:center">
+          <div class="brandmark"><img src="/assets/avatarads-logo-96.png" alt="" width="26" height="26" loading="lazy" decoding="async" style="border-radius:7px;display:block"></div>
+          <span class="logo-wordmark" style="font-size:20px">AvatarAds</span>
+        </div>
+        <p class="muted" style="margin-top:16px;font-size:14px;line-height:1.6;max-width:320px">
+          Create viral faceless videos with AI: avatar, your voice, captions — no camera. Got a question? Our team is here to help.
+        </p>
+      </div>
+      <details class="foot-col">
+        <summary>Help</summary>
+        <div class="col" style="gap:12px">
+          <a href="mailto:contact@avatarads.fr" class="muted foot-link" style="font-size:14px">Contact us</a>
+          <a href="/app/" class="muted foot-link" style="font-size:14px">Open the app</a>
+          <a href="/en/claude.html" class="muted foot-link" style="font-size:14px">Connect Claude</a>
+          <a href="/en/videos.html" class="muted foot-link" style="font-size:14px">Video demos</a>
+        </div>
+      </details>
+      <details class="foot-col">
+        <summary>Tools</summary>
+        <div class="col" style="gap:12px">
+          <a href="/express.html" class="muted foot-link" style="font-size:14px">Express</a>
+          <a href="/image-ia.html" class="muted foot-link" style="font-size:14px">AI Image</a>
+          <a href="/motion-control.html" class="muted foot-link" style="font-size:14px">Motion Control</a>
+          <a href="/montage-ia.html" class="muted foot-link" style="font-size:14px">AI Editing</a>
+        </div>
+      </details>
+      <details class="foot-col">
+        <summary>Company</summary>
+        <div class="col" style="gap:12px">
+          <a href="/app/" class="muted foot-link" style="font-size:14px">Referral program</a>
+          <a href="/en/tarifs.html" class="muted foot-link" style="font-size:14px">Pricing</a>
+          <a href="/en/a-propos.html" class="muted foot-link" style="font-size:14px">About</a>
+        </div>
+      </details>
+      <details class="foot-col">
+        <summary>Resources</summary>
+        <div class="col" style="gap:12px">
+          <a href="/en/creer-video-ia.html" class="muted foot-link" style="font-size:14px">Create a video with AI</a>
+          <a href="/en/ugc-ia.html" class="muted foot-link" style="font-size:14px">AI UGC videos</a>
+          <a href="/en/publicite-tiktok-ia.html" class="muted foot-link" style="font-size:14px">AI TikTok ads</a>
+          <a href="/en/generateur-avatar-ia.html" class="muted foot-link" style="font-size:14px">AI avatar generator</a>
+          <a href="/en/meilleurs-outils-ugc-ia.html" class="muted foot-link" style="font-size:14px">Best AI UGC tools</a>
+          <a href="/en/meilleur-generateur-avatar-ia.html" class="muted foot-link" style="font-size:14px">Best AI avatar generator</a>
+          <a href="/en/avatarads-vs-arcads.html" class="muted foot-link" style="font-size:14px">AvatarAds vs Arcads</a>
+        </div>
+      </details>
+      <details class="foot-col">
+        <summary>Legal</summary>
+        <div class="col" style="gap:12px">
+          <a href="/en/cgv.html" class="muted foot-link" style="font-size:14px">Terms &amp; conditions</a>
+          <a href="/en/confidentialite.html" class="muted foot-link" style="font-size:14px">Privacy policy</a>
+        </div>
+      </details>
+    </div>
+    <div style="text-align:center;margin-top:54px">
+      <div class="display foot-wordmark" style="font-size:clamp(44px,12vw,168px);font-weight:800;line-height:.9;letter-spacing:-.03em;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.03));-webkit-background-clip:text;background-clip:text;color:transparent">AvatarAds</div>
+      <div class="mono faint" style="font-size:12px;margin-top:10px">© 2026 AvatarAds · by IA Manager</div>
+    </div>
+  </div>
+</footer>
+<style>
+.foot-link{transition:.15s;text-decoration:underline;text-decoration-color:transparent}
+.foot-link:hover{color:var(--text);text-decoration-color:var(--text-3)}
+/* Colonnes de liens du footer en accordéon : figées OUVERTES en desktop, REPLIABLES sur mobile (footer moins long) */
+.foot-col{min-width:0}
+.foot-col>summary{color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px;list-style:none;cursor:pointer}
+.foot-col>summary::-webkit-details-marker{display:none}
+@media (min-width:761px){ .foot-col>summary{cursor:default;pointer-events:none} .foot-col>*:not(summary){display:block !important} }
+@media (max-width:760px){
+  .foot-grid{grid-template-columns:1fr !important;gap:0 !important} footer .wrap{padding-top:44px}
+  .foot-grid>div:first-child{margin-bottom:20px}
+  .foot-col{border-top:1px solid var(--border)}
+  .foot-col>summary{display:flex;align-items:center;justify-content:space-between;margin:0;padding:16px 2px}
+  .foot-col[open]>summary{padding-bottom:8px}
+  .foot-col>summary::after{content:'+';font-size:22px;font-weight:400;color:var(--violet)}
+  .foot-col[open]>summary::after{content:'−'}
+  .foot-col .col{padding:0 2px 16px}
+}
+/* ── FOOTER (Axel 29/09 : « pas hyper sexy quand on ouvre ») : logo à gauche, rubriques repliables à droite, liens rangés
+   en colonnes une fois ouverts (avant : « display:block » les collait sur une ligne), titres sobres, chevron qui pivote ── */
+footer .foot-col>summary{color:var(--text)!important;font-weight:650;font-size:15px;letter-spacing:-.005em;transition:color .15s}
+footer .foot-col>summary:hover{color:var(--violet)!important}
+footer .foot-col>summary::after{content:''!important;width:7px;height:7px;border-right:2px solid var(--text-3);border-bottom:2px solid var(--text-3);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s;margin-right:6px;flex:none}
+footer .foot-col[open]>summary::after{content:''!important;transform:rotate(-135deg) translate(-2px,-2px)}
+footer .foot-col[open]>.col{display:grid!important;grid-template-columns:1fr;gap:11px;padding:2px 2px 18px!important}
+footer .foot-col .foot-link{display:inline-flex;align-items:center;gap:8px;width:fit-content;font-size:14px}
+footer .foot-col .foot-link::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--text-3);opacity:.45;flex:none;transition:.15s}
+footer .foot-col .foot-link:hover::before{background:var(--violet);opacity:1}
+footer .foot-wordmark{background:linear-gradient(180deg,rgba(16,24,32,.16),rgba(16,24,32,.03))!important;-webkit-background-clip:text!important;background-clip:text!important}
+@media(min-width:761px){
+  footer .foot-grid{display:grid!important;grid-template-columns:minmax(240px,.9fr) minmax(0,1.6fr)!important;column-gap:72px!important;row-gap:0!important;max-width:none!important;align-items:start}
+  footer .foot-grid>div:first-child{grid-column:1;grid-row:1 / span 6;position:sticky;top:110px}
+  footer .foot-col{grid-column:2}
+  footer .foot-col:last-of-type{border-bottom:1px solid var(--border)}
+  footer .foot-col[open]>.col{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px}
+}
+/* mobile : les étoiles décoratives chevauchaient le titre « Tout en un » (colonne unique, texte à gauche) */
+@media (max-width:760px){ .lp-sparkles{display:none !important} }
+/* ── LP · Features, mobile (handoff §5) ─────────────────────────────────────
+   Le H2 cassait mal et le sous-titre passait plus gros que lui. */
+@media (max-width:760px){
+  .feat-h2{font-size:25px !important;max-width:320px !important;line-height:1.1 !important;margin-left:auto;margin-right:auto}
+  .feat-h2 br{display:none}
+  .feat-sub{font-size:13.5px !important}
+}
+
+/* ── LP · barre de prompt : le grossissement est DESKTOP uniquement ──────────
+   Le handoff agrandit la pastille, l'input et le bouton pour donner du poids au
+   hero sur grand ecran. Sur mobile la barre tient deja tout juste en largeur :
+   on lui rend ses dimensions d'origine, sinon elle deborde. */
+@media (max-width:760px){
+  .pb-ico{width:30px !important;height:30px !important}
+  .pb-ico svg{width:15px !important;height:15px !important}
+  #lpPrompt{font-size:13px !important;padding:0 8px !important}
+  .pb-go{padding:13px 20px !important;font-size:15.5px !important}
+  .pb-go svg{width:16px !important;height:16px !important}
+}
+
+/* ── LP · Comparateur avant/après Images IA (slider central draggable) ───────
+   Une seule instance desktop + mobile ; hauteur adaptée au breakpoint. */
+#baSlider{height:420px}
+.ba-tag{position:absolute;top:12px;z-index:3;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#fff;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);padding:4px 11px;border-radius:999px;pointer-events:none}
+@media (max-width:760px){ #baSlider{height:340px} }
+
+/* ── LP · Bandeau « Propulsé par » (marquee de logos monochromes) ────────────
+   Piste dupliquée (2 × .pw-seq identiques) + translateX(-50%) → boucle infinie
+   sans raccord. Le wrapper masque tout débordement horizontal. */
+.pw-sec{padding:6px 0 14px;overflow:hidden}
+.pw-label{font-size:14px;font-weight:500;color:var(--text-2);letter-spacing:.02em;text-align:center}
+.pw-marquee{overflow:hidden;max-width:var(--maxw);margin:16px auto 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.pw-track{display:flex;width:max-content;animation:pwScroll 30s linear infinite}
+/* pause au survol : UNIQUEMENT sur les vrais pointeurs — sur iOS le tap rend le
+   :hover collant et FIGEAIT le bandeau au premier contact (Axel, 07/08) */
+@media (hover:hover) and (pointer:fine){ .pw-marquee:hover .pw-track{animation-play-state:paused} }
+@keyframes pwScroll{to{transform:translateX(-50%)}}
+.pw-seq{display:flex;align-items:center;flex:0 0 auto}
+.pw-item{display:flex;align-items:center;gap:9px;color:var(--text-2);margin-right:58px;flex:0 0 auto;transition:color .25s}
+.pw-item:hover{color:var(--text)}
+.pw-item svg{display:block;width:28px;height:28px}
+.pw-item span{font-weight:600;font-size:16.5px;white-space:nowrap;letter-spacing:-.01em}
+@media (max-width:760px){
+  .pw-sec{padding:2px 0 8px}
+  .pw-label{font-size:12.5px}
+  .pw-item{margin-right:34px;gap:7px}
+  .pw-item svg{width:22px;height:22px}
+  .pw-item span{font-size:14px}
+}
+/* 07/08 (Axel) : le bandeau doit défiler PARTOUT — « Réduire les animations »
+   d'iOS (très répandu) coupait la marquee sur téléphone. Décision produit :
+   on garde le mouvement, lent, plutôt que rien. */
+@media (prefers-reduced-motion:reduce){ .pw-track{animation-duration:45s} }
+</style>
+
+<script>
+/* ══════════ Mobile : placeholder court de la PromptBar ══════════ */
+(function(){
+  var inp=document.getElementById('lpPrompt');
+  if(inp && window.matchMedia('(max-width:760px)').matches) inp.placeholder='Describe the video to generate…';
+})();
+
+/* ══════════ Comparateur avant/après Images IA — poignée centrale draggable (desktop + mobile) ══════════ */
+(function(){
+  var el=document.getElementById('baSlider'); if(!el) return;
+  var bef=document.getElementById('baBefore'), img=bef.querySelector('img'), hd=document.getElementById('baHandle'), drag=false;
+  function setPos(clientX){
+    var r=el.getBoundingClientRect();
+    var p=Math.max(1.5,Math.min(98.5,(clientX-r.left)/r.width*100));
+    bef.style.width=p+'%'; img.style.width=(10000/p)+'%'; hd.style.left=p+'%';
+  }
+  if(window.PointerEvent){
+    el.addEventListener('pointerdown',function(e){ drag=true; if(el.setPointerCapture){ try{ el.setPointerCapture(e.pointerId); }catch(_){} } setPos(e.clientX); });
+    el.addEventListener('pointermove',function(e){ if(drag) setPos(e.clientX); });
+    ['pointerup','pointercancel'].forEach(function(t){ el.addEventListener(t,function(){ drag=false; }); });
+  }else{
+    function cx(e){ return e.touches ? e.touches[0].clientX : e.clientX; }
+    el.addEventListener('mousedown',function(e){ drag=true; setPos(cx(e)); });
+    el.addEventListener('touchstart',function(e){ drag=true; setPos(cx(e)); },{passive:true});
+    window.addEventListener('mousemove',function(e){ if(drag) setPos(cx(e)); });
+    window.addEventListener('touchmove',function(e){ if(drag) setPos(cx(e)); },{passive:true});
+    window.addEventListener('mouseup',function(){ drag=false; });
+    window.addEventListener('touchend',function(){ drag=false; });
+  }
+})();
+
+/* ══════════ Funnel hero : prompt mémorisé → app ══════════ */
+function lpGenerateFrom(id){
+  try{
+    var v=(document.getElementById(id)||{}).value||'';
+    if(v.trim()) localStorage.setItem('aa_lp_prompt', v.trim());
+  }catch(_){}
+  window.location.href='/app/';
+}
+function lpGenerate(e){
+  if(e && e.preventDefault) e.preventDefault();
+  try{
+    var v=(document.getElementById('lpPrompt')||{}).value||'';
+    if(v.trim()) localStorage.setItem('aa_lp_prompt', v.trim());
+  }catch(_){}
+  window.location.href='/app/';
+}
+
+/* ══════════ Sticky CTA ══════════ */
+(function(){
+  var bar=document.getElementById('stickyCta'), sentinel=document.getElementById('stickyCtaSentinel');
+  if(!bar) return;
+  function show(v){ bar.style.transform=v?'none':'translateY(-110%)'; bar.style.pointerEvents=v?'auto':'none'; }
+  // IntersectionObserver plutôt que lire window.scrollY à chaque scroll → aucun reflow forcé
+  // (le calcul d'intersection se fait hors du chemin de layout). La barre apparaît quand le
+  // repère (à 620px du haut du document) sort du viewport par le haut.
+  if(sentinel && 'IntersectionObserver' in window){
+    new IntersectionObserver(function(e){ show(!e[0].isIntersecting); }, {threshold:0}).observe(sentinel);
+  } else {
+    // repli (pas de repère / d'IO) : lecture de scrollY différée en rAF pour ne pas forcer de reflow au parse
+    var tick=false; function on(){ tick=false; show(window.scrollY>620); }
+    window.addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(on); } },{passive:true}); requestAnimationFrame(on);
+  }
+})();
+
+/* ══════════ Scroll-reveal (IntersectionObserver) ══════════ */
+var _revIO=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); _revIO.unobserve(e.target); } });
+},{threshold:0.12,rootMargin:'0px 0px -8% 0px'});
+function revealScan(){ document.querySelectorAll('.reveal:not(.in)').forEach(function(el){ _revIO.observe(el); }); }
+
+/* ══════════ CountUp (ease-out cubic, déclenché à la vue) ══════════ */
+document.querySelectorAll('[data-countup]').forEach(function(el){
+  var value=el.getAttribute('data-countup');
+  var m=String(value).match(/^(\D*)([\d.,]+)(.*)$/);
+  if(!m) return;
+  var pre=m[1],numStr=m[2],suf=m[3];
+  var dec=numStr.indexOf(',')>=0?1:0;
+  var target=parseFloat(numStr.replace(',','.'));
+  var started=false, dur=1400;
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){
+    if(e.isIntersecting && !started){ started=true;
+      var t0=performance.now();
+      (function tick(now){
+        var p=Math.min(1,(now-t0)/dur), v=target*(1-Math.pow(1-p,3));
+        el.textContent=pre+v.toFixed(dec).replace('.',',')+suf;
+        if(p<1) requestAnimationFrame(tick);
+      })(t0);
+      io.disconnect();
+    }
+  }); },{threshold:0.4});
+  io.observe(el);
+});
+
+/* ══════════ Features — onglets ══════════ */
+var FEAT_TABS=[
+  { id:"motion", tab:"Motion Control", t:"A still image that comes to life", d:"Animate any photo: the motion is generated and the video is ready to post." },
+  { id:"avatar", tab:"AI Avatar", t:"An avatar for every brand", d:"Realistic UGC-style AI faces — pick yours and it presents your product to the camera. No casting, no shoot." },
+  { id:"audio", tab:"Audio Cleanup", t:"Clean audio, automatically", d:"Background noise, volume, silences — cleaned up in one go for crisp, professional sound." },
+  { id:"omni", tab:"Omni", t:"Transform any object in one click", d:"Film a video, describe what you want, and the AI turns the object into whatever you like — ready to post." },
+  { id:"montage", tab:"AI Editing", t:"Your raw video becomes a viral edit", d:"The AI listens to your video and edits it from start to finish." },
+  { id:"editeur", tab:"Editor", t:"You have the final say", d:"Multi-track timeline, layers, music, effects. Full control without leaving AvatarAds." }
+];
+(function(){
+  var tabsEl=document.getElementById('featTabs');
+  FEAT_TABS.forEach(function(x,i){
+    var b=document.createElement('button');
+    b.textContent=x.tab; if(i===0) b.className='on';
+    b.onclick=function(){ setFeat(x.id,b); };
+    tabsEl.appendChild(b);
+  });
+  setFeat(FEAT_TABS[0].id, tabsEl.children[0], true);
+})();
+function setFeat(id, btn, init){
+  document.querySelectorAll('#featTabs button').forEach(function(b){ b.classList.remove('on'); });
+  if(btn) btn.classList.add('on');
+  document.querySelectorAll('.feat-mock').forEach(function(m){ m.classList.toggle('on', m.getAttribute('data-feat')===id); });
+  if(window._playActiveFeatVid) window._playActiveFeatVid();
+  var cur=FEAT_TABS.find(function(x){ return x.id===id; })||FEAT_TABS[0];
+  var t=document.getElementById('featTitle'), d=document.getElementById('featDesc');
+  t.textContent=cur.t; d.textContent=cur.d;
+  var cl=document.getElementById('featClaudeLink'); if(cl) cl.style.display=(cur.id==='claude')?'inline-flex':'none';
+  var z=document.getElementById('featMockZone');
+  if(init){ t.classList.add('rise'); z.classList.add('rise'); }   // pas de reflow forcé au chargement (PageSpeed)
+  else {
+    t.classList.remove('rise'); void t.offsetWidth; t.classList.add('rise');
+    z.classList.remove('rise'); void z.offsetWidth; z.classList.add('rise');
+  }
+}
+
+/* ══════════ Témoignages ══════════ */
+var TST=[
+  { q:"3 TikTok videos in an hour. One of them already has 80k views. 40 leads in my DMs the next day. Easily the highest-ROI tool I use.", n:"Lucas M.", r:"E-commerce", tag:"+80k views · 40 leads", h:18 },
+  { q:"I hated filming myself. My avatar speaks for me in my own voice. My followers can't tell the difference.", n:"Sarah K.", r:"Business coach", tag:"2 automated videos/day", h:330 },
+  { q:"Everything's included: I log in and generate. I used to pay for 4 separate subscriptions, now it's all in one. Game changer.", n:"Mehdi R.", r:"Content creator", tag:"Full AI stack included", h:265 },
+  { q:"From a 2k to a 60k view average in one month. Consistency changed everything — I post 3× a day without even thinking about it.", n:"Inès B.", r:"Nutrition & fitness", tag:"×30 views", h:150 },
+  { q:"My agency charged me €1,500/month for editing. I brought it all in-house with AvatarAds for the price of a coffee a day.", n:"Thomas D.", r:"SMMA agency", tag:"−€1,500/month saved", h:200 },
+  { q:"The captions and the lip-sync are mind-blowing. It really looks like a real creator talking. Nobody can tell it's AI.", n:"Yasmine A.", r:"Beauty & lifestyle", tag:"Undetectable lip-sync", h:20 },
+  { q:"I launched a store and a faceless channel side by side. 5 avatar videos in the morning, I post them and move on.", n:"Karim Z.", r:"Dropshipping", tag:"5 videos/day", h:40 },
+  { q:"I record 30 seconds, my avatar speaks with MY voice and the sound comes out perfect — no more filming myself.", n:"Camille V.", r:"Info-product creator", tag:"My voice in 30s", h:290 },
+  { q:"First month: 3 viral videos, 12k new followers and my first sales on autopilot. I'm never going back.", n:"Hugo L.", r:"Personal finance", tag:"+12k followers / month", h:240 }
+];
+(function(){
+  var grid=document.getElementById('tstGrid');
+  var stars='<div class="row" style="gap:3px;color:var(--amber);margin-bottom:14px;letter-spacing:2px;font-size:14px">★★★★★</div>';
+  TST.forEach(function(t,i){
+    var cls='tst-card card'+(i>=2&&i<6?' tst-mid':'')+(i>=6?' tst-more':'');
+    var card=document.createElement('div'); card.className=cls;
+    var _p=t.n.split(' '); var _ini=(((_p[0]||'')[0]||'')+((_p[1]||'')[0]||'')).toUpperCase();
+    card.innerHTML=stars
+      +'<p style="font-size:15px;line-height:1.55;color:var(--text);flex:1;font-weight:500">'+t.q+'</p>'
+      +'<div class="row" style="margin-top:20px;align-items:center;justify-content:space-between;gap:12px">'
+      +'<div class="row gap12" style="align-items:center;min-width:0">'
+      +'<div style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;position:relative;background:linear-gradient(145deg,oklch(0.66 0.14 '+t.h+'),oklch(0.42 0.11 '+(t.h+25)+'));border:1.5px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -3px 7px rgba(0,0,0,.28),0 2px 7px rgba(0,0,0,.22)">'
+      +'<span style="position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)">'+_ini+'</span></div>'
+      +'<div class="col" style="line-height:1.35;min-width:0"><span style="font-weight:700;font-size:14.5px">'+t.n+'</span>'
+      +'<span style="font-size:13px;font-weight:600;color:var(--accent-2)">'+t.r+'</span></div></div>'
+      +'<div class="pill" style="flex:0 0 auto;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:11px;font-weight:600;white-space:nowrap">'+t.tag+'</div>'
+      +'</div>';
+    grid.appendChild(card);
+  });
+})();
+function tstToggle(open){
+  document.getElementById('tstWrap').classList.toggle('open', open);
+  document.getElementById('tstLess').style.display=open?'block':'none';
+}
+
+/* ══════════ Vidéos décoratives (Claude, Express, Générateur, Images IA) ══════════
+   Démarrage natif via l'ATTRIBUT `autoplay muted playsinline` (WebKit diffère seul le chargement/la lecture
+   hors-écran). MAIS l'autoplay ne se RE-déclenche pas : une vidéo mise en pause hors-champ ne repart jamais
+   toute seule à la ré-entrée. C'est ce qui figeait les démos après ouverture/fermeture du menu « Choisis un
+   modèle » (body position:fixed + lecture des 6 vidéos du menu → iOS met les démos en pause). On ajoute donc
+   un IntersectionObserver qui REJOUE à chaque (ré)entrée dans le viewport, + des re-kicks (fermeture du menu,
+   pageshow, retour d'onglet). Toujours AUCUN v.load() sur une vidéo visible/en lecture (il la figerait). */
+
+/* ══════════ FAQ ══════════
+   Les 6 Q/R sont PRÉ-RENDUES en HTML statique dans #faq-list (SEO : contenu
+   indexable sans JS). L'accordéon est branché via les onclick inline du markup —
+   aucun rendu JS, donc aucun double rendu ni flash. */
+
+/* Contrôleur unique des démos toujours-actives (genVid, imagesIaVid, veoVid) + tuto Claude.
+   IntersectionObserver : REJOUE à l'entrée dans le viewport (corrige le figement), met en pause à la sortie
+   (batterie). Idempotent : ne relance que si en pause, ne coupe que si en lecture. play() catché, PAS de
+   load(). Images IA se rembobine en plus à l'entrée. window._ensureDemoVids() = relance forcée des visibles
+   (appelé à la fermeture du menu, sur pageshow et au retour d'onglet). */
+(function(){
+  var vids=[].slice.call(document.querySelectorAll('#genVid,#imagesIaVid,#veoVid,#claudeTuto video'));
+  if(!vids.length) return;
+  function visible(v){ var r=v.getBoundingClientRect(); return r.top<innerHeight && r.bottom>0; }
+  function playV(v){
+    if(!v.paused) return;
+    v.muted=true; var p=v.play();
+    // iOS peut rejeter play() tant que ses décodeurs matériels ne sont pas libres (le menu vient de jouer
+    // 6 vidéos) → un seul réessai différé si la vidéo est toujours en pause ET visible. Plus de figement.
+    if(p&&p.catch) p.catch(function(){ setTimeout(function(){ if(v.paused&&visible(v)){ v.muted=true; var q=v.play(); if(q&&q.catch) q.catch(function(){}); } },260); });
+  }
+  function pauseV(v){ if(!v.paused){ try{v.pause();}catch(e){} } }
+  window._ensureDemoVids=function(){ vids.forEach(function(v){ if(visible(v)) playV(v); }); };
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){ es.forEach(function(e){
+      var v=e.target;
+      if(e.isIntersecting){
+        if(v.id==='imagesIaVid' && v._left && v.readyState>=1){ try{v.currentTime=0;}catch(_){ } }  // rembobine seulement après une VRAIE sortie (pas la gigue de scroll)
+        v._left=false; playV(v);
+      } else { v._left=true; pauseV(v); }
+    }); }, { threshold: 0.01 });   // aligné sur visible() (~0) → pas de bande morte 0-25 %
+    vids.forEach(function(v){ io.observe(v); });
+  } else { vids.forEach(playV); }
+})();
+
+/* Vidéos features : seule la vidéo de l'onglet ACTIF joue, et seulement quand la section est visible */
+(function(){
+  var zone=document.getElementById('featMockZone');
+  if(!zone) return;
+  function playActive(inView){
+    document.querySelectorAll('.feat-vid video').forEach(function(v){
+      var mock=v.closest('.feat-mock');
+      var on=mock && mock.classList.contains('on');
+      if(on && inView){ v.muted=true; var p=v.play(); if(p) p.catch(function(){}); }
+      else v.pause();
+    });
+  }
+  window._playActiveFeatVid=function(){ playActive(true); };  // appelé au changement d'onglet (setFeat)
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(es){ es.forEach(function(e){ playActive(e.isIntersecting); }); }, { threshold: 0.35 }).observe(zone);
+  } else { playActive(true); }
+})();
+
+/* Fallback autoplay iOS/économie d'énergie : le mode « Économie d'énergie » de l'iPhone met en
+   PAUSE l'autoplay des vidéos muettes (erreur « paused to save power »). Un geste utilisateur
+   débloque la lecture → au 1er toucher (et quand l'onglet redevient visible) on relance les
+   vidéos visibles + celles du menu modèle. Les vidéos se chargent quand même (preload à la demande),
+   c'est seulement la LECTURE qui était bloquée. */
+(function(){
+  function kick(){
+    try{ if(window._ensureDemoVids) window._ensureDemoVids(); }catch(e){}
+    try{ if(window._playActiveFeatVid) window._playActiveFeatVid(); }catch(e){}
+    try{ var mp=document.getElementById('modelPicker'); if(mp && getComputedStyle(mp).display!=='none'){ mp.querySelectorAll('.mp-vid').forEach(function(v){ v.play().catch(function(){}); }); } }catch(e){}
+  }
+  document.addEventListener('pointerdown', kick, {passive:true});
+  document.addEventListener('touchstart', kick, {passive:true});
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) kick(); });
+  window.addEventListener('pageshow', kick);   // retour arrière / bfcache → relance les vidéos
+  window.addEventListener('orientationchange', function(){ setTimeout(kick,300); });
+})();
+
+/* Filet de récupération iOS : si un play() est rejeté (rare une fois l'attribut autoplay posé), on relance
+   la vidéo à canplay/loadeddata SI elle est visible — sans jamais toucher aux onglets features inactifs,
+   et SANS AUCUN v.load() (qui figerait une vidéo en lecture). */
+(function(){
+  function inView(v){ var r=v.getBoundingClientRect(); return r.top<innerHeight && r.bottom>0; }
+  function retry(){ var v=this, fv=v.closest('.feat-vid');
+    if(fv){ var m=v.closest('.feat-mock'); if(!(m && m.classList.contains('on'))) return; } // feat-vid : seulement l'onglet actif
+    if(v.paused && inView(v)){ v.muted=true; var p=v.play(); if(p) p.catch(function(){}); }
+  }
+  document.querySelectorAll('#genVid,#imagesIaVid,#veoVid,#claudeTuto video,.feat-vid video').forEach(function(v){
+    v.addEventListener('canplay', retry); v.addEventListener('loadeddata', retry);
+  });
+})();
+
+/* ══════════ Menu mobile (burger) ══════════ */
+function mobMenuOpen(){
+  document.getElementById('mobMenu').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function mobMenuClose(){
+  document.getElementById('mobMenu').classList.remove('open');
+  document.body.style.overflow='';
+}
+function mobMenuGo(id){
+  mobMenuClose();
+  var el=document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth'});
+}
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    var m=document.getElementById('mobMenu');
+    if(m && m.classList.contains('open')) mobMenuClose();
+  }
+});
+
+/* lance le scan reveal une fois tout le DOM construit */
+revealScan();
+
+</script>
+
+<!-- ══════════ Sélecteur de modèle (funnel : modèle → connexion → studio → paywall) ══════════ -->
+<style>
+#modelPicker .mp-card{border-radius:16px}
+#modelPicker .mp-card .mp-vis{border-radius:15px 15px 0 0}
+@media(max-width:767px){ #modelGrid{grid-template-columns:1fr 1fr!important} #modelPickerCard{padding:18px!important} #modelPicker h3{font-size:21px!important} #modelGrid .mp-card .faint{display:none} }
+</style>
+<div id="modelPicker" onclick="closeModelPicker()" style="position:fixed;inset:0;z-index:8000;background:rgba(6,6,9,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;flex-direction:column;align-items:center;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:20px">
+  <div id="modelPickerCard" onclick="event.stopPropagation()" style="width:min(920px,100%);max-width:100%;margin:auto;background:var(--surface);border:1px solid var(--border-2);border-radius:22px;padding:32px;box-shadow:0 30px 90px -20px rgba(0,0,0,.9);text-align:left;transform:scale(.97);transition:transform .2s">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <h3 class="display" style="font-size:26px;font-weight:800">Choose a model</h3>
+      <button onclick="closeModelPicker()" aria-label="Close" class="btn-quiet" style="display:grid;place-items:center;width:34px;height:34px;border-radius:10px;flex:0 0 auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <p class="muted" style="font-size:13.5px;margin-bottom:16px">Pick a tool and jump into the studio.</p>
+    <div id="modelGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var ICONS={
+    film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/>',
+    mask:'<path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/>',
+    image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+    bolt:'<path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/>',
+    sparkle:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/>',
+    waveform:'<path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/>'
+  };
+  var MODELS=[
+    ["express","Express","Video from text",200,"bolt","text → video","/assets/lp/express-lp.mp4"],
+    ["motion","Motion Control","Transfer a motion onto an image",265,"mask","video + image → video","/assets/lp/motion-control-lp.mp4"],
+    ["images","AI Image","4K visuals in 1 prompt",330,"image","text → image","/assets/lp/images-ia-lp.mp4"],
+    ["montage","AI Editing","Your audio turned into a viral video",18,"film","audio → video","/assets/lp/montage-ia-lp.mp4"],
+    ["gen","Generator","AI avatar + voice + captions",150,"sparkle","image + audio → video","/assets/lp/generateur-lp.mp4"],
+    ["omni","Omni","Transform any object in one click",30,"sparkle","video → video","/assets/lp/omni-lp.mp4"]
+  ];
+  var grid=document.getElementById('modelGrid');
+  MODELS.forEach(function(m){
+    var id=m[0],t=m[1],d=m[2],hue=m[3],ic=m[4],fmt=m[5],vid=m[6];
+    var b=document.createElement('button');
+    b.className='col card mp-card';
+    b.style.cssText='gap:0;align-items:stretch;padding:0;overflow:hidden;text-align:left;transition:border-color .15s,transform .15s;cursor:pointer;border:1px solid var(--border)';
+    b.innerHTML=
+      '<div class="mp-vis" style="position:relative;aspect-ratio:16 / 10;overflow:hidden;background:radial-gradient(120% 100% at 30% 0%, oklch(0.55 0.16 '+hue+'), oklch(0.16 0.04 '+hue+'))">'
+      +'<video class="mp-vid" src="'+vid+'" poster="'+vid.replace(/\.mp4$/,'.webp')+'" muted loop playsinline preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+      +'</div>'
+      +'<div class="col" style="gap:3px;padding:10px 12px">'
+        +'<div class="row" style="align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;font-size:14px">'+t+'</span><span class="mono" style="font-size:9px;font-weight:600;color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);padding:2px 7px;border-radius:6px;letter-spacing:.02em;white-space:nowrap">'+fmt+'</span></div>'
+        +'<span class="faint" style="font-size:11.5px;line-height:1.3">'+d+'</span>'
+      +'</div>';
+    b.addEventListener('click',function(){ try{localStorage.setItem('aa_tool',id);}catch(e){} window.location.href='/app/?start='+id; });
+    b.addEventListener('mouseenter',function(){ b.style.borderColor='var(--accent-line)'; b.style.transform='translateY(-2px)'; });
+    b.addEventListener('mouseleave',function(){ b.style.borderColor='var(--border)'; b.style.transform='none'; });
+    grid.appendChild(b);
+  });
+  var mp=document.getElementById('modelPicker'), card=document.getElementById('modelPickerCard');
+  var _preloaded=false;
+  // Précharge (et met vraiment en tampon) les vidéos du menu « Choose a model ». Elles sont
+  // display:none et NE jouent PAS → v.load() est sûr ici : il ne fige rien, contrairement au reset
+  // d'une vidéo visible en cours de lecture (c'est ce v.load()-là qui figeait les démos sur iOS).
+  window.preloadModelPicker=function(){ if(_preloaded) return; _preloaded=true; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.preload='auto'; v.load(); }catch(e){} }); };
+  // Axel 05/09 : le menu est PRIORITÉ Nº1. Beaucoup d'utilisateurs l'ouvrent SANS jamais scroller → on
+  // le met en tampon dès le 1er paint (double rAF, après le rendu du hero), au même rang que la 1ʳᵉ démo
+  // (Générateur). load() sur genVid seulement si elle est hors-champ et non lue (readyState<2) → aucun
+  // figement. Les 2 autres démos (Images IA, Express) sont déjà preload=auto et se bufferisent aussi.
+  // Audit 15/10 : le HERO démarre d'abord. Cache vide (TTL 10 min de GitHub Pages + nouvel ETag à chaque déploiement),
+  // ces 7 vidéos 1080p (~20 Mo) partaient au 1er paint EN MÊME TEMPS que le hero (3,4 Mo) et lui volaient la bande au
+  // moment critique → hero calé sur l'affiche. Le préchargement part donc au 1er 'playing' du hero, au plus tard 2 s après
+  // le 1er paint (borne) : toujours bien avant l'idle. Un clic précoce sur « Choose a model » précharge immédiatement
+  // (openModelPicker → preloadModelPicker) : rien ne change pour le menu. genVid : load() seulement HORS CHAMP et non lue.
+  var _bgDone=false;
+  function _bgPreload(){
+    if(_bgDone) return; _bgDone=true;
+    try{ window.preloadModelPicker(); }catch(e){}
+    try{ var g=document.getElementById('genVid'); if(g && g.paused && g.readyState<2){ var r=g.getBoundingClientRect(); if(r.top>=innerHeight || r.bottom<=0){ g.preload='auto'; g.load(); } } }catch(e){}
+  }
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    var h=document.getElementById('v2heroVid');
+    if(!h || (!h.paused && h.readyState>2)){ _bgPreload(); return; }
+    try{ h.addEventListener('playing', _bgPreload); }catch(e){}
+    setTimeout(_bgPreload, 2000);
+  }); });
+  // Verrou de scroll robuste (position:fixed sur body) : sur iOS Safari, body{overflow:hidden}
+  // ne bloque PAS le scroll du document → le fond glissait derrière le menu. On fige le body à
+  // sa position et on la restaure à la fermeture. Plus aucun « slider derrière ».
+  var _lockY=0;
+  window.openModelPicker=function(){
+    _lockY=window.scrollY||window.pageYOffset||0;
+    mp.style.display='flex'; mp.scrollTop=0; void card.offsetWidth; card.style.transform='scale(1)';
+    var b=document.body; b.style.position='fixed'; b.style.top=(-_lockY)+'px'; b.style.left='0'; b.style.right='0'; b.style.width='100%'; b.style.overflow='hidden';
+    window.preloadModelPicker();
+    grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.currentTime=0; v.play().catch(function(){}); }catch(e){} });
+  };
+  window.closeModelPicker=function(){
+    card.style.transform='scale(.97)';
+    var b=document.body; b.style.position=''; b.style.top=''; b.style.left=''; b.style.right=''; b.style.width=''; b.style.overflow='';
+    window.scrollTo(0,_lockY);
+    mp.style.display='none';
+    grid.querySelectorAll('.mp-vid').forEach(function(v){ try{v.pause();}catch(e){} });
+    // iOS libère ses décodeurs matériels avec un délai après la pause des 6 vidéos du menu → on ré-assère
+    // la lecture des démos (+ la vidéo d'onglet active) sur PLUSIEURS frames, pas un seul rAF : sinon une
+    // démo restée co-visible peut se figer juste après (play() rejeté avant libération, jamais réessayé).
+    function _revive(){ try{ window._ensureDemoVids&&window._ensureDemoVids(); }catch(e){} try{ window._playActiveFeatVid&&window._playActiveFeatVid(); }catch(e){} try{ window._ensureHeroVid&&window._ensureHeroVid(); }catch(e){} }
+    requestAnimationFrame(_revive); setTimeout(_revive,260); setTimeout(_revive,650);
+  };
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && mp.style.display!=='none') window.closeModelPicker(); });
+})();
+</script>
+
+<script>/* Header : pilule flottante dès qu'on descend (>40px) — LP claire et sombre. */
+(function(){function n(){try{document.body.classList.toggle('aa-nav-float',(window.scrollY||document.documentElement.scrollTop||0)>40);}catch(e){}}n();window.addEventListener('scroll',n,{passive:true});window.addEventListener('resize',n);})();</script>
+
+<script>
+/* Hero V2 animé : lecture FORCÉE + chien de garde (audit 15/10 — « 1 fois sur 5 la vidéo du header reste sur l'affiche »).
+   L'ancienne garde `if(!v.paused) return` était un CUL-DE-SAC : WebKit passe paused à false DÈS l'appel à play(), même si
+   l'image ne bouge jamais (téléchargement calé ou pendu pendant que 7 vidéos 1080p se mettent en tampon au 1er paint, erreur
+   réseau/média, retour bfcache). Toutes les relances (IO, canplay, visibilitychange, pageshow, gestes)
+   repartaient alors à vide, et la relance périodique abandonnait après 8 s. On juge maintenant sur la PROGRESSION RÉELLE
+   (currentTime qui avance), avec un chien de garde BORNÉ (25 s par épisode, 6 déblocages max, il s'arrête seul après ~2 s
+   de vraie lecture) réarmé par les vrais déclencheurs (geste, retour d'onglet, bfcache, ré-entrée à l'écran, fermeture
+   du menu). Règle LP conservée : JAMAIS v.load() sur la vidéo visible. Déblocage = play(), pause()+play(), micro-seek
+   tant qu'aucune image n'est décodée ; et seulement si l'élément est MORT (erreur média, aucune source, chargement pendu), un clone neuf
+   est posé SOUS l'affiche et ne la remplace qu'à son 1er 'playing' (aucun flash). Pas de lecture forcée hors champ, ni
+   onglet caché, ni menu « Choose a model » ouvert (iOS : on ne dispute pas les décodeurs à ses 6 vidéos).
+   Vérif 15/10 : (1) chargement mort SANS erreur (connexion pendue, décodeur iOS saturé : toujours aucune image après
+   3 déblocages et plus un octet) → même remplacement par un clone ; (2) les événements média seuls (pause, waiting,
+   suspend…) ne relancent que 3 épisodes d'affilée sans vraie lecture (anti-boucle pause/play si le système repause) ;
+   (3) retour du réseau ('online') = nouveau budget de remplacement. */
+(function(){
+  var v=document.getElementById('v2heroVid'); if(!v) return;
+  var box=v.parentNode, SRC=v.getAttribute('src')||'', mp=document.getElementById('modelPicker');
+  var inView=true, lastCT=-1, lastProg=0, lastNet=0, lastTry=0, t0=0, until=0, iv=0, fixes=0, okTicks=0, swaps=0, autoEp=0;
+  function prep(el){ el.muted=true; el.defaultMuted=true; el.playsInline=true; try{ el.setAttribute('muted',''); el.setAttribute('playsinline',''); el.setAttribute('webkit-playsinline',''); }catch(_){} }
+  function pickerOpen(){ return !!(mp && mp.style.display && mp.style.display!=='none'); }
+  function canRun(){ return !document.hidden && inView && !pickerOpen(); }
+  function healthy(){ return !v.paused && v.readyState>2 && (Date.now()-lastProg)<1500; }   // l'image bouge VRAIMENT
+  function tryPlay(force){   // play() rejeté (décodeurs pris, économie d'énergie) = repris par le chien de garde
+    var now=Date.now(); if(!force && now-lastTry<600) return; lastTry=now;
+    v.muted=true; try{ var p=v.play(); if(p&&p.catch) p.catch(function(e){ if(e&&e.name==='NotAllowedError') enImage(); }); }catch(_){}
+  }
+  // Économie d'énergie iOS (Axel 23/10) : Safari refuse TOUTE lecture automatique (play() → NotAllowedError) et montrait son
+  // bouton play (masqué en CSS). La même vidéo passe alors dans une <img> par-dessus : WebKit anime un MP4 en image comme un
+  // GIF, hors règle de lecture automatique. Ailleurs (Chrome…) l'image ne se charge pas et rien ne change. Dès que la vraie
+  // vidéo joue (1er toucher), l'image est retirée.
+  var img=null;
+  function enImage(){
+    var ua=navigator.userAgent;
+    if(img || !/AppleWebKit/.test(ua) || /Chrome\/|Chromium|Android/.test(ua)) return;
+    img=new Image(); img.className='v2hero-vid v2hero-img'; img.alt=''; img.setAttribute('aria-hidden','true');
+    img.onload=function(){ if(img && !img.parentNode && !healthy() && v.parentNode) v.parentNode.insertBefore(img, v.nextSibling); };
+    img.onerror=function(){ img=null; };
+    img.src=SRC;
+  }
+  function sansImage(){ if(img && img.parentNode) img.parentNode.removeChild(img); }
+  function stop(){ if(iv){ clearInterval(iv); iv=0; } }
+  function bind(el){
+    function on(ev,fn){ el.addEventListener(ev,function(){ if(el===v) fn(); }); }
+    on('timeupdate',function(){ if(el.currentTime!==lastCT){ lastCT=el.currentTime; lastProg=Date.now(); if(!el.paused) sansImage(); } });
+    on('progress',function(){ lastNet=Date.now(); });
+    ['loadedmetadata','loadeddata','canplay','pause','waiting','stalled','suspend','emptied','error'].forEach(function(ev){ on(ev,function(){ arm(false); }); });
+  }
+  function swap(){   // dernier recours, élément MORT seulement (erreur, aucune source, chargement pendu) : clone neuf SOUS l'ancien (même boîte absolue), aucun load()
+    if(swaps>=2){ stop(); return; }
+    swaps++;
+    var old=v, n=old.cloneNode(false);
+    n.removeAttribute('id');
+    n.setAttribute('src', SRC+(SRC.indexOf('?')<0?'?':'&')+'r='+Date.now());   // contourne une entrée de cache corrompue
+    prep(n); bind(n);
+    n.addEventListener('playing',function(){
+      if(n!==v || !n.parentNode) return;   // clone déjà remplacé/retiré : ne touche à rien
+      [].slice.call(box.querySelectorAll('video')).forEach(function(x){ if(x!==n && x.parentNode) x.parentNode.removeChild(x); });
+      n.id='v2heroVid';
+    });
+    box.insertBefore(n, old);   // ordre DOM : l'ancien (affiche) reste DEVANT tant que le clone ne joue pas
+    if(old.id!=='v2heroVid' && old.parentNode) old.parentNode.removeChild(old);   // un clone mort (sous l'original, invisible) ne s'empile pas
+    v=n; lastCT=-1; lastProg=0; fixes=0; t0=Date.now(); until=Math.max(until,t0+25000); tryPlay(true);   // le clone a son propre budget
+  }
+  function tick(){
+    var now=Date.now();
+    if(now>until){ stop(); return; }
+    if(!canRun()){ okTicks=0; return; }
+    if(healthy()){ if(++okTicks>=3){ autoEp=0; stop(); } return; }   // ~2 s de vraie lecture → on se retire (batterie)
+    okTicks=0;
+    if(v.error || v.networkState===3){ swap(); return; }
+    if(v.paused){ tryPlay(false); return; }
+    // paused=false mais l'image ne bouge pas : on laisse 2,5 s de grâce, et plus tant que des octets arrivent encore
+    if(now-Math.max(lastProg,t0)<2500) return;
+    if(v.readyState<3 && now-Math.max(lastNet,t0)<2500) return;
+    if(v.readyState<2 && fixes>=3){ swap(); return; }   // toujours AUCUNE image (= l'affiche) après 3 déblocages, plus un octet : chargement mort sans erreur
+    if(fixes>=6) return;
+    fixes++; t0=now;
+    if(v.readyState<2){ try{ v.currentTime=(v.currentTime||0)+0.001; }catch(_){} }   // aucune image décodée → micro-seek qui relance le chargement
+    try{ v.pause(); }catch(_){}
+    tryPlay(true);
+  }
+  function arm(reset){   // reset = vrai déclencheur (geste, onglet, bfcache, IO, menu fermé) ; sinon événement média
+    if(!canRun()) return;
+    if(reset) autoEp=0;
+    else if(!iv){ if(autoEp>=3) return; autoEp++; }   // événement média seul : 3 épisodes d'affilée max sans vraie lecture (anti-boucle)
+    if(v.paused) tryPlay(reset);   // synchrone : dans un geste, c'est CE play() qui lève le blocage « économie d'énergie » iOS
+    if(!iv){ t0=Date.now(); until=t0+25000; fixes=0; okTicks=0; iv=setInterval(tick,700); }   // si ça joue déjà : 3 tours (~2 s) et arrêt
+    else if(reset){ until=Date.now()+25000; if(fixes>=6) fixes=3; }   // prolonge sans remettre la grâce à zéro (les gestes de scroll iOS ne repoussent pas le déblocage)
+  }
+  prep(v); bind(v);
+  window._ensureHeroVid=function(){ arm(true); };   // appelé à la fermeture du menu « Choose a model »
+  ['touchstart','touchend','pointerdown','click','keydown'].forEach(function(ev){ window.addEventListener(ev,function(){ arm(true); },{passive:true,capture:true}); });
+  window.addEventListener('scroll',function(){ if(v.paused) arm(false); },{passive:true});
+  try{ new IntersectionObserver(function(es){ inView=es[es.length-1].isIntersecting; if(inView) arm(true); },{threshold:0.01}).observe(box); }catch(_){}
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) arm(true); });
+  window.addEventListener('pageshow',function(){ arm(true); });   // retour arrière Safari (bfcache) : la vidéo revient souvent figée
+  window.addEventListener('online',function(){ swaps=0; arm(true); });   // réseau revenu (coupure, tunnel 4G) : nouveau budget de remplacement
+  arm(true);
+})();
+/* Page V2 autonome (accès manuel via /v2). PAS de redirection. On tague juste les sessions V2 dans Clarity pour pouvoir comparer. */
+/* Audit 04/10 (SITE-03) : Clarity est chargé par /app/consent.js après le rendu (load + idle), et jamais si le visiteur l'a
+   refusé → plus de sondage infini toutes les 600 ms ; on tague au chargement de Clarity (événement aa-clarity) ou tout de
+   suite s'il est déjà là. */
+(function(){ var done=false; function tag(){ if(done) return; try{ if(window.clarity){ window.clarity('set','lp_variant','v2'); done=true; } }catch(_){} } tag(); window.addEventListener('aa-clarity', tag); })();
+/* NB : le header pilule (aa-nav-float) est géré par index.html (hérité) ; le footer = accordéons natifs <details>. */
+</script>
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.whop.com https://pay.google.com https://applepay.cdn-apple.com https://js.braintreegateway.com https://www.paypal.com https://c.paypal.com; object-src 'none'; base-uri 'self'">
+<title>Checkout — AvatarAds</title>
+<link rel="icon" href="/assets/avatarads-logo-96.png">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Page de paiement façon Qoves (Axel 23/10) : maquette Claude Design « checkout-handoff » reproduite au pixel près ;
+     seul le bloc de paiement est le module Whop Elements (ses champs carte, son bouton et ses mentions vivent dans son cadre). -->
+<style>
+:root{--bg:#fff;--line:#E8EAED;--text:#14171A;--text-2:#5B626B;--mono:#8A9BA6;--field:#F6F7F8;--accent:#FF5A1F;--accent-2:#FF8042;--dark:#1C252B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hanken Grotesk",system-ui,sans-serif;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+a{color:var(--text);text-decoration:underline}a:hover{color:var(--accent)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;color:inherit}
+.top{display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 28px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:5}
+.back{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text-2)}
+.logo{width:30px;height:30px;border-radius:9px;display:block}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:calc(100vh - 64px)}
+.col-l{padding:56px 28px 80px;display:flex;justify-content:center;border-right:1px solid var(--line);min-width:0}
+.col-r{padding:56px 28px;display:flex;justify-content:center;background:#fff;min-width:0}
+.inner{width:100%;max-width:520px;min-width:0}
+.sec{margin-bottom:36px}
+.addon{display:flex;align-items:center;gap:16px;padding:20px 22px;border:1px solid var(--line);border-radius:16px;margin-bottom:12px;cursor:pointer;transition:.15s}
+.addon.on{border-color:var(--accent);background:#FFF7F3}
+.addon-t{font-size:17px;font-weight:500}
+.addon-d{font-size:14.5px;color:var(--text-2);margin-top:4px;line-height:1.4}
+.pill{font-size:13px;color:var(--text-2);background:#F1F3F5;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.price{font-size:19px;font-weight:600;min-width:58px;text-align:right}
+.box{width:22px;height:22px;border-radius:6px;border:1.5px solid #C5CBD0;flex:0 0 auto;display:grid;place-items:center}
+.box.on{background:var(--accent);border-color:var(--accent)}
+.sep{display:flex;align-items:center;gap:14px;color:var(--text-2);font-size:14px;margin:8px 0 22px}.sep::before,.sep::after{content:"";flex:1;border-top:1px solid var(--line)}
+.trust{text-align:center;color:var(--text-2);font-size:14px;margin-top:22px}
+.stars{color:#F5A524;letter-spacing:2px;font-size:16px}
+.plan{border-radius:18px;aspect-ratio:1.75/1;min-height:190px;max-width:440px;margin:0 auto;position:relative;overflow:hidden;padding:26px 28px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;
+ background:radial-gradient(55% 75% at 72% 35%,rgba(120,120,128,.55),transparent 70%),radial-gradient(60% 80% at 18% 85%,rgba(70,70,76,.7),transparent 72%),radial-gradient(40% 50% at 92% 92%,rgba(255,110,50,.22),transparent 70%),linear-gradient(135deg,#1E1E22,#0B0B0D 65%,#151518);
+ box-shadow:0 26px 50px -26px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12)}
+.plan::before{content:"";position:absolute;inset:0;background:radial-gradient(70% 60% at 30% 20%,rgba(255,255,255,.07),transparent 70%);pointer-events:none}
+.plan-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
+.upsell{width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;margin:14px 0 18px;text-align:left}
+.upsell{background:#fff;border:1.5px solid var(--line);cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.upsell.on{background:#FFF7F3;border-color:#FFB894}
+.sw{width:34px;height:20px;border-radius:999px;background:#D5D9DE;flex:0 0 auto;position:relative;transition:.2s}
+.sw span{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.2s}
+.sw.on{background:var(--accent)}.sw.on span{left:16px}
+.upsell:hover{transform:translateY(-1px);box-shadow:0 10px 24px -14px rgba(255,90,31,.6)}
+.up-ic{width:26px;height:26px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(135deg,#FF8042,#FF5A1F)}
+.up-t{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.35}.up-t b{font-size:13px;font-weight:700}.up-t small{font-size:11.5px;color:var(--text-2)}
+.plan::after{content:"";position:absolute;inset:0;backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);opacity:.25;pointer-events:none}
+.plan-t{font-family:"Hanken Grotesk";font-size:24px;font-weight:400;line-height:1.15;position:relative;z-index:1;letter-spacing:-.01em}
+.plan-t span{opacity:.62}
+.plan-b{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;position:relative;z-index:1;gap:8px 16px}
+.plan-p{font-family:"Hanken Grotesk";font-size:clamp(34px,3.4vw,44px);font-weight:400;letter-spacing:-.02em;line-height:1;white-space:nowrap}
+.plan-p small{font-size:15px;font-weight:400;opacity:.8;letter-spacing:0}.plan-p small.uniq{margin-left:8px}
+.plan-n{font-size:13.5px;opacity:.85}
+.sum{margin-top:44px;padding-top:30px;border-top:1px solid var(--line)}
+.sum-row{display:flex;justify-content:space-between;font-size:16px;padding:12px 0}
+.sum-row span:first-child{color:var(--text-2)}
+.due{display:flex;justify-content:space-between;font-family:"Bricolage Grotesque";font-size:26px;font-weight:600;padding-top:20px;margin-top:10px;border-top:1px solid var(--line)}
+/* petits téléphones (375 px) : le libellé touchait le montant dans la maquette */
+.due{gap:12px}@media(max-width:400px){.due{font-size:23px}}
+.mob-sum{display:none}
+.promo-link{font-size:15px;color:var(--text-2);text-decoration:underline;text-underline-offset:3px;padding:12px 0}
+.promo-link:hover{color:var(--text)}
+.promo-box{display:flex;gap:10px;padding:8px 0}
+.promo-box input{flex:1;min-width:0;height:48px;border-radius:999px;border:1px solid var(--line);background:var(--field);padding:0 18px;font-size:16px;outline:none}
+.promo-box input:focus{border-color:#C9CED4}
+.promo-box button{height:48px;padding:0 22px;border-radius:999px;background:var(--dark);color:#fff;font-size:15px;font-weight:500;white-space:nowrap}
+.promo-box button:disabled{opacity:.6;cursor:default}
+.promo-err{font-size:13.5px;color:#C2410C;line-height:1.45;padding:2px 0 8px}
+.promo-on span:last-child{color:#15803D}
+.promo-x{margin-left:10px;font-size:13px;color:var(--text-2);text-decoration:underline;text-underline-offset:2px}
+/* ── ajouts du branchement Whop (hors maquette) ── */
+[hidden]{display:none!important}
+/* Apple Pay : replié tant que Whop n'a pas rendu de portefeuille (pas « hidden » : un bloc masqué mesure 0 et ne s'ouvrirait jamais) */
+.whop{position:relative;min-height:420px}
+.whop:has(> .pack-login){min-height:0}   /* message à la place du module : pas de place réservée (Axel 24/10) */
+.whop-wait{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-2);font-size:14px;text-align:center;padding:0 24px}
+.whop-wait i{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.whop-mount{position:relative;z-index:1}
+/* paiement parti (Axel 24/10 : « paiement en cours à la place du bouton jaune / du bouton Apple Pay ») : le bouton du module
+   est dans le cadre sécurisé de Whop, intouchable → NOTRE bouton « Paiement en cours » posé pile sur le sien, module laissé
+   net (sans voile ni flou, Axel 24/10). Carte : jaune, calé au-dessus des conditions Whop (--pb), collant en bas de l'écran
+   si le bouton sort de la vue ; Apple Pay : noir, sur le bouton Apple Pay en haut du module (6 px du haut, 52 px de haut,
+   17 px des bords, mesuré sur les captures iPhone d'Axel du 24/10). Seul le bouton reçoit les clics. */
+.pay-veil{position:absolute;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px var(--pb,140px)}
+.pay-veil.ap{justify-content:flex-start;padding:6px 17px 0}
+.pay-run{position:sticky;bottom:calc(20px + env(safe-area-inset-bottom));pointer-events:auto}
+.pay-veil.ap .pay-run{position:static}
+/* roue + texte centrés ensemble dans la case (Axel 24/10, version B choisie parmi 4) */
+.pay-run b{width:100%;height:58px;border-radius:999px;background:#FFC107;color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);
+  display:flex;align-items:center;justify-content:center;gap:12px;font-size:18px;font-weight:500;white-space:nowrap}
+.pay-veil.ap .pay-run b{height:52px;border-radius:8px;background:#000;color:#fff;box-shadow:none;font-size:17px}
+.pay-run i{flex:none;width:19px;height:19px;border-radius:50%;border:2.4px solid rgba(26,19,0,.22);border-top-color:#1A1300;animation:spin .8s linear infinite}
+.pay-veil.ap .pay-run i{border-color:rgba(255,255,255,.3);border-top-color:#fff}
+/* iPhone : un cran plus petit pour que la roue garde de l'air au bord de la case */
+@media(max-width:400px){.pay-run b,.pay-veil.ap .pay-run b{font-size:17px;gap:10px}.pay-run i{width:18px;height:18px}}
+@media(max-width:360px){.pay-run b,.pay-veil.ap .pay-run b{font-size:14px;gap:8px}.pay-run i{width:16px;height:16px}}
+.wait-step{font-size:13px;color:var(--text-2);min-height:1.2em}
+/* « Réduire les animations » (iPhone d'Axel) : la roue tourne quand même, et le texte des étapes avance */
+@media (prefers-reduced-motion:reduce){.pay-run i,.whop-wait i{animation:spin .8s linear infinite!important}.pay-step,.wait-step{animation:pulse 1.6s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.55}}
+.whop-wait.fin{position:fixed;inset:0;z-index:60;background:rgba(255,255,255,.97);font-size:15.5px}
+.whop-wait.apres{z-index:3;background:#fff;font-size:15.5px}   /* après le défi bancaire : Whop traite, rien d'animé chez lui */   /* fin du module : attente de la confirmation serveur sur TOUT l'écran (Axel 24/10 : « petit freeze ») */
+.legal{font-size:13.5px;color:var(--text-2);text-align:center;line-height:1.55;margin:-8px 0 0}
+.step-p{font-size:15px;color:var(--text-2);line-height:1.55;margin-bottom:22px}
+.pack-login{padding:6px 0 4px}.pack-login .cta{margin-top:18px}
+.cta{width:100%;height:58px;border-radius:999px;background:linear-gradient(180deg,#FFD43B,#FFC107);color:#1A1300;box-shadow:0 14px 30px -14px rgba(255,180,0,.75);display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-size:18px;font-weight:500;margin-top:8px;transition:.15s;text-decoration:none}
+.cta:hover{filter:brightness(1.05);color:#1A1300}
+.cta .ar{display:flex;align-items:center;gap:18px}.cta .ar::before{content:"";width:1px;height:24px;background:rgba(26,19,0,.25)}
+.cta .ar svg{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.cta:hover .ar svg{animation:payNudge .9s cubic-bezier(.2,.8,.2,1) infinite}
+@keyframes payNudge{0%,100%{transform:translateX(0)}45%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:reduce){.cta:hover .ar svg{animation:none;transform:translateX(4px)}}
+@media(max-width:1100px){
+ .wrap{grid-template-columns:1fr}.col-r{display:none}.col-l{border-right:none;padding:28px 20px 60px}
+ .mob-sum{display:block}.plan-p{font-size:44px}.plan-t{font-size:26px}
+ .addon{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"pill box" "txt txt" "price price";gap:8px 12px;align-items:center}
+ .addon > div:first-child{grid-area:txt}
+ .addon .pill{grid-area:pill;justify-self:start}
+ .addon .price{grid-area:price;text-align:left;min-width:0}
+ .addon .box{grid-area:box}
+ .mob-sum .sum{margin-top:0;margin-bottom:36px}
+}
+</style>
+<link rel="prefetch" href="/en/paiement-confirme.html">
+</head>
+<body>
+<div class="top"><button class="back" id="back" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>Back</button><img class="logo" src="/assets/avatarads-logo.png" alt="AvatarAds"></div>
+<div class="wrap">
+ <div class="col-l"><div class="inner">
+  <div class="mob-sum sec" id="mPlan"></div>
+  <div id="flow">
+   <div class="sec" id="opts"></div>
+   <!-- téléphone : le récapitulatif passe AVANT le paiement (le bouton de paiement est dans le module Whop) -->
+   <div class="mob-sum" id="mSum"></div>
+   <div class="sec"><div class="whop" id="co"></div></div>
+  </div>
+  <div id="reassure">
+   <div class="sep" style="margin-top:26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg> Your information is encrypted and secure</div>
+   <div class="trust">Rated 4.9/5 by +50K creators <span class="stars">★★★★★</span></div>
+  </div>
+ </div></div>
+ <div class="col-r"><div class="inner" id="rPlan"></div></div>
+</div>
+<script>
+/* ── Données (alignées sur la page Tarifs et le paywall de l'app) ─────────────────────────────────────────────────── */
+const PLANS={
+ starter:{n:"Starter",m:29.99,y:249.99,d:"Get started without breaking the bank.",pid:{m:"plan_YKcdyPT6RRQSi",y:"plan_cNydK89X39PLE"},pack:"S"},
+ pro:{n:"Pro",m:49.99,y:449.99,d:"For creators who want to scale.",pid:{m:"plan_g4BVtDmk6hgjQ",y:"plan_P7WIywSa6YrxT"},pack:"M"},
+ elite:{n:"Elite",m:89.99,y:799.99,d:"The max for the most ambitious.",pid:{m:"plan_w8lh5zpEJFOQR",y:"plan_OvRwm5CW3xcNh"},pack:"L"},
+ elite60:{n:"Elite 60",m:158.99,y:1439.88,d:"Twice the credits: 2,200 a month.",pid:{m:"plan_pZmWh1dVdmIWT",y:"plan_uWTkJDl1GvxNR"},pack:"L"},
+ elite90:{n:"Elite 90",m:224.99,y:1895.88,d:"Three times the credits: 3,300 a month.",pid:{m:"plan_63PGeG3MesbJR",y:"plan_x2kDWR6ur2W5E"},pack:"L"}};
+const NEXT={starter:"pro",pro:"elite",elite:"elite60",elite60:"elite90"};   // Axel 23/10 : Elite → Elite 60 → Elite 90
+// Packs à prix réduit proposés UNIQUEMENT ici (Axel 23/10), payés dans le MÊME paiement que l'abonnement : Whop refuse
+// abonnement + achat ponctuel dans un panier, donc chaque palier a une VARIANTE Whop dont le 1er paiement inclut le pack
+// (initial_price = prix du pack), puis le prix normal. VAR[palier][pack] = {m: mensuel, y: annuel}. Le webhook verse les
+// crédits du pack une seule fois, à l'activation (whop-webhook, VARIANTES).
+const PACKS={S:{n:"Credit pack S",c:120,p:14.99,was:19.99},M:{n:"Credit pack M",c:300,p:27.99,was:34.99},L:{n:"Credit pack L",c:600,p:59.99,was:74.99}};
+const VAR={
+ starter:{S:{m:"plan_blQtyUh90R2wP",y:"plan_NcMairMUEz3ST"}},
+ pro:{S:{m:"plan_hE8bkwTPoTkrj",y:"plan_iATzKyUuANyfI"},M:{m:"plan_0iHH0kY3uoJpo",y:"plan_QF7HXCR81yXRy"}},
+ elite:{M:{m:"plan_wn7ZntgBemFL0",y:"plan_5RTUZOJ3sGCXd"},L:{m:"plan_i7ubxuFfVHQ5k",y:"plan_QaAyO2Msc11Xk"}},
+ elite60:{L:{m:"plan_th1REeLIfRP50",y:"plan_tAKWwP8U88eTT"}},
+ elite90:{L:{m:"plan_xN9BOWCvFUWXp",y:"plan_xzr5jL4TCAlWf"}}};
+// Rendu prioritaire : abonnement Whop à part (webhook : secret WHOP_PRIO_PLANS), payé AVEC l'abonnement dans le même
+// paiement. Whop exige, pour tous les articles d'un paiement, la même période (→ un plan mensuel 5 € et un annuel 60 €) et le
+// même réglage 3D Secure (Elite 60 / 90 annuels l'imposent → leur propre plan annuel, y3ds).
+const PRIO={m:{p:5,plan:"plan_5mcgIdN0ZTlCG"},y:{p:60,plan:"plan_2KlnrycFeoXMT"},y3ds:{p:60,plan:"plan_oPv9MNE8701Tt"}};
+// Code promo saisi dans NOTRE récapitulatif (Axel 23/10) : Whop chiffre le panier remisé (fonction whop-quote → devis Whop),
+// puis le code est passé au module de paiement (promoCode) — Whop reste seul juge du prix encaissé.
+const QUOTE_URL="https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/whop-quote";
+// Pack seul (?pack=S|M|L, depuis l'app « Recharger des crédits ») : paiement unique au prix normal, sans options
+const PACK_SEUL={S:{n:"Credit pack S",c:120,p:19.99,plan:"plan_hR0u4VHoeszbu"},M:{n:"Credit pack M",c:300,p:34.99,plan:"plan_GLoKHMqZtNbLK"},L:{n:"Credit pack L",c:600,p:74.99,plan:"plan_iRh99E5F2g4XU"}};
+const qs=new URLSearchParams(location.search);
+// clés PROPRES seulement (audit 23/10, constat 47 : ?plan=constructor lisait Object.prototype et cassait la page)
+const aCle=(o,k)=>k!=null&&Object.prototype.hasOwnProperty.call(o,k);
+const base0=aCle(PLANS,qs.get("plan"))?qs.get("plan"):"pro";
+const pack0=String(qs.get("pack")||"").toUpperCase();
+// step : 1 = choix et paiement, 2 = paiement terminé (panier figé) ; promoPending : code en cours de devis ; basOk : palier
+// inférieur accepté après l'avertissement
+const S={plan:base0,base:base0,bill:qs.get("bill")==="y"?"y":"m",add:{},step:1,promo:null,promoOpen:false,promoBusy:false,promoErr:"",promoDraft:"",
+  promoPending:"",basOk:"",packSeul:aCle(PACK_SEUL,pack0)?pack0:""};
+// plan Whop payé : la variante « palier + pack » si le pack est coché, sinon l'abonnement seul
+function planWhop(){if(S.packSeul) return PACK_SEUL[S.packSeul].plan; const v=S.add.credits&&(VAR[S.plan]||{})[PLANS[S.base].pack];return v?v[S.bill]:PLANS[S.plan].pid[S.bill]}
+function prioWhop(){return S.packSeul||!S.add.prio?"":(S.bill==="y"&&(S.plan==="elite60"||S.plan==="elite90")?PRIO.y3ds:PRIO[S.bill]).plan}
+const panier=()=>[planWhop(),prioWhop()].filter(Boolean);
+const eur=n=>{const v=Math.round(n*100)/100;return "€"+(v%1?v.toFixed(2):String(v))};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function ADDONS_FOR(){
+  if(S.packSeul) return [];
+  const list=[], nx=S.plan!==S.base?S.plan:NEXT[S.base];
+  if(nx){const cur=PLANS[S.base],up=PLANS[nx],diff=S.bill==="y"?up.y-cur.y:up.m-cur.m;
+    list.push({id:"upgrade",t:"Upgrade to "+up.n,d:up.d,p:diff,unit:S.bill==="y"?" / year":" / month",up:nx});}
+  const pk=PACKS[PLANS[S.base].pack];
+  if((VAR[S.plan]||{})[PLANS[S.base].pack]) list.push({id:"credits",t:pk.n,d:"+"+pk.c+" credits, no expiry.",p:pk.p,was:pk.was});
+  list.push({id:"prio",t:"Priority rendering",d:"Your videos jump to the front of the queue.",p:PRIO[S.bill].p,unit:S.bill==="y"?" / year":" / month"});
+  return list;
+}
+function total(){if(S.packSeul) return PACK_SEUL[S.packSeul].p; const p=PLANS[S.plan];let t=S.bill==="y"?p.y:p.m;ADDONS_FOR().forEach(a=>{if(S.add[a.id]&&!a.up)t+=a.p});return t}
+// Axel 23/10 : l'économie réelle de chaque plan (« 3 mois offerts » quand l'année vaut 9 mois, sinon « −X % »)
+function yearDeal(p){const mois=p.y/p.m;return Math.abs(mois-9)<=0.15?"3 months free":"−"+Math.round((1-p.y/(p.m*12))*100)+"%"}
+function planCard(){
+  if(S.packSeul){const k=PACK_SEUL[S.packSeul];return `
+ <div class="plan"><div class="plan-top"><div class="plan-t">AvatarAds<br><span>${k.n}</span></div></div>
+ <div class="plan-b"><div class="plan-p">${eur(k.p)}<small class="uniq">one-time payment</small></div><div class="plan-n">+${k.c} credits added to your account, no expiry.</div></div></div>`}
+  const p=PLANS[S.plan],price=S.bill==="y"?p.y:p.m,y=S.bill==="y";return `
+ <div class="plan"><div class="plan-top"><div class="plan-t">AvatarAds<br><span>${p.n}</span></div></div>
+ <div class="plan-b"><div class="plan-p">${eur(price)}<small>/ ${y?"year":"month"}</small></div><div class="plan-n">No hidden fees. Cancel anytime.</div></div></div>
+ <button class="upsell ${y?"on":""}" type="button" data-act="bill">
+  <span class="up-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4L13.4 20.6a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><path d="M9 9l6 6M15 9.5h.01M9 14.5h.01"/></svg></span>
+  <span class="up-t"><b>${y?`You save ${eur(p.m*12-p.y)} this year`:`Save ${eur(p.m*12-p.y)} by paying yearly`}</b><small>${y?`<s>${eur(p.m*12)}</s> → ${eur(p.y)} / year · ${yearDeal(p)}`:`That’s ${eur(p.y/12)} / month instead of ${eur(p.m)}`}</small></span>
+  <span class="sw ${y?"on":""}"><span></span></span>
+ </button>`}
+function promoHTML(){
+  if(S.promo) return `<div class="sum-row promo-on"><span>Code ${esc(S.promo.code)}<button type="button" class="promo-x" data-act="promo-del">Remove</button></span><span>−${eur(S.promo.discount)}</span></div>`;
+  if(!S.promoOpen) return `<button type="button" class="promo-link" data-act="promo-open">Add a promo code</button>`;
+  return `<form class="promo-box" data-promo><input name="code" maxlength="40" placeholder="Promo code" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(S.promoDraft)}"><button type="submit"${S.promoBusy?" disabled":""}>${S.promoBusy?"Checking…":"Apply"}</button></form>${S.promoErr?`<div class="promo-err">${esc(S.promoErr)}</div>`:""}`;
+}
+function summary(){const p=PLANS[S.plan];return `<div class="sum">
+ ${S.packSeul?`<div class="sum-row"><span>${PACK_SEUL[S.packSeul].n}</span><span>${eur(PACK_SEUL[S.packSeul].p)}</span></div>`
+   :`<div class="sum-row"><span>AvatarAds ${p.n}</span><span>${eur(S.bill==="y"?p.y:p.m)} / ${S.bill==="y"?"year":"month"}</span></div>`}
+ ${ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>`<div class="sum-row"><span>${a.t}</span><span>${eur(a.p)}${a.unit||""}</span></div>`).join("")}
+ ${promoHTML()}
+ <div class="due"><span>Due today</span><span>${eur(S.promo?S.promo.total:total())}</span></div></div>`}
+const chk='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+function optsHTML(){return ADDONS_FOR().map(a=>`<div class="addon ${S.add[a.id]?"on":""}" data-act="opt" data-id="${a.id}" role="checkbox" aria-checked="${!!S.add[a.id]}" tabindex="0">
+    <div style="flex:1;min-width:0"><div class="addon-t">${a.t}</div><div class="addon-d">${a.d}</div></div>
+    <span class="pill">${a.up?"Upgrade":a.unit?(S.bill==="y"?"Yearly":"Monthly"):"One-time"}</span><span class="price">${a.was?`<s style="font-size:13px;font-weight:500;color:var(--text-2);margin-right:6px">${eur(a.was)}</s>`:""}${a.up?"+":""}${eur(a.p)}<small style="font-size:12px;font-weight:500;color:var(--text-2)">${a.unit||""}</small></span><span class="box ${S.add[a.id]?"on":""}">${S.add[a.id]?chk:""}</span></div>`).join("")}
+// rendu par blocs : le module Whop n'est JAMAIS reconstruit par un clic qui ne change pas ce qu'on paie (README, piège 2)
+function r(){
+  $("rPlan").innerHTML=planCard()+summary();
+  $("mPlan").innerHTML=planCard();
+  $("mSum").innerHTML=summary();
+  $("opts").innerHTML=optsHTML(); $("opts").hidden=!!S.packSeul;
+}
+// ce que paie le paiement : le plan (mensuel ou annuel, avec ou sans pack) + le rendu prioritaire, et le code promo
+function cartKey(){return [...panier(),S.promo?S.promo.code:""].join("|")}
+// devis Whop du panier avec ce code ; succès → code appliqué et module remonté avec lui, échec → message sous le champ.
+// Audit 23/10 (constat 29) : pendant le devis, l'ancien module (ancien panier, ancien code) n'est plus payable, et un panier
+// changé pendant le devis relance un devis avec le MÊME code (promoPending) au lieu de le perdre et de bloquer le champ
+let _devis=0;
+async function appliquerPromo(code){
+  code=String(code||"").trim(); S.promoDraft=code; S.promoErr="";
+  if(!/^[A-Za-z0-9_-]{1,40}$/.test(code)){S.promoErr="Enter a valid promo code.";r();return}
+  const n=++_devis;
+  S.promoBusy=true; S.promoOpen=true; S.promo=null; S.promoPending=code; r();
+  suspendre("Updating the total…");
+  let res=null;
+  try{ const q=await fetch(QUOTE_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plans:panier(),promo:code})}); res=await q.json(); }catch(_){}
+  if(n!==_devis||S.step!==1) return;   // un devis plus récent (panier changé pendant celui-ci) fait foi
+  S.promoBusy=false; S.promoPending="";
+  if(res&&res.ok){S.promo={code:res.code,discount:res.discount,total:res.total}; S.promoOpen=false; S.promoDraft="";}
+  else S.promoErr=(res&&res.message)||"Couldn’t check it right now, try again.";
+  r(); mountWhop();
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b||S.step!==1) return;
+  const act=b.dataset.act;
+  if(act==="promo-open"){S.promoOpen=true; r(); const z=(b.closest("#mSum")?$("mSum"):$("rPlan")).querySelector("[data-promo] input"); if(z) z.focus(); return;}
+  if(act==="promo-del"){++_devis; S.promo=null; S.promoErr=""; S.promoBusy=false; S.promoPending=""; r(); mountWhop(); return;}
+  if(act==="retry"){_wp=null; mountWhop(); return;}   // module Whop qui ne s'affichait pas
+  if(act==="bas-ok"){S.basOk=S.plan; mountWhop(); return;}   // palier inférieur accepté après l'avertissement
+  const before=cartKey(), code=(S.promo&&S.promo.code)||S.promoPending;
+  if(act==="bill") S.bill=S.bill==="y"?"m":"y";
+  if(act==="opt"){const id=b.dataset.id;
+    if(id==="upgrade"){S.plan=S.plan===S.base?NEXT[S.base]:S.base;S.add.upgrade=S.plan!==S.base;}
+    else S.add[id]=!S.add[id];}
+  if(code&&cartKey()!==before){appliquerPromo(code);return}   // panier changé : la remise est recalculée par Whop
+  if(cartKey()!==before) S.promoErr="";   // un refus de code portait sur l'ancien panier
+  r(); if(cartKey()!==before) mountWhop();
+});
+document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-promo]")) S.promoDraft=e.target.value;});
+document.addEventListener("submit",e=>{const f=e.target.closest("[data-promo]"); if(!f) return; e.preventDefault(); if(!S.promoBusy&&S.step===1) appliquerPromo(f.elements.code.value);});
+document.addEventListener("keydown",e=>{const b=e.target.closest&&e.target.closest('[data-act="opt"]'); if(b&&(e.key===" "||e.key==="Enter")){e.preventDefault();b.click();}});
+$("back").addEventListener("click",()=>{ if(history.length>1&&document.referrer) history.back(); else location.href="/en/tarifs.html"; });
+
+/* ── Whop Elements ───────────────────────────────────────────────────────────────────────────────────────────────── */
+const WHOP_SRC="https://cdn.whop.com/elements/amber/elements.js";
+let _wp=null; const whopReady=()=>_wp||(_wp=new Promise((ok,ko)=>{ if(window.WhopElements) return ok(window.WhopElements({locale:"en"}));
+  const s=document.createElement("script"); s.src=WHOP_SRC; s.async=true; s.onload=()=>window.WhopElements?ok(window.WhopElements({locale:"en"})):ko(new Error("Whop absent")); s.onerror=()=>ko(new Error("script Whop bloqué")); document.head.appendChild(s); }));
+// compte AvatarAds connecté (même origine que /app) : e-mail repris et verrouillé chez Whop + identifiant pour le webhook
+function compte(){try{const s=JSON.parse(localStorage.getItem("sb-guvwgiejzkiodghywpwj-auth-token")||"null"),u=s&&(s.user||(s.currentSession&&s.currentSession.user));
+  if(u&&u.id&&u.email) return {id:String(u.id),email:String(u.email)};}catch(_){} return null}
+// apparence au plus près de la maquette : champs en pilule sur fond --field, bouton jaune en pilule, récapitulatif ET « Code
+// promo & détails » de Whop masqués (Axel 23/10 : le code promo se saisit dans notre récapitulatif, plus de grand vide), Apple
+// Pay affiché DANS le module, en tête (Axel : les mentions Whop une seule fois — un élément Apple Pay séparé ajoute les
+// siennes, impossibles à masquer)
+const HIDE={display:"none"};
+const FIELD={height:"54px",borderRadius:"999px",backgroundColor:"#F6F7F8",fontSize:"16px"};
+function appearance(lock){return {theme:{appearance:"light",accentColor:"orange",grayColor:"slate"},
+  classes:{"whop-CheckoutSeller":HIDE,"whop-CheckoutSellerLogo":HIDE,"whop-CheckoutItem":HIDE,"whop-CheckoutItemHeadline":HIDE,"whop-CheckoutItemDescription":HIDE,
+    "whop-CheckoutCartItems":HIDE,"whop-CheckoutTotal":HIDE,"whop-CheckoutPriceContext":HIDE,
+    "whop-CheckoutDetails":HIDE,"whop-CheckoutDetailsToggle":HIDE,"whop-CheckoutSummary":HIDE,
+    // après le paiement, notre page prend la main (connexion au compte AvatarAds) : pas d'écran Whop « réclamer l'achat »
+    "whop-CheckoutCompleted":HIDE,"whop-CheckoutAwaitClaim":HIDE,"whop-CheckoutClaimOffer":HIDE,
+    "whop-CheckoutExpressGooglePay":HIDE,"whop-CheckoutExpressPayPal":HIDE,"whop-CheckoutExpressDivider":{color:"#5B626B",fontSize:"12.5px"},
+    "whop-EmailInput":Object.assign({},FIELD,lock?{backgroundColor:"#EEF1F4"}:{}),"whop-CardField":{borderRadius:"16px",backgroundColor:"#F6F7F8"},
+    // adresse : bloc groupé de Whop (des pilules débordaient de son cadre) → seulement le fond gris, comme la carte
+    "whop-AddressFieldInput":{backgroundColor:"#F6F7F8"},"whop-AddressFieldSelect":{backgroundColor:"#F6F7F8"},
+    "whop-CheckoutPayButton":{backgroundColor:"#FFC107",color:"#1A1300",borderRadius:"999px",height:"58px",fontSize:"18px",fontWeight:"500",boxShadow:"0 14px 30px -14px rgba(255,180,0,.75)"}}}}
+/* Fin du paiement : le cadre « _controller » du module Whop déplace l'onglet LUI-MÊME (window.open(url,"_top")) vers une
+   destination décidée par le serveur Whop — l'accueil chez nous : 3 achats test d'Axel le 24/10, même avec returnUrl, même
+   avec allowCompletionNavigation:false, même après le réglage « Redirection après paiement » des produits. Le SDK pose
+   lui-même « allow-top-navigation » sur ce cadre : on le retire au moment où il le pose (avant l'insertion dans la page,
+   donc avant son chargement). Le cadre garde tout le reste (scripts, API, fenêtres) ; seul le déplacement de l'onglet lui
+   est refusé → onComplete arrive, notre veille emmène sur « Paiement confirmé ». Le cadre du formulaire (Apple Pay, étape
+   bancaire) n'est pas touché. */
+(function(){
+  const P=HTMLIFrameElement.prototype, sa=P.setAttribute, ctrl=el=>/\/checkout\/_controller\//.test(el.getAttribute("src")||"");
+  P.setAttribute=function(n,v){
+    if(String(n).toLowerCase()==="sandbox"&&ctrl(this)) v=String(v).split(/\s+/).filter(t=>t&&!/^allow-top-navigation/.test(t)).join(" ");
+    return sa.call(this,n,v);
+  };
+  const d=Object.getOwnPropertyDescriptor(P,"src");
+  if(d&&d.set) Object.defineProperty(P,"src",{configurable:true,enumerable:d.enumerable,get:d.get,set(v){ d.set.call(this,v); if(ctrl(this)&&this.hasAttribute("sandbox")) this.setAttribute("sandbox",this.getAttribute("sandbox")); }});
+})();
+let _co=null,_seq=0;
+function destroyAll(){try{_co&&_co.destroy()}catch(_){} _co=null; jeterVoile(); finBanque();}
+function waitHTML(t){return `<div class="whop-wait"><i></i><span>${t}</span><small class="wait-step" aria-live="polite"></small></div>`}
+// étapes affichées sous la roue : on voit que ça avance même quand l'iPhone coupe les animations (Axel 24/10)
+const ETAPES=["Bank verification…","Activating your access…","Just a moment…"];   // courts : tiennent dans le bouton sur iPhone
+let _etapesT=0;
+function etapes(){ clearInterval(_etapesT); let k=0; const maj=()=>{ document.querySelectorAll(".wait-step,.pay-step").forEach(el=>{ el.textContent=ETAPES[Math.min(k,ETAPES.length-1)] }); k++; };
+  _etapesT=setInterval(maj,2500); }
+// « Paiement en cours » dès le clic sur payer (Whop ne le signale qu'une fois la carte valide, ou à l'ouverture de la feuille
+// Apple Pay), puis les étapes dans le bouton. Il s'efface et rend celui de Whop (son message reste lisible) : module qui
+// change de taille (message d'erreur : carte refusée), notification Whop affichée, 8 s après un clic sans paiement lancé
+// (feuille Apple Pay fermée), 60 s après le lancement. Jamais pendant l'étape bancaire (fenêtre Whop au-dessus de tout).
+let _voile=null, _demandeA=0, _demandeT=0;
+// conditions Whop sous le bouton de la carte (mesuré au pixel le 24/10, de 280 à 520 px de large) : 5 lignes jusqu'à
+// 460 px → bouton à 147 px du bas du module ; 3 lignes dès 480 px (ordinateur : 520) → 115 px
+const basCarte=w=>w>=470?115:147;
+// quel bouton vient d'être pressé : celui qui est à l'écran ("" = les deux, on tranche au lancement du paiement)
+function lieuPaiement(){
+  const f=document.querySelector("#co .whop-mount iframe"); if(!f) return "carte";
+  const r=f.getBoundingClientRect(), t=document.querySelector(".top"), haut=t?Math.max(0,t.getBoundingClientRect().bottom):0;
+  const vu=(a,b)=>a>=haut-4&&b<=innerHeight+4, pb=basCarte(r.width);
+  const ap=!!window.ApplePaySession&&vu(r.top+6,r.top+58), ca=vu(r.bottom-pb-58,r.bottom-pb);
+  return ap&&ca?"":ap?"ap":"carte";
+}
+function demande(){ _demandeA=Date.now(); const l=lieuPaiement(); clearTimeout(_demandeT);
+  if(l) enCours(false,l); else _demandeT=setTimeout(()=>{ if(!_voile) enCours(false,"ap") },800); }   // carte : le paiement part aussitôt
+function lancement(){ clearTimeout(_demandeT);
+  enCours(true,_voile?_voile.lieu:Date.now()-_demandeA<800?"carte":lieuPaiement()||"carte"); veiller(true); veillerBanque(); }
+// Étape bancaire (défi 3DS imposé par le compte Whop) : le défi de la banque remplace le formulaire DANS le module (grand
+// changement de hauteur n° 1 → notre bouton se retire, le défi doit rester utilisable). Quand le défi disparaît (changement
+// n° 2), Whop traite le paiement 1 à 3 s sans rien montrer d'animé (Axel : « freeze ») → « Encore un instant… » couvre le
+// module jusqu'à onComplete. Un 3e changement (formulaire de retour après un refus) rend le module.
+let _banque=null;
+function veillerBanque(){
+  const f=document.querySelector("#co .whop-mount iframe"); if(!f||_banque||!("ResizeObserver" in window)) return;
+  const b={ro:null,t:0,n:0,h:f.getBoundingClientRect().height};
+  b.ro=new ResizeObserver(()=>{ if(_fige||_paye) return finBanque();
+    const h=f.getBoundingClientRect().height; if(Math.abs(h-b.h)<120) return; b.h=h; b.n++;
+    if(b.n===1) jeterVoile(); else if(b.n===2) apresBanque(); else { finBanque(); } });
+  b.ro.observe(f); _banque=b; b.t=setTimeout(finBanque,15*60e3);
+}
+function apresBanque(){ const box=$("co"); if(!box||_fige||_paye||box.querySelector(".whop-wait")) return;
+  box.insertAdjacentHTML("afterbegin",waitHTML("Just a moment…").replace("whop-wait","whop-wait apres")); }
+function finBanque(){ if(!_banque) return; try{ _banque.ro.disconnect() }catch(_){} clearTimeout(_banque.t); _banque=null;
+  document.querySelectorAll("#co .whop-wait.apres").forEach(e=>e.remove()); }
+function enCours(lance,lieu){
+  const box=$("co"), f=box&&box.querySelector(".whop-mount iframe");
+  if(!box||!f||_fige) return;
+  if(!_voile||!_voile.v.isConnected){
+    jeterVoile();
+    const v=document.createElement("div"); v.className="pay-veil"+(lieu==="ap"?" ap":""); v.setAttribute("role","status");
+    v.style.setProperty("--pb",basCarte(f.getBoundingClientRect().width)+"px");
+    v.innerHTML='<div class="pay-run"><b><i></i><span class="pay-step">Payment in progress…</span></b></div>';
+    box.appendChild(v); etapes();
+    const h0=f.getBoundingClientRect().height, vo={v,lieu,ro:null,tr:0,tf:0,tt:0};
+    const plusTard=ms=>{ clearTimeout(vo.tr); vo.tr=setTimeout(()=>retirerVoile(),ms); };
+    if("ResizeObserver" in window){ vo.ro=new ResizeObserver(()=>{ if(Math.abs(f.getBoundingClientRect().height-h0)>=9) plusTard(1500); }); vo.ro.observe(f); }
+    // notifications Whop (cadre posé sur la page, caché tant qu'il n'y a rien à dire) : une qui s'ouvre = un message à lire
+    const toasts=()=>[...document.querySelectorAll("[data-element-toasts]")].some(t=>t.style.visibility==="visible");
+    const deja=toasts(); vo.tt=setInterval(()=>{ if(!deja&&toasts()) plusTard(800); },400);
+    _voile=vo;
+  }
+  clearTimeout(_voile.tf); _voile.tf=setTimeout(()=>retirerVoile(),lance?60e3:8e3);
+}
+function jeterVoile(){ if(!_voile) return; const vo=_voile; _voile=null; clearTimeout(vo.tr); clearTimeout(vo.tf); clearInterval(vo.tt);
+  try{ vo.ro&&vo.ro.disconnect() }catch(_){} vo.v.remove(); clearInterval(_etapesT); }
+function retirerVoile(){
+  if(!_voile||_fige||_paye) return;   // paiement abouti : la confirmation prend la main
+  if(document.querySelector("dialog[open]")){ clearTimeout(_voile.tf); _voile.tf=setTimeout(()=>retirerVoile(),3e3); return; }   // étape bancaire ouverte
+  jeterVoile();
+}
+// module retiré (devis en cours…) : plus rien de payable tant qu'il n'est pas remonté
+function suspendre(t){ ++_seq; destroyAll(); $("co").innerHTML=waitHTML(t); }
+// Module Whop impossible à afficher (bloqueur, réseau). Audit 23/10 (constat 17) : la page Whop de secours ne reprend ni le
+// rendu prioritaire, ni le code promo, ni le suivi de cet onglet → proposée SEULEMENT pour un panier d'un seul article sans
+// code, avec l'adresse du compte verrouillée (comme l'app, _whopHostedUrl) ; sinon message + « Réessayer », jamais un
+// paiement partiel
+function fallback(el){
+  const items=panier(), acc=compte(), seul=items.length===1&&!S.promo;
+  const url="https://whop.com/checkout/"+encodeURIComponent(items[0])+(acc?"?email="+encodeURIComponent(acc.email)+"&email.disabled=1":"");
+  el.innerHTML=`<div class="whop-wait" style="position:static;padding:30px 0"><span>The payment module isn’t showing (ad blocker or slow connection?).</span>
+   <button type="button" class="promo-link" data-act="retry">Try again</button>
+   ${seul?`<span>You can also pay on Whop’s secure page${acc?": your address is carried over and the credits go to your account.":": your AvatarAds account is created with the address you enter there; then log in with it (code by email)."}</span><a href="${esc(url)}" target="_blank" rel="noopener">Pay on Whop’s secure page</a>`
+     :`<span>Whop’s backup page doesn’t carry over your whole cart (${[items.length>1?"priority rendering":"",S.promo?"promo code":""].filter(Boolean).join(", ")}): turn off your ad blocker for this page, then try again.</span>`}</div>`}
+/* ── Plan actuel du compte connecté (audit 23/10, constats 18 et 31) ───────────────────────────────────────────────────
+   Lu une fois au chargement (paiement-compte, action plan, avec la session). Même palier → pas de paiement ; palier
+   inférieur → avertissement (les crédits restants du plan actuel disparaissent au changement de plan) ; pack seul d'un compte
+   Free → réservé aux abonnés (crédits inutilisables sans plan). Lecture impossible → la page reste comme avant. */
+const RANG={starter:1,pro:2,elite:3,elite60:4,elite90:5};
+let ACTUEL=null, _planPret=false;
+// plan Whop (abonnement ou variante avec pack) → palier et rythme
+function palierDe(id){
+  for(const k of Object.keys(PLANS)){ const p=PLANS[k]; if(p.pid.m===id) return {palier:k,bill:"m"}; if(p.pid.y===id) return {palier:k,bill:"y"};
+    for(const v of Object.values(VAR[k]||{})){ if(v.m===id) return {palier:k,bill:"m"}; if(v.y===id) return {palier:k,bill:"y"}; } }
+  return null;
+}
+async function lirePlan(){
+  if(!compte()) return;
+  try{
+    const tok=await jeton(); if(!tok) return;
+    const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),6000);
+    const j=await fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json",Authorization:"Bearer "+tok},body:JSON.stringify({action:"plan"})}).then(x=>x.json());
+    clearTimeout(t);
+    if(!j||!j.ok) return;
+    const plan=String(j.plan||""), w=palierDe(String(j.plan_whop||""));
+    // palier exact par le plan Whop ; sinon le nom (« elite » seul ne dit pas 30, 60 ou 90)
+    ACTUEL=!aCle(RANG,plan)?{plan,palier:""}:w&&w.palier.indexOf(plan)===0?{plan,palier:w.palier,bill:w.bill,exact:true}:{plan,palier:plan,bill:"",exact:plan!=="elite"};
+  }catch(_){}
+}
+// ce que la page montre à la place du module pour ce panier ("" = paiement normal)
+function garde(){
+  if(!ACTUEL) return "";
+  if(S.packSeul) return ACTUEL.plan==="free"?`<div class="pack-login"><p class="step-p">Credit packs are for subscribers only: they add to your plan’s credits. Choose a plan first, then top up from your dashboard.</p>
+   <a class="cta" href="/en/tarifs.html"><span>See the plans</span>${FLECHE}</a></div>`:"";
+  if(!ACTUEL.palier) return "";
+  const cur=PLANS[ACTUEL.palier], rc=RANG[ACTUEL.palier], rn=RANG[S.plan];
+  if(ACTUEL.exact&&rn===rc) return `<div class="pack-login"><p class="step-p">You’re already subscribed to the <b>${cur.n}</b> plan${ACTUEL.bill?(ACTUEL.bill==="y"?" (yearly)":" (monthly)"):""}: nothing to pay here. Your subscription is managed from your dashboard${NEXT[S.base]&&S.plan===S.base?", or choose a higher plan above":""}.</p>
+   <a class="cta" href="/app/"><span>Open my dashboard</span>${FLECHE}</a></div>`;
+  const flou=!ACTUEL.exact&&rn>=rc;   // « elite » sans plan Whop connu : Elite, Elite 60 ou Elite 90
+  if((rn<rc||flou)&&S.basOk!==S.plan) return `<div class="pack-login"><p class="step-p">${flou?`You already have a <b>${cur.n}</b> plan. By changing plans`:`Your current plan is <b>${cur.n}</b>. By switching to the <b>${PLANS[S.plan].n}</b> plan`}, the remaining credits of your current plan disappear as soon as you pay (credits you bought stay on your account), and the period already paid is not refunded.</p>
+   <button class="cta" type="button" data-act="bas-ok"><span>Got it, continue</span>${FLECHE}</button></div>`;
+  return "";
+}
+function mountWhop(){
+  const seq=++_seq; destroyAll();
+  const box=$("co"), items=panier().map(plan=>({plan,quantity:1}));
+  // pack seul sans session : les crédits vont sur un compte, on se connecte d'abord (les packs s'achètent depuis l'app)
+  if(S.packSeul&&!compte()){ box.innerHTML=`<div class="pack-login"><p class="step-p">The pack’s credits are added to your AvatarAds account: log in first, then pick the pack again from your dashboard.</p>
+   <a class="cta" href="/en/connexion.html"><span>Log in</span>${FLECHE}</a></div>`; return; }
+  if(!_planPret){ box.innerHTML=waitHTML("Loading payment…"); return; }   // plan du compte pas encore lu
+  if(S.promoPending){ box.innerHTML=waitHTML("Updating the total…"); return; }   // devis en cours : il remontera le module
+  const g=garde(); if(g){ box.innerHTML=g; return; }
+  box.innerHTML=waitHTML("Loading payment…")+'<div class="whop-mount"></div>'; garderPanier();
+  // Fin du paiement (2 achats test d'Axel, 24/10, renvoyés sur l'accueil) : le module Whop déplaçait l'onglet LUI-MÊME vers
+  // une destination choisie par son serveur (l'accueil chez nous, quel que soit le réglage du compte et même avec l'adresse
+  // de retour). allowCompletionNavigation:false (option du module, lue dans son code : « case redirect ») : Whop ne bouge
+  // plus l'onglet ; onComplete arrive, la veille (aa_nonce) emmène sur « Paiement confirmé ». L'adresse de retour reste
+  // pour une étape bancaire HORS page (retour ici avec ?payment=…&status=…, relus par paiement-confirme.html).
+  const acc=compte(), meta={returnUrl:location.origin+"/en/paiement-confirme.html",allowCompletionNavigation:false,metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{})};
+  whopReady().then(W=>{
+    if(seq!==_seq) return;
+    // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche
+    // en tête du module quand l'appareil le propose
+    _co=W.checkout.create(Object.assign({items,appearance:appearance(!!acc),onComplete:()=>{ if(seq!==_seq) return; figer();
+        finBanque(); if(!box.querySelector(".whop-wait")) box.insertAdjacentHTML("afterbegin",waitHTML("Payment accepted, confirming…").replace("whop-wait","whop-wait fin")); etapes(); veiller(true); }},
+      meta,S.promo?{promoCode:S.promo.code}:{}));
+    let ready=false;
+    _co.create("checkout",Object.assign(acc?{buyerEmail:acc.email,lockBuyerEmail:true}:{},{
+      onReady:()=>{ready=true; const w=box.querySelector(".whop-wait"); if(w) w.remove(); veiller(false);},
+      // Axel 24/10 (« petit freeze ») : le bouton du module reste figé pendant le paiement → notre « Paiement en cours » à sa place
+      onCheckoutRequested:()=>{ if(seq===_seq) demande(); },
+      onCheckoutInitiated:()=>{ if(seq===_seq) lancement(); },
+      onError:e=>{ if(!ready&&seq===_seq) fallback(box); else console.warn("[whop]",e&&(e.code||e.message)); }
+    })).mount(box.querySelector(".whop-mount"));
+  }).catch(()=>{ if(seq===_seq) fallback(box); });
+}
+/* ── Après le paiement (Axel 23/10, test réel sur iPhone) ─────────────────────────────────────────────────────────────
+   On ne dépend pas de l'événement de fin du module Whop : le paiement porte un identifiant de cet onglet (aa_nonce) et la
+   page demande au serveur (paiement-compte) s'il est arrivé, puis passe la main à la page « Paiement confirmé »
+   (paiement-confirme.html, même identifiant) : reçu, ouverture du compte d'un nouvel acheteur, 1er mot de passe. */
+const SB_URL="https://guvwgiejzkiodghywpwj.supabase.co", SB_KEY="sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck", SB_SESSION="sb-guvwgiejzkiodghywpwj-auth-token";
+// jeton d'accès encore valable (rafraîchi s'il expire dans la minute, session réécrite là où l'app la lit : même code que
+// paiement-confirme.html) — sert à lire le plan du compte connecté
+function garderSession(j){ try{ if(!j.expires_at&&j.expires_in) j.expires_at=Math.floor(Date.now()/1000)+Number(j.expires_in);
+  localStorage.setItem(SB_SESSION,JSON.stringify(j)); return !!localStorage.getItem(SB_SESSION); }catch(_){ return false } }
+async function jeton(){
+  let s=null; try{ s=JSON.parse(localStorage.getItem(SB_SESSION)||"null") }catch(_){}
+  if(!s||!s.access_token) return "";
+  if(!s.refresh_token||(s.expires_at&&s.expires_at*1000-Date.now()>60e3)) return s.access_token;
+  try{ const t=await fetch(SB_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})});
+    const j=await t.json(); if(t.ok&&j.access_token&&garderSession(j)) return j.access_token; }catch(_){}
+  return s.access_token;
+}
+const NONCE=(()=>{ const neuf=()=>{ try{ return crypto.randomUUID() }catch(_){ const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=b[6]&15|64; b[8]=b[8]&63|128;
+    const h=[...b].map(x=>x.toString(16).padStart(2,"0")).join(""); return h.slice(0,8)+"-"+h.slice(8,12)+"-"+h.slice(12,16)+"-"+h.slice(16,20)+"-"+h.slice(20) } };
+  try{ let n=sessionStorage.getItem("aa_pay_nonce"); if(!n){ n=neuf(); sessionStorage.setItem("aa_pay_nonce",n); } return n }catch(_){ return neuf() } })();
+const appel=(corps,jeton)=>fetch(SB_URL+"/functions/v1/paiement-compte",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},jeton?{Authorization:"Bearer "+jeton}:{}),body:JSON.stringify(corps)}).then(r=>r.json());
+let _veille=0,_veilleFin=0,_paye=false,_vite=false,_fige=false,_attente=0,_dernier=null,_tarde="";
+const ATTENTE_MS=90e3;   // au-delà, la roue fait place à un message (audit 23/10, constat 30)
+// module affiché : vérification toutes les 4 s (30 min) ; fin du module ou retour de la banque : tout de suite puis toutes
+// les 1,5 s (le webhook arrive en quelques secondes)
+function veiller(vite){ if(_paye) return; _veilleFin=Date.now()+30*60e3;
+  if(vite&&!_vite){ _vite=true; _viteT0=Date.now(); clearInterval(_veille); _veille=0; if(!_attente) _attente=Date.now(); }
+  if(!_veille) _veille=setInterval(verifier,_vite?800:4000); if(vite) verifier(); }   // après le paiement : toutes les 0,8 s
+let _viteT0=0, _lent=false;
+async function verifier(){
+  if(_paye) return;
+  // 0,8 s pendant les 20 premières secondes, puis 2 s (plafond de paiement-compte : 400 appels / 10 min par IP)
+  if(_vite&&!_lent&&_veille&&Date.now()-_viteT0>20e3){ _lent=true; clearInterval(_veille); _veille=setInterval(verifier,2000); }
+  if(Date.now()>_veilleFin){ clearInterval(_veille); _veille=0; if(_attente) tarde(_dernier); return; }
+  let r=null; try{ r=await appel({action:"etat",nonce:NONCE}); }catch(_){ return; }
+  if(_paye||!r) return;
+  if(r.paid) _dernier=r;
+  if(r.paid&&r.compte==="attente"&&!_attente) _attente=Date.now();
+  if(!r.paid||r.compte==="attente"){   // « attente » : le webhook crée encore le compte
+    if(_attente&&Date.now()-_attente>ATTENTE_MS) tarde(_dernier);
+    return;
+  }
+  _paye=true; clearInterval(_veille); _veille=0; apresPaiement();
+}
+// confirmation qui tarde (paiement fait, compte pas encore créé ou webhook pas encore reçu) : consigne au lieu d'une roue
+// sans fin ; la veille continue et emmène quand même sur « Paiement confirmé » si tout arrive
+function tarde(r){
+  const cmd=r&&r.recu&&r.recu.commande, acc=compte();
+  const h=`<div class="pack-login"><p class="step-p">${r&&r.paid?"Payment received. Your AvatarAds account is being created":"Your payment is being confirmed"}: don’t pay a second time.
+   ${acc?"Your credits will reach your account within a few minutes.":"Check your emails, then log in with the address you entered at checkout."}
+   If nothing arrives, write to us at <a href="mailto:bonjour@avatarads.fr">bonjour@avatarads.fr</a>${cmd?`, quoting order <b>${esc(cmd)}</b>`:""}.</p>
+   <a class="cta" href="${acc?"/app/":"/en/connexion.html"}"><span>${acc?"Open my dashboard":"Log in"}</span>${FLECHE}</a></div>`;
+  if(h===_tarde) return; _tarde=h;
+  ++_seq; destroyAll(); $("co").innerHTML=h;
+}
+// paiement terminé (fin du module Whop) : panier figé (audit 23/10, constat 28) — plus aucun clic ne remonte un module de
+// paiement ni ne réécrit le panier dont le reçu tire ses lignes
+function figer(){
+  if(S.step!==1) return;
+  garderPanier(); S.step=2; _fige=true;
+  ["opts","rPlan","mPlan","mSum"].forEach(id=>{ const el=$(id); if(!el) return; el.style.pointerEvents="none"; el.setAttribute("aria-disabled","true"); try{ el.inert=true }catch(_){} });
+}
+// panier payé, tel qu'affiché (lignes du reçu de la page « Paiement confirmé ») ; pas réécrit au retour d'une étape bancaire
+// hors page, où les options cochées ne sont plus connues
+const retourBanque=qs.get("status")==="succeeded"||!!qs.get("payment");
+function lignes(){
+  if(S.packSeul){const k=PACK_SEUL[S.packSeul];return [{n:k.n,q:1,p:k.p}]}
+  const p=PLANS[S.plan],y=S.bill==="y";
+  return [{n:p.n+" plan"+(y?" (yearly)":""),q:1,p:y?p.y:p.m}].concat(ADDONS_FOR().filter(a=>S.add[a.id]&&!a.up).map(a=>({n:a.t,q:1,p:a.p})));
+}
+function garderPanier(){ if(retourBanque||_fige) return; const acc=compte();
+  try{ sessionStorage.setItem("aa_pay_from",location.pathname+location.search) }catch(_){}
+  try{ sessionStorage.setItem("aa_pay_order",JSON.stringify({lines:lignes(),promo:S.promo?S.promo.code:null,total:S.promo?S.promo.total:total(),email:acc?acc.email:null})); }catch(_){} }
+function apresPaiement(){
+  destroyAll(); $("co").innerHTML=waitHTML("Payment confirmed…");
+  try{ sessionStorage.setItem("aa_pay_ok",NONCE); sessionStorage.removeItem("aa_pay_nonce");   // un autre achat dans cet onglet aura son identifiant
+    const u=new URLSearchParams(location.search); ["status","payment","receipt_id","state_id"].forEach(k=>u.delete(k));
+    sessionStorage.setItem("aa_pay_from",location.pathname+(u.toString()?"?"+u:"")); }catch(_){}
+  location.replace("/en/paiement-confirme.html");
+}
+const FLECHE='<span class="ar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+// retour d'une étape bancaire hors page (returnUrl) : le paiement est peut-être déjà passé
+if(qs.get("status")==="succeeded"||qs.get("payment")) veiller(true);
+// compte connecté : son plan est lu AVANT de monter le module (même palier, palier inférieur, pack d'un compte Free)
+r(); mountWhop(); lirePlan().finally(()=>{ _planPret=true; if(S.step===1) mountWhop(); });
+</script>
+</body>
+</html>
