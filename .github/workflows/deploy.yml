@@ -60,7 +60,7 @@ jobs:
                 --include='/usine/' --include='/usine/coherence.js' --include='/usine/hook-liaison.js' \
                 --include='/*.html' --include='/CNAME' --include='/.nojekyll' \
                 --include='/robots.txt' --include='/sitemap.xml' --include='/llms.txt' \
-                --include='/favicon.*' --include='/apple-touch-icon.png' --include='/og-image.*' \
+                --include='/favicon.*' --include='/apple-touch-icon.png' --include='/og-image.*' --include='/og-image-en.*' \
                 --include='/tiktok*.txt' --include='/5d8b40c34d4e9c7964421c785bfedb1a.txt' \
                 --exclude='*' \
                 ./ _site/
