@@ -2,7 +2,7 @@
 # phrase entière jusqu'au mot fort (« ça commence vraiment à devenir ») ; mot fort EN BAS, DEVANT, en vert, et à ce moment
 # les 2 démos du hook arrivent ensemble (gauche par la gauche, droite par la droite).
 import difflib, json, os, re, subprocess, unicodedata
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageFilter
 import numpy as np
 
 # Réglages par hook / photo (facultatif) : incruste.json = {"fps": 30, "forts": ["QUALITÉ-LÀ"],
@@ -15,10 +15,21 @@ VERT = (200, 255, 61)
 # Couleur du mot fort (Axel 26/10) : défaut = vert validé (200,255,61) à plat. « teinte » = la couleur de devinjatho, SANS
 # rien changer d'autre (police, tailles, emplacements validés) : dégradé vertical mesuré sur ses vidéos + léger halo de la
 # couleur. incruste.json : {"teinte": "vert"} ou {"teinte": "rouge"}.
-TEINTES = {   # (haut, bas, halo) — mesurés sur « DID IT! » / « 2 SH*TS » ; la ligne blanche au-dessus prend un reflet
-    'vert': ((186, 252, 168), (96, 229, 84), (60, 215, 60)),
-    'rouge': ((255, 128, 122), (222, 26, 26), (235, 40, 40)),
+# Recette mesurée AU PIXEL sur « DID IT! » de devinjatho (médiane du cœur des lettres, ligne par ligne) :
+# liseré clair en haut, dégradé haut → bas très saturé, bord des lettres un peu plus clair, halo vert vif serré + halo
+# sombre large (c'est lui qui rend le vert « foncé » et profond). Rouge = même recette (« 2 SH*TS »).
+TEINTES = {
+    'vert': {'liseré': (180, 251, 161), 'haut': (138, 234, 116), 'bas': (60, 214, 36), 'bord': (150, 242, 128),
+             'halo': (40, 205, 40), 'ombre': (8, 60, 10), 'reflet': (228, 250, 222)},
+    'rouge': {'liseré': (255, 140, 134), 'haut': (238, 70, 66), 'bas': (192, 16, 16), 'bord': (255, 110, 104),
+              'halo': (225, 28, 28), 'ombre': (70, 4, 4), 'reflet': (250, 228, 226)},
+    # jaune-vert validé (200,255,61) passé dans la même recette (mêmes écarts de clarté / saturation que le vert mesuré)
+    'jaune': {'liseré': (236, 255, 170), 'haut': (212, 252, 118), 'bas': (166, 228, 24), 'bord': (222, 254, 140),
+              'halo': (180, 232, 30), 'ombre': (48, 60, 4), 'reflet': (246, 250, 222)},
 }
+# Couleur À PLAT du mot fort (sans dégradé) : « jaune » = le validé (200,255,61) ; « vert » / « rouge » (Axel 26/10).
+COULEURS = {'jaune': (200, 255, 61), 'vert': (64, 222, 52), 'rouge': (236, 38, 38)}
+if CONF.get('couleur') in COULEURS and CONF.get('style', 'anton') != 'neon': VERT = COULEURS[CONF['couleur']]
 TEINTE = TEINTES.get(CONF.get('teinte'))
 # « neon » (police élargie + emplacements changés) : essai du 26/10 ÉCARTÉ par Axel (« je parle juste de la couleur »).
 STYLE = CONF.get('style', 'anton')
@@ -153,16 +164,24 @@ def dessine(lay, t, mots, col, cap_px, bas, larg=960, une_ligne=None, dessin=Tru
                     ImageDraw.Draw(sh).text(base, m, font=f, fill=(0, 0, 0, 160), anchor='ls')
                     img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(4, size / 25))), (0, 5))
                 if TEINTE and (col == VERT or (col == BLANC and bas > 1200)):
-                    # dégradé vertical du haut au bas des capitales (blanc devant : reflet de la teinte en bas) + halo
-                    haut_c, bas_c, halo = TEINTE if col == VERT else ((250, 250, 248), tuple(int(0.88 * 255 + 0.12 * c) for c in TEINTE[1]), None)
-                    mk = Image.new('L', img.size, 0); ImageDraw.Draw(mk).text(base, m, font=f, fill=255, anchor='ls')
-                    if halo:
-                        g = Image.new('RGBA', img.size, halo + (0,)); g.putalpha(mk.filter(ImageFilter.GaussianBlur(size / 9)).point(lambda v: int(v * 0.55)))
-                        img.alpha_composite(g)
+                    T = TEINTE; mk = Image.new('L', img.size, 0); ImageDraw.Draw(mk).text(base, m, font=f, fill=255, anchor='ls')
                     y0, y1 = base[1] - cap, base[1]
-                    k = np.clip((np.arange(img.height) - y0) / max(1, y1 - y0), 0, 1)[:, None, None]
-                    deg = (np.array(haut_c) * (1 - k) + np.array(bas_c) * k).astype(np.uint8) * np.ones((1, img.width, 1), np.uint8)
-                    txt = Image.fromarray(np.dstack([deg, np.asarray(mk)]), 'RGBA'); img.alpha_composite(txt)
+                    k = np.clip((np.arange(img.height) - y0) / max(1, y1 - y0), 0, 1)
+                    if col == VERT:
+                        for c, r, fo in ((T['ombre'], size / 3.2, 0.55), (T['halo'], size / 10, 0.70)):   # halo sombre large, puis vif serré
+                            g = Image.new('RGBA', img.size, c + (0,)); g.putalpha(mk.filter(ImageFilter.GaussianBlur(r)).point(lambda v, fo=fo: int(min(255, v * fo * 1.4))))
+                            img.alpha_composite(g)
+                        h, b, li = np.array(T['haut']), np.array(T['bas']), np.array(T['liseré'])
+                        coul = h[None, :] * (1 - k[:, None]) + b[None, :] * k[:, None]
+                        bande = np.clip(1 - (np.arange(img.height) - y0) / max(1.0, cap * 0.07), 0, 1)[:, None]   # liseré clair en haut
+                        coul = coul * (1 - bande) + li[None, :] * bande
+                    else:   # ligne blanche devant : reflet de la teinte vers le bas
+                        coul = np.array((250, 250, 248))[None, :] * (1 - k[:, None]) + np.array(T['reflet'])[None, :] * k[:, None]
+                    deg = (coul[:, None, :] * np.ones((1, img.width, 1))).astype(np.uint8)
+                    img.alpha_composite(Image.fromarray(np.dstack([deg, np.asarray(mk)]), 'RGBA'))
+                    if col == VERT:   # bord des lettres un peu plus clair (contour intérieur de ~2 px)
+                        bord = ImageChops.subtract(mk, mk.filter(ImageFilter.MinFilter(5))).point(lambda v: int(v * 0.55))
+                        e = Image.new('RGBA', img.size, T['bord'] + (0,)); e.putalpha(bord); img.alpha_composite(e)
                 else: ImageDraw.Draw(img).text(base, m, font=f, fill=col + (255,), anchor='ls')
                 if sc != 1.0: img = img.resize((max(1, int(img.width * sc)), max(1, int(img.height * sc))), Image.LANCZOS)
                 if a < 1:

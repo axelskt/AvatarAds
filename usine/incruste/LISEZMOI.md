@@ -21,9 +21,10 @@ Règles d'écriture des groupes (Axel 26/10) : ALTERNER mot seul (grand, derriè
 le nom de ce qu'on montre (« AVATAR IA ») = mot fort DEVANT en vert pendant son tour ; le dernier mot fort tient
 jusqu'à la fin. Uniquement des clips Omni Flash (format `omni`), jamais Character-3.
 
-Couleur du mot fort : défaut = vert validé à plat ; `"teinte": "vert"|"rouge"` = couleur de devinjatho (dégradé vertical
-mesuré + léger halo, reflet sur la ligne blanche), SANS rien changer d'autre (Axel 26/10 : « juste la couleur, garde
-l'emplacement validé »). Le style `neon` (police Archivo élargie + emplacements changés) a été ÉCARTÉ.
+Couleur du mot fort (même police / tailles / emplacements validés) : à plat `"couleur": "jaune"|"vert"|"rouge"` (jaune =
+le validé, défaut) ; dégradé « DID IT! » `"teinte": "jaune"|"vert"|"rouge"` = recette mesurée au pixel sur devinjatho
+(liseré clair en haut, dégradé saturé, bord plus clair, halo vif serré + halo sombre large, reflet sur la ligne blanche).
+Axel 26/10 : « juste la couleur, garde l'emplacement validé »). Le style `neon` (police Archivo élargie + emplacements changés) a été ÉCARTÉ.
 Masques : `masques.py --tout` (tous les clips Omni, factory-media/masques/<clip>-masque.mp4) puis
 `masques.py --pour <url du clip> m2` dans un montage au lieu de detoure.py.
 
