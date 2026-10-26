@@ -106,7 +106,9 @@ MARGE = CONF.get('carte', {}).get('marge', 64)
 # Mot long (≥ 7 lettres, « LAISSE-MOI ») : à 300 / 291 le visage en cache le milieu, même à l'image 0 (couverture)
 # → 250 / 120 automatiquement ; mot court (« WAOUH ») : réglage validé.
 def mot_seul(m):
-    base = {'cap': 300, 'chevauche': 291} if len(m.replace('-', '')) < 7 else {'cap': 250, 'chevauche': 120}
+    n = len(m.replace('-', '').replace("'", ''))
+    # ≥ 10 lettres (« GRATUITEMENT ») : le crâne en cachait encore le milieu → à peine posé sur la tête
+    base = {'cap': 300, 'chevauche': 291} if n < 7 else {'cap': 250, 'chevauche': 120} if n < 10 else {'cap': 230, 'chevauche': 45}
     return {**base, **CONF.get('mot_seul', {})}
 def carte(dossier, t, t_in):
     i = int((t - t_in) * 30) + 1
