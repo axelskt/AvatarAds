@@ -7,7 +7,7 @@
 import json, os
 import numpy as np
 from PIL import Image
-from hook import dessine, mot_seul, BLANC, VERT
+from hook import dessine, mot_seul, voile, BLANC, VERT, STYLE
 
 CONF = json.load(open('cta/incruste.json')) if os.path.exists('cta/incruste.json') else {}
 FPS = CONF.get('fps', 24)
@@ -50,8 +50,13 @@ for i in range(n):
     personne = fond.copy(); personne.putalpha(Image.open('cta/m2/%03d.png' % (i + 1)).convert('L'))
     derriere = Image.new('RGBA', (W, H), (0, 0, 0, 0)); devant = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     # consigne : COMMENTE (blanc) au-dessus, PLAN (vert, gros) dessous — même place que « à devenir / FLIPPANT » du hook
-    dessine(devant, t, consigne[:1], BLANC, 105, 1430)
-    dessine(devant, t, consigne[1:], VERT, 150, 1600)
+    if STYLE == 'neon': voile(devant)   # style néon : bas de l'image assombri en permanence (pas de clignotement)
+    if STYLE == 'neon':   # style néon : le verbe posé au-dessus du mot-clé, 80 % de sa taille
+        hf, cf = dessine(devant, t, consigne[1:], VERT, 150, 1600)
+        dessine(devant, t, consigne[:1], BLANC, 0.8 * cf, hf - 0.3 * cf)
+    else:
+        dessine(devant, t, consigne[:1], BLANC, 105, 1430)
+        dessine(devant, t, consigne[1:], VERT, 150, 1600)
     for a, b, g in bornes:
         if a <= t < b:   # même règle que le hook : mot seul GRAND derrière la tête, groupe plus petit au-dessus
             if len(g) == 1:

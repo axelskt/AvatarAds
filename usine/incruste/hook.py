@@ -12,6 +12,15 @@ CONF = json.load(open('incruste.json')) if os.path.exists('incruste.json') else 
 FPS = CONF.get('fps', 24)
 ANTON = 'Anton.ttf'
 VERT = (200, 255, 61)
+# Styles (Axel 26/10) : « anton » = le style VALIDÉ (défaut) ; « neon » = autre style à tester (réf. devinjatho) : police
+# large très grasse (Archivo élargie, fichier Archivo.ttf à côté), textes DEVANT avec un halo de leur couleur, mot fort en
+# vert franc ou en rouge (« couleur » : vert | rouge). incruste.json : {"style": "neon", "couleur": "rouge"}.
+STYLE = CONF.get('style', 'anton')
+if STYLE == 'neon': VERT = {'vert': (52, 235, 72), 'rouge': (242, 36, 44)}[CONF.get('couleur', 'vert')]
+
+def police(size):
+    if STYLE != 'neon': return ImageFont.truetype(ANTON, size)
+    f = ImageFont.truetype('Archivo.ttf', size); f.set_variation_by_axes([900, 125]); return f
 BLANC = (255, 255, 255)
 FORTS = set(CONF.get('forts', ['FLIPPANT']))
 DEMOS = ['demo', 'demo2']
@@ -73,14 +82,31 @@ def lignes_de(mots, une_ligne=None):
         if abs(tot / 2 - g) < best: best, k = abs(tot / 2 - g), i
     return [mots[:k], mots[k:]]
 
-def dessine(lay, t, mots, col, cap_px, bas, larg=960, une_ligne=None):
-    f0 = ImageFont.truetype(ANTON, 100); cap0 = f0.getbbox('H')[3] - f0.getbbox('H')[1]
+def voile(lay):
+    """style néon : bas de l'image assombri (une fois par image) pour que le halo ressorte, comme la réf."""
+    if lay.info.get('voile'): return
+    W, H = lay.size; a = np.clip((np.arange(H) - H * 0.55) / (H * 0.45), 0, 1) ** 1.3 * 165
+    v = np.zeros((H, W, 4), np.uint8); v[:, :, 3] = a.astype(np.uint8)[:, None]
+    lay.alpha_composite(Image.fromarray(v)); lay.info['voile'] = 1
+
+def dessine(lay, t, mots, col, cap_px, bas, larg=960, une_ligne=None, dessin=True):
+    """dessine les mots (base de la dernière ligne à `bas`) ; renvoie (haut du bloc, hauteur des capitales)"""
+    lueur = STYLE == 'neon' and bas > 1200           # textes DEVANT (consigne, mots forts) : halo de leur couleur
+    if lueur: larg = 1000
+    f0 = police(100); cap0 = f0.getbbox('H')[3] - f0.getbbox('H')[1]
     lignes = lignes_de(mots, une_ligne)
-    esp0 = f0.getlength(' ') * 1.6
-    plus_large = max(sum(f0.getlength(m) for m, _ in l) + esp0 * (len(l) - 1) for l in lignes)
-    size = min(100 * cap_px / cap0, 100 * larg / plus_large)
-    f = ImageFont.truetype(ANTON, size); cap = cap0 * size / 100; esp = esp0 * size / 100
-    pas = cap * 1.22
+    esp0 = f0.getlength(' ') * (1.0 if STYLE == 'neon' else 1.6)
+    largeur = lambda ls: max(sum(f0.getlength(m) for m, _ in l) + esp0 * (len(l) - 1) for l in ls)
+    size = min(100 * cap_px / cap0, 100 * larg / largeur(lignes))
+    if lueur and len(lignes) == 1 and len(mots) >= 2 and size < 0.8 * 100 * cap_px / cap0 and une_ligne is False:
+        # police élargie : un mot fort qui rétrécit trop passe sur 2 lignes (« C'ÉTAIT / AVANT »)
+        n = [len(m) for m, _ in mots]; k = min(range(1, len(mots)), key=lambda i: abs(sum(n[:i]) - sum(n[i:])))
+        lignes = [mots[:k], mots[k:]]; size = min(100 * cap_px / cap0, 100 * larg / largeur(lignes))
+    f = police(size); cap = cap0 * size / 100; esp = esp0 * size / 100
+    pas = cap * (1.14 if lueur else 1.22)
+    haut = bas - pas * (len(lignes) - 1) - cap
+    if not dessin: return haut, cap
+    if lueur: voile(lay)
     for li, ligne in enumerate(lignes):
         y = bas - pas * (len(lignes) - 1 - li)
         x = (lay.width - sum(f.getlength(m) for m, _ in ligne) - esp * (len(ligne) - 1)) / 2
@@ -88,16 +114,25 @@ def dessine(lay, t, mots, col, cap_px, bas, larg=960, une_ligne=None):
             lw = f.getlength(m)
             if t >= t0 - 0.02:
                 a, sc = pop(t, t0)
-                img = Image.new('RGBA', (int(lw) + 60, int(size * 1.5)), (0, 0, 0, 0))
-                sh = Image.new('RGBA', img.size, (0, 0, 0, 0))
-                ImageDraw.Draw(sh).text((30, size * 1.2), m, font=f, fill=(0, 0, 0, 160), anchor='ls')
-                img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(4, size / 25))), (0, 5))
-                ImageDraw.Draw(img).text((30, size * 1.2), m, font=f, fill=col + (255,), anchor='ls')
+                pad = int(size * 0.5) if lueur else 30
+                img = Image.new('RGBA', (int(lw) + 2 * pad, int(size * 1.2 + pad + size * 0.3)), (0, 0, 0, 0))
+                base = (pad, pad + size * 0.9)
+                if lueur:   # halo large + halo serré de la couleur du mot (blanc : halo discret)
+                    mk = Image.new('L', img.size, 0); ImageDraw.Draw(mk).text(base, m, font=f, fill=255, anchor='ls')
+                    for r, k in ((size / 4.5, 0.75 if col != BLANC else 0.30), (size / 14, 0.9 if col != BLANC else 0.35)):
+                        g = Image.new('RGBA', img.size, col + (0,)); g.putalpha(mk.filter(ImageFilter.GaussianBlur(r)).point(lambda v, k=k: int(min(255, v * k * 1.6))))
+                        img.alpha_composite(g)
+                else:
+                    sh = Image.new('RGBA', img.size, (0, 0, 0, 0))
+                    ImageDraw.Draw(sh).text(base, m, font=f, fill=(0, 0, 0, 160), anchor='ls')
+                    img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(4, size / 25))), (0, 5))
+                ImageDraw.Draw(img).text(base, m, font=f, fill=col + (255,), anchor='ls')
                 if sc != 1.0: img = img.resize((max(1, int(img.width * sc)), max(1, int(img.height * sc))), Image.LANCZOS)
                 if a < 1:
                     al = np.asarray(img).copy(); al[:, :, 3] = (al[:, :, 3] * a).astype(np.uint8); img = Image.fromarray(al)
-                lay.alpha_composite(img, (int(x + lw / 2 - img.width / 2), int(y - size * 1.2 * sc)))
+                lay.alpha_composite(img, (int(x + lw / 2 - img.width / 2), int(y - base[1] * sc)))
             x += lw + esp
+    return haut, cap
 
 CW = CONF.get('carte', {}).get('w', 340); CH = round(CW * 540 / 340); CY = 350 + DY
 MARGE = CONF.get('carte', {}).get('marge', 64)
@@ -114,8 +149,8 @@ def mot_seul(m, masque='m2/001.png'):
     l = np.where(M[:, 200:880].sum(axis=1) > 40)[0]; crane = int(l.min()) if len(l) else 459
     n = len(m.replace('-', '').replace("'", ''))
     cap = 300 if n < 7 else 250 if n < 10 else 230
-    f0 = ImageFont.truetype(ANTON, 100); cap0 = f0.getbbox('H')[3] - f0.getbbox('H')[1]
-    size = min(100 * cap / cap0, 100 * 960 / f0.getlength(m)); f = ImageFont.truetype(ANTON, size)
+    f0 = police(100); cap0 = f0.getbbox('H')[3] - f0.getbbox('H')[1]
+    size = min(100 * cap / cap0, 100 * 960 / f0.getlength(m)); f = police(size)
     choix = {'cap': cap, 'chevauche': 45}
     for ch in (291, 220, 160, 120, 80, 45):
         t = Image.new('L', (M.shape[1], M.shape[0]), 0)
@@ -172,8 +207,13 @@ def main():
         fond = Image.open('f/%03d.png' % (i + 1)).convert('RGBA'); W, H = fond.size
         personne = fond.copy(); personne.putalpha(Image.open('m2/%03d.png' % (i + 1)).convert('L'))
         derriere = Image.new('RGBA', (W, H), (0, 0, 0, 0)); devant = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        if STYLE == 'neon': voile(devant)   # bas de l'image assombri en permanence (pas de clignotement)
         if t >= t_demo: derriere.alpha_composite(calque_demos(t, t_demo, W, H))   # démos DERRIÈRE l'avatar
-        if pre and pre[0] <= t < pre[1]: dessine(devant, t, pre[2], BLANC, 105, 1430)   # « À DEVENIR » au-dessus du mot fort
+        if pre and pre[0] <= t < pre[1]:   # « À DEVENIR » au-dessus du mot fort
+            if STYLE == 'neon':   # posé juste au-dessus du bloc du dernier mot fort (1 ou 2 lignes), 80 % de sa taille
+                hf, cf = dessine(devant, t, G[k][2], VERT, 150, 1600, une_ligne=False, dessin=False)
+                dessine(devant, t, pre[2], BLANC, 0.8 * cf, hf - 0.3 * cf)
+            else: dessine(devant, t, pre[2], BLANC, 105, 1430)
         for debut, fin, gm, fort in G:
             if not (debut <= t < fin): continue
             if fort: dessine(devant, t, gm, VERT, 150, 1600, une_ligne=False)   # mot fort long (« 100 RÉELS INSTAGRAM ») : 2 lignes, pas rétréci

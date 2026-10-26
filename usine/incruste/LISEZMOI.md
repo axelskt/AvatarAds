@@ -21,5 +21,11 @@ Règles d'écriture des groupes (Axel 26/10) : ALTERNER mot seul (grand, derriè
 le nom de ce qu'on montre (« AVATAR IA ») = mot fort DEVANT en vert pendant son tour ; le dernier mot fort tient
 jusqu'à la fin. Uniquement des clips Omni Flash (format `omni`), jamais Character-3.
 
+Styles : `anton` (VALIDÉ, défaut) et `neon` (essai 26/10, réf. devinjatho) — `"style": "neon", "couleur": "vert"|"rouge"`
+dans incruste.json ; copier `polices/Archivo.ttf` (OFL) à côté de hook.py. Néon : Archivo élargie 900, halo de la couleur
+du mot, mot fort sur 2 lignes s'il rétrécit, ligne blanche posée au-dessus, bas de l'image assombri en permanence.
+Masques : `masques.py --tout` (tous les clips Omni, factory-media/masques/<clip>-masque.mp4) puis
+`masques.py --pour <url du clip> m2` dans un montage au lieu de detoure.py.
+
 À faire pour la série : mot fort de chaque hook (banque), mots du hook depuis le cache vérifié (Whisper rate la fin sur le
 clip habillé), woosh à l'arrivée des démos dans l'assembleur, intégration au lot.
