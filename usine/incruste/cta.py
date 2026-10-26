@@ -7,7 +7,7 @@
 import json, os
 import numpy as np
 from PIL import Image
-from hook import dessine, mot_seul, voile, BLANC, VERT, STYLE
+from hook import dessine, decoupe, mot_seul, voile, BLANC, VERT, STYLE
 
 CONF = json.load(open('cta/incruste.json')) if os.path.exists('cta/incruste.json') else {}
 FPS = CONF.get('fps', 24)
@@ -20,13 +20,12 @@ lignes = np.where(M[:, 200:880].sum(axis=1) > 40)[0]
 DY = CONF.get('dy', (int(lignes.min()) if len(lignes) else 459) - 459)
 
 if CONF.get('groupes'):
-    groupes = [g.split() for g in CONF['groupes'].split('/') if g.strip()]
-    if sum(map(len, groupes)) != len(mots):
-        raise SystemExit('groupes : %d mots écrits pour %d mots dits' % (sum(map(len, groupes)), len(mots)))
-    cible, G, consigne, i = CONF['consigne'].split(), [], None, 0
-    for g in groupes:
-        gm = [(m, mots[i + j]['start']) for j, m in enumerate(g)]; i += len(g)
-        if g == cible: consigne = gm
+    # groupes écrits (banque) ALIGNÉS sur les mots dits, comme le hook (hook.decoupe) : « commande » entendu → COMMENTE
+    # affiché, « » ignorés, un mot dit non écrit (« simplement ») sauté
+    cible, G, consigne = CONF['consigne'].split(), [], None
+    for g in decoupe(mots, CONF['groupes']):
+        gm = [(m, t) for m, t, _ in g]
+        if [m for m, _ in gm] == cible: consigne = gm
         else: G.append(gm)
     if not consigne: raise SystemExit('consigne « %s » absente des groupes' % CONF['consigne'])
 else:

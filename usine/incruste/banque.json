@@ -1,5 +1,5 @@
 {
-  "_lisezmoi": "Banque du format texte incrusté (Axel 26/10). Par hook Omni : groupes écrits (« / » sépare, « * » = mot fort DEVANT en vert ; le DERNIER mot fort tient jusqu'à la fin, son groupe précédent passe devant en blanc et les 2 Hook démo arrivent à ce moment ; « > » = les démos arrivent sur ce groupe et la suite passe DEVANT un bloc à la fois JUSQU'À LA FIN (Axel 26/10) ; sans « > » (H90 : « là ce qu'on peut faire » retiré à sa demande) rien n'est affiché après le dernier mot fort), alternance mot seul / groupe derrière la tête. hook_demos = 2 HD-xx (vide : pas de cartes, hooks de transformation sans résultat en banque). teinte conseillée pour l'option dégradé (vert | rouge). Copié dans factory_bricks.meta.incruste par banque.py.",
+  "_lisezmoi": "Banque du format texte incrusté (Axel 26/10). Par hook Omni : groupes écrits (« / » sépare, « * » = mot fort DEVANT en vert ; le DERNIER mot fort tient jusqu'à la fin, son groupe précédent passe devant en blanc et les 2 Hook démo arrivent à ce moment ; « > » = les démos arrivent sur ce groupe et la suite passe DEVANT un bloc à la fois JUSQU'À LA FIN (Axel 26/10) ; sans « > » (H90 : « là ce qu'on peut faire » retiré à sa demande) rien n'est affiché après le dernier mot fort), alternance mot seul / groupe derrière la tête. hook_demos = 2 HD-xx (vide : pas de cartes, hooks de transformation sans résultat en banque). teinte conseillée pour l'option dégradé (vert | rouge). Copié dans factory_bricks.meta.incruste par banque.py. CTA (CTA-…) : consigne = verbe + mot-clé affichés DEVANT (le mot entendu peut différer : « commande » → COMMENTE), groupes alignés sur les mots dits (un mot dit non écrit, ex. « simplement », est ignoré).",
   "H14": {
     "groupes": "LAISSE-MOI / 30 SECONDES POUR TE / MONTRER / COMMENT CRÉER UN / *AVATAR IA / AVEC CETTE / *QUALITÉ-LÀ",
     "hook_demos": [
@@ -238,5 +238,45 @@
       "HD-02"
     ],
     "teinte": "rouge"
+  },
+  "CTA-AIDE": {
+    "consigne": "MARQUE AIDE",
+    "groupes": "MARQUE AIDE / EN COMMENTAIRE / ET VA SUR / AVATARADS.FR / TESTER PAR TOI-MÊME"
+  },
+  "CTA-AIDE-guide": {
+    "consigne": "COMMENTE AIDE",
+    "groupes": "SI TU VEUX / EN SAVOIR PLUS / COMMENTE AIDE / ET JE T'ENVOIE / UN GUIDE / GRATUIT / EN PRIVÉ"
+  },
+  "CTA-cafe": {
+    "consigne": "COMMENTE SITE",
+    "groupes": "TU PEUX TOI AUSSI / FAIRE / LA MÊME CHOSE / POUR SEULEMENT / UN CAFÉ PAR JOUR / COMMENTE SITE / ET JE T'ENVOIE / LE LIEN / EN PRIVÉ"
+  },
+  "CTA-CLAUDE": {
+    "consigne": "COMMENTE CLAUDE",
+    "groupes": "COMMENTE CLAUDE / ET JE T'ENVOIE / LE LIEN / EN PRIVÉ / POUR FAIRE / LA MÊME CHOSE"
+  },
+  "CTA-GUIDE": {
+    "consigne": "COMMENTE GUIDE",
+    "groupes": "SI TU VEUX / RECEVOIR / UN TUTO / COMPLET / SUR L'OUTIL / COMMENTE GUIDE / ET JE TE L'ENVOIE"
+  },
+  "CTA-MONTAGE": {
+    "consigne": "COMMENTE MONTAGE",
+    "groupes": "COMMENTE MONTAGE / ET JE T'ENVOIE / TOUT"
+  },
+  "CTA-PLAN": {
+    "consigne": "COMMENTE PLAN",
+    "groupes": "COMMENTE PLAN / ET JE T'ENVOIE / LA CONFIGURATION / EXACTE / QUE J'UTILISE"
+  },
+  "CTA-SITE-2clics": {
+    "consigne": "COMMENTE SITE",
+    "groupes": "TU PEUX MAINTENANT / FAIRE / TOUT ÇA / EN 2 CLICS / SEULEMENT / COMMENTE SITE / SOUS LA VIDÉO / ET JE T'ENVOIE / LE LIEN / EN PRIVÉ"
+  },
+  "CTA-SITE-tuto": {
+    "consigne": "ÉCRIS SITE",
+    "groupes": "ÉCRIS SITE / EN COMMENTAIRE ET JE / T'ENVOIE / LE TUTORIEL COMPLET / GRATUITEMENT / POUR FAIRE LA MÊME CHOSE"
+  },
+  "CTA-UGC": {
+    "consigne": "COMMENTE UGC",
+    "groupes": "ALORS / COMMENTE UGC / ET JE T'ENVOIE / UN GUIDE / COMPLET / POUR FAIRE / LA MÊME CHOSE"
   }
 }

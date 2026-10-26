@@ -246,6 +246,10 @@ def calque_demos(t, t_in, W, H):
         lay.alpha_composite(sh); lay.alpha_composite(c, (int(x), CY))
     return lay
 
+# Bloc SEUL devant (mot fort au milieu, ligne blanche seule) : un peu plus haut que le bas de la pile blanc + mot fort
+# (Axel 26/10 : « CHOQUER », « LITTÉRALEMENT » un peu trop bas) ; la pile garde sa place validée (base 1600)
+BAS_SEUL = 1510
+
 def empile(G, c, D):
     """groupe blanc c suivi d'un mot fort : empilés (blanc au-dessus) seulement si le bloc reste léger — mot fort sur 1
     ligne ou blanc court (Axel 26/10 : « LITTÉRALEMENT » + « LA PLANQUE / DE CET HIVER » + démos = écran trop rempli)"""
@@ -270,7 +274,7 @@ def main_avec_marque(G, D):
         if t < t_demo:
             for debut, fin, gm, fort in G[:D]:
                 if not (debut <= t < min(fin, t_demo)): continue
-                if fort: dessine(devant, t, gm, VERT, 150, 1600, une_ligne=False)
+                if fort: dessine(devant, t, gm, VERT, 150, BAS_SEUL, une_ligne=False)
                 elif len(gm) == 1:
                     ms = mot_seul(gm[0][0]); dessine(derriere, t, gm, BLANC, ms['cap'], 459 + DY + ms['chevauche'])
                 else: dessine(derriere, t, gm, BLANC, 105, 470 + DY)
@@ -280,11 +284,11 @@ def main_avec_marque(G, D):
                 if empile(G, c - 1, D):   # le blanc d'avant reste au-dessus
                     hf, cf = dessine(devant, t, G[c][2], VERT, 150, 1600, une_ligne=False, dessin=False)
                     dessine(devant, t, G[c - 1][2], BLANC, 105, min(1430, hf - 0.22 * cf))
-                dessine(devant, t, G[c][2], VERT, 150, 1600, une_ligne=False)
+                dessine(devant, t, G[c][2], VERT, 150, 1600 if empile(G, c - 1, D) else BAS_SEUL, une_ligne=False)
             elif empile(G, c, D):         # blanc qui sera surmonté : déjà à sa place du dessus
                 hf, cf = dessine(devant, t, G[c + 1][2], VERT, 150, 1600, une_ligne=False, dessin=False)
                 dessine(devant, t, G[c][2], BLANC, 105, min(1430, hf - 0.22 * cf))
-            else: dessine(devant, t, G[c][2], BLANC, 120, 1600, une_ligne=False)
+            else: dessine(devant, t, G[c][2], BLANC, 120, BAS_SEUL, une_ligne=False)
         img = fond.copy(); img.alpha_composite(derriere); img.alpha_composite(personne); img.alpha_composite(devant)
         img.convert('RGB').save('oE/%03d.png' % (i + 1))
     json.dump({'t_demo': round(t_demo, 3), 'dy': DY}, open('oE/meta.json', 'w'))
@@ -307,6 +311,10 @@ def main():
     elif CONF.get('groupes'):            # groupe déjà écrit à la main (« AVEC CETTE ») : il passe devant tel quel
         pre = (debut, 99, gm); G.pop(k - 1); k -= 1
     t_demo = pre[0] if pre else G[k][0]
+    if pre:
+        hf0, cf0 = dessine(None, 0, G[k][2], VERT, 150, 1600, une_ligne=False, dessin=False)
+        leger_final = hf0 >= 1600 - cf0 * 1.1 or sum(len(m) for m, _ in pre[2]) <= 8
+    else: leger_final = False
     subprocess.run(['mkdir', '-p', 'oE'])
     n = len(subprocess.run(['ls', 'f'], capture_output=True, text=True).stdout.split())
     for i in range(n):
@@ -326,10 +334,12 @@ def main():
                 hf, cf = dessine(devant, t, G[k][2], VERT, 150, 1600, une_ligne=False, dessin=False)
                 leger = hf >= 1600 - cf * 1.1 or sum(len(m) for m, _ in pre[2]) <= 8
                 if leger: dessine(devant, t, pre[2], BLANC, 105, min(1430, hf - 0.22 * cf))
-                elif t < G[k][0]: dessine(devant, t, pre[2], BLANC, 120, 1600, une_ligne=False)   # seul, avant le mot fort
+                elif t < G[k][0]: dessine(devant, t, pre[2], BLANC, 120, BAS_SEUL, une_ligne=False)   # seul, avant le mot fort
         for debut, fin, gm, fort in G:
             if not (debut <= t < fin): continue
-            if fort: dessine(devant, t, gm, VERT, 150, 1600, une_ligne=False)   # mot fort long (« 100 RÉELS INSTAGRAM ») : 2 lignes, pas rétréci
+            if fort:   # mot fort long (« 100 RÉELS INSTAGRAM ») : 2 lignes, pas rétréci ; seul → un peu plus haut
+                final_empile = gm is G[k][2] and pre is not None and (STYLE == 'neon' or leger_final)
+                dessine(devant, t, gm, VERT, 150, 1600 if final_empile else BAS_SEUL, une_ligne=False)
             elif t >= t_demo: continue                                              # Axel 26/10 : rien après le mot fort
             elif len(gm) == 1:
                 ms = mot_seul(gm[0][0]); dessine(derriere, t, gm, BLANC, ms['cap'], 459 + DY + ms['chevauche'])
