@@ -103,7 +103,11 @@ CW = CONF.get('carte', {}).get('w', 340); CH = round(CW * 540 / 340); CY = 350 +
 MARGE = CONF.get('carte', {}).get('marge', 64)
 # mot seul derrière la tête : taille des capitales et px cachés sous le haut du crâne (A1-11 : 300 / 291) ; tête large ou
 # mot long (« LAISSE-MOI » sur A1-6) → plus petit et plus haut, sinon il disparaît derrière le visage
-MOT_SEUL = {'cap': 300, 'chevauche': 291, **CONF.get('mot_seul', {})}
+# Mot long (≥ 7 lettres, « LAISSE-MOI ») : à 300 / 291 le visage en cache le milieu, même à l'image 0 (couverture)
+# → 250 / 120 automatiquement ; mot court (« WAOUH ») : réglage validé.
+def mot_seul(m):
+    base = {'cap': 300, 'chevauche': 291} if len(m.replace('-', '')) < 7 else {'cap': 250, 'chevauche': 120}
+    return {**base, **CONF.get('mot_seul', {})}
 def carte(dossier, t, t_in):
     i = int((t - t_in) * 30) + 1
     try: im = Image.open('%s/%03d.png' % (dossier, max(1, i))).convert('RGB')
@@ -133,7 +137,9 @@ def main():
     G = phrases(json.load(open('words.json')))
     # Axel 26/10 : les 2 derniers mots avant le mot fort (« à devenir ») passent DEVANT en bas, juste au-dessus du mot fort ;
     # les démos arrivent à ce moment-là (dès la fin de « vraiment »)
-    k = next(i for i, g in enumerate(G) if g[3])
+    # Axel 26/10 : plusieurs mots forts possibles (« AVATAR IA » … « QUALITÉ-LÀ ») : chacun DEVANT en vert pendant son
+    # tour ; le DERNIER tient jusqu'à la fin, précédé de ses 2 mots (devant aussi) et des démos
+    k = max(i for i, g in enumerate(G) if g[3])
     G = G[:k + 1]; G[k] = (G[k][0], 99, G[k][2], True)
     debut, fin, gm, _ = G[k - 1]
     pre = None
@@ -156,7 +162,8 @@ def main():
             if not (debut <= t < fin): continue
             if fort: dessine(devant, t, gm, VERT, 150, 1600)
             elif t >= t_demo: continue                                              # Axel 26/10 : rien après le mot fort
-            elif len(gm) == 1: dessine(derriere, t, gm, BLANC, MOT_SEUL['cap'], 459 + DY + MOT_SEUL['chevauche'])
+            elif len(gm) == 1:
+                ms = mot_seul(gm[0][0]); dessine(derriere, t, gm, BLANC, ms['cap'], 459 + DY + ms['chevauche'])
             else: dessine(derriere, t, gm, BLANC, 105, 470 + DY)
         img = fond.copy(); img.alpha_composite(derriere); img.alpha_composite(personne); img.alpha_composite(devant)
         img.convert('RGB').save('oE/%03d.png' % (i + 1))

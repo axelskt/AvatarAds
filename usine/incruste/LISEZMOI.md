@@ -17,5 +17,9 @@ Réglages par hook / photo : `incruste.json` dans le dossier de travail (essai H
 Les positions derrière la tête suivent le haut du crâne mesuré sur le masque (A1-6 : −153 px par rapport à A1-11) ;
 `oE/meta.json` donne `t_demo` (woosh). Tête large ou 1er mot long → `mot_seul` plus petit et plus haut (couverture lisible).
 
+Règles d'écriture des groupes (Axel 26/10) : ALTERNER mot seul (grand, derrière la tête) et groupe de mots (plus petit) ;
+le nom de ce qu'on montre (« AVATAR IA ») = mot fort DEVANT en vert pendant son tour ; le dernier mot fort tient
+jusqu'à la fin. Uniquement des clips Omni Flash (format `omni`), jamais Character-3.
+
 À faire pour la série : mot fort de chaque hook (banque), mots du hook depuis le cache vérifié (Whisper rate la fin sur le
 clip habillé), woosh à l'arrivée des démos dans l'assembleur, intégration au lot.
