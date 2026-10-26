@@ -215,8 +215,31 @@ CTA après la fin de la démo, chaîne voix commune, liaison + B-roll « regarde
   M15, M16, M18, M19 refusées par build-f05.mjs. Manque de pistes énergiques longues → en demander à Axel.
 - Lot du 06/10 : 8 réactions × 3 (texte choc, démo, musique tous différents par réaction) = VF-0079 → VF-0102.
 
+## Format « texte incrusté » F-AP-INCRUSTE (VALIDÉ DÉFINITIVEMENT par Axel le 26/10)
+5 essais validés (H90 × A1-11, H14 × A1-14, H89 × A1-10, H72 × A1-11, H91 × A1-12) ; vidéos VF-0972 / VF-0973. Outils :
+`usine/incruste/` (LISEZMOI.md = procédure pas à pas). Réf. avatarhype_fr.
+- **Clips Omni Flash UNIQUEMENT** (factory_variants format `omni`), jamais Character-3. CTA de la MÊME photo.
+- **Hook** : avatar détouré (rembg isnet, `detoure.py`) ; texte DERRIÈRE la tête en ALTERNANT mot seul (grand, Anton) et
+  groupe de mots (plus petit, une ligne, au-dessus des cheveux) ; le nom de ce qu'on montre (« AVATAR IA », « 100 RÉELS
+  INSTAGRAM », « CLAUDE ») passe DEVANT en vert (200,255,61) pendant son tour (2 lignes si long) ; le dernier mot fort tient
+  jusqu'à la fin, précédé de ses 2 mots devant en blanc — à cet instant 2 Hook démo (HD-xx, démo Express) arrivent
+  DERRIÈRE l'avatar de chaque côté de la tête + woosh ; RIEN après le dernier mot fort ; un seul texte à la fois ; jamais
+  de texte choc. Découpage + mots forts écrits à la main par hook dans `incruste.json` (groupes « A B / C / … »).
+- **Mot seul** placé d'après le masque : le plus enfoncé derrière le crâne avec ≥ 70 % des lettres visibles (sinon
+  « LAISSE-MOI », « CENSÉ » disparaissaient sur les photos cadrées serré). Positions calées sur le haut du crâne mesuré.
+- **CTA** (`cta.py` + `cta/incruste.json`) : consigne (« COMMENTE » / « ÉCRIS » blanc + mot-clé vert) DEVANT dès qu'elle
+  est dite, jusqu'à la fin ; le reste de la phrase derrière la tête, même alternance. Retirer les « » que Whisper compte
+  comme des mots. « commande » entendu = COMMENTE (le texte affiché est celui des groupes).
+- **Assemblage** : `build.mjs … --incruste --format F01 --subs-style auto` (pas de zoom / tremblement / texte choc /
+  sous-titres sur hook et CTA ; la démo garde ses sous-titres, en 1,08x). Copier d'abord les mots vérifiés du clip brut dans
+  le cache words/ sous l'empreinte du clip habillé (Whisper rate la fin d'un clip habillé).
+- **Livraison** : 4K (agrandi lanczos, 42 Mbit/s) ; publish-qc puis brick_combo + {incruste: true, hook_demos, cta_file,
+  demo_vitesse: 1.08} ; fingerprint ; `valider.py VF-…` (stock commun). Classement stats : `factory_format_de` → F-AP-INCRUSTE.
+
 ## Encore à faire
 - B-roll : en faire des briques en base (kind `broll`, tags produit / static ad / UGC) pour les choisir automatiquement.
 - ~~Stockage : vidéo programmée / postée supprimée de Supabase~~ FAIT 30/09 : le kit appelle `factory-release` quand
   Axel confirme (MP4 de `final/` seulement, la recette reste). Ne JAMAIS toucher aux briques (`variants/`, `hooks/`, `ctas/`, `demos/`).
+- Texte incrusté en LOT : banque des découpages / mots forts / Hook démo par hook Omni (meta.incruste) + branchement dans
+  usine/lots (détourage ~90 s par clip).
 - Commande A→Z en lot (choix des briques, musique validée au hasard, rendu, QC auto, upload, kit) ; rendu sur Railway.
