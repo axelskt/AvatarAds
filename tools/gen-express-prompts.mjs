@@ -29,7 +29,10 @@ function ugcStyle() {
 function stmt(re, what) { const m = app.match(re); if (!m) throw new Error(what + ' introuvable dans app/index.html'); return m[0]; }
 
 const FNS = ['_expQuotedLine', '_expCommentKeyword', '_expWantsScenes', '_expEnvLock', '_expSpeechLock', '_expSelfieCue'].map(fn);
-const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END', '_EXP_PIXEL_LOCK', '_EXP_PRODUCT_VIDEO_LOCK'];
+const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_PIXEL_LOCK', '_EXP_PRODUCT_VIDEO_LOCK'];
+// 26/10 (Axel) : règle de langue de l'app, française OU anglaise (comme /app/ et /en/app/) : constantes sous un autre nom,
+// chaque fonction pose ses _EXP_FRENCH / _EXP_FRENCH_END locales selon `lang` (même mécanique que _expLangRule dans l'app)
+const LANGS = [['_EXP_FR', '_EXP_FRENCH'], ['_EXP_FR_END', '_EXP_FRENCH_END'], ['_EXP_EN', '_EXP_ENGLISH'], ['_EXP_EN_END', '_EXP_ENGLISH_END']];
 const imgP = stmt(/const imgPrompt = prompt \+ ', ' \+ styleMeta\.prompt[^\n]*;/, 'prompt image de départ');
 // Depuis le 04/10 (extensions Veo), l'app assemble le prompt par PASSE (_mkAnim) ; le MCP rejoue la passe unique (seg null).
 const anim = stmt(/const _mkAnim = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage _mkAnim') + '\n  const animPrompt = _mkAnim(prompt, null)';
@@ -45,14 +48,18 @@ if (!/window\._mcPrompt \|\|/.test(MC[0])) throw new Error('_mcMotion : instruct
 
 const ts = `// @ts-nocheck — GÉNÉRÉ par tools/gen-express-prompts.mjs depuis app/index.html — ne pas éditer à la main.
 // Prompt Express Omni Flash « UGC réel » de l'app, rejoué à l'identique pour le MCP (style ugc, voix native, Omni).
+// lang (26/10) : 'fr' (défaut) ou 'en' — même règle de langue que l'app sous /app/ ou /en/app/.
 const window = { _expStyle: 'ugc', _expVoice: 'native', _expVeoModel: 'omni' }
 ${FNS.join('\n')}
 ${LOCKS.map(k => `const ${k} = ${JSON.stringify(cst(k))}`).join('\n')}
+${LANGS.map(([k, src]) => `const ${k} = ${JSON.stringify(cst(src))}`).join('\n')}
+const langRule = (lang) => lang === 'en' ? [_EXP_EN, _EXP_EN_END] : [_EXP_FR, _EXP_FR_END]
 const styleMeta = { prompt: ${JSON.stringify(ugcStyle())} }
 // Omni Flash image → vidéo (photo de départ) : assemblage Express + enveloppe « CLEAN SHOT » de _expOmniImageToVideo.
 // dur (23/10) : durée du clip en secondes → débit de parole calculé (PACING) comme dans l'app ; sans elle, pas de débit imposé.
-export function expressOmniPrompt(prompt: string, dur?: number): string {
+export function expressOmniPrompt(prompt: string, dur?: number, lang: 'fr' | 'en' = 'fr'): string {
   window._expVeoModel = 'omni'; const _isOmni = true; const _dur = dur || null
+  const [_EXP_FRENCH, _EXP_FRENCH_END] = langRule(lang)
   ${anim}
   return (function (prompt) { ${wrap} return _omniPrompt })(animPrompt)
 }
@@ -84,8 +91,9 @@ export function motionControlPrompt(o: { instruction?: string; camFollow?: boole
   return (_mcMotion + _mcId).slice(0, 2400)
 }
 // Veo 3.1 Lite (sans photo) : même assemblage Express que l'app, moteur Veo (verrou de fin de parole compris).
-export function expressVeoPrompt(prompt: string, dur?: number): string {
+export function expressVeoPrompt(prompt: string, dur?: number, lang: 'fr' | 'en' = 'fr'): string {
   window._expVeoModel = 'lite'; const _isOmni = false; const _dur = dur || null
+  const [_EXP_FRENCH, _EXP_FRENCH_END] = langRule(lang)
   ${anim}
   return animPrompt
 }

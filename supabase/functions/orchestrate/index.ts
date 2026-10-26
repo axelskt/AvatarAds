@@ -2932,7 +2932,9 @@ async function traiter(req: Request, budgetMs = BUDGET_MS): Promise<Response> {
     // claudePlan(), pas dans ce handler. Vérifié avant déploiement — c'est la
     // même erreur de portée que subsActifs ce matin, qui n'aurait pété qu'au
     // premier rendu.
-    const motsRelus = await relireTranscription(
+    // 26/10 : relecture écrite pour le FRANÇAIS (élisions, homophones) — un audio anglais (/en/app/, MCP language 'en')
+    // garde sa transcription brute plutôt que d'être « corrigé » par un relecteur francophone
+    const motsRelus = lang !== 'fr' ? words : await relireTranscription(
       words,
       [brief, mem.text, website].filter(Boolean).join(' · '),
       Deno.env.get('ANTHROPIC_API_KEY') ?? '',

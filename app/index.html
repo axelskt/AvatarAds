@@ -17869,7 +17869,7 @@ async function _mtSegmentedGenerate(){
     fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
     const script=(document.getElementById('mtScript')?.value||'').trim();
     if(script) fd.append('script', script);
-    fd.append('options', JSON.stringify({ lang:'fr', hasAvatar:true, style:((_mt.adv||{}).vstyle||'auto'), useBrand:(_mt.useBrand!==false) }));
+    fd.append('options', JSON.stringify({ lang:_aaVidLang(), hasAvatar:true, style:((_mt.adv||{}).vstyle||'auto'), useBrand:(_mt.useBrand!==false) }));
     const site=(document.getElementById('mtSite')?.value||'').trim() || (localStorage.getItem('aa_user_site')||'');
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
@@ -18218,7 +18218,7 @@ async function _mtMusiqueSansVoix(){
     fd.append('sans_voix', '1');
     fd.append('reaction', avecReaction ? '1' : '0');
     fd.append('demo_dur', String(Math.round(demoDur*100)/100));
-    fd.append('options', JSON.stringify({ lang:'fr', hasAvatar: avecReaction, style:'musique', useBrand:(_mt.useBrand!==false) }));
+    fd.append('options', JSON.stringify({ lang:_aaVidLang(), hasAvatar: avecReaction, style:'musique', useBrand:(_mt.useBrand!==false) }));
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
     // la démo part au stockage D'ABORD : le chef la fait transcrire depuis un lien signé (aucune extraction du son dans le
     // navigateur — muette sur Safari —, aucun plafond de 20 Mo) ; elle sert ensuite telle quelle au rendu
@@ -18418,7 +18418,7 @@ async function _mtVideoGenerate(){
     fd.append('duration', String(Math.round(dur*100)/100));
     frames.forEach((f,i)=>fd.append('frame_'+i, f.blob, 't'+f.t+'.jpg'));
     fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
-    fd.append('options', JSON.stringify({ lang:'fr', useBrand:(_mt.useBrand!==false) }));
+    fd.append('options', JSON.stringify({ lang:_aaVidLang(), useBrand:(_mt.useBrand!==false) }));
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
     const _lot=await _mtLaunchFiles();   // ses fichiers + « Ma marque » auto, sans toucher l'UI
@@ -43300,7 +43300,7 @@ async function edAiGenerate(){
     fd.append('frame_times', JSON.stringify(vFrames.map(f=>f.t)));
     const script=((document.getElementById('edAiScript')?.value||'').trim()) || (_edAi.presetScript||'');
     if(script) fd.append('script', script);
-    fd.append('options', JSON.stringify({ lang:'fr' }));
+    fd.append('options', JSON.stringify({ lang:_aaVidLang() }));
     const site=((document.getElementById('edAiSite')?.value||'').trim()) || (localStorage.getItem('aa_user_site')||'');
     if(site){ fd.append('website', site); try{ localStorage.setItem('aa_user_site', site); }catch(_){} }
     fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));

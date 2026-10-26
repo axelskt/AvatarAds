@@ -1248,7 +1248,8 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
       inputSchema: {
         type: 'object',
         properties: {
-          prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit EN FRANÇAIS entre guillemets « … » (c'est exactement ce que la personne dira, mot pour mot ; l'avatar parle toujours français). ⏱ Elle DOIT tenir dans la durée avec une demi-seconde de silence à la fin : 2 mots par seconde AU MAXIMUM — 4 s ≈ 7 mots, 6 s ≈ 11 mots, 8 s ≈ 15 mots, 10 s ≈ 19 mots. Trop longue = coupée en pleine phrase : raccourcis-la ou choisis une durée plus longue." },
+          prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit entre guillemets « … » dans la langue de la vidéo (paramètre language) : c'est exactement ce que la personne dira, mot pour mot. ⏱ Elle DOIT tenir dans la durée avec une demi-seconde de silence à la fin : 2 mots par seconde AU MAXIMUM — 4 s ≈ 7 mots, 6 s ≈ 11 mots, 8 s ≈ 15 mots, 10 s ≈ 19 mots. Trop longue = coupée en pleine phrase : raccourcis-la ou choisis une durée plus longue." },
+          language: { type: 'string', enum: ['fr', 'en'], description: "Langue PARLÉE dans la vidéo : 'en' = anglais américain, 'fr' = français de France. Mets la langue dans laquelle l'utilisateur t'écrit, sauf s'il en demande une autre ; la réplique entre guillemets est dans cette langue. Sans ce paramètre, la langue se déduit de la réplique." },
           duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6, 8 ou 10 (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
           product_url: { type: 'string', description: "Lien de la PAGE PRODUIT quand l'utilisateur veut une vidéo d'une personne qui présente ce produit : passe-le ici, dans CE seul appel (pas de generate_image avant). La photo OFFICIELLE du produit est récupérée côté serveur, la photo de départ est générée avec ce produit en main (+3 crédits), puis la vidéo se lance — tout dans la même carte. Si le site bloque la récupération (Louis Vuitton, Dior, Chanel…), la carte le dit et demande de déposer la photo du produit : on n'invente JAMAIS le produit." },
           user_photo: { type: 'boolean', description: "true quand l'utilisateur veut partir d'une photo qu'il a JOINTE AU CHAT (que tu ne peux pas transmettre) : la carte lui propose de la déposer, puis lance la vidéo. Un appel par photo / par vidéo. Ne l'utilise pas si tu as déjà une URL (image_url)." },
@@ -1376,6 +1377,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
           style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel, comme dans l'app : auto (défaut — l'IA choisit, avec les sous-titres et le texte choc du look Production), apple (fond clair, minimal), slam (sombre premium : fond noir, contrastes chauds), word (mot par mot sur page blanche), dynamic (motion design continu, sous-titres maison)." },
           brief: { type: 'string', description: "Optionnel — ce que l'utilisateur veut mettre en avant (intention, produit, CTA). 700 caractères max." },
           script: { type: 'string', description: 'Optionnel — texte EXACT du script parlé : garantit des sous-titres parfaits.' },
+          language: { type: 'string', enum: ['fr', 'en'], description: "Langue PARLÉE dans l'audio : 'fr' ou 'en' (transcription, sous-titres et textes du montage dans cette langue). Mets la langue de l'utilisateur, sauf s'il dit que l'audio est dans une autre ; sans ce paramètre, elle se déduit du script / du brief (français par défaut)." },
           duration_seconds: { type: 'number', description: "Optionnel — durée exacte de l'audio en secondes (sinon estimée automatiquement)." },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
@@ -2236,7 +2238,18 @@ async function reconcileAllStale(): Promise<void> {
 }
 let _lastReconcile = 0
 
-// Prompts Express (fin propre, produit à l'identique, français seul, verrous de l'app) : expressOmniPrompt / expressVeoPrompt
+// 26/10 (Axel) : langue PARLÉE des vidéos (Express, Montage IA) — 'fr' (français de France) ou 'en' (anglais américain), comme
+// l'app sous /app/ ou /en/app/. Claude la passe (paramètre language) ; sinon elle se lit dans la réplique / le texte : mots
+// outils et accents français contre mots outils anglais (à égalité : français, comme avant).
+function langueVideo(explicite: unknown, texte: string): 'fr' | 'en' {
+  const e = String(explicite || '').toLowerCase()
+  if (e === 'en' || e === 'fr') return e
+  const t = ' ' + String(texte || '').toLowerCase().replace(/[«»"“”()]/g, ' ') + ' '
+  const fr = (t.match(/ (le|la|les|des|une|est|et|pour|avec|dans|tu|je|ce|cette|mon|ma|qui|que|pas|c'est|j'ai|ça) /g) || []).length + (/[éèàçùêâîôœ]/.test(t) ? 2 : 0)
+  const en = (t.match(/ (the|and|you|your|is|are|this|that|with|for|my|it's|i'm|i|we|to|of|it) /g) || []).length
+  return en > fr ? 'en' : 'fr'
+}
+// Prompts Express (fin propre, produit à l'identique, langue choisie, verrous de l'app) : expressOmniPrompt / expressVeoPrompt
 // de ../_shared/express-prompts.ts, GÉNÉRÉ depuis app/index.html (node tools/gen-express-prompts.mjs) — rien à ajouter ici.
 
 // ── FILE D'ATTENTE DES SOUMISSIONS VEO (11/09, Axel : « la file d'attente, fais-le proprement ») ──
@@ -2585,6 +2598,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   if (!GOOGLE_AI_KEY && !kieVeoOn(profile)) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
+  const lang = langueVideo(args.language, prompt)
   // Omni Flash (5 cr/s, 4 / 6 / 8 / 10 s) PARTOUT comme l'app (Flash par défaut, Axel 27/09) : image de départ fournie, photo
   // déposée dans la carte, ou — sans rien — PHOTO DE DÉPART GÉNÉRÉE d'abord (+OMNI_START_IMG cr, Axel 01/10).
   // Veo Lite (1,5 cr/s) seulement si Omni n'est pas ouvert sur ce compte.
@@ -2625,7 +2639,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   // photo officielle : rien n'est inventé, rien n'est débité avant.
   if (genStart && productUrlV) {
     const { data: pp, error: ppErr } = await svc.from('mcp_jobs')
-      .insert({ user_id: userId, kind: 'avatar', status: 'pending', credits_cost: cost, params: { video: true, product: true, prompt, aspect, duration, product_url: productUrlV, cap_held: capHeldOf(profile, ctx, cost) } })
+      .insert({ user_id: userId, kind: 'avatar', status: 'pending', credits_cost: cost, params: { video: true, product: true, prompt, lang, aspect, duration, product_url: productUrlV, cap_held: capHeldOf(profile, ctx, cost) } })
       .select('id').single()
     if (ppErr || !pp) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur — réessaie.') }
     const capP = await jobCap(pp.id)
@@ -2651,7 +2665,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   // que les images : job « pending », rien débité, /start lance Omni Flash dès que la photo est déposée).
   if (wantsPhoto) {
     const { data: pj, error: pjErr } = await svc.from('mcp_jobs')
-      .insert({ user_id: userId, kind: 'avatar', status: 'pending', credits_cost: cost, params: { video: true, prompt, aspect, duration, cap_held: capHeldOf(profile, ctx, cost) } })
+      .insert({ user_id: userId, kind: 'avatar', status: 'pending', credits_cost: cost, params: { video: true, prompt, lang, aspect, duration, cap_held: capHeldOf(profile, ctx, cost) } })
       .select('id').single()
     if (pjErr || !pj) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur (carte photo) — réessaie.') }
     return {
@@ -2672,9 +2686,9 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt, duration), genImage: genStart ? augmenterPortrait(expressImagePrompt(prompt)) : undefined })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt, duration, lang), genImage: genStart ? augmenterPortrait(expressImagePrompt(prompt)) : undefined })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
-    prompt: expressVeoPrompt(prompt, duration), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
+    prompt: expressVeoPrompt(prompt, duration, lang), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
   return {
     content: [{ type: 'text', text: `🎬 Vidéo lancée (${duration} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 1 à 3 min), avec le bouton Télécharger. NE rappelle PAS check_video — le widget suit la génération et affiche la vidéo tout seul. Dis juste à l'utilisateur que la vidéo apparaît dans la carte.` }],
@@ -4450,6 +4464,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   const style = MONTAGE_STYLES.includes(String(args.style)) ? String(args.style) : 'auto'
   const brief = String(args.brief || '').trim().slice(0, 700)
   const script = String(args.script || '').trim().slice(0, 4000)
+  const langM = langueVideo(args.language, script || brief)   // 26/10 : langue de l'audio (transcription + textes du montage)
   const got = await fetchUserFile(audioUrl, MONTAGE_MAX_BYTES, /^(audio\/|video\/mp4|application\/octet-stream)/, "l'audio (audio_url)")
   if (typeof got === 'string') return toolErr(got)
 
@@ -4628,7 +4643,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       fd.append('duration', String(Math.round(durEst * 100) / 100))
       if (script) fd.append('script', script)
       if (brief) fd.append('brief', brief)
-      fd.append('options', JSON.stringify({ lang: 'fr', hasAvatar: !!avatarFile, style }))   // le style choisit la fiche du chef (comme l'app)
+      fd.append('options', JSON.stringify({ lang: langM, hasAvatar: !!avatarFile, style }))   // le style choisit la fiche du chef (comme l'app)
       fd.append('user_id', userId)   // appel service : la mémoire de marque lue est celle de CE compte (et seulement elle)
       // le chef VOIT les médias (vision) et les place au moment que leur nom décrit
       if (medias.length) {
@@ -5847,7 +5862,7 @@ serve(async (req) => {
           .eq('id', jobId).eq('status', 'pending').select('id')
         if (!tookP || !tookP.length) return json(409, { error: 'not_pending' })
         runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: '', aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
-          prompt: expressOmniPrompt(String(params.prompt || ''), durV), genImage: augmenterPortrait(expressImagePrompt(String(params.prompt || ''))), productRef: refP })
+          prompt: expressOmniPrompt(String(params.prompt || ''), durV, params.lang === 'en' ? 'en' : 'fr'), genImage: augmenterPortrait(expressImagePrompt(String(params.prompt || ''))), productRef: refP })
         return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
       }
       const mV = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
@@ -5870,7 +5885,7 @@ serve(async (req) => {
         .eq('id', jobId).eq('status', 'pending').select('id')
       if (!tookV || !tookV.length) return json(409, { error: 'not_pending' })
       runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: urlV, aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
-        prompt: expressOmniPrompt(String(params.prompt || ''), durV) })
+        prompt: expressOmniPrompt(String(params.prompt || ''), durV, params.lang === 'en' ? 'en' : 'fr') })
       return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
     }
     const pArgs = (params.args || {}) as Record<string, unknown>
