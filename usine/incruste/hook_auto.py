@@ -43,7 +43,8 @@ def main():
         src = os.path.join(d, hd[0] + '.mp4')
         if not os.path.exists(src): urllib.request.urlretrieve(m, src)
         os.makedirs(os.path.join(d, nom))
-        run('ffmpeg', '-v', 'error', '-y', '-i', src, '-vf', 'fps=30,scale=720:-2', '-t', '6', os.path.join(d, nom, '%03d.png'))
+        # résolution d'origine (Axel 26/10 : « même résolution que le hook ») : plus de passage en 720p avant la carte
+        run('ffmpeg', '-v', 'error', '-y', '-i', src, '-vf', 'fps=30', '-t', '6', os.path.join(d, nom, '%03d.png'))
     conf = {'fps': round(fps_de(clip), 3), 'groupes': banque['groupes'], 'une_ligne': True, 'carte': {'w': 320, 'marge': 36}}
     if opt.get('--couleur'): conf['couleur'] = opt['--couleur']
     if opt.get('--teinte'): conf['teinte'] = opt['--teinte']

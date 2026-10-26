@@ -29,7 +29,7 @@ TEINTES = {
               'halo': (180, 232, 30), 'ombre': (48, 60, 4), 'reflet': (246, 250, 222)},
 }
 # Couleur À PLAT du mot fort (sans dégradé) : « jaune » = le validé (200,255,61) ; « vert » / « rouge » (Axel 26/10).
-COULEURS = {'jaune': (200, 255, 61), 'vert': (64, 222, 52), 'rouge': (236, 38, 38)}
+COULEURS = {'jaune': (200, 255, 61), 'vert': (64, 222, 52), 'rouge': (218, 12, 24)}   # rouge : Axel 26/10 « un rouge plus rouge » (236,38,38 tirait sur l'orange)
 if CONF.get('couleur') in COULEURS and CONF.get('style', 'anton') != 'neon': VERT = COULEURS[CONF['couleur']]
 TEINTE = TEINTES.get(CONF.get('teinte'))
 # « neon » (police élargie + emplacements changés) : essai du 26/10 ÉCARTÉ par Axel (« je parle juste de la couleur »).
@@ -55,6 +55,8 @@ def pop(t, t0, d=0.14):
     x = max(0.0, min(1.0, (t - t0) / d))
     return x, (1 + 0.12 * np.sin(np.pi * x)) if x < 1 else 1.0
 
+MARQUE_DEMO = None
+
 def _norme(m):
     m = unicodedata.normalize('NFKD', m.lower()); m = ''.join(c for c in m if not unicodedata.combining(c))
     return re.sub(r'[^a-z0-9]', '', m)
@@ -63,10 +65,13 @@ def decoupe(mots, texte):
     """groupes écrits à la main (« A B / *C D / … », « * » = mot fort DEVANT) ; le texte affiché est celui des groupes.
     Les mots écrits sont ALIGNÉS sur les mots entendus (Whisper peut couper « AvatarAds » en deux ou écrire « 2026 » en
     lettres) : un mot écrit sans correspondance prend un temps interpolé entre ses voisins."""
+    global MARQUE_DEMO
     groupes = []
     for g in texte.split('/'):
         g = g.strip()
-        if g: groupes.append((g.lstrip('*').split(), g.startswith('*')))
+        if not g: continue
+        if g.startswith('>'): MARQUE_DEMO = len(groupes); g = g[1:].strip()   # « > » : les démos arrivent sur ce groupe
+        groupes.append((g.lstrip('*').split(), g.startswith('*')))
     ecrits = [m for g, _ in groupes for m in g]
     t = [None] * len(ecrits)
     sm = difflib.SequenceMatcher(None, [_norme(m) for m in ecrits], [_norme(w['text']) for w in mots], autojunk=False)
@@ -241,8 +246,53 @@ def calque_demos(t, t_in, W, H):
         lay.alpha_composite(sh); lay.alpha_composite(c, (int(x), CY))
     return lay
 
+def empile(G, c, D):
+    """groupe blanc c suivi d'un mot fort : empilés (blanc au-dessus) seulement si le bloc reste léger — mot fort sur 1
+    ligne ou blanc court (Axel 26/10 : « LITTÉRALEMENT » + « LA PLANQUE / DE CET HIVER » + démos = écran trop rempli)"""
+    if c + 1 >= len(G) or c < D or G[c][3] or not G[c + 1][3]: return False
+    hf, cf = dessine(None, 0, G[c + 1][2], VERT, 150, 1600, une_ligne=False, dessin=False)
+    une_ligne = hf >= 1600 - cf * 1.1
+    return une_ligne or sum(len(m) for m, _ in G[c][2]) <= 8
+
+def main_avec_marque(G, D):
+    """banque avec « > » : avant les démos, comme d'habitude (mot seul / groupe derrière la tête, mots forts devant) ;
+    à partir du groupe D, les démos arrivent et les sous-titres continuent DEVANT, un bloc à la fois, JUSQU'À LA FIN
+    (Axel 26/10 : « il n'y a pas les sous-titres jusqu'à la fin ») ; le dernier groupe tient jusqu'à la fin."""
+    t_demo = G[D][0]; G[-1] = (G[-1][0], 99, G[-1][2], G[-1][3])
+    os.makedirs('oE', exist_ok=True)
+    n = len(os.listdir('f'))
+    for i in range(n):
+        t = i / FPS
+        fond = Image.open('f/%03d.png' % (i + 1)).convert('RGBA'); W, H = fond.size
+        personne = fond.copy(); personne.putalpha(Image.open('m2/%03d.png' % (i + 1)).convert('L'))
+        derriere = Image.new('RGBA', (W, H), (0, 0, 0, 0)); devant = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        if t >= t_demo and os.path.isdir('demo'): derriere.alpha_composite(calque_demos(t, t_demo, W, H))
+        if t < t_demo:
+            for debut, fin, gm, fort in G[:D]:
+                if not (debut <= t < min(fin, t_demo)): continue
+                if fort: dessine(devant, t, gm, VERT, 150, 1600, une_ligne=False)
+                elif len(gm) == 1:
+                    ms = mot_seul(gm[0][0]); dessine(derriere, t, gm, BLANC, ms['cap'], 459 + DY + ms['chevauche'])
+                else: dessine(derriere, t, gm, BLANC, 105, 470 + DY)
+        else:
+            c = max(j for j in range(D, len(G)) if G[j][0] <= t or j == D)
+            if G[c][3]:
+                if empile(G, c - 1, D):   # le blanc d'avant reste au-dessus
+                    hf, cf = dessine(devant, t, G[c][2], VERT, 150, 1600, une_ligne=False, dessin=False)
+                    dessine(devant, t, G[c - 1][2], BLANC, 105, min(1430, hf - 0.22 * cf))
+                dessine(devant, t, G[c][2], VERT, 150, 1600, une_ligne=False)
+            elif empile(G, c, D):         # blanc qui sera surmonté : déjà à sa place du dessus
+                hf, cf = dessine(devant, t, G[c + 1][2], VERT, 150, 1600, une_ligne=False, dessin=False)
+                dessine(devant, t, G[c][2], BLANC, 105, min(1430, hf - 0.22 * cf))
+            else: dessine(devant, t, G[c][2], BLANC, 120, 1600, une_ligne=False)
+        img = fond.copy(); img.alpha_composite(derriere); img.alpha_composite(personne); img.alpha_composite(devant)
+        img.convert('RGB').save('oE/%03d.png' % (i + 1))
+    json.dump({'t_demo': round(t_demo, 3), 'dy': DY}, open('oE/meta.json', 'w'))
+    print('crâne décalé de', DY, 'px | démos à', round(t_demo, 2), [(round(a, 2), ' '.join(m for m, _ in g)) for a, _, g, _ in G])
+
 def main():
     G = phrases(json.load(open('words.json')))
+    if MARQUE_DEMO is not None: return main_avec_marque(G, MARQUE_DEMO)
     # Axel 26/10 : les 2 derniers mots avant le mot fort (« à devenir ») passent DEVANT en bas, juste au-dessus du mot fort ;
     # les démos arrivent à ce moment-là (dès la fin de « vraiment »)
     # Axel 26/10 : plusieurs mots forts possibles (« AVATAR IA » … « QUALITÉ-LÀ ») : chacun DEVANT en vert pendant son
@@ -270,9 +320,13 @@ def main():
             if STYLE == 'neon':   # posé juste au-dessus du bloc du dernier mot fort (1 ou 2 lignes), 80 % de sa taille
                 hf, cf = dessine(devant, t, G[k][2], VERT, 150, 1600, une_ligne=False, dessin=False)
                 dessine(devant, t, pre[2], BLANC, 0.8 * cf, hf - 0.3 * cf)
-            else:   # posé au-dessus du dernier mot fort ; s'il tient sur 2 lignes (« LA PLANQUE / DE CET HIVER »), il remonte
+            else:   # posé au-dessus du dernier mot fort ; s'il tient sur 2 lignes (« 1000 EUROS / PAR JOUR »), il remonte —
+                    # et un blanc long sur un mot fort de 2 lignes (« LITTÉRALEMENT » / « LA PLANQUE DE CET HIVER ») s'efface
+                    # quand le mot fort arrive (Axel 26/10 : écran trop rempli)
                 hf, cf = dessine(devant, t, G[k][2], VERT, 150, 1600, une_ligne=False, dessin=False)
-                dessine(devant, t, pre[2], BLANC, 105, min(1430, hf - 0.22 * cf))
+                leger = hf >= 1600 - cf * 1.1 or sum(len(m) for m, _ in pre[2]) <= 8
+                if leger: dessine(devant, t, pre[2], BLANC, 105, min(1430, hf - 0.22 * cf))
+                elif t < G[k][0]: dessine(devant, t, pre[2], BLANC, 120, 1600, une_ligne=False)   # seul, avant le mot fort
         for debut, fin, gm, fort in G:
             if not (debut <= t < fin): continue
             if fort: dessine(devant, t, gm, VERT, 150, 1600, une_ligne=False)   # mot fort long (« 100 RÉELS INSTAGRAM ») : 2 lignes, pas rétréci
