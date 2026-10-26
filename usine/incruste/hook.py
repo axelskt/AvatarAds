@@ -197,7 +197,7 @@ MARGE = CONF.get('carte', {}).get('marge', 64)
 # mot long (« LAISSE-MOI » sur A1-6) → plus petit et plus haut, sinon il disparaît derrière le visage
 # Mot seul derrière la tête : il doit rester LISIBLE (Axel 26/10 : « LAISSE-MOI », « CENSÉ », « GRATUITEMENT » à moitié
 # cachés sur les photos cadrées serré). On mesure sur le masque de la 1re image la part des lettres que le crâne cacherait
-# et on garde la position la plus enfoncée où ≥ 70 % du mot reste visible (A1-11 « WAOUH » : 300 / 291 comme validé).
+# et on garde la position la plus enfoncée où ≥ 80 % du mot reste visible (A1-11 « WAOUH » : 300 / 291 comme validé).
 _MS = {}
 def mot_seul(m, masque='m2/001.png'):
     if 'mot_seul' in CONF: return {'cap': 300, 'chevauche': 291, **CONF['mot_seul']}
@@ -213,7 +213,7 @@ def mot_seul(m, masque='m2/001.png'):
         t = Image.new('L', (M.shape[1], M.shape[0]), 0)
         ImageDraw.Draw(t).text(((M.shape[1] - f.getlength(m)) / 2, crane + ch), m, font=f, fill=255, anchor='ls')
         T = np.asarray(t) > 128
-        if T.sum() and (T & M).sum() / T.sum() <= 0.30: choix = {'cap': cap, 'chevauche': ch}; break
+        if T.sum() and (T & M).sum() / T.sum() <= 0.20: choix = {'cap': cap, 'chevauche': ch}; break
     _MS[(m, masque)] = choix
     return choix
 def carte(dossier, t, t_in):
@@ -270,7 +270,9 @@ def main():
             if STYLE == 'neon':   # posé juste au-dessus du bloc du dernier mot fort (1 ou 2 lignes), 80 % de sa taille
                 hf, cf = dessine(devant, t, G[k][2], VERT, 150, 1600, une_ligne=False, dessin=False)
                 dessine(devant, t, pre[2], BLANC, 0.8 * cf, hf - 0.3 * cf)
-            else: dessine(devant, t, pre[2], BLANC, 105, 1430)
+            else:   # posé au-dessus du dernier mot fort ; s'il tient sur 2 lignes (« LA PLANQUE / DE CET HIVER »), il remonte
+                hf, cf = dessine(devant, t, G[k][2], VERT, 150, 1600, une_ligne=False, dessin=False)
+                dessine(devant, t, pre[2], BLANC, 105, min(1430, hf - 0.22 * cf))
         for debut, fin, gm, fort in G:
             if not (debut <= t < fin): continue
             if fort: dessine(devant, t, gm, VERT, 150, 1600, une_ligne=False)   # mot fort long (« 100 RÉELS INSTAGRAM ») : 2 lignes, pas rétréci
