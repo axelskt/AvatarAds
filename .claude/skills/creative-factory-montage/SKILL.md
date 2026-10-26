@@ -215,7 +215,7 @@ CTA après la fin de la démo, chaîne voix commune, liaison + B-roll « regarde
   M15, M16, M18, M19 refusées par build-f05.mjs. Manque de pistes énergiques longues → en demander à Axel.
 - Lot du 06/10 : 8 réactions × 3 (texte choc, démo, musique tous différents par réaction) = VF-0079 → VF-0102.
 
-## Format « texte incrusté » F-AP-INCRUSTE (VALIDÉ DÉFINITIVEMENT par Axel le 26/10)
+## Format « Sous-titres en arrière-plan » (ex « texte incrusté ») F-AP-INCRUSTE (VALIDÉ DÉFINITIVEMENT par Axel le 26/10)
 5 essais validés (H90 × A1-11, H14 × A1-14, H89 × A1-10, H72 × A1-11, H91 × A1-12) ; vidéos VF-0972 / VF-0973. Outils :
 `usine/incruste/` (LISEZMOI.md = procédure pas à pas). Réf. avatarhype_fr.
 - **Clips Omni Flash UNIQUEMENT** (factory_variants format `omni`), jamais Character-3. CTA de la MÊME photo.

@@ -1,4 +1,4 @@
-# Format « texte incrusté » F-AP-INCRUSTE — VALIDÉ DÉFINITIVEMENT par Axel le 26/10 (H90, H14, H89, H72, H91)
+# Format « Sous-titres en arrière-plan » (ex « texte incrusté ») F-AP-INCRUSTE — VALIDÉ DÉFINITIVEMENT par Axel le 26/10 (H90, H14, H89, H72, H91)
 
 Prototype (dossier de travail : `f/` images du clip, `m2/` masques, `demo/` et `demo2/` images des 2 Hook démo à 30 i/s,
 `words.json` mots du hook ; CTA : `cta/f`, `cta/m2`, `cta/words.json`) :
