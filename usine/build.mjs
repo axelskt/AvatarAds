@@ -29,7 +29,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--medaillon', '--medaillon-libre', '--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut', '--split'];
+const VAL_FLAGS = ['--medaillon', '--medaillon-libre', '--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut', '--split', '--demo-speed'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres', '--incruste'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -157,18 +157,31 @@ try { execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','color=c=black:s=64
 const VENC = HW ? ['-c:v','h264_videotoolbox','-b:v','20M','-maxrate','26M','-bufsize','40M','-profile:v','high'] : ['-c:v','libx264','-crf','20','-preset','medium'];
 const fileKey = f => { const st = statSync(f), fd = openSync(f, 'r'), h = createHash('sha1'), n = Math.min(st.size, 4 << 20), b = Buffer.alloc(n);
   readSync(fd, b, 0, n, 0); h.update(b); readSync(fd, b, 0, n, Math.max(0, st.size - n)); h.update(b); closeSync(fd); h.update(String(st.size)); return h.digest('hex').slice(0, 16); };
+const DEMO_SPEED = +(OPT['demo-speed'] || process.env.CF_DEMO_SPEED || 1.08);
 function workingDemo(src) {
   const pr = execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=width,height,r_frame_rate','-of','csv=p=0', src]).toString().trim().split(',');
   const [w, h] = [+pr[0], +pr[1]], fps = (() => { const [a, b] = String(pr[2] || '30/1').split('/').map(Number); return b ? a / b : a; })();
-  if (w === 1080 && h === 1920 && Math.abs(fps - FPS) < 0.02) return src;
-  const out = join(CACHE, 'demos', basename(src).replace(/\.[^.]+$/, '') + '-' + fileKey(src) + '-' + FPS + 'fps.mp4');
+  // Axel 26/10 : toute démo AVEC son passe en 1,08x (voix à hauteur normale, atempo) ; une démo muette reste à 1x.
+  // La vitesse est dans le nom du cache → la démo accélérée est retranscrite (sous-titres calés sur la nouvelle vitesse).
+  const sonore = execFileSync('ffprobe', ['-v','error','-select_streams','a','-show_entries','stream=index','-of','csv=p=0', src]).toString().trim() !== '';
+  const vit = sonore ? DEMO_SPEED : 1;
+  if (vit === 1 && w === 1080 && h === 1920 && Math.abs(fps - FPS) < 0.02) return src;
+  const out = join(CACHE, 'demos', basename(src).replace(/\.[^.]+$/, '') + '-' + fileKey(src) + '-' + FPS + 'fps' + (vit === 1 ? '' : '-x' + vit) + '.mp4');
   if (!existsSync(out)) {
     console.log('  démo : version de travail 1080×1920 ' + FPS + ' i/s (une seule fois) → ' + basename(out));
     // 19/10 : fichier temporaire PROPRE au processus — un lot rend 3 vidéos à la fois ; deux rendus qui préparaient la même
     // démo neuve (C-EXP-01, 4K) écrivaient le même .part et le second échouait au renommage (ENOENT, VF-0633 perdue)
     const tmp = out + '.' + process.pid + '.part.mp4';
-    ff(['-i', src, '-vf', VF, ...VENC, '-g', String(FPS), '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', tmp]);
+    ff(['-i', src, '-vf', (vit === 1 ? '' : `setpts=PTS/${vit},`) + VF, ...(vit === 1 ? [] : ['-af', `atempo=${vit}`]), ...VENC, '-g', String(FPS), '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', tmp]);
     if (existsSync(out)) rmSync(tmp, { force: true }); else renameSync(tmp, out);
+  }
+  if (vit !== 1) {   // mots déjà vérifiés de la démo à 1x → mêmes mots, temps divisés par la vitesse (pas de nouvelle transcription)
+    const W = n => join(CACHE, 'words', n), cible = W(fileKey(out) + '.json'), un = out.replace('-x' + vit + '.mp4', '.mp4');
+    const src1 = [W(fileKey(src) + '.json'), W('n-' + basename(un) + '.json'), existsSync(un) ? W(fileKey(un) + '.json') : ''].find(c => c && existsSync(c));
+    if (!existsSync(cible) && src1) {
+      const ws = JSON.parse(readFileSync(src1, 'utf8')).map(w => ({ ...w, start: +(w.start / vit).toFixed(3), end: +(w.end / vit).toFixed(3) }));
+      writeFileSync(cible, JSON.stringify(ws)); console.log('  démo x' + vit + ' : mots repris de la version 1x');
+    }
   }
   return out;
 }

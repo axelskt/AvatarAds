@@ -1,24 +1,46 @@
 # Essai 5 (Axel 26/10, reformulé) : mot seul = GRAND derrière la tête (taille de l'essai 2) ; groupe de mots = plus petit,
 # phrase entière jusqu'au mot fort (« ça commence vraiment à devenir ») ; mot fort EN BAS, DEVANT, en vert, et à ce moment
 # les 2 démos du hook arrivent ensemble (gauche par la gauche, droite par la droite).
-import json, subprocess
+import json, os, subprocess
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import numpy as np
 
-FPS = 24
+# Réglages par hook / photo (facultatif) : incruste.json = {"fps": 30, "forts": ["QUALITÉ-LÀ"],
+#   "groupes": "LAISSE-MOI / 30 SECONDES / … / QUALITÉ-LÀ", "une_ligne": true, "carte": {"w": 320, "marge": 36}}
+# Sans fichier : réglages validés sur H90 × A1-11.
+CONF = json.load(open('incruste.json')) if os.path.exists('incruste.json') else {}
+FPS = CONF.get('fps', 24)
 ANTON = 'Anton.ttf'
 VERT = (200, 255, 61)
 BLANC = (255, 255, 255)
-FORTS = {'FLIPPANT'}
+FORTS = set(CONF.get('forts', ['FLIPPANT']))
 DEMOS = ['demo', 'demo2']
+
+def haut_tete():
+    """haut du crâne sur la 1re image (masque) : les positions validées sont calées sur A1-11 (crâne à y 459)"""
+    M = np.asarray(Image.open('m2/001.png').convert('L')) > 128
+    lignes = np.where(M[:, 200:880].sum(axis=1) > 40)[0]
+    return int(lignes.min()) if len(lignes) else 459
+DY = CONF.get('dy', haut_tete() - 459)
 
 def ease(x): x = max(0.0, min(1.0, x)); return 1 - (1 - x) ** 3
 def pop(t, t0, d=0.14):
     x = max(0.0, min(1.0, (t - t0) / d))
     return x, (1 + 0.12 * np.sin(np.pi * x)) if x < 1 else 1.0
 
+def decoupe(mots, texte):
+    """groupes écrits à la main (« A B / C / … ») ; le texte affiché est celui des groupes (accents, chiffres)"""
+    groupes = [g.split() for g in texte.split('/') if g.strip()]
+    if sum(map(len, groupes)) != len(mots):
+        raise SystemExit('groupes : %d mots écrits pour %d mots dits' % (sum(map(len, groupes)), len(mots)))
+    brut, i = [], 0
+    for g in groupes:
+        brut.append([(m, mots[i + j]['start'], m in FORTS) for j, m in enumerate(g)]); i += len(g)
+    return brut
+
 def phrases(mots):
     """coupure aux ponctuations et autour des mots forts ; un mot isolé (hors 1er) rejoint le groupe suivant"""
+    if CONF.get('groupes'): return bornes(decoupe(mots, CONF['groupes']))
     brut, cur = [], []
     for w in mots:
         txt = w['text'].strip(',.!?;:').upper()
@@ -32,6 +54,9 @@ def phrases(mots):
     for i, g in enumerate(brut):
         if out and len(out[-1]) == 1 and len(out) > 1 and not out[-1][0][2] and not g[0][2]: out[-1] = out[-1] + g
         else: out.append(g)
+    return bornes(out)
+
+def bornes(out):
     res = []
     for i, g in enumerate(out):
         debut = 0.0 if i == 0 else g[0][1] - 0.02
@@ -40,7 +65,7 @@ def phrases(mots):
     return res
 
 def lignes_de(mots):
-    if len(mots) <= 2: return [mots]
+    if len(mots) <= 2 or CONF.get('une_ligne'): return [mots]
     # coupe équilibrée en 2 lignes (largeur en lettres)
     n = [len(m) for m, _ in mots]; tot = sum(n) + len(n) - 1; best, k = 1e9, 1
     for i in range(1, len(mots)):
@@ -74,7 +99,11 @@ def dessine(lay, t, mots, col, cap_px, bas, larg=960):
                 lay.alpha_composite(img, (int(x + lw / 2 - img.width / 2), int(y - size * 1.2 * sc)))
             x += lw + esp
 
-CW, CH, CY = 340, 540, 350
+CW = CONF.get('carte', {}).get('w', 340); CH = round(CW * 540 / 340); CY = 350 + DY
+MARGE = CONF.get('carte', {}).get('marge', 64)
+# mot seul derrière la tête : taille des capitales et px cachés sous le haut du crâne (A1-11 : 300 / 291) ; tête large ou
+# mot long (« LAISSE-MOI » sur A1-6) → plus petit et plus haut, sinon il disparaît derrière le visage
+MOT_SEUL = {'cap': 300, 'chevauche': 291, **CONF.get('mot_seul', {})}
 def carte(dossier, t, t_in):
     i = int((t - t_in) * 30) + 1
     try: im = Image.open('%s/%03d.png' % (dossier, max(1, i))).convert('RGB')
@@ -88,7 +117,7 @@ def calque_demos(t, t_in, W, H):
     lay = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     for k, dossier in enumerate(DEMOS):
         cote = 'g' if k == 0 else 'd'
-        cible = 64 if cote == 'g' else W - 64 - CW
+        cible = MARGE if cote == 'g' else W - MARGE - CW
         depart = -CW - 20 if cote == 'g' else W + 20
         p = ease((t - t_in) / 0.35)
         x = depart + (cible - depart) * p
@@ -111,6 +140,8 @@ def main():
     if len(gm) >= 3:
         G[k - 1] = (debut, gm[-2][1] - 0.02, gm[:-2], False)
         pre = (gm[-2][1] - 0.02, G[k + 1][0] if k + 1 < len(G) else 99, gm[-2:])
+    elif CONF.get('groupes'):            # groupe déjà écrit à la main (« AVEC CETTE ») : il passe devant tel quel
+        pre = (debut, 99, gm); G.pop(k - 1); k -= 1
     t_demo = pre[0] if pre else G[k][0]
     subprocess.run(['mkdir', '-p', 'oE'])
     n = len(subprocess.run(['ls', 'f'], capture_output=True, text=True).stdout.split())
@@ -125,9 +156,10 @@ def main():
             if not (debut <= t < fin): continue
             if fort: dessine(devant, t, gm, VERT, 150, 1600)
             elif t >= t_demo: continue                                              # Axel 26/10 : rien après le mot fort
-            elif len(gm) == 1: dessine(derriere, t, gm, BLANC, 300, 750)
-            else: dessine(derriere, t, gm, BLANC, 105, 470)
+            elif len(gm) == 1: dessine(derriere, t, gm, BLANC, MOT_SEUL['cap'], 459 + DY + MOT_SEUL['chevauche'])
+            else: dessine(derriere, t, gm, BLANC, 105, 470 + DY)
         img = fond.copy(); img.alpha_composite(derriere); img.alpha_composite(personne); img.alpha_composite(devant)
         img.convert('RGB').save('oE/%03d.png' % (i + 1))
-    print('démos à', round(t_demo, 2), [(round(a, 2), ' '.join(m for m, _ in g)) for a, _, g, _ in G], pre and ' '.join(m for m, _ in pre[2]))
+    json.dump({'t_demo': round(t_demo, 3), 'dy': DY}, open('oE/meta.json', 'w'))   # woosh à l'arrivée des démos
+    print('crâne décalé de', DY, 'px | démos à', round(t_demo, 2), [(round(a, 2), ' '.join(m for m, _ in g)) for a, _, g, _ in G], pre and ' '.join(m for m, _ in pre[2]))
 if __name__ == "__main__": main()
