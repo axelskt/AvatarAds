@@ -10,7 +10,8 @@ import numpy as np
 # Sans fichier : réglages validés sur H90 × A1-11.
 CONF = json.load(open('incruste.json')) if os.path.exists('incruste.json') else {}
 FPS = CONF.get('fps', 24)
-ANTON = 'Anton.ttf'
+_POLICES = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'polices')
+ANTON = 'Anton.ttf' if os.path.exists('Anton.ttf') else os.path.join(_POLICES, 'Anton.ttf')
 VERT = (200, 255, 61)
 # Couleur du mot fort (Axel 26/10) : défaut = vert validé (200,255,61) à plat. « teinte » = la couleur de devinjatho, SANS
 # rien changer d'autre (police, tailles, emplacements validés) : dégradé vertical mesuré sur ses vidéos + léger halo de la
@@ -37,7 +38,7 @@ if STYLE == 'neon': VERT = {'vert': (52, 235, 72), 'rouge': (242, 36, 44)}[CONF.
 
 def police(size):
     if STYLE != 'neon': return ImageFont.truetype(ANTON, size)
-    f = ImageFont.truetype('Archivo.ttf', size); f.set_variation_by_axes([900, 125]); return f
+    f = ImageFont.truetype('Archivo.ttf' if os.path.exists('Archivo.ttf') else os.path.join(_POLICES, 'Archivo.ttf'), size); f.set_variation_by_axes([900, 125]); return f
 BLANC = (255, 255, 255)
 FORTS = set(CONF.get('forts', ['FLIPPANT']))
 DEMOS = ['demo', 'demo2']
