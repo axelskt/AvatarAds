@@ -657,7 +657,7 @@ video::-webkit-media-controls{display:none!important}
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="genVid" src="/assets/lp/generateur-lp.mp4" poster="/assets/lp/generateur-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" fetchpriority="low" aria-label="Generator demo: an avatar, your voice, a caption style — the video is ready" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="genVid" src="/assets/lp/en/generateur-lp.mp4" poster="/assets/lp/generateur-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" fetchpriority="low" aria-label="Generator demo: an avatar, your voice, a caption style — the video is ready" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -714,11 +714,11 @@ video::-webkit-media-controls{display:none!important}
       <!-- avatar IA — grille de 6 avatars UGC (vraies images générées par l'app,
            dossiers « Image IA /Garçon + /Fille » — jamais de visuels externes) -->
       <div class="feat-mock" data-feat="avatar" style="padding:16px"><div class="feat-demo vidwrap">
-        <div class="feat-vid"><video src="/assets/lp/avatar-ia-lp.mp4" poster="/assets/lp/avatar-ia-lp.webp" muted loop playsinline preload="metadata" aria-label="AI Avatar demo: realistic AI faces generated to present your product"></video></div>
+        <div class="feat-vid"><video src="/assets/lp/en/avatar-ia-lp.mp4" poster="/assets/lp/avatar-ia-lp.webp" muted loop playsinline preload="metadata" aria-label="AI Avatar demo: realistic AI faces generated to present your product"></video></div>
       </div></div>
       <!-- motion control -->
       <div class="feat-mock" data-feat="motion" style="padding:16px"><div class="feat-demo vidwrap">
-        <div class="feat-vid"><video src="/assets/lp/motion-control-lp.mp4" poster="/assets/lp/motion-control-lp.webp" muted loop playsinline preload="metadata" aria-label="Motion Control demo: a still image turned into a moving video"></video></div>
+        <div class="feat-vid"><video src="/assets/lp/en/motion-control-lp.mp4" poster="/assets/lp/motion-control-lp.webp" muted loop playsinline preload="metadata" aria-label="Motion Control demo: a still image turned into a moving video"></video></div>
       </div></div>
       <!-- montage IA : avant/après vidéo (boucles muettes lancées ensemble à l'apparition) -->
       <div class="feat-mock" data-feat="montage" style="padding:16px"><div class="feat-demo vidwrap">
@@ -726,7 +726,7 @@ video::-webkit-media-controls{display:none!important}
       </div></div>
       <!-- nettoyage audio -->
       <div class="feat-mock" data-feat="audio" style="padding:16px"><div class="feat-demo vidwrap">
-        <div class="feat-vid"><video src="/assets/lp/nettoyage-audio-lp.mp4" poster="/assets/lp/nettoyage-audio-lp.webp" muted loop playsinline preload="metadata" aria-label="Audio Cleanup demo: raw sound cleaned up (noise, volume, silences)"></video></div>
+        <div class="feat-vid"><video src="/assets/lp/en/nettoyage-audio-lp.mp4" poster="/assets/lp/en/nettoyage-audio-lp.webp" muted loop playsinline preload="metadata" aria-label="Audio Cleanup demo: raw sound cleaned up (noise, volume, silences)"></video></div>
       </div></div>
       <!-- omni : transforme un objet d'une vidéo par un prompt (avant/après) -->
       <div class="feat-mock" data-feat="omni" style="padding:16px"><div class="feat-demo vidwrap">
@@ -1394,10 +1394,10 @@ revealScan();
   };
   var MODELS=[
     ["express","Express","Video from text",200,"bolt","text → video","/assets/lp/express-lp.mp4"],
-    ["motion","Motion Control","Transfer a motion onto an image",265,"mask","video + image → video","/assets/lp/motion-control-lp.mp4"],
+    ["motion","Motion Control","Transfer a motion onto an image",265,"mask","video + image → video","/assets/lp/en/motion-control-lp.mp4"],
     ["images","AI Image","4K visuals in 1 prompt",330,"image","text → image","/assets/lp/images-ia-lp.mp4"],
     ["montage","AI Editing","Your audio turned into a viral video",18,"film","audio → video","/assets/lp/montage-ia-lp.mp4"],
-    ["gen","Generator","AI avatar + voice + captions",150,"sparkle","image + audio → video","/assets/lp/generateur-lp.mp4"],
+    ["gen","Generator","AI avatar + voice + captions",150,"sparkle","image + audio → video","/assets/lp/en/generateur-lp.mp4"],
     ["omni","Omni","Transform any object in one click",30,"sparkle","video → video","/assets/lp/en/omni-lp.mp4?v=2"]
   ];
   var grid=document.getElementById('modelGrid');
