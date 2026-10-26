@@ -673,6 +673,7 @@ if (FMT.hasChoc(format) && !SPLIT && !INCRUSTE) {
 sidecar.combo = { format: format.id, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
 if (illusLog.length) sidecar.illustrations = illusLog;
 sidecar.musique = music ? (/(M\d+)_/.exec(basename(music)) || [])[1] || basename(music) : null; sidecar.sous_titre = SUBS[OPT['subs-style'] || 'contour'] || (/^S\d{2}$/.test(OPT['subs-style']) ? OPT['subs-style'] : 'S02');
+if (INCRUSTE) capOpts.fenetre = { de: +(O1 + TS).toFixed(3), a: +(cta ? O2 : 1e9).toFixed(3) };   // sous-titres de la démo seulement, hors glissements
 const oj = join(work, 'capOpts.json'); writeFileSync(oj, JSON.stringify(capOpts));
 const capt = join(work, 'capt.mp4');
 execFileSync('node', [join(HERE,'captions.mjs'), 'burn', voice, capt, wj, oj], { stdio:'inherit', env: { ...process.env, CF_FPS: String(FPS) } });

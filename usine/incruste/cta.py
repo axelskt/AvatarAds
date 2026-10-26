@@ -31,6 +31,8 @@ for i in range(n):
     dessine(devant, t, consigne[:1], BLANC, 105, 1430)
     dessine(devant, t, consigne[1:], VERT, 150, 1600)
     for a, b, g in bornes:
-        if a <= t < b: dessine(derriere, t, g, BLANC, 105, 470)
+        if a <= t < b:   # même règle que le hook : mot seul GRAND derrière la tête, groupe plus petit au-dessus
+            if len(g) == 1: dessine(derriere, t, g, BLANC, 300, 750)
+            else: dessine(derriere, t, g, BLANC, 105, 470)
     img = fond.copy(); img.alpha_composite(derriere); img.alpha_composite(personne); img.alpha_composite(devant)
     img.convert('RGB').save('cta/o/%03d.png' % (i + 1))

@@ -121,6 +121,12 @@ function burn(video, output, words, opts = {}) {
     const e = Math.min(dur, next && next.start - w.end <= GAP_HOLD ? Math.max(s, next.start - LEAD) : w.end + (next ? 0.45 : 0.35));
     caps.push({ t: clean(w.text), s, e }); i++;
   }
+  // 26/10 (format « texte incrusté ») : hook et CTA portent déjà leur texte → les sous-titres de la démo ne s'affichent
+  // qu'entre la fin du glissement hook → démo et le début du glissement démo → CTA (jamais deux textes l'un sur l'autre)
+  if (opts.fenetre && isFinite(opts.fenetre.de) && isFinite(opts.fenetre.a)) {
+    caps = caps.map(c => ({ ...c, s: Math.max(c.s, opts.fenetre.de), e: Math.min(c.e, opts.fenetre.a),
+      grp: c.grp ? c.grp.map(x => ({ ...x, s: Math.max(x.s, opts.fenetre.de) })) : c.grp })).filter(c => c.e - c.s >= 0.08);
+  }
   // 11/10 (VF-0109) : le 1er mot calé à 0 par l'avance (LEAD) n'avait plus que 0,03 s (« C'est » dit de 0,03 à 0,15) et le
   // filtre ci-dessous le supprimait → le hook s'ouvrait sur le 2e mot. Il garde 0,12 s, le mot suivant attend.
   for (let k = 0; k + 1 < caps.length; k++) {
