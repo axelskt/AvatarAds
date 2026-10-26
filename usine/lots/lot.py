@@ -200,7 +200,10 @@ for si in range(S['serie'], len(S['series'])):
         for k, (it, tries) in enumerate(batch):
             try: j = prep(it, 's%d_%d_%d' % (si + 1, k, tries)); j['tries'] = tries; js.append(j)
             except Exception as e: log('✗ préparation', it, e); S['fail'].append({'it': it, 'err': str(e)[:200]})
-        ps = [(j, subprocess.Popen(j['cmd'], cwd=REPO, env=env, stdout=open(j['out'] + '.log', 'w'), stderr=subprocess.STDOUT)) for j in js]
+        ps = []
+        for j in js:   # 27/10 : départs décalés de 3 s, chaque rendu voit la musique tirée par le précédent (dernier.json)
+            if ps: time.sleep(3)
+            ps.append((j, subprocess.Popen(j['cmd'], cwd=REPO, env=env, stdout=open(j['out'] + '.log', 'w'), stderr=subprocess.STDOUT)))
         for j, p in ps:
             p.wait()
             if p.returncode or not os.path.exists(j['out']):

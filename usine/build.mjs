@@ -66,10 +66,15 @@ const musicFile = id => {
   return p;
 };
 const musicAuto = music === 'auto';
+// 27/10 : rendus en parallèle (lot) → ils lisaient le même dernier.json et tiraient souvent la même piste (VF-0976/77/78 en M14) :
+// les 4 dernières pistes tirées (lastPick.recentes, écrit dès le tirage) sont écartées tant qu'il en reste d'autres
+const recentes = Array.isArray(lastPick.recentes) ? lastPick.recentes : [];
+const noter = id => { lastPick.musique = id; lastPick.recentes = [id, ...recentes.filter(x => x !== id)].slice(0, 4); };
 if (musicAuto) {
-  const id = draw(MUSIC_OK, lastPick.musique);
+  const libres = MUSIC_OK.filter(m => !recentes.includes(m));
+  const id = draw(libres.length ? libres : MUSIC_OK, lastPick.musique);
   try { music = musicFile(id); } catch { console.error('✗ musique ' + id + ' introuvable'); process.exit(2); }
-  lastPick.musique = id; console.log('  musique tirée : ' + id);
+  noter(id); console.log('  musique tirée : ' + id);
 }
 // STYLE DU TEXTE CHOC (Axel 01/10) : 12 styles validés (CS06 néon retiré ; CS16 surligneur rouge, CS17 Snapchat ajoutés), tiré au hasard par défaut (--choc-style CSxx pour forcer), jamais
 // le même que la vidéo précédente ; noté dans le sidecar (style_choc) → ID complet de la vidéo (…_THxx_CSxx…) et recette.
@@ -573,12 +578,12 @@ const total = dur(voice);
 // toutes sur le serveur) sont souvent plus courtes → la musique repartait du début avant la fin (VF-0032 : 40,6 s pour 41,5 s ;
 // VF-0033 : 21,9 s pour 28,9 s). Une piste tirée trop courte est remplacée par une autre, assez longue.
 if (musicAuto && dur(music) < total + 0.5) {
-  const pool = MUSIC_OK.filter(m => m !== lastPick.musique).sort(() => Math.random() - 0.5);
+  const pool = MUSIC_OK.filter(m => m !== lastPick.musique).sort(() => Math.random() - 0.5).sort((a, b) => recentes.includes(a) - recentes.includes(b));
   for (const id of pool) {
     let f; try { f = musicFile(id); } catch { continue; }
     if (dur(f) < total + 0.5) continue;
     console.log('  musique retirée : ' + id + ' (' + dur(f).toFixed(1) + ' s ; la première était trop courte)');
-    music = f; lastPick.musique = id; try { writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
+    music = f; noter(id); try { writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
     break;
   }
 }
