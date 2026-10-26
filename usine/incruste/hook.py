@@ -1,7 +1,7 @@
 # Essai 5 (Axel 26/10, reformulé) : mot seul = GRAND derrière la tête (taille de l'essai 2) ; groupe de mots = plus petit,
 # phrase entière jusqu'au mot fort (« ça commence vraiment à devenir ») ; mot fort EN BAS, DEVANT, en vert, et à ce moment
 # les 2 démos du hook arrivent ensemble (gauche par la gauche, droite par la droite).
-import json, os, subprocess
+import difflib, json, os, re, subprocess, unicodedata
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import numpy as np
 
@@ -43,14 +43,34 @@ def pop(t, t0, d=0.14):
     x = max(0.0, min(1.0, (t - t0) / d))
     return x, (1 + 0.12 * np.sin(np.pi * x)) if x < 1 else 1.0
 
+def _norme(m):
+    m = unicodedata.normalize('NFKD', m.lower()); m = ''.join(c for c in m if not unicodedata.combining(c))
+    return re.sub(r'[^a-z0-9]', '', m)
+
 def decoupe(mots, texte):
-    """groupes écrits à la main (« A B / C / … ») ; le texte affiché est celui des groupes (accents, chiffres)"""
-    groupes = [g.split() for g in texte.split('/') if g.strip()]
-    if sum(map(len, groupes)) != len(mots):
-        raise SystemExit('groupes : %d mots écrits pour %d mots dits' % (sum(map(len, groupes)), len(mots)))
+    """groupes écrits à la main (« A B / *C D / … », « * » = mot fort DEVANT) ; le texte affiché est celui des groupes.
+    Les mots écrits sont ALIGNÉS sur les mots entendus (Whisper peut couper « AvatarAds » en deux ou écrire « 2026 » en
+    lettres) : un mot écrit sans correspondance prend un temps interpolé entre ses voisins."""
+    groupes = []
+    for g in texte.split('/'):
+        g = g.strip()
+        if g: groupes.append((g.lstrip('*').split(), g.startswith('*')))
+    ecrits = [m for g, _ in groupes for m in g]
+    t = [None] * len(ecrits)
+    sm = difflib.SequenceMatcher(None, [_norme(m) for m in ecrits], [_norme(w['text']) for w in mots], autojunk=False)
+    for b in sm.get_matching_blocks():
+        for k in range(b.size): t[b.a + k] = mots[b.b + k]['start']
+    connus = [i for i, x in enumerate(t) if x is not None]
+    if len(connus) < 0.6 * len(ecrits):
+        raise SystemExit('groupes : %d mots écrits sur %d retrouvés dans ce qui est dit' % (len(connus), len(ecrits)))
+    for i in range(len(t)):
+        if t[i] is not None: continue
+        p = max((k for k in connus if k < i), default=None); n = min((k for k in connus if k > i), default=None)
+        t[i] = (max(0.0, t[n] - 0.15 * (n - i)) if p is None else t[p] + 0.2 * (i - p) if n is None
+                else t[p] + (t[n] - t[p]) * (i - p) / (n - p))
     brut, i = [], 0
-    for g in groupes:
-        brut.append([(m, mots[i + j]['start'], m in FORTS) for j, m in enumerate(g)]); i += len(g)
+    for g, fort in groupes:
+        brut.append([(m, t[i + j], fort or m in FORTS) for j, m in enumerate(g)]); i += len(g)
     return brut
 
 def phrases(mots):
@@ -225,7 +245,7 @@ def main():
         personne = fond.copy(); personne.putalpha(Image.open('m2/%03d.png' % (i + 1)).convert('L'))
         derriere = Image.new('RGBA', (W, H), (0, 0, 0, 0)); devant = Image.new('RGBA', (W, H), (0, 0, 0, 0))
         if STYLE == 'neon': voile(devant)   # bas de l'image assombri en permanence (pas de clignotement)
-        if t >= t_demo: derriere.alpha_composite(calque_demos(t, t_demo, W, H))   # démos DERRIÈRE l'avatar
+        if t >= t_demo and os.path.isdir('demo'): derriere.alpha_composite(calque_demos(t, t_demo, W, H))   # hook sans Hook démo : pas de cartes   # démos DERRIÈRE l'avatar
         if pre and pre[0] <= t < pre[1]:   # « À DEVENIR » au-dessus du mot fort
             if STYLE == 'neon':   # posé juste au-dessus du bloc du dernier mot fort (1 ou 2 lignes), 80 % de sa taille
                 hf, cf = dessine(devant, t, G[k][2], VERT, 150, 1600, une_ligne=False, dessin=False)
