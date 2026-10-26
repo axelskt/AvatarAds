@@ -64,8 +64,8 @@ def bornes(out):
         res.append((debut, fin, [(m, -1.0 if i == 0 else t) for m, t, _ in g], g[0][2]))
     return res
 
-def lignes_de(mots):
-    if len(mots) <= 2 or CONF.get('une_ligne'): return [mots]
+def lignes_de(mots, une_ligne=None):
+    if len(mots) <= 2 or (CONF.get('une_ligne') if une_ligne is None else une_ligne): return [mots]
     # coupe équilibrée en 2 lignes (largeur en lettres)
     n = [len(m) for m, _ in mots]; tot = sum(n) + len(n) - 1; best, k = 1e9, 1
     for i in range(1, len(mots)):
@@ -73,9 +73,9 @@ def lignes_de(mots):
         if abs(tot / 2 - g) < best: best, k = abs(tot / 2 - g), i
     return [mots[:k], mots[k:]]
 
-def dessine(lay, t, mots, col, cap_px, bas, larg=960):
+def dessine(lay, t, mots, col, cap_px, bas, larg=960, une_ligne=None):
     f0 = ImageFont.truetype(ANTON, 100); cap0 = f0.getbbox('H')[3] - f0.getbbox('H')[1]
-    lignes = lignes_de(mots)
+    lignes = lignes_de(mots, une_ligne)
     esp0 = f0.getlength(' ') * 1.6
     plus_large = max(sum(f0.getlength(m) for m, _ in l) + esp0 * (len(l) - 1) for l in lignes)
     size = min(100 * cap_px / cap0, 100 * larg / plus_large)
@@ -160,7 +160,7 @@ def main():
         if pre and pre[0] <= t < pre[1]: dessine(devant, t, pre[2], BLANC, 105, 1430)   # « À DEVENIR » au-dessus du mot fort
         for debut, fin, gm, fort in G:
             if not (debut <= t < fin): continue
-            if fort: dessine(devant, t, gm, VERT, 150, 1600)
+            if fort: dessine(devant, t, gm, VERT, 150, 1600, une_ligne=False)   # mot fort long (« 100 RÉELS INSTAGRAM ») : 2 lignes, pas rétréci
             elif t >= t_demo: continue                                              # Axel 26/10 : rien après le mot fort
             elif len(gm) == 1:
                 ms = mot_seul(gm[0][0]); dessine(derriere, t, gm, BLANC, ms['cap'], 459 + DY + ms['chevauche'])
