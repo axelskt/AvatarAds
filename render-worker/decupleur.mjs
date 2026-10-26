@@ -83,6 +83,15 @@ function messageLien(m) {
   return 'Impossible de récupérer cette vidéo — importe le fichier à la place'
 }
 
+// 25/10 : Railway Hobby donne 8 vCPU, mais le Décupleur y tourne comme sur ~1 cœur (143 s contre 10,6 s en local). Le
+// quota réel du conteneur (cgroup v2 cpu.max « quota période », ou « max » = sans limite) tranche entre bride et code.
+function quotaCpu() {
+  try {
+    const [q, p] = readFileSync('/sys/fs/cgroup/cpu.max', 'utf8').trim().split(/\s+/)
+    return q === 'max' ? 'illimité' : (Number(q) / Number(p)).toFixed(2) + ' cœur(s)'
+  } catch { return 'inconnu' }
+}
+
 // Lien TikTok / Instagram → MP4 normalisé (outPath). Le lien est revérifié ici (le moteur ne lit QUE ces deux sites).
 export async function dcFetch(url, outPath) {
   if (!lienDecupleurOk(url)) throw new Error('Lien TikTok ou Instagram uniquement')
@@ -285,7 +294,7 @@ export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {
   const liste = JSON.parse(readFileSync(join(TEXTES_DIR, 'textes.json'), 'utf8'))
   const ref = empreinte(vSrc, vDebut, lenV)
   await onProgress(5)
-  console.log(`▶ décupleur ×${n} (${lenV.toFixed(1)} s, ${W}×${H}) sur ${availableParallelism()} cœur(s)`)
+  console.log(`▶ décupleur ×${n} (${lenV.toFixed(1)} s, ${W}×${H}) sur ${availableParallelism()} cœur(s) · quota CPU ${quotaCpu()}`)
 
   const params = tirerParametres(n, alt, textPos, Number(seed) >>> 0, liste.length, lenV)
   const faites = []   // { v, nom, emp }

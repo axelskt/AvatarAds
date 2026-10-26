@@ -22,6 +22,9 @@ try{
   try{ var _oe=+localStorage.getItem('aa_oauth_en')||0; if(_oe){ localStorage.removeItem('aa_oauth_en'); if(!_en && _oauth && Date.now()-_oe<6e5){ location.replace('/en/app/'+location.search+location.hash); } } }catch(e){}
   if(!_hasTok && !_recent && !_oauth && !_cap){ location.replace(_en?'/en/connexion.html':'/connexion.html'); }
 }catch(e){}</script>
+<script>/* 25/10 (Axel) : app anglaise /en/app/ — traducteur de l'interface (app/i18n-en.js, GÉNÉRÉ : node tools/gen-i18n-app.mjs)
+   chargé AVANT le corps, pour que rien ne s'affiche en français. Sous /app/ : rien n'est chargé. */
+if(location.pathname.indexOf('/en/')===0)document.write('<script src="/app/i18n-en.js?v=2026-10-25-1700"><\/script>');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Chargé par /app/consent.js (pas de bandeau, refus possible depuis /confidentialite.html) ; et jamais tant que l'URL porte un jeton de connexion (SITE-02). -->
 <script src="consent.js?v=2026-10-04-3" defer data-place="app"></script>
@@ -2212,7 +2215,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <div id="wordEditorBody" style="display:none;margin-top:6px">
                   <!-- 05/08 : la ligne d'aide « Glisse n'importe où · double-clic… »
                        est retirée (Axel) — le geste doit se comprendre sans notice. -->
-                  <div id="wordEditor"></div>
+                  <div id="wordEditor" data-no-i18n></div>
                 </div>
               </div>
             </div>
@@ -2426,7 +2429,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
               <!-- SUBTITLES · masqués par défaut, révélés à l'arrivée sur l'étape Style (aucun placeholder « PASSE À L'ACTION ») -->
               <div id="subsOverlay" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;padding:0 8px;z-index:50;pointer-events:none;top:75%;width:90%;visibility:hidden">
-                <div id="subsContent" style="pointer-events:auto;cursor:grab;touch-action:none;display:inline-block" title="Glisse pour déplacer les sous-titres"></div>
+                <div id="subsContent" data-no-i18n style="pointer-events:auto;cursor:grab;touch-action:none;display:inline-block" title="Glisse pour déplacer les sous-titres"></div>
               </div>
 
               <!-- ── TIKTOK ── -->
@@ -6043,7 +6046,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-25-1600'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-25-1700'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -38429,7 +38432,7 @@ function initAudioCleanView(){
   if(!lbl) return;
   // Check if there's already a loaded audio in the silence tool
   const existingLbl = document.getElementById('silenceSourceLabel');
-  if(existingLbl && existingLbl.textContent && !existingLbl.textContent.includes('aucun')){
+  if(existingLbl && existingLbl.textContent && !/aucun|^no /i.test(existingLbl.textContent.trim())){
     lbl.textContent = existingLbl.textContent;
     const si=document.getElementById('acSourceInfo'); if(si) si.style.display='block';
     const analyzeBtn = document.getElementById('acAnalyzeBtn');
@@ -41919,7 +41922,7 @@ function edAddText(){
   // #texte-sur-vidéo (Axel 25/08) : par défaut le texte s'écrit DIRECTEMENT sur la vidéo
   // (pas de fond/boîte) — juste une ombre pour la lisibilité. Le fond reste une OPTION
   // (styles « Fond » / « Snapchat »), plus le défaut.
-  const ov={ id:'ov'+Date.now(), type:'text', text:'TON TEXTE', x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', font:'var(--display)', style:'shadow', bold:true, start:start, end:end };
+  const ov={ id:'ov'+Date.now(), type:'text', text:(AA_LANG==='en'?'YOUR TEXT':'TON TEXTE'), x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', font:'var(--display)', style:'shadow', bold:true, start:start, end:end };
   _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
 }
 function edAddImage(file){
@@ -45103,10 +45106,10 @@ lastY=y;
     renderNav();
     if(window.innerWidth>768) return;
     /* eyebrow court sur mobile (1:1 proto) */
-    var ey=document.getElementById('genStepEyebrow'); if(ey) ey.textContent=ey.textContent.replace('Générateur · ','');
+    var ey=document.getElementById('genStepEyebrow'); if(ey) ey.textContent=ey.textContent.replace(/^(Générateur|Generator) · /,'');
     /* éditeur : « Glisse ta vidéo ici » → « Importe ta vidéo » (pas de drag sur téléphone) */
     var dz=document.querySelector('#edEmpty div[ondrop]');
-    if(dz){ [].forEach.call(dz.querySelectorAll('div'),function(d){ if(d.textContent.trim()==='Glisse ta vidéo ici') d.textContent='Importe ta vidéo'; }); }
+    if(dz){ [].forEach.call(dz.querySelectorAll('div'),function(d){ if(/^(Glisse ta vidéo ici|Drop your video here)$/.test(d.textContent.trim())) d.textContent='Importe ta vidéo'; }); }
     /* express : synchro initiale + retour visuel quand une image est choisie */
     var ein=document.getElementById('expImgInput');
     if(ein) ein.addEventListener('change',function(){ var l=document.getElementById('mExpImgLabel'); if(l&&this.files&&this.files.length) l.textContent='✓ '+this.files.length; });
@@ -45459,6 +45462,46 @@ window.mPreviewClose=function(){
     "Change la couleur du t-shirt en noir",
     "Ajoute des gouttes d'eau sur la bouteille"
   ];
+  if (location.pathname.indexOf('/en/') === 0) {   // 25/10 : app anglaise
+    IMG = [
+      "A 30-year-old woman holds a serum in a bright bathroom, natural iPhone photo",
+      "Packshot of a perfume bottle on a rock by the sea, golden evening light",
+      "A man in a white t-shirt drinks a coffee in front of his computer, UGC style, waist-up shot",
+      "Flat lay of skincare products on a beige background, soft shadows, top view",
+      "A white sneaker levitating in front of a concrete wall, studio lighting",
+      "A fitness coach smiling in a gym, medium shot, natural light",
+      "A jar of cream on a bath towel, water drops, spa vibe"
+    ];
+    EXP = [
+      "A young woman in her kitchen shows a shaker and says: “I've been taking it for 3 weeks, and honestly I didn't expect this.”",
+      "A coach facing the camera in his car says: “If you want to lose belly fat, stop doing this in the morning.”",
+      "A student sitting on her bed holds her phone and says: “This app saves me 2 hours a day.”",
+      "A man in his living room holds a cream and says: “I've had dry skin for years, look at it now.”",
+      "A mom in her car says with a smile: “The only product that calmed my son at bedtime.”"
+    ];
+    OMNI = [
+      "Replace the car with a black Lamborghini Urus",
+      "Turn the room into a luxury apartment in Dubai",
+      "Change his outfit to a well-cut navy suit",
+      "Switch the scene to night, with the city lights",
+      "Replace the cup with a can of our drink",
+      "Add snow falling over the whole scene"
+    ];
+    MONTAGE = [
+      "I tested an AI that creates video ads in 2 minutes. Here's what it looks like…",
+      "3 mistakes that kill your Facebook ads, and how to avoid them.",
+      "How I found my first 100 clients without paying for ads.",
+      "Stop filming your videos yourself: here's what brands do today.",
+      "The secret of creators who post every day without spending their evenings on it."
+    ];
+    CORR = [
+      "Replace the background with a bright studio",
+      "Remove the text at the top of the image",
+      "Make the light warmer, end-of-day vibe",
+      "Change the t-shirt color to black",
+      "Add water drops on the bottle"
+    ];
+  }
   var HINTS = { imgPrompt: IMG, expPrompt: EXP, mExpPrompt: EXP, omniPrompt: OMNI, mtBrief: MONTAGE };
   var REDUCE = (function () { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
   var BAR = '|';
