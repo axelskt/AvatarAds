@@ -612,7 +612,7 @@ export const EN: Record<string, Mail> = {
   "titre": "Three steps, that’s it",
   "corps": [
    "“I won’t know how to use it.” That’s the sentence I hear the most. Yet every tool works the same way: you drop, you choose, you generate.",
-   "Example with Motion Control: drop the video whose moves you want to copy, drop the photo of your character, then click “Generate the motion”.",
+   "Example with Motion Control: drop the video whose moves you want to copy, drop the photo of your character, then click “Generate”.",
    {
     "visuel": true
    },
@@ -620,8 +620,8 @@ export const EN: Record<string, Mail> = {
    "<b>All that for the price of a coffee a day</b>, no commitment."
   ],
   "image": "trois-gestes.jpg",
-  "alt": "Motion Control: a video, a photo, a Generate the motion button",
-  "legende": "The video on the left, the photo on the right, one click on “Generate the motion”.",
+  "alt": "Motion Control: a video, a photo, a Generate button",
+  "legende": "The video on the left, the photo on the right, one click on “Generate”.",
   "cta": "See the plans",
   "url": "https://avatarads.fr/en/tarifs.html"
  },

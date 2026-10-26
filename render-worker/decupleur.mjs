@@ -91,6 +91,11 @@ function quotaCpu() {
     return q === 'max' ? 'illimité' : (Number(q) / Number(p)).toFixed(2) + ' cœur(s)'
   } catch { return 'inconnu' }
 }
+// 26/10 : calcul réellement consommé par le conteneur (cgroup v2 cpu.stat usage_usec, ffmpeg compris), en secondes ;
+// null hors conteneur. Lu au début et à la fin d'un lot → « calcul X s, ~Y cœurs en moyenne » : dit si les 8 cœurs servent.
+function calculCpu() {
+  try { const m = /usage_usec (\d+)/.exec(readFileSync('/sys/fs/cgroup/cpu.stat', 'utf8')); return m ? Number(m[1]) / 1e6 : null } catch { return null }
+}
 
 // Lien TikTok / Instagram → MP4 normalisé (outPath). Le lien est revérifié ici (le moteur ne lit QUE ces deux sites).
 export async function dcFetch(url, outPath) {
@@ -257,16 +262,17 @@ function filtres(v, W, H, textePng, src) {
 
 const maxrate = (W, H) => Math.round(Math.min(6000, Math.max(1500, 6000 * (W * H) / (1080 * 1920))))
 
-async function rendreVariante({ v, vSrc, vDebut, aSrc, aDebut, len, W, H, src, textePng, out }) {
+async function rendreVariante({ v, vSrc, vDebut, aSrc, aDebut, len, W, H, src, textePng, out, fils = 0 }) {
   const debut = v.debut, duree = Math.max(0.8, len - v.debut - v.fin)
   const { fc, vOut, aOut } = filtres(v, W, H, textePng, src)
-  const args = ['-ss', (vDebut + debut).toFixed(3), '-t', duree.toFixed(3), '-i', vSrc,
+  // fils (26/10) : variantes rendues par lots → chaque ffmpeg a sa part des cœurs (filtres + x264), sans s'écraser entre eux
+  const args = [...(fils ? ['-filter_complex_threads', String(fils)] : []), '-ss', (vDebut + debut).toFixed(3), '-t', duree.toFixed(3), '-i', vSrc,
     '-ss', (aDebut + debut).toFixed(3), '-t', duree.toFixed(3), '-i', aSrc]
   if (textePng) args.push('-loop', '1', '-t', (duree / (v.vitesse || 1) + 0.5).toFixed(3), '-i', textePng)
   args.push('-filter_complex', fc, '-map', vOut, ...(aOut ? ['-map', aOut] : ['-an']),
     // débit PLAFONNÉ (le grain se compresse mal : sans plafond, une variante 1080×1920 de 15 s pesait jusqu'à 60 Mo)
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(v.crf), '-maxrate', maxrate(W, H) + 'k', '-bufsize', 2 * maxrate(W, H) + 'k',
-    '-g', String(v.gop), '-pix_fmt', 'yuv420p', '-r', String(Math.round(src.fps)),
+    ...(fils ? ['-threads', String(fils)] : []), '-g', String(v.gop), '-pix_fmt', 'yuv420p', '-r', String(Math.round(src.fps)),
     ...(aOut ? ['-c:a', 'aac', '-b:a', v.abr, '-ar', String(v.ar), '-ac', '2'] : []),
     '-movflags', '+faststart', '-map_metadata', '-1', '-metadata', 'creation_time=' + v.date, out)
   await ffmpeg(args)
@@ -297,27 +303,46 @@ export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {
   console.log(`▶ décupleur ×${n} (${lenV.toFixed(1)} s, ${W}×${H}) sur ${availableParallelism()} cœur(s) · quota CPU ${quotaCpu()}`)
 
   const params = tirerParametres(n, alt, textPos, Number(seed) >>> 0, liste.length, lenV)
+  const cpu0 = calculCpu(), t0 = Date.now()
+  // 26/10 (Axel) : variantes rendues PAR LOTS. Test Railway du 26/10 : 8 cœurs et quota de 8, mais une variante à la fois
+  // avec des filtres ffmpeg mono-fil → ~1 cœur occupé (×5 sur 7,6 s = 99 s). LOT ffmpeg tournent en même temps (FILS fils
+  // chacun) ; l'acceptation reste dans l'ordre v01, v02… avec la même règle (assez loin de l'original et des variantes
+  // déjà gardées, sinon 2e passe recadrée), et chaque variante part dès qu'elle est gardée (onVariante).
+  const coeurs = availableParallelism(), LOT = Math.max(1, Math.min(4, Math.floor(coeurs / 2))), FILS = Math.max(1, Math.floor(coeurs / LOT))
+  const nomDe = (v) => 'v' + String(v.i + 1).padStart(2, '0')
+  const rendre = async (v) => {   // un essai : rendu + empreinte
+    const out = join(outDir, nomDe(v) + '.mp4'), t = Date.now()
+    await rendreVariante({ v, vSrc, vDebut, aSrc: src, aDebut: a, len: lenV, W, H, src: info,
+      textePng: v.texte != null ? join(TEXTES_DIR, liste[v.texte].fichier) : null, out, fils: LOT > 1 ? FILS : 0 })
+    return { emp: empreinte(out, 0, dcProbe(out).dur || lenV), s: (Date.now() - t) / 1000 }
+  }
+  // places de rendu : au plus LOT ffmpeg à la fois (1ers essais de la file + 2e passe éventuelle)
+  let libres = LOT; const enAttente = []
+  const prendre = () => libres > 0 ? (libres--, Promise.resolve()) : new Promise((r) => enAttente.push(r))
+  const rendrePlace = () => { const r = enAttente.shift(); if (r) r(); else libres++ }
+  const avecPlace = async (f) => { await prendre(); try { return await f() } finally { rendrePlace() } }
+  const premiers = params.map((v) => { const p = avecPlace(() => rendre(v)); p.catch(() => {}); return p })   // attendue plus bas, dans l'ordre
+  console.log(`  rendu par lots : ${LOT} à la fois, ${LOT > 1 ? FILS : 'tous les'} fil(s) chacun`)
   const faites = []   // { v, nom, emp }
-  for (const v0 of params) {
-    let v = v0, emp = null, dOrig = 0, dMin = 64, essais = 0
-    const nom = 'v' + String(v.i + 1).padStart(2, '0'), tV = Date.now()
-    for (let essai = 0; essai < 2; essai++) {
-      essais = essai + 1
-      const textePng = v.texte != null ? join(TEXTES_DIR, liste[v.texte].fichier) : null
-      await rendreVariante({ v, vSrc, vDebut, aSrc: src, aDebut: a, len: lenV, W, H, src: info, textePng, out: join(outDir, nom + '.mp4') })
-      const d = dcProbe(join(outDir, nom + '.mp4')).dur || lenV
-      emp = empreinte(join(outDir, nom + '.mp4'), 0, d)
-      dOrig = distance(emp, ref)
-      dMin = faites.reduce((m, f) => Math.min(m, distance(emp, f.emp)), 64)
-      if (dOrig >= SEUIL_ORIGINAL && dMin >= SEUIL_ENTRE) break
-      // trop proche : même variante, cadrage plus serré et décalé (et rotation si « Pixels & grain »)
+  for (let i = 0; i < params.length; i++) {
+    let v = params[i], essais = 1
+    const nom = nomDe(v)
+    let r = await premiers[i]
+    let emp = r.emp, rendu = r.s
+    let dOrig = distance(emp, ref), dMin = faites.reduce((m, f) => Math.min(m, distance(emp, f.emp)), 64)
+    if (!(dOrig >= SEUIL_ORIGINAL && dMin >= SEUIL_ENTRE)) {
+      // trop proche : même variante, cadrage plus serré et décalé (et rotation si « Pixels & grain »), une 2e passe
       v = { ...v, zoom: Math.min(1.2, v.zoom + 0.05), ox: 1 - v.ox, oy: 1 - v.oy, ...(alt.pixels ? { rotation: (v.rotation || 0.5) * 1.4 } : {}) }
+      essais = 2
+      r = await avecPlace(() => rendre(v))
+      emp = r.emp; rendu += r.s
+      dOrig = distance(emp, ref); dMin = faites.reduce((m, f) => Math.min(m, distance(emp, f.emp)), 64)
     }
     try {
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '0.5', '-i', join(outDir, nom + '.mp4'), '-frames:v', '1', '-vf', 'scale=360:-2', '-q:v', '4', join(outDir, nom + '.jpg')], { timeout: 60000 })
     } catch (e) { console.warn('affiche', nom, e.message) }
     faites.push({ v, nom, emp, dOrig: +dOrig.toFixed(1), dMin: +dMin.toFixed(1) })
-    console.log(`  ${nom} ${((Date.now() - tV) / 1000).toFixed(1)} s${essais > 1 ? ' (re-tirée)' : ''}`)
+    console.log(`  ${nom} ${rendu.toFixed(1)} s${essais > 1 ? ' (re-tirée)' : ''}`)
     try { await onVariante(nom) } catch (e) { console.warn('envoi', nom, String(e.message || e).slice(0, 200)) }
     await onProgress(Math.round(5 + 85 * faites.length / n))
   }
@@ -345,6 +370,8 @@ export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {
       vitesse: f.v.vitesse ?? 1, hauteur: f.v.hauteur ?? 1, texte: f.v.texte != null ? liste[f.v.texte].texte : null, position: f.v.position || null })),
   }
   writeFileSync(join(outDir, 'dc.json'), JSON.stringify(manifeste))
-  console.log(`✓ décupleur ×${n} (${len.toFixed(1)} s) — contrôle ${manifeste.controle}${faibles ? ` (${faibles} proches)` : ''}, ${(total / 1048576).toFixed(0)} Mo${zip ? ', zip' : ''}`)
+  const cpu1 = calculCpu(), duree = (Date.now() - t0) / 1000
+  const charge = cpu0 != null && cpu1 != null ? `, calcul ${(cpu1 - cpu0).toFixed(0)} s sur ${duree.toFixed(0)} s (~${((cpu1 - cpu0) / duree).toFixed(1)} cœurs en moyenne)` : ''
+  console.log(`✓ décupleur ×${n} (${len.toFixed(1)} s) — contrôle ${manifeste.controle}${faibles ? ` (${faibles} proches)` : ''}, ${(total / 1048576).toFixed(0)} Mo${zip ? ', zip' : ''}${charge}`)
   return manifeste
 }
