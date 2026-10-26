@@ -12,9 +12,15 @@ CONF = json.load(open('incruste.json')) if os.path.exists('incruste.json') else 
 FPS = CONF.get('fps', 24)
 ANTON = 'Anton.ttf'
 VERT = (200, 255, 61)
-# Styles (Axel 26/10) : « anton » = le style VALIDÉ (défaut) ; « neon » = autre style à tester (réf. devinjatho) : police
-# large très grasse (Archivo élargie, fichier Archivo.ttf à côté), textes DEVANT avec un halo de leur couleur, mot fort en
-# vert franc ou en rouge (« couleur » : vert | rouge). incruste.json : {"style": "neon", "couleur": "rouge"}.
+# Couleur du mot fort (Axel 26/10) : défaut = vert validé (200,255,61) à plat. « teinte » = la couleur de devinjatho, SANS
+# rien changer d'autre (police, tailles, emplacements validés) : dégradé vertical mesuré sur ses vidéos + léger halo de la
+# couleur. incruste.json : {"teinte": "vert"} ou {"teinte": "rouge"}.
+TEINTES = {   # (haut, bas, halo) — mesurés sur « DID IT! » / « 2 SH*TS » ; la ligne blanche au-dessus prend un reflet
+    'vert': ((186, 252, 168), (96, 229, 84), (60, 215, 60)),
+    'rouge': ((255, 128, 122), (222, 26, 26), (235, 40, 40)),
+}
+TEINTE = TEINTES.get(CONF.get('teinte'))
+# « neon » (police élargie + emplacements changés) : essai du 26/10 ÉCARTÉ par Axel (« je parle juste de la couleur »).
 STYLE = CONF.get('style', 'anton')
 if STYLE == 'neon': VERT = {'vert': (52, 235, 72), 'rouge': (242, 36, 44)}[CONF.get('couleur', 'vert')]
 
@@ -126,7 +132,18 @@ def dessine(lay, t, mots, col, cap_px, bas, larg=960, une_ligne=None, dessin=Tru
                     sh = Image.new('RGBA', img.size, (0, 0, 0, 0))
                     ImageDraw.Draw(sh).text(base, m, font=f, fill=(0, 0, 0, 160), anchor='ls')
                     img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(4, size / 25))), (0, 5))
-                ImageDraw.Draw(img).text(base, m, font=f, fill=col + (255,), anchor='ls')
+                if TEINTE and (col == VERT or (col == BLANC and bas > 1200)):
+                    # dégradé vertical du haut au bas des capitales (blanc devant : reflet de la teinte en bas) + halo
+                    haut_c, bas_c, halo = TEINTE if col == VERT else ((250, 250, 248), tuple(int(0.88 * 255 + 0.12 * c) for c in TEINTE[1]), None)
+                    mk = Image.new('L', img.size, 0); ImageDraw.Draw(mk).text(base, m, font=f, fill=255, anchor='ls')
+                    if halo:
+                        g = Image.new('RGBA', img.size, halo + (0,)); g.putalpha(mk.filter(ImageFilter.GaussianBlur(size / 9)).point(lambda v: int(v * 0.55)))
+                        img.alpha_composite(g)
+                    y0, y1 = base[1] - cap, base[1]
+                    k = np.clip((np.arange(img.height) - y0) / max(1, y1 - y0), 0, 1)[:, None, None]
+                    deg = (np.array(haut_c) * (1 - k) + np.array(bas_c) * k).astype(np.uint8) * np.ones((1, img.width, 1), np.uint8)
+                    txt = Image.fromarray(np.dstack([deg, np.asarray(mk)]), 'RGBA'); img.alpha_composite(txt)
+                else: ImageDraw.Draw(img).text(base, m, font=f, fill=col + (255,), anchor='ls')
                 if sc != 1.0: img = img.resize((max(1, int(img.width * sc)), max(1, int(img.height * sc))), Image.LANCZOS)
                 if a < 1:
                     al = np.asarray(img).copy(); al[:, :, 3] = (al[:, :, 3] * a).astype(np.uint8); img = Image.fromarray(al)
