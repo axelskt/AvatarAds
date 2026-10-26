@@ -7,7 +7,7 @@
 #   · sans voix : AUCUN bruitage, musique seule ; texte choc toujours centré (axe 540) ; TH13 supprimée.
 # Ici : recettes (plan.mjs), CTA cohérent avec la démo, textes choc et musiques des F05, 6 rendus à la fois (LOT_PAR), relance si le
 # texte choc tombe au milieu, dépôt qc/ en 'pending' (Axel valide), numérotation VF continue, reprise possible (état).
-import json, os, random, subprocess, sys, time, itertools
+import json, os, random, shutil, subprocess, sys, time, itertools
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from outils import *
 NS, NV = int(sys.argv[1]) if len(sys.argv) > 1 else 5, int(sys.argv[2]) if len(sys.argv) > 2 else 5
@@ -86,6 +86,26 @@ def mots_acceleres(src, dst, v):
         json.dump([dict(x, start=round(x['start'] / v, 3), end=round(x['end'] / v, 3)) for x in w], open(os.path.join(WORDS, file_key(dst) + '.json'), 'w'), ensure_ascii=False)
     except (OSError, ValueError, KeyError): pass   # pas de mots en cache pour la prise : build.mjs transcrira
 prev_th = [None]
+# Axel 26/10 : format TEXTE INCRUSTÉ (usine/incruste) sur ~7,3 vidéos Omni parlées sur 10 (INCRUSTE_PART), quand le hook ET le
+# CTA sont dans la banque (factory_bricks.meta.incruste) ; les 6 couleurs du mot fort tournent (à plat / dégradé « DID IT! »)
+# pour comparer les vues — la moins utilisée du lot d'abord. Clips Omni seulement (jamais Character-3).
+PART_INC = float(os.environ.get('INCRUSTE_PART', '0.73'))
+STYLES_INC = ['jaune', 'vert', 'rouge', 'degrade-jaune', 'degrade-vert', 'degrade-rouge']
+USE_INC = {k: 0 for k in STYLES_INC}
+def incruste(photo, hook, demo, cta, cf, tag):
+    """hook + CTA habillés (hook_auto.py / cta_auto.py), mots vérifiés copiés dans le cache de build.mjs ; None si hors banque"""
+    if not ((bricks.get(hook) or {}).get('meta') or {}).get('incruste') or not ((bricks.get(cta) or {}).get('meta') or {}).get('incruste'): return None
+    if random.random() >= PART_INC: return None
+    st = min(STYLES_INC, key=lambda k: (USE_INC[k], random.random())); USE_INC[st] += 1
+    opt = ['--teinte', st[8:]] if st.startswith('degrade-') else ['--couleur', st]
+    d_ = os.path.join(OUT, '%s_%s-inc' % (NOM, tag))
+    subprocess.run(['python3', 'usine/incruste/hook_auto.py', hook, photo, d_] + opt, cwd=REPO, check=True, capture_output=True)
+    subprocess.run(['python3', 'usine/incruste/cta_auto.py', cta, '%s/variants/%s.mp4' % (B, cf), d_] + opt, cwd=REPO, check=True, capture_output=True)
+    hi, ci = os.path.join(d_, 'hook-incruste.mp4'), os.path.join(d_, 'cta-incruste.mp4')
+    for src, dst in ((os.path.join(d_, 'words.json'), hi), (os.path.join(d_, 'cta', 'words.json'), ci)):   # Whisper rate la fin d'un clip habillé
+        shutil.copy(src, os.path.join(WORDS, file_key(dst) + '.json'))
+    hd = ((bricks[hook]['meta']['incruste']) or {}).get('hook_demos') or []
+    return dict(d=d_, hook=hi, cta=ci, style=st, hd=hd)
 # Axel 21/10 (revue fond vert : « il parle trop lentement ») : prises accélérées EN PLUS de leur ×1,10 dans le format fond vert
 VIT_FV = {('A3-10', 'H23'): 1.15, ('A3-11', 'H74'): 1.15}
 def prep(it, tag):
@@ -95,6 +115,13 @@ def prep(it, tag):
         # CTA imposé (lot manuel, Axel 21/10 : AUTRE-1 n'a que son CTA café) — sinon rotation habituelle
         cta, cf = (it['cta'], VAR[(photo, it['cta'], 'omni')]) if it.get('cta') else cta_for(photo, demo)
         # Axel 20/10 : H89 = hook « grille qui se multiplie » 7 fois sur 10 (coin ou centre, usine/grille-hook.py), sinon la prise normale
+        inc = None if it.get('cta') else incruste(photo, hook, demo, cta, cf, tag)
+        if inc:   # texte incrusté : hook et CTA habillés, pas de grille, pas de texte choc ni d'illustration
+            d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
+            out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag))
+            cmd = ['node', 'usine/build.mjs', inc['hook'], d, out, 'auto', inc['hook'], inc['cta'], '--voice', 'omni', '--format', 'F01', '--incruste',
+                   '--subs-style', 'auto', '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
+            return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, incruste=inc['style'], hd=inc['hd'], incdir=inc['d'])
         g = [k for k in ('H89-GRILLE', 'H89-GRILLE-C') if (photo, k, 'omni') in VAR] if hook == 'H89' else []
         if g and random.random() < 0.7: hv = random.choice(g); hf = VAR[(photo, hv, 'omni')]
         h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
@@ -180,6 +207,7 @@ for si in range(S['serie'], len(S['series'])):
                 name, T, zone = publish(j, vf); S['next'] += 1
                 S['ok'].append({'vf': vf, 'name': name, 'serie': si + 1}); log('✓', name, T, zone)
             except Exception as e: log('✗ dépôt', j['it'], e); S['fail'].append({'it': j['it'], 'err': str(e)[:300]})
+            if j.get('incdir'): shutil.rmtree(j['incdir'], ignore_errors=True)   # images du texte incrusté
             for x_ in (j['out'] + '.log', j.get('vis'), j.get('hv'), j.get('visj')):
                 try:
                     if x_: os.remove(x_)

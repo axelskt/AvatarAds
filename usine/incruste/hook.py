@@ -45,6 +45,7 @@ DEMOS = ['demo', 'demo2']
 
 def haut_tete():
     """haut du crâne sur la 1re image (masque) : les positions validées sont calées sur A1-11 (crâne à y 459)"""
+    if not os.path.exists('m2/001.png'): return 459   # importé par cta.py depuis un dossier sans hook
     M = np.asarray(Image.open('m2/001.png').convert('L')) > 128
     lignes = np.where(M[:, 200:880].sum(axis=1) > 40)[0]
     return int(lignes.min()) if len(lignes) else 459
