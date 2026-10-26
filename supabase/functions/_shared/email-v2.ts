@@ -13,6 +13,17 @@ export const FROM = 'AvatarAds <bonjour@avatarads.fr>'
 const IMG_BASE = 'https://avatarads.fr/assets/mail/v2'
 const FONT = '-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif'
 const PLAN_LABEL: Record<string, string> = { starter: 'Starter', pro: 'Pro', elite: 'Élite' }
+const PLAN_LABEL_EN: Record<string, string> = { starter: 'Starter', pro: 'Pro', elite: 'Elite' }
+export type Lang = 'fr' | 'en'
+// 26/10 : langue d'un compte (profiles.lang) → 'en' ou 'fr' (défaut)
+export const langOf = (u: { lang?: string | null } | null | undefined): Lang => (u && u.lang === 'en' ? 'en' : 'fr')
+// Version de l'e-mail dans la langue du compte (EN de email-v2-data.ts, mêmes identifiants) ; repli sur le français
+export const mailFor = (m: Mail, lang: Lang, en: Record<string, Mail>): Mail => (lang === 'en' && en[m.id]) || m
+// Habillage autour du texte (salutation, signature, pied) dans chaque langue
+const CHROME = {
+  fr: { hello: 'Salut', bye: 'À bientôt,', role: 'Fondateur d’AvatarAds', unsub: 'Ne plus recevoir ces e-mails' },
+  en: { hello: 'Hi', bye: 'Talk soon,', role: 'Founder of AvatarAds', unsub: 'Unsubscribe from these emails' },
+}
 
 export const imageUrl = (m: Mail) => `${IMG_BASE}/${m.image}`
 
@@ -28,13 +39,14 @@ export async function unsubUrl(supabaseUrl: string, serviceKey: string, userId: 
   return `${supabaseUrl}/functions/v1/email-unsub?u=${userId}&k=${k}`
 }
 
-export function subject(m: Mail, plan = ''): string {
-  return m.objet.replace('{plan}', PLAN_LABEL[plan] ?? plan)
+export function subject(m: Mail, plan = '', lang: Lang = 'fr'): string {
+  return m.objet.replace('{plan}', (lang === 'en' ? PLAN_LABEL_EN : PLAN_LABEL)[plan] ?? plan)
 }
 
 // Gabarit (tables + styles en ligne : Gmail / Apple Mail / Outlook), identique à l'aperçu validé
-export function render(m: Mail, o: { prenom?: string; plan?: string; unsub: string }): string {
-  const fill = (s: string) => s.replace('{plan}', PLAN_LABEL[o.plan ?? ''] ?? (o.plan ?? ''))
+export function render(m: Mail, o: { prenom?: string; plan?: string; unsub: string; lang?: Lang }): string {
+  const lang: Lang = o.lang === 'en' ? 'en' : 'fr', T = CHROME[lang]
+  const fill = (s: string) => s.replace('{plan}', (lang === 'en' ? PLAN_LABEL_EN : PLAN_LABEL)[o.plan ?? ''] ?? (o.plan ?? ''))
   const visuel = `<img src="${imageUrl(m)}" width="484" alt="${esc(m.alt)}" style="display:block;width:100%;max-width:484px;height:auto;border:0;border-radius:12px;margin:4px 0 8px">`
     + `<p style="margin:0 0 22px;font:12.5px/1.5 ${FONT};color:#8a8a93">${esc(m.legende)}</p>`
   const body = m.corps.map((p) => {
@@ -42,8 +54,8 @@ export function render(m: Mail, o: { prenom?: string; plan?: string; unsub: stri
     if ('liste' in p) return `<ul style="margin:0 0 16px;padding-left:20px">${p.liste.map((x) => `<li style="margin:0 0 8px">${fill(x)}</li>`).join('')}</ul>`
     return visuel
   }).join('')
-  const hello = o.prenom ? `Salut ${esc(o.prenom.trim())},` : 'Salut,'
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(fill(m.objet))}</title></head>
+  const hello = o.prenom ? `${T.hello} ${esc(o.prenom.trim())},` : `${T.hello},`
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(fill(m.objet))}</title></head>
 <body style="margin:0;padding:0;background:#f6f4f0">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(m.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f4f0"><tr><td align="center" style="padding:28px 14px">
@@ -61,10 +73,10 @@ export function render(m: Mail, o: { prenom?: string; plan?: string; unsub: stri
     <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#ff6b35;border-radius:12px">
       <a href="${m.url}" style="display:inline-block;padding:13px 22px;font:700 15px ${FONT};color:#ffffff;text-decoration:none">${m.cta}</a>
     </td></tr></table>
-    <p style="margin:26px 0 0;color:#3d3d46">À bientôt,<br><b style="color:#15151a">Axel</b><br><span style="color:#73737d;font-size:13px">Fondateur d’AvatarAds</span></p>
+    <p style="margin:26px 0 0;color:#3d3d46">${T.bye}<br><b style="color:#15151a">Axel</b><br><span style="color:#73737d;font-size:13px">${T.role}</span></p>
   </td></tr>
   <tr><td style="padding:16px 6px 0;text-align:center;font:12px/1.6 ${FONT};color:#9a9aa3">
-    AvatarAds · avatarads.fr<br><a href="${o.unsub}" style="color:#9a9aa3">Ne plus recevoir ces e-mails</a>
+    AvatarAds · avatarads.fr<br><a href="${o.unsub}" style="color:#9a9aa3">${T.unsub}</a>
   </td></tr>
  </table>
 </td></tr></table>

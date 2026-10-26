@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { crypto } from 'https://deno.land/std@0.168.0/crypto/mod.ts'
-import { type Mail as MailV2, render as renderV2, subject as subjectV2, unsubUrl as unsubUrlV2, sendResend } from '../_shared/email-v2.ts'
-import { CLIENTS as CLIENTS_V2 } from '../_shared/email-v2-data.ts'
+import { type Mail as MailV2, render as renderV2, subject as subjectV2, unsubUrl as unsubUrlV2, sendResend, mailFor, type Lang } from '../_shared/email-v2.ts'
+import { CLIENTS as CLIENTS_V2, EN as EN_V2 } from '../_shared/email-v2-data.ts'
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -559,9 +559,15 @@ async function ensureAccount(sb: any, email: string): Promise<string | null> {
   } catch (e) { console.error('⚠️ ensureAccount:', e); return null }
 }
 
-async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string; firstName?: string; plan: string; credits: number; pending?: boolean }) {
+async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string; firstName?: string; plan: string; credits: number; pending?: boolean; lang?: Lang | '' }) {
   if (!RESEND_API_KEY) return
   try {
+    // 26/10 : langue = page de paiement anglaise (metadata aa_lang, posée aussi sur le compte) sinon profiles.lang du compte
+    let lg: Lang = opts.lang === 'en' ? 'en' : 'fr'
+    if (opts.userId) {
+      if (opts.lang === 'en') { try { await sb.from('profiles').update({ lang: 'en' }).eq('id', opts.userId) } catch (_) { /* best-effort */ } }
+      else { try { const { data: pl } = await sb.from('profiles').select('lang').eq('id', opts.userId).maybeSingle(); if (pl?.lang === 'en') lg = 'en' } catch (_) { /* français */ } }
+    }
     if (opts.userId) {
       const { error } = await sb.from('email_log').insert({ user_id: opts.userId, email: opts.email, kind: 'welcome' })
       if (error) return // déjà envoyé (ex. upgrade de plan)
@@ -569,10 +575,10 @@ async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string;
     // 05/10/2026 : bienvenue v2 (c0, textes validés par Axel) — conseil pour la première heure, aucune mention de
     // crédits. L'identifiant Resend est rangé dans email_log (statistiques, vue email_stats).
     if (!opts.pending && opts.userId) {
-      const c0 = CLIENTS_V2.find((m) => m.id === 'c0')!
+      const c0 = mailFor(CLIENTS_V2.find((m) => m.id === 'c0')!, lg, EN_V2)
       const unsub = await unsubUrlV2(SUPABASE_URL, SUPABASE_SERVICE_KEY, opts.userId)
-      const id = await sendResend(RESEND_API_KEY, opts.email, subjectV2(c0, opts.plan),
-        renderV2(c0, { prenom: opts.firstName || '', plan: opts.plan, unsub }), unsub, 'c0')
+      const id = await sendResend(RESEND_API_KEY, opts.email, subjectV2(c0, opts.plan, lg),
+        renderV2(c0, { prenom: opts.firstName || '', plan: opts.plan, unsub, lang: lg }), unsub, 'c0')
       if (id) await sb.from('email_log').update({ resend_id: id, mail: 'c0' }).eq('user_id', opts.userId).eq('kind', 'welcome')
       console.log(id ? `📧 Bienvenue v2 envoyée à ${masque(opts.email)}` : `⚠️ Bienvenue v2 non envoyée à ${masque(opts.email)}`)
       return
@@ -591,8 +597,21 @@ async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string;
       ],
       cta: 'Créer mon compte', url: 'https://avatarads.fr/app/',
     }
-    const id = await sendResend(RESEND_API_KEY, opts.email, pendingMail.objet,
-      renderV2(pendingMail, { prenom: opts.firstName || '', plan: opts.plan, unsub: 'https://avatarads.fr/app/' }), 'https://avatarads.fr/app/', 'pending')
+    const pendingEn: MailV2 = {
+      ...pendingMail,
+      objet: 'Your AvatarAds plan is waiting, one last step',
+      preheader: 'Create your account with this email address to activate your plan.',
+      titre: 'Your plan is waiting',
+      corps: [
+        'Your payment has been received.',
+        `Just one step left: <b>create your account on avatarads.fr with this email address</b>. Your ${label === 'Élite' ? 'Elite' : label} plan will activate automatically when you log in.`,
+        '<b>If you get stuck, reply to this email</b>: I’ll help you directly.',
+      ],
+      cta: 'Create my account', url: 'https://avatarads.fr/en/app/',
+    }
+    const pm = lg === 'en' ? pendingEn : pendingMail
+    const id = await sendResend(RESEND_API_KEY, opts.email, pm.objet,
+      renderV2(pm, { prenom: opts.firstName || '', plan: opts.plan, unsub: pm.url, lang: lg }), pm.url, 'pending')
     console.log(id ? `📧 E-mail « plan en attente » envoyé à ${masque(opts.email)}` : `⚠️ E-mail « plan en attente » non envoyé à ${masque(opts.email)}`)
   } catch (e) { console.error('⚠️ welcome email:', e) }
 }
@@ -709,6 +728,8 @@ async function traiterWebhook(req: Request): Promise<Response> {
   // code de parrainage du visiteur, joint au paiement par la page (constat 21) — même confiance que ?ref= : posé seulement
   // sur un compte de moins de 24 h sans parrain (whop_webhook_poser_parrain)
   const aaRef = String(data.metadata?.aa_ref ?? '').trim().slice(0, 40)
+  // 26/10 : paiement lancé depuis la page anglaise (/en/paiement.html → metadata aa_lang 'en') → e-mails en anglais
+  const aaLang: Lang | '' = String(data.metadata?.aa_lang ?? data.checkout?.metadata?.aa_lang ?? data.membership?.metadata?.aa_lang ?? '') === 'en' ? 'en' : ''
   const findProfile = async (mid: string | null = memberId, em: string = email) => {
     const cols = 'id, email, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, whop_cancel_at_period_end, first_sub_bonus_used'
     lookup.by = null; lookup.failed = false
@@ -879,7 +900,7 @@ async function traiterWebhook(req: Request): Promise<Response> {
           if (aaRef && parrainPermis) await poserParrain(sb, profile.id, aaRef)
           await creditReferral(sb, profile.id, email, planId, data, 'abonnement', newMemberId)
           console.log(`✅ Plan activé pour ${masque(email)}: ${sub.plan} (${essai ? 'essai gratuit, crédits au 1er paiement' : sub.credits + ' crédits'}${r.bonus ? ' +' + r.bonus + ' bonus' : ''}${r.keep ? ' +' + r.keep + ' achetés reportés' : ''}${r.pack ? ' +' + r.pack + ' pack' : ''})`)
-          await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: r.credits ?? 0 })
+          await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: r.credits ?? 0, lang: aaLang })
         }
         // Audit 23/10 (constat 22) : un échec de résiliation de l'ancien abonnement n'était qu'un log (double facturation
         // silencieuse) → alerte à Axel. Relecture du 24/10 : plus de 500 (l'activation restait hors du journal, la page
@@ -916,10 +937,10 @@ async function traiterWebhook(req: Request): Promise<Response> {
           await markIgLeadPaid(sb, newId, sub.plan, 'free')
           if (aaRef) await poserParrain(sb, newId, aaRef)
           await creditReferral(sb, newId, email, planId, data, 'abonnement', data.id ? String(data.id) : null)
-          await sendWelcomeEmail(sb, { userId: newId, email, plan: sub.plan, credits: credAttente + carryPack })
+          await sendWelcomeEmail(sb, { userId: newId, email, plan: sub.plan, credits: credAttente + carryPack, lang: aaLang })
         } else {
           await alerteOrpheline(`abonnement ${PLAN_LABEL[sub.plan] ?? sub.plan} (${planId})`)
-          await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: credAttente, pending: true })
+          await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: credAttente, pending: true, lang: aaLang })
         }
       }
     } else if (pack) {

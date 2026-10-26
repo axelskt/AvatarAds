@@ -147,8 +147,84 @@ function otpEmail(code: string): string {
   </div></body></html>`
 }
 
+// 26/10 (Axel) : e-mails en anglais pour les comptes de l'app anglaise. Les gabarits restent en français ; à l'envoi
+// d'un e-mail anglais, chaque phrase fixe est remplacée par sa traduction (les plus longues d'abord : « Si ce n'est pas
+// toi, connecte-toi… » avant « Si ce n'est pas toi »). Une phrase française ajoutée plus tard sans traduction reste en
+// français dans l'e-mail anglais : l'ajouter ici.
+type Lang = 'fr' | 'en'
+const EN_OTP: [string, string][] = ([
+  ['Ton code de connexion', 'Your login code'],
+  ['Entre ce code sur AvatarAds pour continuer :', 'Enter this code on AvatarAds to continue:'],
+  ['Ce code expire dans ', 'This code expires in '],
+  [" minutes et ne peut être utilisé qu'une fois.", ' minutes and can only be used once.'],
+  ["Si tu n'es pas à l'origine de cette demande, ignore simplement cet e-mail : rien ne change sur ton compte.", "If you didn't make this request, just ignore this email: nothing changes on your account."],
+  ["Si tu n'es pas à l'origine de cette demande, ignore simplement cet e-mail.", "If you didn't make this request, just ignore this email."],
+  ['Codes faux essayés sur ton adresse AvatarAds', 'Wrong codes tried on your AvatarAds address'],
+  ['Codes faux essayés sur ton adresse', 'Wrong codes tried on your address'],
+  ["Beaucoup de codes faux viennent d'être essayés pour se connecter à AvatarAds avec cette adresse. L'appareil qui les tapait est bloqué pendant 24 heures. Toi, tu peux toujours te connecter normalement.",
+   'Many wrong codes were just tried to log in to AvatarAds with this address. The device entering them is blocked for 24 hours. You can still log in normally.'],
+  ["Si c'était toi, attends un peu ou essaie depuis un autre appareil. Si ce n'est pas toi, tu n'as rien à faire : ces essais ont échoué. Si cela se répète, écris-nous à ",
+   "If it was you, wait a bit or try from another device. If it wasn't you, there's nothing to do: these attempts failed. If it happens again, write to us at "],
+  ['Confirme ta nouvelle adresse', 'Confirm your new address'],
+  ['Entre ce code dans Mon compte sur AvatarAds pour en faire ton adresse de connexion :', 'Enter this code in My account on AvatarAds to make it your login address:'],
+  ['Confirme le changement de ton adresse', 'Confirm your address change'],
+  ["Une demande de changement de l'adresse de connexion de ton compte AvatarAds vers ", 'A request was just made to change the login address of your AvatarAds account to '],
+  [" vient d'être faite. Entre ce code dans Mon compte pour confirmer que c'est bien toi :", '. Enter this code in My account to confirm it’s really you:'],
+  ["Si tu n'es pas à l'origine de cette demande, ne donne ce code à personne : sans lui, ton adresse ne peut pas être changée. Écris-nous à ",
+   "If you didn't make this request, don't give this code to anyone: without it, your address can't be changed. Write to us at "],
+  [' si tu as un doute.', ' if you have any doubt.'],
+  ['Cette adresse-ci ne permet plus de te connecter, ni par code e-mail ni avec Google : la connexion Google qui y était liée a été retirée du compte.',
+   'This address can no longer be used to log in, neither with an email code nor with Google: the Google login linked to it was removed from the account.'],
+  ['Cette adresse-ci ne permet plus de te connecter par code e-mail.', 'This address can no longer be used to log in with an email code.'],
+  ['Cette adresse-ci ne permet plus de te connecter.', 'This address can no longer be used to log in.'],
+  ["Ce n'est pas moi : rétablir mon adresse", "It wasn't me: restore my address"],
+  ['Ce lien est valable ', 'This link is valid for '],
+  [" heures et ne sert qu'une fois. Il rétablit cette adresse, déconnecte toutes les sessions ouvertes et coupe l'accès de Claude à ton compte.",
+   " hours and works only once. It restores this address, logs out every open session and cuts Claude's access to your account."],
+  ['Ton adresse de connexion AvatarAds a été changée', 'Your AvatarAds login address was changed'],
+  ['Ton adresse de connexion a été changée', 'Your login address was changed'],
+  ["L'adresse e-mail de connexion de ton compte AvatarAds vient d'être remplacée par ", 'The login email address of your AvatarAds account was just replaced with '],
+  [" et que le lien ne fonctionne plus", ' and the link no longer works'],
+  [', contacte-nous tout de suite à ', ', contact us right away at '],
+  ['Ton adresse de connexion AvatarAds a été rétablie', 'Your AvatarAds login address was restored'],
+  ['Ton adresse de connexion a été rétablie', 'Your login address was restored'],
+  ["Cette adresse est de nouveau l'adresse de connexion de ton compte AvatarAds. Toutes les sessions ouvertes ont été déconnectées et l'accès de Claude à ton compte a été coupé.",
+   "This address is once again the login address of your AvatarAds account. All open sessions were logged out and Claude's access to your account was cut."],
+  ['Reconnecte-toi par code e-mail sur avatarads.fr. Si tu utilisais AvatarAds dans Claude, relie-le de nouveau depuis « Connecter Claude ». Une question : ',
+   'Log in again with an email code on avatarads.fr. If you used AvatarAds in Claude, link it again from “Connect Claude”. Any question: '],
+  ['Mot de passe modifié sur ton compte AvatarAds', 'Password changed on your AvatarAds account'],
+  ["Le mot de passe du compte AvatarAds qui utilisait cette adresse jusqu'à récemment vient d'être modifié.", 'The password of the AvatarAds account that used this address until recently was just changed.'],
+  ["Si tu n'as changé ni ton adresse ni ton mot de passe, ouvre le lien « Ce n'est pas moi » de l'e-mail « Ton adresse de connexion AvatarAds a été changée » (valable ",
+   "If you changed neither your address nor your password, open the “It wasn't me” link in the email “Your AvatarAds login address was changed” (valid for "],
+  [' heures) : il rétablit ton adresse et retire ce mot de passe. Sinon, écris-nous à ', ' hours): it restores your address and removes this password. Otherwise, write to us at '],
+  ['Ton code pour changer de mot de passe', 'Your code to change your password'],
+  ['Entre ce code dans Mon compte sur AvatarAds pour enregistrer ton nouveau mot de passe :', 'Enter this code in My account on AvatarAds to save your new password:'],
+  ["Si tu n'es pas à l'origine de cette demande, ignore cet e-mail : ton mot de passe ne change pas. Par prudence, déconnecte-toi des appareils que tu ne reconnais pas.",
+   "If you didn't make this request, ignore this email: your password doesn't change. To be safe, log out of devices you don't recognize."],
+  ['Ton mot de passe AvatarAds a été modifié', 'Your AvatarAds password was changed'],
+  ['Ton mot de passe a été modifié', 'Your password was changed'],
+  ["Le mot de passe de ton compte AvatarAds vient d'être modifié depuis Mon compte. Toutes les sessions ouvertes ont été déconnectées.",
+   'The password of your AvatarAds account was just changed from My account. All open sessions were logged out.'],
+  ["Si ce n'est pas toi, connecte-toi tout de suite par code e-mail, change ton mot de passe et écris-nous à ",
+   "If it wasn't you, log in right away with an email code, change your password and write to us at "],
+  ["Si ce n'est pas toi", "If it wasn't you"],
+  [' — ton code pour changer de mot de passe AvatarAds', ' — your code to change your AvatarAds password'],
+  [' — confirme le changement de ton adresse AvatarAds', ' — confirm your AvatarAds address change'],
+  [' — confirme ta nouvelle adresse AvatarAds', ' — confirm your new AvatarAds address'],
+  [' — ton code AvatarAds', ' — your AvatarAds code'],
+] as [string, string][]).sort((a, b) => b[0].length - a[0].length)
+const enAnglais = (s: string, lang: Lang) => lang === 'en' ? EN_OTP.reduce((t, [fr, en]) => t.split(fr).join(en), s) : s
+// Langue d'un e-mail : celle de la page qui appelle (body.lang : connexion anglaise, app /en/app/), sinon profiles.lang
+async function langueDe(sb: SupabaseClient, body: Record<string, unknown> | null, userId?: string): Promise<Lang> {
+  if (body && body.lang === 'en') return 'en'
+  if (body && body.lang === 'fr') return 'fr'
+  if (userId) { try { const { data } = await sb.from('profiles').select('lang').eq('id', userId).maybeSingle(); if (data?.lang === 'en') return 'en' } catch (_) { /* français */ } }
+  return 'fr'
+}
+
 // Audit 02/10 : envoi Resend factorisé (mêmes 2 tentatives) pour servir aussi les e-mails du changement d'adresse.
-async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
+async function sendMail(to: string, subject: string, html: string, lang: Lang = 'fr'): Promise<boolean> {
+  subject = enAnglais(subject, lang); html = enAnglais(html, lang)
   // 2 tentatives : absorbe les micro-pannes Resend sans bloquer la connexion
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -165,8 +241,8 @@ async function sendMail(to: string, subject: string, html: string): Promise<bool
   return false
 }
 
-async function sendCodeEmail(email: string, code: string): Promise<boolean> {
-  return await sendMail(email, `${code} — ton code AvatarAds`, otpEmail(code))
+async function sendCodeEmail(email: string, code: string, lang: Lang = 'fr'): Promise<boolean> {
+  return await sendMail(email, `${code} — ton code AvatarAds`, otpEmail(code), lang)
 }
 
 // Audit 23/10 (n° 40) : avis au titulaire quand un appareil est bloqué pour trop de codes faux sur son adresse (une fois par
@@ -347,7 +423,7 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
       expires_at: new Date(Date.now() + CODE_TTL_MIN * 60_000).toISOString(),
     }).select('id').single()
     if (insErr || !ins) return json(500, { error: 'server_error' })
-    const sent = await sendMail(newEmail, `${code} — confirme ta nouvelle adresse AvatarAds`, emailChangeCodeEmail(code))
+    const sent = await sendMail(newEmail, `${code} — confirme ta nouvelle adresse AvatarAds`, emailChangeCodeEmail(code), await langueDe(sb, body, user.id))
     if (!sent) { await sb.from('email_change_codes').delete().eq('id', ins.id); return json(502, { error: 'send_failed' }) }
     return json(200, { ok: true, etape: 'nouvelle' })
   }
@@ -384,7 +460,7 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
     }).select('id').single()
     if (insErr || !ins) return json(500, { error: 'server_error' })
 
-    const sent = await sendMail(user.email, `${code} — confirme le changement de ton adresse AvatarAds`, emailChangeOldCodeEmail(code, maskEmail(newEmail)))
+    const sent = await sendMail(user.email, `${code} — confirme le changement de ton adresse AvatarAds`, emailChangeOldCodeEmail(code, maskEmail(newEmail)), await langueDe(sb, body, user.id))
     if (!sent) {
       await sb.from('email_change_codes').delete().eq('id', ins.id)
       return json(502, { error: 'send_failed' })
@@ -517,7 +593,7 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
   if (user.email && user.email !== newEmail) {
     try {
       const lien = jeton ? `${REVERT_PAGE}#annuler-adresse=${jeton}` : ''
-      const ok = await sendMail(user.email, 'Ton adresse de connexion AvatarAds a été changée', emailChangedNotice(maskEmail(newEmail), lien, deliage))
+      const ok = await sendMail(user.email, 'Ton adresse de connexion AvatarAds a été changée', emailChangedNotice(maskEmail(newEmail), lien, deliage), await langueDe(sb, body, user.id))
       if (!ok) console.warn('email_change : e-mail d\'information à l\'ancienne adresse non parti')
     } catch { /* best-effort */ }
   }
@@ -575,7 +651,7 @@ async function emailChangeRevert(req: Request, body: Record<string, string>): Pr
     await couperClaude(sb, userId)   // au moins l'accès Claude
   }
   try {
-    const ok = await sendMail(oldEmail, 'Ton adresse de connexion AvatarAds a été rétablie', emailRevertedNotice())
+    const ok = await sendMail(oldEmail, 'Ton adresse de connexion AvatarAds a été rétablie', emailRevertedNotice(), await langueDe(sb, body, userId))
     if (!ok) console.warn('email_change_revert : e-mail de confirmation non parti')
   } catch { /* best-effort */ }
   return json(200, { ok: true, email: maskEmail(oldEmail), sessions_closed: verrou })
@@ -657,7 +733,7 @@ async function passwordChange(req: Request, body: Record<string, unknown>, actio
     }).select('id').single()
     if (insErr || !ins) return json(500, { error: 'server_error' })
 
-    const sent = await sendMail(user.email, `${code} — ton code pour changer de mot de passe AvatarAds`, passwordCodeEmail(code))
+    const sent = await sendMail(user.email, `${code} — ton code pour changer de mot de passe AvatarAds`, passwordCodeEmail(code), await langueDe(sb, body, user.id))
     if (!sent) {
       await sb.from('password_change_codes').delete().eq('id', ins.id)
       return json(502, { error: 'send_failed' })
@@ -732,14 +808,14 @@ async function passwordChange(req: Request, body: Record<string, unknown>, actio
 
   // Information au compte (best-effort : le changement est fait, un échec d'envoi ne le défait pas).
   try {
-    const ok = await sendMail(user.email, 'Ton mot de passe AvatarAds a été modifié', passwordChangedNotice())
+    const ok = await sendMail(user.email, 'Ton mot de passe AvatarAds a été modifié', passwordChangedNotice(), await langueDe(sb, body, user.id))
     if (!ok) console.warn('password_change : e-mail d\'information non parti')
   } catch { /* best-effort */ }
   // Audit 04/10 (CC-1) : adresse changée il y a moins de 72 h → l'ANCIENNE adresse est prévenue aussi (son lien
   // d'annulation retirera ce mot de passe).
   for (const ancienne of await anciennesAdressesRecentes(sb, user.id, user.email)) {
     try {
-      const ok = await sendMail(ancienne, 'Mot de passe modifié sur ton compte AvatarAds', passwordChangedOldNotice())
+      const ok = await sendMail(ancienne, 'Mot de passe modifié sur ton compte AvatarAds', passwordChangedOldNotice(), await langueDe(sb, body, user.id))
       if (!ok) console.warn('password_change : e-mail à l\'ancienne adresse non parti')
     } catch { /* best-effort */ }
   }
@@ -773,13 +849,13 @@ async function echecsCodes(sb: SupabaseClient, eK: string, ipK: string): Promise
 // Un code faux de plus pour ce couple (adresse, IP). true = plafond atteint : cet appareil est bloqué pour l'adresse
 // (titulaire prévenu une seule fois par 24 h). Les codes vivants ne sont PAS expirés : le titulaire garde le sien.
 // L'appelant répond alors comme un plafond de vérification.
-async function noterEchecCode(sb: SupabaseClient, email: string, eK: string, ipK: string): Promise<boolean> {
+async function noterEchecCode(sb: SupabaseClient, email: string, eK: string, ipK: string, lang: Lang = 'fr'): Promise<boolean> {
   await rateHit(cleEchecs(eK, ipK), 86_400, MAX_ECHECS_EMAIL_JOUR)
   if (await echecsCodes(sb, eK, ipK) < MAX_ECHECS_EMAIL_JOUR) return false
   if (await rateHit(`otp:echec:avis:${eK}`, 86_400, 1)) {
     console.warn('verify : appareil bloqué pour une adresse (trop de codes faux en 24 h)')
     try {
-      const ok = await sendMail(email, 'Codes faux essayés sur ton adresse AvatarAds', codesSuspendusNotice())
+      const ok = await sendMail(email, 'Codes faux essayés sur ton adresse AvatarAds', codesSuspendusNotice(), lang)
       if (!ok) console.warn('verify : avis de suspension non parti')
     } catch { /* best-effort */ }
   }
@@ -860,7 +936,7 @@ serve(async (req) => {
     }).select('id, created_at').single()
     if (insErr || !ins) return json(500, { error: 'server_error' })
 
-    const sent = await sendCodeEmail(email, code)
+    const sent = await sendCodeEmail(email, code, body.lang === 'en' ? 'en' : 'fr')   // 26/10 : connexion anglaise
     if (!sent) {
       await sb.from('otp_codes').delete().eq('id', ins.id)
       return json(502, { error: 'send_failed' })
@@ -911,7 +987,7 @@ serve(async (req) => {
     }
     if (row.code_hash !== await hashCode(email, code)) {
       // Audit 23/10 (n° 40) : code faux compté pour ce couple (adresse, IP) ; celui qui atteint le plafond bloque cet appareil
-      if (await noterEchecCode(sb, email, eK, vipK)) return json(429, { error: 'too_many_attempts' })
+      if (await noterEchecCode(sb, email, eK, vipK, body.lang === 'en' ? 'en' : 'fr')) return json(429, { error: 'too_many_attempts' })
       const left = MAX_ATTEMPTS - Number(att)
       if (left <= 0) { await sb.from('otp_codes').delete().eq('id', row.id); return json(400, { error: 'too_many_attempts' }) }
       return json(400, { error: 'wrong_code', remaining: left })
@@ -949,6 +1025,8 @@ serve(async (req) => {
     // (paires parrain↔filleul créées sur la même IP, cf. whop-webhook creditReferral). Colonne non écrivable côté
     // client ; posée ici en service_role. Best-effort (ne bloque jamais la connexion).
     try { const _sip = realIp(req); if (_sip) await sb.from('profiles').update({ signup_ip: _sip }).eq('email', email).is('signup_ip', null) } catch { /* best-effort */ }
+    // 26/10 : compte créé depuis la connexion anglaise → e-mails en anglais dès la bienvenue (l'app /en/app/ le repose aussi)
+    if (created && body.lang === 'en') { try { await sb.from('profiles').update({ lang: 'en' }).eq('email', email) } catch { /* best-effort */ } }
 
     // Session : magic link admin → le client l'échange via verifyOtp({ token_hash })
     const { data: linkData, error: linkErr } = await sb.auth.admin.generateLink({ type: 'magiclink', email })

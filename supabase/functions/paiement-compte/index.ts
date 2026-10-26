@@ -104,7 +104,7 @@ serve(async (req) => {
   const neuf = !u.a_mot_de_passe && !u.last_sign_in_at && Date.now() - Date.parse(u.created_at) < NEUF_MS
   if (!neuf) return json({ ok: true, paid: true, compte: 'existant', email: masque(email), recu, ...acces(u) })
   if (action === 'etat') return json({ ok: true, paid: true, compte: 'nouveau', email: masque(email), recu, ...acces(u) })
-  if (action === 'code') return await envoyerCode(req, sb, u, email, nonce)
+  if (action === 'code') return await envoyerCode(req, sb, u, email, nonce, b.lang === 'en' ? 'en' : 'fr')   // 26/10 : page anglaise
 
   // connexion : l'adresse est prouvée par le code reçu, sinon rien
   const v = await verifierCode(req, sb, u, nonce, String(b?.code ?? '').trim())
@@ -168,7 +168,7 @@ function recuDe(evs: any[], membre: string) {
 }
 
 // ── Code « ouvrir mon espace » (audit 23/10) : envoi à l'adresse de l'achat, puis vérification par l'action connexion ──
-async function envoyerCode(req: Request, sb: any, u: any, email: string, nonce: string): Promise<Response> {
+async function envoyerCode(req: Request, sb: any, u: any, email: string, nonce: string, lang: 'fr' | 'en' = 'fr'): Promise<Response> {
   if (!RESEND_API_KEY) return json({ ok: false, error: 'email_unavailable' }, 503)
   // délai entre deux envois, par compte (dérivé du dernier code, comme auth-otp)
   const heure = new Date(Date.now() - 3600_000).toISOString()
@@ -191,7 +191,10 @@ async function envoyerCode(req: Request, sb: any, u: any, email: string, nonce: 
     expires_at: new Date(Date.now() + CODE_TTL_MIN * 60_000).toISOString(),
   }).select('id').single()
   if (insErr || !ins) { console.error('paiement-compte code :', insErr?.message || 'sans ligne'); return json({ ok: false, error: 'server_error' }, 500) }
-  const sent = await sendMail(email, `${code} — ton code pour ouvrir ton espace AvatarAds`, codeEmail(code))
+  const sent = lang === 'en'
+    ? await sendMail(email, `${code} — your code to open your AvatarAds space`, codeEmail(code, 'en'))
+    : await sendMail(email, `${code} — ton code pour ouvrir ton espace AvatarAds`, codeEmail(code))
+  if (lang === 'en') { try { await sb.from('profiles').update({ lang: 'en' }).eq('id', u.id) } catch { /* best-effort */ } }   // e-mails suivants en anglais
   if (!sent) {
     await sb.from('paiement_codes').delete().eq('id', ins.id)
     return json({ ok: false, error: 'send_failed' }, 502)
@@ -232,15 +235,21 @@ async function verifierCode(req: Request, sb: any, u: any, nonce: string, code: 
 }
 
 // Gabarit sobre des e-mails d'auth-otp (mailLayout), sans émoji
-function codeEmail(code: string): string {
+function codeEmail(code: string, lang: 'fr' | 'en' = 'fr'): string {
+  // 26/10 : version anglaise (page /en/paiement-confirme.html)
+  const T = lang === 'en'
+    ? { titre: 'Open your AvatarAds space', intro: 'Thanks for your purchase. Enter this code on the “Payment confirmed” page to open your space:',
+        fin: `This code expires in ${CODE_TTL_MIN} minutes and can only be used once.<br>If you didn't buy anything on AvatarAds, don't give this code to anyone: without it, nobody can open an account with your address. Write to us at <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a> if you have any doubt.` }
+    : { titre: 'Ouvre ton espace AvatarAds', intro: 'Merci pour ton achat. Entre ce code sur la page « Paiement confirmé » pour ouvrir ton espace :',
+        fin: `Ce code expire dans ${CODE_TTL_MIN} minutes et ne peut être utilisé qu'une fois.<br>Si tu n'as rien acheté sur AvatarAds, ne donne ce code à personne : sans lui, personne ne peut ouvrir de compte à ton adresse. Écris-nous à <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a> si tu as un doute.` }
   return `<!doctype html><html><body style="margin:0;padding:0;background:#f5f5f4;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
   <div style="max-width:520px;margin:0 auto;padding:32px 20px">
     <div style="font-size:20px;font-weight:800;color:#111;margin-bottom:22px">AvatarAds</div>
     <div style="background:#fff;border-radius:16px;padding:30px 28px;border:1px solid #e7e5e4">
-      <div style="font-size:21px;font-weight:800;color:#111;line-height:1.3;margin-bottom:14px">Ouvre ton espace AvatarAds</div>
-      <div style="font-size:15px;color:#44403c;line-height:1.65">Merci pour ton achat. Entre ce code sur la page « Paiement confirmé » pour ouvrir ton espace :</div>
+      <div style="font-size:21px;font-weight:800;color:#111;line-height:1.3;margin-bottom:14px">${T.titre}</div>
+      <div style="font-size:15px;color:#44403c;line-height:1.65">${T.intro}</div>
       <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:20px 8px;margin-top:20px;text-align:center;white-space:nowrap;font-size:30px;font-weight:800;letter-spacing:8px;color:#111;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${code}</div>
-      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Ce code expire dans ${CODE_TTL_MIN} minutes et ne peut être utilisé qu'une fois.<br>Si tu n'as rien acheté sur AvatarAds, ne donne ce code à personne : sans lui, personne ne peut ouvrir de compte à ton adresse. Écris-nous à <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a> si tu as un doute.</div>
+      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">${T.fin}</div>
     </div>
     <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:18px;line-height:1.6">AvatarAds · avatarads.fr</div>
   </div></body></html>`

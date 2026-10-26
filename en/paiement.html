@@ -460,7 +460,7 @@ function mountWhop(){
   // de retour). allowCompletionNavigation:false (option du module, lue dans son code : « case redirect ») : Whop ne bouge
   // plus l'onglet ; onComplete arrive, la veille (aa_nonce) emmène sur « Paiement confirmé ». L'adresse de retour reste
   // pour une étape bancaire HORS page (retour ici avec ?payment=…&status=…, relus par paiement-confirme.html).
-  const acc=compte(), meta={returnUrl:location.origin+"/en/paiement-confirme.html",allowCompletionNavigation:false,metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE},acc?{aa_user_id:acc.id}:{})};
+  const acc=compte(), meta={returnUrl:location.origin+"/en/paiement-confirme.html",allowCompletionNavigation:false,metadata:Object.assign({aa_page:"paiement",aa_nonce:NONCE,aa_lang:"en"},acc?{aa_user_id:acc.id}:{})};
   whopReady().then(W=>{
     if(seq!==_seq) return;
     // Apple Pay et carte bancaire SEULEMENT (Axel 23/10) : les plans Whop n'acceptent que ces deux moyens, Apple Pay s'affiche

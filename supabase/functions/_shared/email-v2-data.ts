@@ -456,3 +456,447 @@ export const ZERO: Mail[] = [
   "url": "https://avatarads.fr/app/?start=recharge"
  }
 ]
+
+// Version anglaise (profiles.lang = 'en'), par identifiant : tools/emails/emails_en.py
+export const EN: Record<string, Mail> = {
+ "p0": {
+  "id": "p0",
+  "quand": "À l’inscription (remplace « welcome_free »)",
+  "objet": "Your first video in 5 minutes",
+  "preheader": "One photo is all it takes.",
+  "titre": "One photo is all you need for your first video",
+  "corps": [
+   "It’s Axel, the founder of AvatarAds. Thanks for creating your account.",
+   "The easiest way to start: take a photo (you, an avatar or your product), open Express and write what the person should say. A minute later, they’re talking to the camera:",
+   {
+    "visuel": true
+   },
+   "Already have an audio or some raw footage? AI Editing cuts it with captions, animations and music. Using Claude? Plug AvatarAds into it and ask for your video in one sentence.",
+   "<b>Make your first video now.</b> If you get stuck, just reply to this email: I read everything."
+  ],
+  "image": "photo-video-lune.jpg",
+  "alt": "A photo of a creator with a lamp, then the Express video where she talks",
+  "legende": "Left, the starting photo; right, the Express video where she talks.",
+  "cta": "Make my first video",
+  "url": "https://avatarads.fr/en/app/?start=express"
+ },
+ "p1": {
+  "id": "p1",
+  "quand": "H+2 (2 heures après l’inscription)",
+  "objet": "Your car becomes a tank",
+  "preheader": "Omni transforms any object in your video.",
+  "titre": "Transform any object in your video",
+  "corps": [
+   "Omni is the tool that surprises people the most. Film anything with your phone, write what it should become, and Omni transforms it in the video.",
+   "Here, a simple Clio parked in the street:",
+   {
+    "visuel": true
+   },
+   "The camera moves exactly the same and the street doesn’t change: only the object is transformed.",
+   "<b>Film an object around you</b> and write what it should become."
+  ],
+  "image": "omni-tank.jpg",
+  "alt": "A Clio parked in the street, then the same video where it has become a tank",
+  "legende": "The same video, before and after Omni: the Clio has become a tank.",
+  "cta": "Try Omni",
+  "url": "https://avatarads.fr/en/app/?start=omni"
+ },
+ "p2": {
+  "id": "p2",
+  "quand": "J+1",
+  "objet": "You can ask Claude for your ads",
+  "preheader": "AvatarAds plugs into Claude in two minutes.",
+  "titre": "Your next ad, in one sentence",
+  "corps": [
+   "If you already use Claude, there’s a shortcut: AvatarAds plugs into it as a connector, in two minutes.",
+   "Add a photo of your product, write “create 4 UGC influencers presenting this product”, and the result shows up right in the conversation:",
+   {
+    "visuel": true
+   },
+   "It works for videos, editing and ad visuals too: everything starts from the same chat.",
+   "<b>Plug AvatarAds into Claude</b> and try it with your own product."
+  ],
+  "image": "claude-influenceurs.jpg",
+  "alt": "Four UGC creators presenting the same can",
+  "legende": "Asked to Claude: “create 4 UGC influencers presenting this product”.",
+  "cta": "Connect Claude",
+  "url": "https://avatarads.fr/en/claude.html"
+ },
+ "p3": {
+  "id": "p3",
+  "quand": "J+3",
+  "objet": "One photo, one talking video",
+  "preheader": "The format that works best on TikTok and Reels.",
+  "titre": "The UGC format, without filming yourself",
+  "corps": [
+   "The format that works best on TikTok and Reels right now: someone presenting a product to the camera, like a real customer.",
+   "With Express, you start from a photo of your product and write what the person should say. The voice, the gestures and the setting are generated for you:",
+   {
+    "visuel": true
+   },
+   "<b>Try it today:</b> take a photo of your product and write “a young woman in her bathroom presents this product in eight seconds”."
+  ],
+  "image": "ugc-produits.jpg",
+  "alt": "Three UGC creators presenting a product to the camera",
+  "legende": "Three UGC videos generated with AvatarAds, each presenting a product to the camera.",
+  "cta": "Try Express",
+  "url": "https://avatarads.fr/en/app/?start=express"
+ },
+ "p4": {
+  "id": "p4",
+  "quand": "J+5",
+  "objet": "Your audio, edited in minutes",
+  "preheader": "Captions, animations and music, no timeline.",
+  "titre": "Editing, without losing your evening",
+  "corps": [
+   "Editing is usually what takes the longest. AI Editing does it for you.",
+   "Drop your audio or your video: it cuts it, adds captions, animations that illustrate what you say, and music. Here are three moments from a video edited that way:",
+   {
+    "visuel": true
+   },
+   "You get a video ready to post, which you can still fine-tune in the Editor.",
+   "<b>Drop your next audio</b> and see what it does with it."
+  ],
+  "image": "montage-moments.jpg",
+  "alt": "Three moments from a video edited by AI Editing",
+  "legende": "Three moments from a video edited by AI Editing: captions, animation, visuals.",
+  "cta": "Edit a video",
+  "url": "https://avatarads.fr/en/app/?start=montage"
+ },
+ "p5": {
+  "id": "p5",
+  "quand": "J+7",
+  "objet": "Recreate a trend with a single photo",
+  "preheader": "No filming, no dancing.",
+  "titre": "Ride a trend without filming yourself",
+  "corps": [
+   "A dance, a gesture, a trending move: Motion Control makes any character reproduce exactly those movements, from a single photo.",
+   {
+    "visuel": true
+   },
+   "It’s the fastest way to jump on a trend with your avatar or your mascot.",
+   "<b>Pick a trend that’s going around right now</b> and try it with your photo."
+  ],
+  "image": "motion-control-geste.jpg",
+  "alt": "Two characters making exactly the same gesture",
+  "legende": "The same gesture, reproduced by two characters from a single video.",
+  "cta": "Try Motion Control",
+  "url": "https://avatarads.fr/en/app/?start=motion"
+ },
+ "p6": {
+  "id": "p6",
+  "quand": "J+10",
+  "objet": "A full campaign in one morning",
+  "preheader": "Visuals, UGC videos and variations, all in one place.",
+  "titre": "Your next campaign in one morning",
+  "corps": [
+   "Sales, holidays, launches: the big moments come fast. With a photo of your product, you can prepare your whole campaign in one morning.",
+   "Start with the visuals: AI Images shows your product from several angles, ready to post.",
+   {
+    "visuel": true
+   },
+   "Then three UGC videos with Express (the price, the result, the review) and an explainer video with AI Editing.",
+   "<b>Pick your next big moment</b> and start with the visuals."
+  ],
+  "image": "campagne-visuels.jpg",
+  "alt": "Three ad visuals for a drink",
+  "legende": "Three visuals from the same campaign, three different angles, generated with AI Images.",
+  "cta": "Prepare my campaign",
+  "url": "https://avatarads.fr/en/app/?start=images"
+ },
+ "p7": {
+  "id": "p7",
+  "quand": "J+14",
+  "objet": "“I won’t know how to use it”",
+  "preheader": "It’s the sentence I hear the most.",
+  "titre": "Three steps, that’s it",
+  "corps": [
+   "“I won’t know how to use it.” That’s the sentence I hear the most. Yet every tool works the same way: you drop, you choose, you generate.",
+   "Example with Motion Control: drop the video whose moves you want to copy, drop the photo of your character, then click “Generate the motion”.",
+   {
+    "visuel": true
+   },
+   "No video idea? Reply with what you sell or what you talk about, and I’ll suggest three ideas that fit.",
+   "<b>All that for the price of a coffee a day</b>, no commitment."
+  ],
+  "image": "trois-gestes.jpg",
+  "alt": "Motion Control: a video, a photo, a Generate the motion button",
+  "legende": "The video on the left, the photo on the right, one click on “Generate the motion”.",
+  "cta": "See the plans",
+  "url": "https://avatarads.fr/en/tarifs.html"
+ },
+ "l1": {
+  "id": "l1",
+  "quand": "J+28, puis rotation toutes les 2 semaines",
+  "objet": "The video that stops the scroll",
+  "preheader": "An everyday object transforming before your eyes.",
+  "titre": "The kind of video people watch twice",
+  "corps": [
+   "On TikTok, you have one second to make people stop on your video. Nothing works better than an everyday object transforming before their eyes.",
+   "With Omni, you film your car, write what it should become, and the video is transformed:",
+   {
+    "visuel": true
+   },
+   "Your car, your desk, your product: anything can become something else, with exactly the same camera movement.",
+   "<b>Pick the object for your next video</b> and let Omni transform it."
+  ],
+  "image": "omni-helicoptere.jpg",
+  "alt": "A car turned into a helicopter in the same video",
+  "legende": "The same video, before and after Omni: the car has become a helicopter.",
+  "cta": "Try Omni",
+  "url": "https://avatarads.fr/en/app/?start=omni"
+ },
+ "l2": {
+  "id": "l2",
+  "quand": "rotation",
+  "objet": "Your avatar speaks with your voice",
+  "preheader": "No camera, no studio mic.",
+  "titre": "Make an avatar talk with your voice",
+  "corps": [
+   "Want to post without filming yourself? Pick an avatar, record your voice on your phone (or write your text): the Generator makes it speak your words, captions and music included.",
+   {
+    "visuel": true
+   },
+   "Perfect for a faceless channel, or to post every day without shooting.",
+   "<b>Record fifteen seconds</b> and watch your avatar talk."
+  ],
+  "image": "generateur-voix.jpg",
+  "alt": "An avatar and a voice recording in the Generator",
+  "legende": "An avatar, your voice recorded on the mic: the Generator makes it talk.",
+  "cta": "Open the Generator",
+  "url": "https://avatarads.fr/en/app/?start=gen"
+ },
+ "l3": {
+  "id": "l3",
+  "quand": "rotation",
+  "objet": "Clean sound, even recorded on a phone",
+  "preheader": "The detail that makes you look like a pro.",
+  "titre": "Sound is half of the video",
+  "corps": [
+   "A breath, an echoing room, street noise: people drop a video within two seconds when the sound is bad.",
+   "Audio cleanup reduces noise, keeps the volume constant and cuts the silences, in one click:",
+   {
+    "visuel": true
+   },
+   "Even recorded on a phone, your voice sounds clean from start to finish.",
+   "<b>Drop your last recording</b> and hear the difference."
+  ],
+  "image": "audio-avant-apres.jpg",
+  "alt": "Waveform before and after audio cleanup",
+  "legende": "The same recording, before and after the cleanup.",
+  "cta": "Clean my audio",
+  "url": "https://avatarads.fr/en/app/?start=audio"
+ },
+ "l4": {
+  "id": "l4",
+  "quand": "selon le mois (ex. novembre)",
+  "objet": "Black Friday: your visuals ready in one morning",
+  "preheader": "A seasonal idea, ready to adapt.",
+  "titre": "Idea of the month: Black Friday",
+  "corps": [
+   "Black Friday is coming. Three visuals to prepare now: the reasons to buy, a before / after, and the announcement of your offer.",
+   {
+    "visuel": true
+   },
+   "With AI Images, each one takes a few seconds from a photo of your product.",
+   "<b>Prepare your visuals now</b>, not the day before."
+  ],
+  "image": "saison-offre.jpg",
+  "alt": "Three visuals: the reasons to buy, a before / after, a limited offer",
+  "legende": "The reasons to buy, a before / after, the offer announcement: three visuals generated with AI Images.",
+  "cta": "Create my visuals",
+  "url": "https://avatarads.fr/en/app/?start=images"
+ },
+ "c0": {
+  "id": "c0",
+  "quand": "À l’abonnement (remplace « welcome »)",
+  "objet": "Welcome, here’s where to start",
+  "preheader": "My advice for your first hour.",
+  "titre": "Your {plan} subscription is active",
+  "corps": [
+   "Thanks for your trust, your studio is ready. My advice for your first hour: start with a photo.",
+   {
+    "visuel": true
+   },
+   "Open Express, add a photo (you, an avatar or your product) and write what the person should say. Then try AI Editing with an audio. And if you use Claude, plug AvatarAds into it to ask for anything in one sentence.",
+   "<b>If you get stuck, reply to this email</b>: I’ll help you directly."
+  ],
+  "image": "photo-video-villa.jpg",
+  "alt": "A photo, then the video where the person talks",
+  "legende": "A photo turned into a talking video: the first thing I recommend you try.",
+  "cta": "Make my first video",
+  "url": "https://avatarads.fr/en/app/?start=express"
+ },
+ "c1": {
+  "id": "c1",
+  "quand": "J+2, s’il n’a encore rien créé",
+  "objet": "Your first video is waiting",
+  "preheader": "The easiest one to make: a photo with your product.",
+  "titre": "Your first video, with your product",
+  "corps": [
+   "Haven’t created a video yet? Here’s the easiest one to start with: a photo of someone holding your product.",
+   "Add it in Express and write what the person should say, for example “present this product as if you were recommending it to a friend”. Here’s what it looks like with different products:",
+   {
+    "visuel": true
+   },
+   "No photo at hand? Take a selfie with your product, or create one with AI Images.",
+   "<b>Open Express with a photo of your product</b>, your video arrives in a few minutes."
+  ],
+  "image": "ugc-premiere-video.jpg",
+  "alt": "Four UGC creators each presenting a product to the camera",
+  "legende": "Four UGC videos generated with AvatarAds, each with its product.",
+  "cta": "Create my first video",
+  "url": "https://avatarads.fr/en/app/?start=express"
+ },
+ "c2": {
+  "id": "c2",
+  "quand": "Après 7 jours sans création",
+  "objet": "A video for this week?",
+  "preheader": "An idea that takes five minutes.",
+  "titre": "An idea for this week",
+  "corps": [
+   "We haven’t seen you in the studio for a week. Here’s an idea that takes five minutes.",
+   "Record a tip from your field on your phone, thirty seconds is enough. Drop the audio into AI Editing: it turns it into a video, with a talking avatar, captions, images that illustrate what you say and music.",
+   {
+    "visuel": true
+   },
+   "<b>Record your tip</b> and let AI Editing do the rest."
+  ],
+  "image": "montage-audio-video.jpg",
+  "alt": "An audio, then the video edited by AI Editing with an avatar and an inset image",
+  "legende": "An audio in, an edited video out: avatar, captions and an illustration image.",
+  "cta": "Edit my tip",
+  "url": "https://avatarads.fr/en/app/?start=montage"
+ },
+ "w1": {
+  "id": "w1",
+  "quand": "Semaine 1 de la rotation",
+  "objet": "This week: recreate a trend with your avatar",
+  "preheader": "Idea of the week: Motion Control.",
+  "titre": "Idea of the week: Motion Control",
+  "corps": [
+   "This week, recreate a TikTok trend with your avatar: pick a dance or gesture video that’s going around, add the photo of your character, and Motion Control reproduces every move.",
+   {
+    "visuel": true
+   },
+   "Next week: Omni, to turn any object in your video into whatever you want.",
+   "<b>Pick a trend</b> and go for it."
+  ],
+  "image": "motion-control-reference.jpg",
+  "alt": "The reference video and the character reproducing its gestures",
+  "legende": "The reference video and the character reproducing its gestures, frame by frame.",
+  "cta": "Try Motion Control",
+  "url": "https://avatarads.fr/en/app/?start=motion"
+ },
+ "w2": {
+  "id": "w2",
+  "quand": "Semaine 2",
+  "objet": "This week: your car becomes a Bugatti",
+  "preheader": "Idea of the week: Omni.",
+  "titre": "Idea of the week: Omni",
+  "corps": [
+   "This week, film your car (or any object) and ask Omni to turn it into something else. Here, a Clio parked in the street becomes a Bugatti:",
+   {
+    "visuel": true
+   },
+   "The camera movement stays identical, only what you ask for changes. The kind of video people watch twice.",
+   "Next week: Express, to have UGC creators present your product.",
+   "<b>Film something around you</b> and transform it."
+  ],
+  "image": "omni-bugatti.jpg",
+  "alt": "A Clio parked in the street, then the same video where it has become a Bugatti",
+  "legende": "The same video, before and after Omni: the Clio has become a Bugatti.",
+  "cta": "Try Omni",
+  "url": "https://avatarads.fr/en/app/?start=omni"
+ },
+ "w3": {
+  "id": "w3",
+  "quand": "Semaine 3",
+  "objet": "This week: your product presented by three creators",
+  "preheader": "Idea of the week: Express.",
+  "titre": "Idea of the week: Express",
+  "corps": [
+   "This week, have several UGC creators present your product. One photo per creator with your product, one sentence to say what they should talk about, and Express generates each video.",
+   {
+    "visuel": true
+   },
+   "Change the angle with each video: the price, the result, the review. You’ll quickly see which one works best.",
+   "Next week: AI Editing, to edit a video without opening a timeline.",
+   "<b>Take a photo of your product</b> and launch your first series."
+  ],
+  "image": "ugc-createurs.jpg",
+  "alt": "Three UGC creators each presenting a product to the camera",
+  "legende": "Three UGC videos generated with AvatarAds, one creator and one product per video.",
+  "cta": "Try Express",
+  "url": "https://avatarads.fr/en/app/?start=express"
+ },
+ "w4": {
+  "id": "w4",
+  "quand": "Semaine 4",
+  "objet": "This week: give your video some rhythm",
+  "preheader": "Idea of the week: AI Editing.",
+  "titre": "Idea of the week: AI Editing",
+  "corps": [
+   "This week, turn a simple talking-to-camera video into one that holds attention. Drop your raw video (or just the audio) into AI Editing:",
+   {
+    "visuel": true
+   },
+   "It adds animations that illustrate what you say (split screen or full screen), captions, key words and music. You never open a timeline.",
+   "Next week: AI Images, to create your UGC creators in one sentence.",
+   "<b>Drop your next video</b> and see the difference."
+  ],
+  "image": "montage-brute-split.jpg",
+  "alt": "A raw talking-to-camera video, then the same one after AI Editing in split screen with an animation",
+  "legende": "Left, the raw video; right, after AI Editing: an animation illustrating what he says, in split screen.",
+  "cta": "Edit a video",
+  "url": "https://avatarads.fr/en/app/?start=montage"
+ },
+ "w5": {
+  "id": "w5",
+  "quand": "Semaine 5, puis retour à la semaine 1",
+  "objet": "This week: your UGC creators in one sentence",
+  "preheader": "Idea of the week: AI Images.",
+  "titre": "Idea of the week: AI Images",
+  "corps": [
+   "This week, create your own UGC creators. Describe the person in one sentence, AI Images generates ultra-realistic photos, ready to post or to make talk with Express.",
+   {
+    "visuel": true
+   },
+   "Here, the sentence was “UGC creator, lifestyle selfie, natural light, casual streetwear”.",
+   "Next week: Motion Control, to recreate a trend with your avatar.",
+   "<b>Write your first description</b> and see the result."
+  ],
+  "image": "imagesia-createurs.jpg",
+  "alt": "Three UGC creators generated with AI Images",
+  "legende": "Three creators generated with AI Images from a single sentence.",
+  "cta": "Create an image",
+  "url": "https://avatarads.fr/en/app/?start=images"
+ },
+ "z0": {
+  "id": "z0",
+  "quand": "Abonné à 0 crédit (une fois par mois au plus)",
+  "objet": "You’ve used all your credits this month",
+  "preheader": "Rather good news: it means you’re posting.",
+  "titre": "You’ve used it all this month",
+  "corps": [
+   "Your monthly credits are used up. That’s rather good news: it means you’re producing, and consistency is what brings views.",
+   "Two UGC videos and a product visual, each for a different product: that’s the kind of content, posted every week, that makes an account grow:",
+   {
+    "visuel": true
+   },
+   "To keep your rhythm, two options:",
+   {
+    "liste": [
+     "<b>a credit pack</b>, in one click, without changing your subscription;",
+     "<b>the plan above</b>, if you hit zero every month."
+    ]
+   },
+   "<b>Top up now</b> and pick up where you left off."
+  ],
+  "image": "credits-trio.jpg",
+  "alt": "A creator with a perfume, a creator with a serum and an ad visual for a can",
+  "legende": "A perfume, a serum, a can: two UGC videos and a product visual, generated with AvatarAds.",
+  "cta": "Top up my credits",
+  "url": "https://avatarads.fr/en/app/?start=recharge"
+ }
+}

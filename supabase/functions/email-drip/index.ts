@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { type Mail, render, subject, imageUrl, unsubUrl, sendResend, PROSPECT_STEPS, LONG_START, LONG_EVERY,
-  LONG_ROTATION, isBlackFridaySeason, CLIENT_GAP, ROTATION_IDS } from '../_shared/email-v2.ts'
-import { PROSPECTS, LONGUE, CLIENTS, ROTATION, ZERO } from '../_shared/email-v2-data.ts'
+  LONG_ROTATION, isBlackFridaySeason, CLIENT_GAP, ROTATION_IDS, langOf, mailFor, type Lang } from '../_shared/email-v2.ts'
+import { PROSPECTS, LONGUE, CLIENTS, ROTATION, ZERO, EN } from '../_shared/email-v2-data.ts'
 
 // ── E-mails automatiques (Resend), séquences v2 validées par Axel le 05/10/2026 ──
 // Appelée toutes les heures par pg_cron (job email-drip-hourly, clé x-cron-key lue dans Vault).
@@ -48,13 +48,14 @@ serve(async (req) => {
 
   // Mode APERÇU : { test_to: "adresse", test_ids?: ["p0", "w2", …] } envoie la série (ou une sélection) à cette
   // seule adresse, préfixée [TEST], sans lire la base ni journaliser.
-  let testTo = '', testIds: string[] = []
+  let testTo = '', testIds: string[] = [], testLang: Lang = 'fr'   // 26/10 : { test_lang: "en" } = aperçu de la version anglaise
   try {
     const j = await req.clone().json()
     testTo = String(j?.test_to || ''); testIds = Array.isArray(j?.test_ids) ? j.test_ids.map(String) : []
+    testLang = j?.test_lang === 'en' ? 'en' : 'fr'
   } catch (_) { /* pas de corps JSON */ }
   if (testTo) {
-    const mails = testIds.length ? testIds.map((id) => BY_ID[id]).filter(Boolean) : Object.values(BY_ID)
+    const mails = (testIds.length ? testIds.map((id) => BY_ID[id]).filter(Boolean) : Object.values(BY_ID)).map((m) => mailFor(m, testLang, EN))
     // Garde-fou : chaque visuel doit être en ligne avant d'écrire à qui que ce soit
     const broken: string[] = []
     for (const u of [...new Set(mails.map(imageUrl))]) {
@@ -64,8 +65,8 @@ serve(async (req) => {
     if (broken.length) return json({ ok: false, error: 'images cassées, rien envoyé', broken })
     const results: Record<string, boolean> = {}
     for (const m of mails) {
-      results[m.id] = !!(await sendResend(RESEND_API_KEY, testTo, '[TEST] ' + subject(m, 'starter'),
-        render(m, { prenom: 'Axel', plan: 'starter', unsub: APP_URL }), APP_URL, 'test'))
+      results[m.id] = !!(await sendResend(RESEND_API_KEY, testTo, '[TEST] ' + subject(m, 'starter', testLang),
+        render(m, { prenom: 'Axel', plan: 'starter', unsub: APP_URL, lang: testLang }), APP_URL, 'test'))
       await new Promise((r) => setTimeout(r, 600))
     }
     return json({ ok: true, test_to: testTo, results })
@@ -103,12 +104,13 @@ serve(async (req) => {
   }
 
   // Envoie un e-mail v2 : réserve le kind, envoie, range l'identifiant Resend (statistiques)
-  const sendV2 = async (u: { id: string; email: string; first_name?: string | null; plan?: string }, m: Mail, kind: string, also?: string) => {
+  const sendV2 = async (u: { id: string; email: string; first_name?: string | null; plan?: string; lang?: string | null }, m: Mail, kind: string, also?: string) => {
     if (!(await claim(u.id, u.email, kind))) return false
     if (also) await claim(u.id, u.email, also)
     const unsub = await unsubUrl(SUPABASE_URL, SERVICE_KEY, u.id)
-    const id = await sendResend(RESEND_API_KEY, u.email, subject(m, u.plan || ''),
-      render(m, { prenom: u.first_name || '', plan: u.plan || '', unsub }), unsub, m.id)
+    const lg = langOf(u), mm = mailFor(m, lg, EN)   // 26/10 : version anglaise pour un compte de l'app /en/app/
+    const id = await sendResend(RESEND_API_KEY, u.email, subject(mm, u.plan || '', lg),
+      render(mm, { prenom: u.first_name || '', plan: u.plan || '', unsub, lang: lg }), unsub, m.id)
     if (id) {
       await sb.from('email_log').update({ resend_id: id, mail: m.id }).eq('user_id', u.id).eq('kind', kind)
       sent++; report[m.id] = (report[m.id] || 0) + 1
@@ -123,7 +125,7 @@ serve(async (req) => {
   let welcomeUser = ''
   try { welcomeUser = String((await req.clone().json())?.welcome_user || '') } catch (_) { /* pas de corps */ }
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(welcomeUser)) {
-    const { data: u } = await sb.from('profiles').select('id, email, first_name, plan').eq('id', welcomeUser).maybeSingle()
+    const { data: u } = await sb.from('profiles').select('id, email, first_name, plan, lang').eq('id', welcomeUser).maybeSingle()
     if (!u || !u.plan || u.plan === 'free') return json({ ok: false, error: 'compte introuvable ou en Free' })
     const m = BY_ID['c0']
     if (!m) return json({ ok: false, error: 'e-mail c0 introuvable' })
@@ -139,7 +141,7 @@ serve(async (req) => {
   {
     if (budget === 0) console.log(`📬 email-drip: quota du jour atteint (${used}/${DAILY_CAP} sur 24 h) — seul p0 part`)
     const { data: users } = await sb.from('profiles')
-      .select('id, email, first_name, drip_anchor, plan, whop_member_id, bought_credits, whop_cancel_at_period_end')
+      .select('id, email, first_name, drip_anchor, plan, whop_member_id, bought_credits, whop_cancel_at_period_end, lang')
       .eq('email_optout', false)
       .or('plan.eq.free,whop_cancel_at_period_end.eq.true')
       .not('drip_anchor', 'is', null)
@@ -175,7 +177,7 @@ serve(async (req) => {
   // Abonnés qui ont résilié : exclus (repassés en prospects ci-dessus).
   if (sent < budget) {
     const { data: users } = await sb.from('profiles')
-      .select('id, email, first_name, plan, created_at, credits_remaining, whop_cancel_at_period_end')
+      .select('id, email, first_name, plan, created_at, credits_remaining, whop_cancel_at_period_end, lang')
       .in('plan', ['starter', 'pro', 'elite']).eq('email_optout', false)
       .eq('whop_cancel_at_period_end', false)
       .limit(2000)

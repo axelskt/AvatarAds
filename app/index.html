@@ -24,7 +24,7 @@ try{
 }catch(e){}</script>
 <script>/* 25/10 (Axel) : app anglaise /en/app/ — traducteur de l'interface (app/i18n-en.js, GÉNÉRÉ : node tools/gen-i18n-app.mjs)
    chargé AVANT le corps, pour que rien ne s'affiche en français. Sous /app/ : rien n'est chargé. */
-if(location.pathname.indexOf('/en/')===0)document.write('<script src="/app/i18n-en.js?v=2026-10-25-1700"><\/script>');</script>
+if(location.pathname.indexOf('/en/')===0)document.write('<script src="/app/i18n-en.js?v=2026-10-26-1100"><\/script>');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Chargé par /app/consent.js (pas de bandeau, refus possible depuis /confidentialite.html) ; et jamais tant que l'URL porte un jeton de connexion (SITE-02). -->
 <script src="consent.js?v=2026-10-04-3" defer data-place="app"></script>
@@ -6046,7 +6046,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-25-1700'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-26-1100'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -7264,7 +7264,7 @@ const _OTP_ERRORS = {
 
 async function _otpCall(payload){
   try{
-    const r = await fetch(AUTH_OTP_FN, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+    const r = await fetch(AUTH_OTP_FN, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(Object.assign({ lang: AA_LANG }, payload)) });   // 26/10 : e-mails dans la langue de l'app
     return await r.json();
   }catch(e){ return { error:'network' }; }
 }
@@ -7844,6 +7844,8 @@ function enterApp(profile){
   currentMember = profile;
   try{ const be=document.getElementById('aaBootEchec'); if(be) be.remove(); }catch(_){}   // compte chargé après un premier échec
   try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){}   // #65 · fusionne la biblio du compte (tous appareils)
+  // 26/10 (Axel) : langue des e-mails = langue de l'app ouverte (/app/ français, /en/app/ anglais) — profiles.lang via RPC
+  try{ if(profile && profile.lang !== AA_LANG && typeof sb !== 'undefined' && sb) sb.rpc('set_my_lang', { p_lang: AA_LANG }).then(function(r){ if(!r.error) profile.lang = AA_LANG; }, function(){}); }catch(_){}
   // Montage IA (audit 10/10) : un montage interrompu par la page fermée rend ses crédits, un rendu fini en son absence est rangé
   setTimeout(function(){ try{ _mtPendSolder(); _mtRepriseRendu(); }catch(_){} }, 4000);
   document.getElementById('loginOverlay').style.display = 'none';
@@ -9765,7 +9767,7 @@ async function _emailChgCall(payload, retried){
   if(!token) return { error:'unauthorized' };
   let r;
   try{
-    r = await fetch(AUTH_OTP_FN, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token }, body: JSON.stringify(payload) });
+    r = await fetch(AUTH_OTP_FN, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token }, body: JSON.stringify(Object.assign({ lang: AA_LANG }, payload)) });   // 26/10 : langue des e-mails
   }catch(e){ return { error:'network' }; }
   const out = await r.json().catch(() => ({ error:'server_error' }));
   if(r.status === 401 && !retried){
