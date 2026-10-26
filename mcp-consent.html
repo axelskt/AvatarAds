@@ -87,6 +87,24 @@
     var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
     var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     var $ = function(id){ return document.getElementById(id); };
+    // 26/10 : page en anglais si le navigateur n'est pas en français (la demande vient de claude.ai, pas de /en/)
+    var EN = !/^fr\b/i.test(String((navigator.languages && navigator.languages[0]) || navigator.language || 'fr'));
+    function t(fr, en){ return EN ? en : fr; }
+    if (EN) {
+      document.documentElement.lang = 'en';
+      document.title = 'AvatarAds authorization';
+      $('loading').querySelector('.sub').textContent = 'Loading…';
+      document.querySelector('#consent h1').textContent = 'Authorization';
+      document.querySelector('#consent .acct').firstChild.textContent = 'Account: ';
+      $('ok').textContent = 'Authorize'; $('no').textContent = 'Decline';
+      document.querySelector('#login h1').textContent = 'Sign in to AvatarAds';
+      $('lsub').textContent = 'Sign in to continue.';
+      $('lemail').placeholder = 'Email'; $('lpwd').placeholder = 'Password';
+      $('lbtn').textContent = 'Get a code by email'; $('lmode').textContent = 'I have a password';
+      $('lcodemsg').textContent = 'Code sent. Enter the 6 digits you received by email.';
+      $('lcode').placeholder = '6-digit code';
+      $('lverify').textContent = 'Sign in'; $('lresend').textContent = 'Resend code'; $('lback').textContent = 'Change email';
+    }
     function show(id){ ['loading','consent','login'].forEach(function(x){ $(x).classList.toggle('hide', x !== id); }); }
 
     // Décode le relais (client_id, redirect_uri, state, code_challenge, scope)
@@ -96,13 +114,13 @@
       if (r) params = JSON.parse(atob(r.replace(/-/g,'+').replace(/_/g,'/')));
     } catch(e) {}
     if (!params || !params.client_id || !params.redirect_uri) {
-      document.querySelector('.card').innerHTML = '<h1>Lien invalide</h1><div class="sub" style="margin-top:8px">Ce lien d\'autorisation est incomplet ou expiré.</div>';
+      document.querySelector('.card').innerHTML = t('<h1>Lien invalide</h1><div class="sub" style="margin-top:8px">Ce lien d\'autorisation est incomplet ou expiré.</div>', '<h1>Invalid link</h1><div class="sub" style="margin-top:8px">This authorization link is incomplete or expired.</div>');
       throw new Error('relais invalide');
     }
     // CRITICAL 1 (06/09) : redirect_uri vient du relais base64 (URL, contrôlé par l'attaquant). Sans validation
     // de schéma, deny() ci-dessous exécutait un `javascript:` via location.href (CSP unsafe-inline) → vol du JWT.
     try { var _u = new URL(params.redirect_uri); if (!/^https?:$/.test(_u.protocol)) throw 0; }
-    catch (e) { document.querySelector('.card').innerHTML = '<h1>Lien invalide</h1><div class="sub" style="margin-top:8px">Redirection non autorisée.</div>'; throw new Error('redirect_uri non-http'); }
+    catch (e) { document.querySelector('.card').innerHTML = t('<h1>Lien invalide</h1><div class="sub" style="margin-top:8px">Redirection non autorisée.</div>', '<h1>Invalid link</h1><div class="sub" style="margin-top:8px">Redirect not allowed.</div>'); throw new Error('redirect_uri non-http'); }
 
     // Audit 02/10 (contrat C2) : l'identité du client (« Claude » ou non) est calculée par le SERVEUR
     // (GET /oauth/client-info, même base que /oauth/approve) et plus d'après le domaine lu ici dans le navigateur.
@@ -126,7 +144,7 @@
     function approve(session){
       if (_approving) return; _approving = true;
       show('loading');
-      var sub = $('loading').querySelector('.sub'); if (sub) sub.textContent = 'Autorisation en cours…';
+      var sub = $('loading').querySelector('.sub'); if (sub) sub.textContent = t('Autorisation en cours…', 'Authorizing…');
       fetch(SUPABASE_URL + '/functions/v1/mcp/oauth/approve', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
@@ -145,7 +163,7 @@
       // round3 (06/09) : le relais mcp_oauth n'est PAS signé → un redirect_uri forgé (https://evil) atteignait
       // location.href = open redirect + fuite du state. On ne REDIRIGE PLUS vers l'URL client sur le refus ;
       // le succès, lui, passe par le serveur (/oauth/approve → d.redirect_url validé contre le CIMD).
-      document.querySelector('.card').innerHTML = '<h1>Autorisation refusée</h1><div class="sub" style="margin-top:8px">Tu peux fermer cette fenêtre et revenir à Claude.</div>';
+      document.querySelector('.card').innerHTML = t('<h1>Autorisation refusée</h1><div class="sub" style="margin-top:8px">Tu peux fermer cette fenêtre et revenir à Claude.</div>', '<h1>Authorization declined</h1><div class="sub" style="margin-top:8px">You can close this window and go back to Claude.</div>');
       return;
     }
     function _esc(x){ return String(x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -160,20 +178,21 @@
       var sub = document.querySelector('#consent .sub');
       if (trusted) {
         var nom = _trustedName();
-        document.title = 'Autoriser ' + nom + ' — AvatarAds';
-        h1.textContent = 'Autoriser ' + nom + ' ?';
+        document.title = t('Autoriser ', 'Authorize ') + nom + ' — AvatarAds';
+        h1.textContent = t('Autoriser ' + nom + ' ?', 'Authorize ' + nom + '?');
         h1.style.color = '';
-        sub.textContent = nom + " demande l'accès à ton compte AvatarAds pour générer des images, vidéos et montages avec tes crédits.";
+        sub.textContent = nom + t(" demande l'accès à ton compte AvatarAds pour générer des images, vidéos et montages avec tes crédits.", ' is asking for access to your AvatarAds account to generate images, videos and edits with your credits.');
       } else {
-        h1.textContent = 'Application externe';
+        h1.textContent = t('Application externe', 'External application');
         h1.style.color = '#ffb020';
-        sub.innerHTML = "Une application externe (<b>" + _esc(_clientHost()) + "</b>) — <b>ce n'est PAS Claude</b> — demande l'accès à ton compte AvatarAds et pourra dépenser tes crédits. N'autorise que si tu es toi-même à l'origine de cette demande.";
+        sub.innerHTML = t("Une application externe (<b>" + _esc(_clientHost()) + "</b>) — <b>ce n'est PAS Claude</b> — demande l'accès à ton compte AvatarAds et pourra dépenser tes crédits. N'autorise que si tu es toi-même à l'origine de cette demande.",
+          "An external application (<b>" + _esc(_clientHost()) + "</b>) — <b>this is NOT Claude</b> — is asking for access to your AvatarAds account and will be able to spend your credits. Only authorize it if you started this request yourself.");
       }
     }
     function toConsent(session, errMsg){
       $('email').textContent = (session.user && session.user.email) || '';
       _renderIdentity();
-      var ok = $('ok'); ok.disabled = false; ok.textContent = errMsg ? 'Réessayer' : 'Autoriser';
+      var ok = $('ok'); ok.disabled = false; ok.textContent = errMsg ? t('Réessayer', 'Try again') : t('Autoriser', 'Authorize');
       ok.onclick = function(){ ok.disabled = true; ok.innerHTML = '<span class="spin"></span>'; _approving = false; approve(session); };
       $('no').onclick = deny;
       show('consent');
@@ -210,45 +229,47 @@
       }
       function envoyer(b){
         var email = lemail();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { lerr('Entre ton e-mail'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { lerr(t('Entre ton e-mail', 'Enter your email')); return; }
         var label = b.textContent; occupe(b, true); lerr('');
-        otp({ action: 'send', mode: 'login', email: email }).then(function(d){
+        otp({ action: 'send', mode: 'login', email: email, lang: EN ? 'en' : 'fr' }).then(function(d){
           occupe(b, false, label);
           // plafond atteint ou code parti il y a moins de 30 s : l'écran du code s'ouvre quand même (un code de moins de 10 min vaut)
-          if (d && d.error === 'too_many_codes') { $('lcodemsg').textContent = 'Trop de codes demandés pour cette adresse. Si tu as reçu un code il y a moins de 10 minutes, entre-le ici ; sinon, réessaie plus tard.'; etape(2); return; }
-          if (d && d.error === 'cooldown') { $('lcodemsg').textContent = 'Un code vient de partir : entre les 6 chiffres reçus par e-mail.'; etape(2); return; }
-          if (!d || d.error) { lerr('Envoi impossible, réessaie dans un instant.'); return; }
-          $('lcodemsg').textContent = 'Code envoyé à ' + email + '. Entre les 6 chiffres reçus.'; etape(2);
+          if (d && d.error === 'too_many_codes') { $('lcodemsg').textContent = t('Trop de codes demandés pour cette adresse. Si tu as reçu un code il y a moins de 10 minutes, entre-le ici ; sinon, réessaie plus tard.', 'Too many codes requested for this address. If you got a code less than 10 minutes ago, enter it here; otherwise, try again later.'); etape(2); return; }
+          if (d && d.error === 'cooldown') { $('lcodemsg').textContent = t('Un code vient de partir : entre les 6 chiffres reçus par e-mail.', 'A code was just sent: enter the 6 digits you received by email.'); etape(2); return; }
+          if (!d || d.error) { lerr(t('Envoi impossible, réessaie dans un instant.', 'Could not send the code, try again in a moment.')); return; }
+          $('lcodemsg').textContent = t('Code envoyé à ' + email + '. Entre les 6 chiffres reçus.', 'Code sent to ' + email + '. Enter the 6 digits you received.'); etape(2);
         });
       }
       function verifier(){
         if (verifEnCours) return;
         var code = ($('lcode').value || '').replace(/\D/g, '');
-        if (code.length !== 6) { lerr('Entre les 6 chiffres reçus.'); return; }
+        if (code.length !== 6) { lerr(t('Entre les 6 chiffres reçus.', 'Enter the 6 digits you received.')); return; }
         var b = $('lverify'); verifEnCours = true; occupe(b, true); lerr('');
-        var echec = function(t){ verifEnCours = false; occupe(b, false, 'Se connecter'); lerr(t); };
+        var echec = function(m){ verifEnCours = false; occupe(b, false, t('Se connecter', 'Sign in')); lerr(m); };
         otp({ action: 'verify', email: lemail(), code: code }).then(function(d){
           if (!d || !d.token_hash) {
             var e = d && d.error, n = Number(d && d.remaining) || 0;
-            echec(e === 'wrong_code' ? 'Code incorrect' + (n > 0 ? ' (' + n + ' essai' + (n > 1 ? 's' : '') + ' restant' + (n > 1 ? 's' : '') + ')' : '') + '.'
-              : e === 'too_many_attempts' ? "Trop d'essais : attends quelques minutes puis demande un nouveau code."
-              : e === 'email_recently_changed' ? "Cette adresse vient d'être retirée d'un compte AvatarAds. Si tu n'as pas fait ce changement, ouvre le lien « Ce n'est pas moi » reçu par e-mail ; sinon, écris-nous à bonjour@avatarads.fr."
-              : 'Code invalide ou expiré.');
+            echec(e === 'wrong_code' ? (EN ? 'Wrong code' + (n > 0 ? ' (' + n + ' attempt' + (n > 1 ? 's' : '') + ' left)' : '') + '.'
+                                           : 'Code incorrect' + (n > 0 ? ' (' + n + ' essai' + (n > 1 ? 's' : '') + ' restant' + (n > 1 ? 's' : '') + ')' : '') + '.')
+              : e === 'too_many_attempts' ? t("Trop d'essais : attends quelques minutes puis demande un nouveau code.", 'Too many attempts: wait a few minutes, then request a new code.')
+              : e === 'email_recently_changed' ? t("Cette adresse vient d'être retirée d'un compte AvatarAds. Si tu n'as pas fait ce changement, ouvre le lien « Ce n'est pas moi » reçu par e-mail ; sinon, écris-nous à bonjour@avatarads.fr.",
+                  "This address was just removed from an AvatarAds account. If you didn't make this change, open the “This wasn't me” link you received by email; otherwise, write to us at bonjour@avatarads.fr.")
+              : t('Code invalide ou expiré.', 'Invalid or expired code.'));
             return;
           }
           return sb.auth.verifyOtp({ type: 'magiclink', token_hash: d.token_hash }).then(function(r2){
-            if (r2.error || !r2.data || !r2.data.session) { echec('Code invalide ou expiré.'); return; }
+            if (r2.error || !r2.data || !r2.data.session) { echec(t('Code invalide ou expiré.', 'Invalid or expired code.')); return; }
             verifEnCours = false;
             toConsent(r2.data.session);
           });
-        }).catch(function(){ echec('Connexion impossible, réessaie.'); });
+        }).catch(function(){ echec(t('Connexion impossible, réessaie.', 'Could not sign in, try again.')); });
       }
       function motDePasse(){
         var email = lemail(), pwd = $('lpwd').value || '';
-        if (!email || !pwd) { lerr('Entre ton e-mail et ton mot de passe'); return; }
+        if (!email || !pwd) { lerr(t('Entre ton e-mail et ton mot de passe', 'Enter your email and password')); return; }
         var b = $('lbtn'); occupe(b, true); lerr('');
         sb.auth.signInWithPassword({ email: email, password: pwd }).then(function(r2){
-          if (r2.error || !r2.data.session) { occupe(b, false, 'Se connecter'); lerr('E-mail ou mot de passe incorrect'); return; }
+          if (r2.error || !r2.data.session) { occupe(b, false, t('Se connecter', 'Sign in')); lerr(t('E-mail ou mot de passe incorrect', 'Wrong email or password')); return; }
           toConsent(r2.data.session);
         });
       }
@@ -256,8 +277,8 @@
       $('lmode').onclick = function(){
         modePwd = !modePwd; lerr('');
         $('lpwd').classList.toggle('hide', !modePwd);
-        $('lbtn').textContent = modePwd ? 'Se connecter' : 'Recevoir un code par e-mail';
-        $('lmode').textContent = modePwd ? 'Recevoir un code par e-mail' : "J'ai un mot de passe";
+        $('lbtn').textContent = modePwd ? t('Se connecter', 'Sign in') : t('Recevoir un code par e-mail', 'Get a code by email');
+        $('lmode').textContent = modePwd ? t('Recevoir un code par e-mail', 'Get a code by email') : t("J'ai un mot de passe", 'I have a password');
         if (modePwd) $('lpwd').focus();
       };
       $('lemail').onkeydown = function(e){ if (e.key === 'Enter') $('lbtn').click(); };
@@ -267,7 +288,7 @@
       $('lverify').onclick = verifier;
       $('lresend').onclick = function(){ envoyer($('lresend')); };
       $('lback').onclick = function(){ lerr(''); $('lcode').value = ''; etape(1); };
-      if (isTrustedClaude()) $('lsub').textContent = 'Connecte-toi pour autoriser ' + _trustedName() + '.';
+      if (isTrustedClaude()) $('lsub').textContent = t('Connecte-toi pour autoriser ', 'Sign in to authorize ') + _trustedName() + '.';
       show('login');
     });
   </script>
