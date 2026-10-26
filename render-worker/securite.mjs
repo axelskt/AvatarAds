@@ -339,20 +339,32 @@ export function horsBornes(mesure, bornes) {
 // d'un AUTRE compte passe devant (requête dédiée : aucune fenêtre, un compte qui empile 50 jobs n'en masque aucun autre). Un
 // seul compte en file : ordre chronologique inchangé. File vide : deux lectures, comme avant. `sb` = client Supabase (injecté :
 // le module reste sans accès réseau à l'import). Rend { id, user_id } ou null (erreur de lecture = null, comme avant).
-export async function prochainJob(sb, dernierCompte, prioritaires) {
+export async function prochainJob(sb, dernierCompte, prioritaires, local = null) {
+  // 26/10 (Axel : « sur le compte dev, que le Décupleur passe en local, pas par Railway ») : un moteur lancé sur le Mac
+  // (DC_LOCAL=1, tools/decupleur-local.sh) ne prend QUE les Décupleurs des comptes propriétaire / developer (local.ids) ;
+  // les moteurs Railway leur laissent local.fenetreMs (15 s) avant de les prendre eux-mêmes : Mac éteint = Railway, comme avant.
+  if (local && local.seul) {
+    if (!local.ids || !local.ids.size) return null
+    const { data } = await sb.from('render_jobs').select('id, user_id').eq('status', 'queued').eq('plan->>__compose', 'decupleur')
+      .in('user_id', [...local.ids]).order('created_at').limit(1)
+    return (Array.isArray(data) && data[0]) || null
+  }
   // 15/10 (panne de la base, 23h54) : 6 moteurs × 2 requêtes toutes les 2 s même file vide = ~6 requêtes/s en continu.
   // Sonde légère d'abord : file vide → UNE requête (index status), et la logique de file équitable seulement s'il y a du travail.
   const { data: sonde } = await sb.from('render_jobs').select('id').eq('status', 'queued').limit(1)
   if (!Array.isArray(sonde) || !sonde.length) return null
+  const reserve = (j) => !!(local && local.ids && local.ids.has(j.user_id) && j.compose === 'decupleur'
+    && Date.now() - Date.parse(j.created_at) < (local.fenetreMs || 15000))
   // 3 classes, dans l'ordre : les compositions courtes (retouches…), puis les rendus des comptes au « Rendu prioritaire »
   // (Axel 23/10, abonnement 5 €/mois : render_jobs.prioritaire, posé à l'insertion d'après le compte), puis tous les autres.
   const plusAncien = async (classe, autreQue) => {
-    let q = sb.from('render_jobs').select('id, user_id').eq('status', 'queued')
+    let q = sb.from('render_jobs').select('id, user_id, created_at, compose:plan->>__compose').eq('status', 'queued')
     if (classe === 'compose') q = q.in('plan->>__compose', prioritaires)
     if (classe === 'compte') q = q.eq('prioritaire', true)
     if (autreQue) q = q.neq('user_id', autreQue)
-    const { data } = await q.order('created_at').limit(1)
-    return (Array.isArray(data) && data[0]) || null
+    const { data } = await q.order('created_at').limit(6)
+    const libres = (Array.isArray(data) ? data : []).filter((j) => !reserve(j))
+    return libres[0] ? { id: libres[0].id, user_id: libres[0].user_id } : null
   }
   for (const classe of ['compose', 'compte', 'normal']) {
     const premier = await plusAncien(classe, null)

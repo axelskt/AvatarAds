@@ -3520,17 +3520,32 @@ async function pollLoop() {
   let dernierCompte = null
   let fileVide = 0   // nombre de sondes à vide d'affilée (attente progressive)
 
+  // 26/10 : Décupleur des comptes propriétaire / developer rendu sur le Mac d'Axel (DC_LOCAL=1, tools/decupleur-local.sh).
+  // Les deux sortes de moteurs connaissent ces comptes (relus toutes les 10 min) : le moteur local ne prend qu'eux, Railway
+  // attend DC_LOCAL_FENETRE_S (15 s) avant de les prendre à sa place (moteur local éteint = rendu Railway, 15 s plus tard).
+  const DC_LOCAL_SEUL = process.env.DC_LOCAL === '1'
+  const dcLocal = { seul: DC_LOCAL_SEUL, ids: new Set(), fenetreMs: Math.max(0, Number(process.env.DC_LOCAL_FENETRE_S || 15)) * 1000 }
+  const lireComptesLocaux = async () => {
+    try {
+      const { data } = await sb.from('profiles').select('id').or('is_owner.eq.true,plan.eq.developer').limit(50)
+      if (Array.isArray(data)) dcLocal.ids = new Set(data.map((r) => r.id))
+    } catch (e) { console.warn('comptes du Décupleur local :', e.message) }
+  }
+  await lireComptesLocaux()
+  setInterval(lireComptesLocaux, 10 * 60_000).unref?.()
+  if (DC_LOCAL_SEUL) console.log(`🖥  moteur LOCAL : Décupleur des comptes propriétaire / developer seulement (${dcLocal.ids.size} compte(s))`)
+
   for (;;) {
     try {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
       // + préparation des vidéos MCP (02/10)
-      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix', 'dc-fetch', 'dc-cut'])   // Décupleur : récupération d'un lien / découpe = quelques secondes   // motion-voix : simple mux (copie du flux vidéo), quelques secondes
+      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix', 'dc-fetch', 'dc-cut'], dcLocal)   // Décupleur : récupération d'un lien / découpe = quelques secondes   // motion-voix : simple mux (copie du flux vidéo), quelques secondes
       if (!cand) {
         if (Date.now() - dernierBalayage > 5 * 60_000) await reprendreOrphelins()
         // 15/10 : attente qui S'ALLONGE quand la file reste vide (2 s → 12 s, + un peu de hasard pour que les 6 moteurs ne
         // sondent pas en même temps), et revient à 2 s dès qu'un job est pris. Avec 6 moteurs, un job attend ~2 s en moyenne.
         fileVide = Math.min(fileVide + 1, 8)
-        const attente = Math.min(2000 * Math.pow(1.35, fileVide), 12_000) + Math.random() * 800
+        const attente = DC_LOCAL_SEUL ? 1500 : Math.min(2000 * Math.pow(1.35, fileVide), 12_000) + Math.random() * 800
         await new Promise((r) => setTimeout(r, attente)); continue   // #vitesse (02/09) : 2 s dès qu'il y a du travail
       }
       fileVide = 0
@@ -3903,7 +3918,7 @@ if (flag('--batch-blank') != null) {
   // les 4 min ne suffisait pas (les isolates recyclent entre deux bursts). Le
   // worker tourne 24/7 sur Railway → on garde un PETIT POOL chaud : 3 GET
   // concurrents (route sans clé, quasi gratuite) toutes les 45 s, + un au démarrage.
-  if (process.env.SUPABASE_URL) {
+  if (process.env.SUPABASE_URL && process.env.DC_LOCAL !== '1') {   // moteur local du Décupleur (Mac) : Railway s'en charge
     const warm = () => { for (let i = 0; i < 3; i++) fetch(process.env.SUPABASE_URL + '/functions/v1/mcp').catch(() => {}) }
     setInterval(warm, 45000)
     warm()
