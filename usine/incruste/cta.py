@@ -55,7 +55,7 @@ for i in range(n):
     for a, b, g in bornes:
         if a <= t < b:   # même règle que le hook : mot seul GRAND derrière la tête, groupe plus petit au-dessus
             if len(g) == 1:
-                ms = mot_seul(g[0][0]); dessine(derriere, t, g, BLANC, ms['cap'], 459 + DY + ms['chevauche'])
+                ms = mot_seul(g[0][0], 'cta/m2/001.png'); dessine(derriere, t, g, BLANC, ms['cap'], 459 + DY + ms['chevauche'])
             else: dessine(derriere, t, g, BLANC, 105, 470 + DY)
     img = fond.copy(); img.alpha_composite(derriere); img.alpha_composite(personne); img.alpha_composite(devant)
     img.convert('RGB').save('cta/o/%03d.png' % (i + 1))

@@ -103,13 +103,27 @@ CW = CONF.get('carte', {}).get('w', 340); CH = round(CW * 540 / 340); CY = 350 +
 MARGE = CONF.get('carte', {}).get('marge', 64)
 # mot seul derrière la tête : taille des capitales et px cachés sous le haut du crâne (A1-11 : 300 / 291) ; tête large ou
 # mot long (« LAISSE-MOI » sur A1-6) → plus petit et plus haut, sinon il disparaît derrière le visage
-# Mot long (≥ 7 lettres, « LAISSE-MOI ») : à 300 / 291 le visage en cache le milieu, même à l'image 0 (couverture)
-# → 250 / 120 automatiquement ; mot court (« WAOUH ») : réglage validé.
-def mot_seul(m):
+# Mot seul derrière la tête : il doit rester LISIBLE (Axel 26/10 : « LAISSE-MOI », « CENSÉ », « GRATUITEMENT » à moitié
+# cachés sur les photos cadrées serré). On mesure sur le masque de la 1re image la part des lettres que le crâne cacherait
+# et on garde la position la plus enfoncée où ≥ 70 % du mot reste visible (A1-11 « WAOUH » : 300 / 291 comme validé).
+_MS = {}
+def mot_seul(m, masque='m2/001.png'):
+    if 'mot_seul' in CONF: return {'cap': 300, 'chevauche': 291, **CONF['mot_seul']}
+    if (m, masque) in _MS: return _MS[(m, masque)]
+    M = np.asarray(Image.open(masque).convert('L')) > 128
+    l = np.where(M[:, 200:880].sum(axis=1) > 40)[0]; crane = int(l.min()) if len(l) else 459
     n = len(m.replace('-', '').replace("'", ''))
-    # ≥ 10 lettres (« GRATUITEMENT ») : le crâne en cachait encore le milieu → à peine posé sur la tête
-    base = {'cap': 300, 'chevauche': 291} if n < 7 else {'cap': 250, 'chevauche': 120} if n < 10 else {'cap': 230, 'chevauche': 45}
-    return {**base, **CONF.get('mot_seul', {})}
+    cap = 300 if n < 7 else 250 if n < 10 else 230
+    f0 = ImageFont.truetype(ANTON, 100); cap0 = f0.getbbox('H')[3] - f0.getbbox('H')[1]
+    size = min(100 * cap / cap0, 100 * 960 / f0.getlength(m)); f = ImageFont.truetype(ANTON, size)
+    choix = {'cap': cap, 'chevauche': 45}
+    for ch in (291, 220, 160, 120, 80, 45):
+        t = Image.new('L', (M.shape[1], M.shape[0]), 0)
+        ImageDraw.Draw(t).text(((M.shape[1] - f.getlength(m)) / 2, crane + ch), m, font=f, fill=255, anchor='ls')
+        T = np.asarray(t) > 128
+        if T.sum() and (T & M).sum() / T.sum() <= 0.30: choix = {'cap': cap, 'chevauche': ch}; break
+    _MS[(m, masque)] = choix
+    return choix
 def carte(dossier, t, t_in):
     i = int((t - t_in) * 30) + 1
     try: im = Image.open('%s/%03d.png' % (dossier, max(1, i))).convert('RGB')
