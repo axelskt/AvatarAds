@@ -30,7 +30,7 @@ await import(new URL('./coherence.js', import.meta.url).href);   // assemblages 
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
 const VAL_FLAGS = ['--medaillon', '--medaillon-libre', '--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut', '--split'];
-const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
+const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres', '--incruste'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
   const a = ARGV[i];
@@ -107,6 +107,10 @@ const avantApres = OPT['no-avant-apres'] ? false : OPT['avant-apres'] ? true : F
 // puis en bas du plein écran (1250 px) après la bascule de la version B.
 const SPLIT = (() => { const m = /^([AB]):(\d+(?:\.\d+)?)$/.exec(String(OPT.split || '')); return m ? { mode: m[1], sw: +m[2] } : null; })();
 if (OPT.split && !SPLIT) { console.error('--split attend A:<s> ou B:<s> (ex. B:4.08)'); process.exit(2); }
+// Axel 26/10 : TEXTE INCRUSTÉ — hook et CTA arrivent DÉJÀ habillés par usine/incruste.py (sous-titres derrière l'avatar
+// détouré, mot fort devant, démos du hook derrière) : ni zoom, ni tremblement, ni phrase choc, ni illustration, et aucun
+// sous-titre de l'assembleur sur ces deux briques (la démo garde les siens).
+const INCRUSTE = !!OPT.incruste;
 let format;
 // Statut des formats dans Production : avant le 07/10, seul « auto » le lisait — F03 par défaut ou un format demandé
 // était rendu même retiré (formats.test.mjs, cas « tous retirés »). Sans base lisible (ni --bricks ni clé) : tous tirables.
@@ -429,7 +433,7 @@ if (OPT['hook-broll']) {
 //    démo). --illus "fichier|entrée|sortie;fichier|entrée" = liste à la main. Toutes : grande carte qui entre par la droite
 //    et repart par la gauche (style 'hook'), woosh à l'entrée, glissé à la sortie.
 const illusLog = [];
-if (OPT.illus && !SPLIT) {   // split : les résultats sont déjà en haut de l'écran
+if (OPT.illus && !SPLIT && !INCRUSTE) {   // split : les résultats sont déjà en haut de l'écran
   const BANK = readJson(join(HERE, 'illustrations.json'), 'illustrations.json');
   // Axel 15/10 (VF-0489 / VF-0503) : l'illustration du hook doit montrer ce que la démo montre (Omni, static ads, Images IA…)
   if (OPT.illus === 'auto' && hookId && demoBrick && !avantApres) {
@@ -535,11 +539,11 @@ if (cta) { inputs.push('-i', cta); iCta=n++; }
 
 // démo prolongée sur sa dernière image : le glissement vers le CTA se fait APRÈS la fin de la démo, jamais sur ses mots
 // hook : léger zoom avant continu (1,00 → 1,07) pour le rendre plus vivant (Axel 29/09)
-let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,${SPLIT ? 'scale=1080:1920' : `scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920`},setsar=1${avantApres || SPLIT ? '' : ',' + AV_TREAT}[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
+let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,${SPLIT || INCRUSTE ? 'scale=1080:1920' : `scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920`},setsar=1${avantApres || SPLIT || INCRUSTE ? '' : ',' + AV_TREAT}[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : vfix(hookId || idFromFile(hookVoice)) + VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,atrim=0:${(L2 + TS).toFixed(3)},afade=t=out:st=${L2.toFixed(3)}:d=${TS},adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
-  vf += `[${iCta}:v]trim=0:${durC.toFixed(3)},setpts=PTS-STARTPTS,${VF},${AV_TREAT}[cv];`
+  vf += `[${iCta}:v]trim=0:${durC.toFixed(3)},setpts=PTS-STARTPTS,${VF},${INCRUSTE ? GRAIN : AV_TREAT}[cv];`
       + `[hv][dv]xfade=transition=${TRANS}:duration=${TS}:offset=${O1.toFixed(3)}[vhd];`
       + `[vhd][cv]xfade=transition=${TRANS}:duration=${TS}:offset=${O2.toFixed(3)}[v]`;
   // audio EMBARQUÉ du clip avatar, TRIMMÉ à la voix (pas de silence mort) puis posé à O2
@@ -626,13 +630,13 @@ if (SPLIT) {   // 2-3 mots par boîte (≤ 18 lettres), coupure à la ponctuatio
     if (w.g !== nx.g && w.sp === nx.sp && hookW.filter(x => x.g === w.g).length >= 2 && PETIT.test(bare(w.text))) w.g = nx.g;
   }
 }
-allWords.push(...hookW, ...demoW, ...ctaW);
+allWords.push(...(INCRUSTE ? [] : hookW), ...demoW, ...(INCRUSTE ? [] : ctaW));
 const wj = join(work, 'allWords.json'); writeFileSync(wj, JSON.stringify(allWords));
 // format : phrase choc (placée hors visage, zone sûre) + style des sous-titres
 const capOpts = { subs: format.subs, style: OPT['subs-style'] || 'contour', broll: brollEvents.map(e => ({ file: e.file, pair: e.pair || undefined, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image, style: e.style || 'card' })) };
-const sidecar = { format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
+const sidecar = { incruste: INCRUSTE || undefined, format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
-if (FMT.hasChoc(format) && !SPLIT) {
+if (FMT.hasChoc(format) && !SPLIT && !INCRUSTE) {
   const firstIll = brollEvents.filter(e => e.style === 'hook').map(e => e.at).sort((a, b) => a - b)[0];
   // Axel 12/10 : le texte choc reste TOUT le hook (plus coupé à la 1re illustration : elle passe au centre, la phrase est en haut)
   const end = FMT.chocEnd(format, durH, total); void firstIll;
