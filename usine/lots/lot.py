@@ -19,6 +19,10 @@ bricks, VARS, QC = snapshot()
 json.dump({'qc': [{'t': x['t'], 's': x['s'], 'c': x['c']} for x in QC], 'variants': VARS}, open(os.path.join(WORK, 'inventaire.json'), 'w'))
 VAR = {}
 for v in VARS: VAR[(v['a'], v['b'], v['f'])] = os.path.basename(v['u'])[:-4]   # trié par date : la plus récente gagne
+if not S and os.environ.get('LOT_PLAN'):   # Axel 27/10 : lot écrit à la main (recettes imposées, une série = un passage de rendus)
+    se_ = json.load(open(os.environ['LOT_PLAN']))
+    nxt = max(int(x['t'][3:]) for x in QC if x['t'] and x['t'].startswith('VF-')) + 1
+    S = {'series': se_, 'next': nxt, 'serie': 0, 'ok': [], 'fail': []}; json.dump(S, open(ST, 'w'), indent=1)
 if not S:
     n = NS * NV; nM = 0 if os.environ.get('OMNI_SEUL') else n // 2   # OMNI_SEUL=1 : lot ciblé sans Texte + musique (16/10)
     # on demande tout ce qui existe des deux côtés, puis moitié / moitié ; le côté qui manque est complété par l'autre (Axel 15/10)
@@ -92,11 +96,12 @@ prev_th = [None]
 PART_INC = float(os.environ.get('INCRUSTE_PART', '0.73'))
 STYLES_INC = ['jaune', 'vert', 'rouge', 'degrade-jaune', 'degrade-vert', 'degrade-rouge']
 USE_INC = {k: 0 for k in STYLES_INC}
-def incruste(photo, hook, demo, cta, cf, tag):
-    """hook + CTA habillés (hook_auto.py / cta_auto.py), mots vérifiés copiés dans le cache de build.mjs ; None si hors banque"""
+def incruste(photo, hook, demo, cta, cf, tag, style=None):
+    """hook + CTA habillés (hook_auto.py / cta_auto.py), mots vérifiés copiés dans le cache de build.mjs ; None si hors banque.
+    style imposé (lot écrit à la main) : toujours en texte incrusté, dans cette couleur"""
     if not ((bricks.get(hook) or {}).get('meta') or {}).get('incruste') or not ((bricks.get(cta) or {}).get('meta') or {}).get('incruste'): return None
-    if random.random() >= PART_INC: return None
-    st = min(STYLES_INC, key=lambda k: (USE_INC[k], random.random())); USE_INC[st] += 1
+    if not style and random.random() >= PART_INC: return None
+    st = style or min(STYLES_INC, key=lambda k: (USE_INC[k], random.random())); USE_INC[st] = USE_INC.get(st, 0) + 1
     opt = ['--teinte', st[8:]] if st.startswith('degrade-') else ['--couleur', st]
     d_ = os.path.join(OUT, '%s_%s-inc' % (NOM, tag))
     subprocess.run(['python3', 'usine/incruste/hook_auto.py', hook, photo, d_] + opt, cwd=REPO, check=True, capture_output=True)
@@ -113,9 +118,10 @@ def prep(it, tag):
         photo, hook, demo = it['photo'], it['hook'], it['demo']
         hf = VAR[(photo, hook, 'omni')]; hv = None
         # CTA imposé (lot manuel, Axel 21/10 : AUTRE-1 n'a que son CTA café) — sinon rotation habituelle
-        cta, cf = (it['cta'], VAR[(photo, it['cta'], 'omni')]) if it.get('cta') else cta_for(photo, demo)
+        # (cta_photo : CTA d'une autre photo du même avatar, ex. CTA-CLAUDE de A1-13 sous un hook A1-14)
+        cta, cf = (it['cta'], VAR[(it.get('cta_photo') or photo, it['cta'], 'omni')]) if it.get('cta') else cta_for(photo, demo)
         # Axel 20/10 : H89 = hook « grille qui se multiplie » 7 fois sur 10 (coin ou centre, usine/grille-hook.py), sinon la prise normale
-        inc = None if it.get('cta') else incruste(photo, hook, demo, cta, cf, tag)
+        inc = incruste(photo, hook, demo, cta, cf, tag, it['style']) if it.get('style') else None if it.get('cta') else incruste(photo, hook, demo, cta, cf, tag)
         if inc:   # texte incrusté : hook et CTA habillés, pas de grille, pas de texte choc ni d'illustration
             d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
             out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag))

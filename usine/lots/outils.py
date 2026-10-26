@@ -91,6 +91,12 @@ def publish(j, vf):
     final = os.path.join(OUT, name + '.mp4'); os.replace(j['out'], final); os.replace(j['out'] + '.format.json', final + '.format.json')
     if os.path.exists(j['out'] + '.words.json'): os.replace(j['out'] + '.words.json', final + '.words.json')
     T = dur(final)
+    if os.environ.get('LOT_4K'):   # Axel 27/10 : livré en 4K (agrandi lanczos à la toute fin, 42 Mbit/s, même son)
+        k4 = final[:-4] + '-4k.mp4'
+        sh(['ffmpeg', '-v', 'error', '-y', '-i', final, '-vf', 'scale=2160:3840:flags=lanczos', '-c:v', 'h264_videotoolbox', '-b:v', '42M', '-maxrate', '50M',
+            '-bufsize', '80M', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', k4])
+        if not os.path.exists(k4): raise RuntimeError('agrandissement 4K')
+        os.replace(k4, final)
     if j['kind'] == 'o':
         combo = {'voice': 'omni', 'avatar': j['photo'].split('-')[0], 'photo': j['photo'], 'hook': j['hook'], 'contenu': j['demo'], 'cta': j['cta'],
                  'musique': fj.get('musique'), 'sous_titre': fj.get('sous_titre')}

@@ -10,6 +10,7 @@ ICI = os.path.dirname(os.path.abspath(__file__)); REPO = os.path.abspath(os.path
 sys.path.insert(0, os.path.join(REPO, 'usine', 'lots')); sys.path.insert(0, ICI)
 from outils import q, log
 import masques
+from voix import images_a_couper
 
 def run(*a, **kw): subprocess.run(list(a), check=True, **kw)
 def fps_de(f): return masques.fps_de(f)
@@ -26,14 +27,30 @@ def main():
     banque = (b[0]['i'] if b else None) or {}
     if isinstance(banque, str): banque = json.loads(banque)
     if not banque.get('groupes'): raise SystemExit('%s absent de la banque (usine/incruste/banque.json)' % hook)
-    clip = os.path.join(d, 'hook.mp4')
+    clip = os.path.join(d, 'hook.mp4')   # prise brute (non coupée) ; ses masques dans m2-brut/, ses mots dans words-brut.json
     if not os.path.exists(clip): urllib.request.urlretrieve(url, clip)
-    for s in ('f', 'oE'): shutil.rmtree(os.path.join(d, s), ignore_errors=True); os.makedirs(os.path.join(d, s))
+    mb, wb = os.path.join(d, 'm2-brut'), os.path.join(d, 'words-brut.json')
+    if not os.path.isdir(mb) and os.path.isdir(os.path.join(d, 'm2')) and not os.path.islink(os.path.join(d, 'm2', '001.png')):
+        os.rename(os.path.join(d, 'm2'), mb)   # dossier d'avant le 27/10 : m2/ = masques de la prise brute
+    if not os.path.exists(wb) and os.path.exists(os.path.join(d, 'words.json')): os.rename(os.path.join(d, 'words.json'), wb)
+    for s in ('f', 'oE', 'm2'): shutil.rmtree(os.path.join(d, s), ignore_errors=True); os.makedirs(os.path.join(d, s))
     run('ffmpeg', '-v', 'error', '-y', '-i', clip, os.path.join(d, 'f', '%03d.png'))
-    if not os.path.isdir(os.path.join(d, 'm2')) or len(os.listdir(os.path.join(d, 'm2'))) != len(os.listdir(os.path.join(d, 'f'))):
-        shutil.rmtree(os.path.join(d, 'm2'), ignore_errors=True); masques.pour(url, os.path.join(d, 'm2'))
-    if not os.path.exists(os.path.join(d, 'words.json')):
-        run('node', os.path.join(REPO, 'usine', 'captions.mjs'), 'emit', clip, '0', os.path.join(d, 'words.json'), stdout=subprocess.DEVNULL)
+    n = len(os.listdir(os.path.join(d, 'f')))
+    if not os.path.isdir(mb) or len(os.listdir(mb)) != n:
+        shutil.rmtree(mb, ignore_errors=True); masques.pour(url, mb)
+    if not os.path.exists(wb):
+        run('node', os.path.join(REPO, 'usine', 'captions.mjs'), 'emit', clip, '0', wb, stdout=subprocess.DEVNULL)
+    # Axel 27/10 : la voix parle dès la 1re image — le blanc de tête de la prise est retiré (images, masques, mots, son)
+    fps = fps_de(clip); n0 = images_a_couper(clip, fps); t0 = n0 / fps
+    for i in range(1, n + 1):
+        src = os.path.join(d, 'f', '%03d.png' % i)
+        if i <= n0: os.remove(src)
+        else:
+            os.rename(src, os.path.join(d, 'f', '%03d.png' % (i - n0)))
+            os.symlink(os.path.join(mb, '%03d.png' % i), os.path.join(d, 'm2', '%03d.png' % (i - n0)))
+    json.dump([dict(w, start=round(max(0.0, w['start'] - t0), 3), end=round(max(0.01, w['end'] - t0), 3)) for w in json.load(open(wb))],
+              open(os.path.join(d, 'words.json'), 'w'), ensure_ascii=False)
+    if n0: log(hook, photo, 'voix à %.2f s : %d images de blanc coupées en tête' % (t0 + 0.02, n0))
     # Hook démo de la banque (aucun : pas de cartes)
     for k, nom in enumerate(['demo', 'demo2']):
         shutil.rmtree(os.path.join(d, nom), ignore_errors=True)
@@ -45,7 +62,7 @@ def main():
         os.makedirs(os.path.join(d, nom))
         # résolution d'origine (Axel 26/10 : « même résolution que le hook ») : plus de passage en 720p avant la carte
         run('ffmpeg', '-v', 'error', '-y', '-i', src, '-vf', 'fps=30', '-t', '6', os.path.join(d, nom, '%03d.png'))
-    conf = {'fps': round(fps_de(clip), 3), 'groupes': banque['groupes'], 'une_ligne': True, 'carte': {'w': 320, 'marge': 36}}
+    conf = {'fps': round(fps, 3), 'groupes': banque['groupes'], 'une_ligne': True, 'carte': {'w': 320, 'marge': 36}}
     if opt.get('--couleur'): conf['couleur'] = opt['--couleur']
     if opt.get('--teinte'): conf['teinte'] = opt['--teinte']
     json.dump(conf, open(os.path.join(d, 'incruste.json'), 'w'), ensure_ascii=False)
@@ -55,7 +72,7 @@ def main():
     t = json.load(open(os.path.join(d, 'oE', 'meta.json')))['t_demo']
     son = ['-i', os.path.join(REPO, 'render-worker', 'assets', 'sfx', 'debut-woosh.mp3')]
     filtre = ('[2:a]volume=-4dB,adelay=%d|%d[w];[1:a][w]amix=inputs=2:normalize=0[a]' % (t * 1000, t * 1000)) if os.path.isdir(os.path.join(d, 'demo')) else '[1:a]anull[a]'
-    run('ffmpeg', '-v', 'error', '-y', '-framerate', str(conf['fps']), '-i', os.path.join(d, 'oE', '%03d.png'), '-i', clip, *son,
+    run('ffmpeg', '-v', 'error', '-y', '-framerate', str(conf['fps']), '-i', os.path.join(d, 'oE', '%03d.png'), '-ss', '%.4f' % t0, '-i', clip, *son,
         '-filter_complex', filtre, '-map', '0:v', '-map', '[a]', '-c:v', 'h264_videotoolbox', '-b:v', '20M', '-pix_fmt', 'yuv420p',
         '-c:a', 'aac', '-b:a', '192k', '-shortest', os.path.join(d, 'hook-incruste.mp4'))
     log('→', os.path.join(d, 'hook-incruste.mp4'))
