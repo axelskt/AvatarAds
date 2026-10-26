@@ -89,6 +89,29 @@ def mots_acceleres(src, dst, v):
         w = json.load(open(os.path.join(WORDS, file_key(src) + '.json')))
         json.dump([dict(x, start=round(x['start'] / v, 3), end=round(x['end'] / v, 3)) for x in w], open(os.path.join(WORDS, file_key(dst) + '.json'), 'w'), ensure_ascii=False)
     except (OSError, ValueError, KeyError): pass   # pas de mots en cache pour la prise : build.mjs transcrira
+# Axel 27/10 : « dès le premier centième de seconde la voix parle » — 28 prises Omni sur 82 ont 0,15 à 1,3 s de blanc avant le
+# 1er mot (H59 × AUTRE, H81 × A3-2, H48 × A3-7…). Tous les formats partent d'une copie coupée à l'attaque de la voix (0,02 s de
+# souffle gardé, à l'image près), mots du cache décalés d'autant. Le texte incrusté le fait dans hook_auto.py.
+sys.path.insert(0, os.path.join(REPO, 'usine', 'incruste'))
+from voix import images_a_couper
+def sans_blanc(h):
+    fps = float(eval(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', h],
+                                    capture_output=True, text=True).stdout.strip() or '25'))
+    n0 = images_a_couper(h, fps)
+    if not n0: return h
+    out = h[:-4] + '-c%d.mp4' % n0; t0 = n0 / fps
+    if not os.path.exists(out):
+        tmp = out + '.%d.part.mp4' % os.getpid()
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', '%.4f' % t0, '-i', h, '-c:v', 'libx264', '-crf', '15', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+                        '-c:a', 'aac', '-b:a', '192k', tmp], check=True)
+        os.replace(tmp, out)
+    try:
+        w = json.load(open(os.path.join(WORDS, file_key(h) + '.json')))
+        json.dump([dict(x, start=round(max(0.0, x['start'] - t0), 3), end=round(max(0.01, x['end'] - t0), 3)) for x in w],
+                  open(os.path.join(WORDS, file_key(out) + '.json'), 'w'), ensure_ascii=False)
+    except (OSError, ValueError, KeyError): pass   # pas de mots en cache : build.mjs transcrira la copie
+    log('  voix à %.2f s dans %s : %d images coupées en tête' % (t0 + 0.02, os.path.basename(h), n0))
+    return out
 prev_th = [None]
 # Axel 26/10 : format TEXTE INCRUSTÉ (usine/incruste) sur ~7,3 vidéos Omni parlées sur 10 (INCRUSTE_PART), quand le hook ET le
 # CTA sont dans la banque (factory_bricks.meta.incruste) ; les 6 couleurs du mot fort tournent (à plat / dégradé « DID IT! »)
@@ -130,7 +153,7 @@ def prep(it, tag):
             return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, incruste=inc['style'], hd=inc['hd'], incdir=inc['d'])
         g = [k for k in ('H89-GRILLE', 'H89-GRILLE-C') if (photo, k, 'omni') in VAR] if hook == 'H89' else []
         if g and random.random() < 0.7: hv = random.choice(g); hf = VAR[(photo, hv, 'omni')]
-        h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        h = sans_blanc(get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4')); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
         d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
         out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag))
         cmd = ['node', 'usine/build.mjs', h, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--illus', 'auto', '--subs-style', 'auto',
@@ -139,7 +162,7 @@ def prep(it, tag):
     if it['k'] == 's':   # Axel 23/10 : SPLIT (usine/split-hook.py) — 2 résultats « Hook démo » en haut, l'avatar en bas, démo Express
         photo, hook, demo, mode = it['photo'], it['hook'], it['demo'], it.get('mode', 'B')
         hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
-        h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        h = sans_blanc(get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4')); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
         d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
         out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-split.mp4'
         hds = sorted(x for x, b in bricks.items() if b.get('kind') == 'hook-demo' and b.get('status') == 'ready' and (b.get('meta') or {}).get('media'))
@@ -155,7 +178,7 @@ def prep(it, tag):
     if it['k'] == 'v':   # Axel 21/10 : voix off Motion Control (usine/voix-off-mc.py), même photo / hook / CTA qu'une parlée
         photo, hook, demo, tx = it['photo'], it['hook'], it['demo'], it['tx']
         hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
-        h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        h = sans_blanc(get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4')); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
         d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
         out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-vo.mp4'; hv = out[:-4] + '-voix.mp4'
         # Axel 21/10 (VF-0854 « il parle trop lentement ») : la voix est accélérée ×1,10 (hauteur gardée) dans ce format
@@ -169,7 +192,7 @@ def prep(it, tag):
     if it['k'] == 'f':   # Axel 21/10 : FOND VERT (usine/fond-vert.py) — avatar détouré devant la transformation, voix d'origine
         photo, hook, demo, tx = it['photo'], it['hook'], it['demo'], it['tx']
         hf = VAR[(photo, hook, 'omni')]; cta, cf = cta_for(photo, demo)
-        h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        h = sans_blanc(get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4')); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
         d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
         out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag)); vis = out[:-4] + '-fv.mp4'
         v_ = VIT_FV.get((photo, hook))
