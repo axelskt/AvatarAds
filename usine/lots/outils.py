@@ -126,6 +126,8 @@ def publish(j, vf):
 #    fonction kit-recharge) OU un diffuseur BloxAI (une mission). Fichiers : factory-media/stock/<nom>.mp4 + <nom>-poster.jpg.
 #    BloxAI est un AUTRE projet Supabase, joint seulement par le CLI (jamais de clé dans le code). ──
 BLOX = os.environ.get('BLOXAI_DIR') or os.path.join(os.path.dirname(REPO), 'bloxai-site')
+if not os.path.isdir(BLOX):   # dépôt lancé depuis une copie (scratchpad) : le site BloxAI est à sa place habituelle
+    BLOX = os.path.join(os.path.expanduser('~'), 'Downloads', 'Autre SaaS', 'bloxai-site')
 BX_REF = 'rlkcyrldkwutyjymjcxi'
 LEGENDE_BX = 'Publicité · Vidéo créée avec AvatarAds. Teste-le sur avatarads.fr'   # légende proposée au diffuseur (mention pub)
 def vf_ok(v): return isinstance(v, str) and len(v) == 7 and v.startswith('VF-') and v[3:].isdigit()
