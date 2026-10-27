@@ -578,6 +578,8 @@ const total = dur(voice);
 // toutes sur le serveur) sont souvent plus courtes → la musique repartait du début avant la fin (VF-0032 : 40,6 s pour 41,5 s ;
 // VF-0033 : 21,9 s pour 28,9 s). Une piste tirée trop courte est remplacée par une autre, assez longue.
 if (musicAuto && dur(music) < total + 0.5) {
+  // dernier.json RELU ici : les rendus voisins du lot ont pu tirer / remplacer leur piste depuis le départ (VF-0984 / 0985 en M23)
+  try { const d = JSON.parse(readFileSync(LASTF, 'utf8')); if (Array.isArray(d.recentes)) recentes.splice(0, recentes.length, ...d.recentes.filter(x => x !== lastPick.musique)); } catch { /* sans gravité */ }
   const pool = MUSIC_OK.filter(m => m !== lastPick.musique).sort(() => Math.random() - 0.5).sort((a, b) => recentes.includes(a) - recentes.includes(b));
   for (const id of pool) {
     let f; try { f = musicFile(id); } catch { continue; }
