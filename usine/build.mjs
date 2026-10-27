@@ -30,7 +30,7 @@ await import(new URL('./coherence.js', import.meta.url).href);   // assemblages 
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
 const VAL_FLAGS = ['--medaillon', '--medaillon-libre', '--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus', '--sfx-debut', '--split', '--demo-speed'];
-const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres', '--incruste'];
+const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres', '--incruste', '--uhd'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
   const a = ARGV[i];
@@ -147,7 +147,10 @@ const SFX = join(HERE, '..', 'render-worker', 'assets', 'sfx');
 const work = mkdtempSync(join(tmpdir(), 'build-'));
 // 60 i/s (Axel 29/09 : les démos sont tournées en 60 i/s, on garde leur fluidité ; hook / CTA Hedra 25 i/s dupliqués)
 const FPS = 60;
-const VF = `scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=${FPS},setsar=1,format=yuv420p`;
+// 4K NATIVE (Axel 27/10, --uhd ou CF_UHD=1) : tout le montage en 2160×3840 — la démo 4K garde sa vraie finesse (avant : réduite
+// en 1080p puis la vidéo finie agrandie), sous-titres dessinés en 4K (captions.mjs, zoom 2). Hook / CTA (prises 1080p) agrandis.
+const UHD = !!(OPT.uhd || process.env.CF_UHD === '1'), WW = UHD ? 2160 : 1080, HH = UHD ? 3840 : 1920, KX = UHD ? 2 : 1;
+const VF = `scale=${WW}:${HH}:force_original_aspect_ratio=increase:flags=lanczos,crop=${WW}:${HH},fps=${FPS},setsar=1,format=yuv420p`;
 const dur = f => parseFloat(execFileSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0', f]).toString().trim());
 const ff = args => execFileSync('ffmpeg', ['-v','error','-y', ...args], { stdio:'inherit' });
 // ── VITESSE (29/09) : ce qui ne change pas d'une vidéo à l'autre n'est calculé qu'UNE fois ──
@@ -159,7 +162,7 @@ const CACHE = process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creative Fac
 mkdirSync(join(CACHE, 'demos'), { recursive: true }); mkdirSync(join(CACHE, 'words'), { recursive: true });
 let HW = true;
 try { execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','color=c=black:s=64x64:d=0.1','-c:v','h264_videotoolbox','-f','null','-'], { stdio:'ignore' }); } catch { HW = false; }
-const VENC = HW ? ['-c:v','h264_videotoolbox','-b:v','20M','-maxrate','26M','-bufsize','40M','-profile:v','high'] : ['-c:v','libx264','-crf','20','-preset','medium'];
+const VENC = HW ? ['-c:v','h264_videotoolbox','-b:v',UHD ? '45M' : '20M','-maxrate',UHD ? '55M' : '26M','-bufsize',UHD ? '90M' : '40M','-profile:v','high'] : ['-c:v','libx264','-crf','20','-preset','medium'];
 const fileKey = f => { const st = statSync(f), fd = openSync(f, 'r'), h = createHash('sha1'), n = Math.min(st.size, 4 << 20), b = Buffer.alloc(n);
   readSync(fd, b, 0, n, 0); h.update(b); readSync(fd, b, 0, n, Math.max(0, st.size - n)); h.update(b); closeSync(fd); h.update(String(st.size)); return h.digest('hex').slice(0, 16); };
 const DEMO_SPEED = +(OPT['demo-speed'] || process.env.CF_DEMO_SPEED || 1.05);   // Axel 27/10 : 1,05x (1,08x « un peu trop rapide »)
@@ -171,10 +174,10 @@ function workingDemo(src) {
   // La vitesse est dans le nom du cache → la démo accélérée est retranscrite (sous-titres calés sur la nouvelle vitesse).
   const sonore = execFileSync('ffprobe', ['-v','error','-select_streams','a','-show_entries','stream=index','-of','csv=p=0', src]).toString().trim() !== '';
   const vit = sonore ? DEMO_SPEED : 1;
-  if (vit === 1 && w === 1080 && h === 1920 && Math.abs(fps - FPS) < 0.02) return src;
-  const out = join(CACHE, 'demos', basename(src).replace(/\.[^.]+$/, '') + '-' + fileKey(src) + '-' + FPS + 'fps' + (vit === 1 ? '' : '-x' + vit) + '.mp4');
+  if (vit === 1 && w === WW && h === HH && Math.abs(fps - FPS) < 0.02) return src;
+  const out = join(CACHE, 'demos', basename(src).replace(/\.[^.]+$/, '') + '-' + fileKey(src) + '-' + FPS + 'fps' + (UHD ? '-uhd' : '') + (vit === 1 ? '' : '-x' + vit) + '.mp4');
   if (!existsSync(out)) {
-    console.log('  démo : version de travail 1080×1920 ' + FPS + ' i/s (une seule fois) → ' + basename(out));
+    console.log('  démo : version de travail ' + WW + '×' + HH + ' ' + FPS + ' i/s (une seule fois) → ' + basename(out));
     // 19/10 : fichier temporaire PROPRE au processus — un lot rend 3 vidéos à la fois ; deux rendus qui préparaient la même
     // démo neuve (C-EXP-01, 4K) écrivaient le même .part et le second échouait au renommage (ENOENT, VF-0633 perdue)
     const tmp = out + '.' + process.pid + '.part.mp4';
@@ -201,8 +204,8 @@ const TRANS = 'slideleft';
 const GRAIN = 'noise=alls=9:allf=t+u,eq=saturation=1.03:contrast=1.02';
 // Tremblé main tenue « faible » (validé Axel) : vraies fréquences ~1-3 Hz, A=8px, rotation 0,4°, zoom 1,09.
 const SHAKE = "scale=iw*1.09:ih*1.09:flags=lanczos,rotate='(0.4*(sin(5.7*t)+0.4*sin(11.3*t)))*PI/180':c=black,"
-  + "crop=1080:1920:x='(iw-1080)/2+8*(sin(6.3*t)+0.5*sin(12.9*t+1)+0.3*sin(19.7*t))':"
-  + "y='(ih-1920)/2+8*(cos(7.1*t)+0.5*sin(13.7*t+0.5)+0.25*sin(22.3*t))'";
+  + `crop=${WW}:${HH}:x='(iw-${WW})/2+${8 * KX}*(sin(6.3*t)+0.5*sin(12.9*t+1)+0.3*sin(19.7*t))':`
+  + `y='(ih-${HH})/2+${8 * KX}*(cos(7.1*t)+0.5*sin(13.7*t+0.5)+0.25*sin(22.3*t))'`;
 const AV_TREAT = GRAIN + ',' + SHAKE;
 const GAPH = 0.50;    // respiration après la voix du hook (phrase finie AVANT le raccord)
 const AFMT = 'aformat=sample_rates=48000:channel_layouts=stereo';
@@ -558,7 +561,7 @@ if (cta) { inputs.push('-i', cta); iCta=n++; }
 
 // démo prolongée sur sa dernière image : le glissement vers le CTA se fait APRÈS la fin de la démo, jamais sur ses mots
 // hook : léger zoom avant continu (1,00 → 1,07) pour le rendre plus vivant (Axel 29/09)
-let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,${SPLIT || INCRUSTE ? 'scale=1080:1920' : `scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920`},setsar=1${avantApres || SPLIT || INCRUSTE ? '' : ',' + AV_TREAT}[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
+let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,${SPLIT || INCRUSTE ? `scale=${WW}:${HH}` : `scale=w='trunc(${WW}*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=${WW}:${HH}`},setsar=1${avantApres || SPLIT || INCRUSTE ? '' : ',' + AV_TREAT}[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : vfix(hookId || idFromFile(hookVoice)) + VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,atrim=0:${(L2 + TS).toFixed(3)},afade=t=out:st=${L2.toFixed(3)}:d=${TS},adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
@@ -654,7 +657,7 @@ if (SPLIT) {   // 2-3 mots par boîte (≤ 18 lettres), coupure à la ponctuatio
 allWords.push(...(INCRUSTE ? [] : hookW), ...demoW, ...(INCRUSTE ? [] : ctaW));
 const wj = join(work, 'allWords.json'); writeFileSync(wj, JSON.stringify(allWords));
 // format : phrase choc (placée hors visage, zone sûre) + style des sous-titres
-const capOpts = { subs: format.subs, style: OPT['subs-style'] || 'contour', broll: brollEvents.map(e => ({ file: e.file, pair: e.pair || undefined, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image, style: e.style || 'card' })) };
+const capOpts = { uhd: UHD || undefined, subs: format.subs, style: OPT['subs-style'] || 'contour', broll: brollEvents.map(e => ({ file: e.file, pair: e.pair || undefined, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image, style: e.style || 'card' })) };
 const sidecar = { incruste: INCRUSTE || undefined, format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
 if (FMT.hasChoc(format) && !SPLIT && !INCRUSTE) {

@@ -248,11 +248,16 @@ function burn(video, output, words, opts = {}) {
     return a;
   }).join('\n   ');
   const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=1080, height=1920">
+<meta name="viewport" content="width=${opts.uhd ? 2160 : 1080}, height=${opts.uhd ? 3840 : 1920}">
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
 <style>
  body{margin:0;background:#000}
- #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:'Arial Black','Archivo Black',system-ui,sans-serif}
+ #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:'Arial Black','Archivo Black',system-ui,sans-serif}${opts.uhd ? `
+ /* 4K native (27/10) : la vidéo de fond à sa taille réelle (2160×3840) ; tout le reste (mise en page en px 1080) dans #zz,
+    rendu au double (zoom = texte redessiné net, pas agrandi). Un zoom sur #root agrandissait aussi les images injectées
+    de la vidéo de fond (on ne voyait que son quart en haut à gauche). */
+ #root{width:2160px;height:3840px}
+ #zz{position:absolute;left:0;top:0;width:1080px;height:1920px;zoom:2}` : ''}
  #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
  /* ZONE SÛRE (Axel 07/10, capture TikTok : « ça touche l'icône commentaire, les sous-titres sont trop gros ») :
     800 px de large, bas du texte au-dessus de 1 470 px (légende) ; un mot ou une ligne plus large que 800 px est réduit
@@ -353,12 +358,14 @@ function burn(video, output, words, opts = {}) {
  .cs-CS15{font-weight:800;color:#fff}
  .cs-CS15 .cl>span{background:#111;border-left:.22em solid #E8261C;border-radius:4px}
 </style></head><body>
- <div id="root" class="${stCls}" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
+ <div id="root" class="${stCls}" data-composition-id="main" data-start="0" data-width="${opts.uhd ? 2160 : 1080}" data-height="${opts.uhd ? 3840 : 1920}" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>
    <audio id="au" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" data-volume="1"></audio>
+      ${opts.uhd ? '<div id="zz">' : ''}
       ${brollHtml}
       ${clipsHtml}
       ${chocHtml}
+      ${opts.uhd ? '</div>' : ''}
  </div>
  <script>
    // filet de sécurité : une ligne de la phrase choc plus large que prévu → police réduite (jamais hors de sa boîte),
