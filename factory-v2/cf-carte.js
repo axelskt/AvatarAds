@@ -227,6 +227,7 @@
     var self = this, c = this.canvas, qin = this.el.querySelector('.cfc-qin');
     this.ro = new ResizeObserver(function () { requestAnimationFrame(function () { if (self.alive) self.resize(); }); });
     this.ro.observe(this.area);
+    if (window.IntersectionObserver) { this.io = new IntersectionObserver(function (es) { self.onScreen = es[es.length - 1].isIntersecting; }); this.io.observe(this.area); }
     this.wheel = function (e) { self.onWheel(e); }; c.addEventListener('wheel', this.wheel, { passive: false });
     c.addEventListener('pointerdown', function (e) { self.onDown(e); }); c.addEventListener('pointermove', function (e) { self.onMove(e); });
     c.addEventListener('pointerup', function (e) { self.onUp(e); }); c.addEventListener('pointercancel', function (e) { self.onUp(e); });
@@ -268,7 +269,7 @@
     document.addEventListener('pointerdown', this.outside = function (e) { if (self.state.qOpen && !self.el.querySelector('.cfc-search').contains(e.target)) self.setState({ qOpen: false }); });
   };
   P.destroy = function () {
-    this.alive = false; cancelAnimationFrame(this.raf); if (this.ro) this.ro.disconnect();
+    this.alive = false; cancelAnimationFrame(this.raf); if (this.ro) this.ro.disconnect(); if (this.io) this.io.disconnect();
     window.removeEventListener('keydown', this.key); document.removeEventListener('pointerdown', this.outside);
   };
   P.setState = function (patch) {
@@ -310,6 +311,9 @@
     var old = {}; if (this.g && !this.needStart) this.g.nodes.forEach(function (n) { old[n.id] = [n.x, n.y]; });
     var wasStarted = this.g && !this.needStart && this.W;
     this.build(this.data);
+    // densité d'affichage selon la charge (vidéos : 1,5 au plus), sans toucher à la caméra
+    var dpr = Math.min(this.state.vids ? 1.5 : 2, window.devicePixelRatio || 1);
+    if (this.W && dpr !== this.dpr) { this.dpr = dpr; this.canvas.width = Math.max(1, Math.round(this.W * dpr)); this.canvas.height = Math.max(1, Math.round(this.H * dpr)); }
     if (this.state.sel && !this.g.byId[this.state.sel]) this.state.sel = null;
     if (this.state.selVid) { var v = this.V.byVf[this.state.selVid]; this.vidP = v ? { nodes: new Set(v.ids), links: new Set(this.V.vlinks[v.vf]) } : null; }
     if (wasStarted) {
@@ -325,7 +329,7 @@
     this.renderUI();
   };
   P.resize = function () {
-    var r = this.area.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    var r = this.area.getBoundingClientRect(), dpr = Math.min(this.state.vids ? 1.5 : 2, window.devicePixelRatio || 1);
     if (!r.width || !r.height) return;   // onglet caché : rien à mesurer
     var first = !this.W; this.W = r.width; this.H = r.height; this.dpr = dpr;
     this.canvas.width = Math.max(1, Math.round(r.width * dpr)); this.canvas.height = Math.max(1, Math.round(r.height * dpr));
@@ -508,39 +512,68 @@
     G.nodes.forEach(function (n) { if (n.ox == null) { n.ox = n.cx; n.oy = n.cy; } });
     this.titlesO = titles;
   };
+  // Amas (refait 27/10, Axel : « fais-le mieux, je ne suis pas fan ») : un amas par module (démos, hooks, liaisons, CTA de ce
+  // module), puis Formats, Avatars & photos, Habillage, Commun ; dans chaque amas, une famille = un anneau de sa couleur autour
+  // du carrefour (vidéos à l'extérieur) ; amas rangés en rangées. Câbles entre deux amas cachés au repos (visibles au survol).
   P.layoutClu = function () {
-    var G = this.g, mods = G.nodes.filter(function (n) { return n.kind === 'module'; }).sort(function (a, b) { return MOD_ORDER.indexOf(a.id) - MOD_ORDER.indexOf(b.id); }), home = {};
+    var G = this.g, home = {};
+    var HAB = ['texte_choc', 'style_choc', 'musique', 'sous_titre', 'reaction'];
     G.nodes.forEach(function (n) {
-      if (n.kind === 'module') return;
+      if (n.kind === 'module') { home[n.id] = n.id; return; }
+      if (n.kind === 'format') { home[n.id] = '__formats'; return; }
+      if (n.kind === 'avatar' || n.kind === 'photo') { home[n.id] = '__avatars'; return; }
+      if (HAB.indexOf(n.kind) >= 0) { home[n.id] = '__habillage'; return; }
       if (n.kind === 'video') { home[n.id] = n.mod && G.byId['M:' + n.mod] ? 'M:' + n.mod : '__commun'; return; }
-      var m = n.module ? G.byId['M:' + n.module] : null;
+      var m = n.module && G.byId['M:' + n.module] ? 'M:' + n.module : null;
       if (!m) {
-        var cnt = {}; (G.adj[n.id] || []).forEach(function (l) { var o = l.s === n ? l.t : l.s; if (o.kind === 'module') cnt[o.id] = (cnt[o.id] || 0) + 1; });
-        var best = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; })[0];
-        if (best && ['hook', 'liaison', 'cta', 'demo', 'demo_muette', 'transformation'].indexOf(n.kind) >= 0) m = G.byId[best];
+        var cnt = {}; (G.adj[n.id] || []).forEach(function (l) { var o = l.s === n ? l.t : l.s; if (o.kind === 'module' && o.id !== 'M:generique') cnt[o.id] = (cnt[o.id] || 0) + 1; });
+        var ks = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a] || MOD_ORDER.indexOf(a) - MOD_ORDER.indexOf(b); });
+        if (ks.length === 1 || (ks.length > 1 && cnt[ks[0]] > cnt[ks[1]])) m = ks[0];
       }
-      home[n.id] = m ? m.id : '__commun';
+      home[n.id] = m || '__commun';
     });
-    var groups = mods.map(function (m) { return [m.id, m.short || m.label]; }).concat([['__commun', 'Commun à tous']]), ga = Math.PI * (3 - Math.sqrt(5)), titles = [];
-    // briques en spirale autour du module, vidéos en couronne autour des briques ; la grille s'agrandit avec le plus gros amas
-    var parts = groups.map(function (g) {
-      var mem = G.nodes.filter(function (n) { return home[n.id] === g[0]; }), br = mem.filter(function (n) { return n.kind !== 'video'; }), vv = mem.filter(function (n) { return n.kind === 'video'; }).sort(vidOrder);
-      br.sort(function (a, b) { return FAM_ORDER.indexOf(a.fam) - FAM_ORDER.indexOf(b.fam) || (b.r || 0) - (a.r || 0); });
-      var Rb = 34 + 15 * Math.sqrt(br.length + 0.5);
-      return { br: br, vv: vv, Rb: Rb, R: vv.length ? Math.sqrt((Rb + 14) * (Rb + 14) + 85 * vv.length) : Rb };
+    var mods = G.nodes.filter(function (n) { return n.kind === 'module'; }).sort(function (a, b) { return MOD_ORDER.indexOf(a.id) - MOD_ORDER.indexOf(b.id); });
+    var groups = mods.map(function (m) { return [m.id, m.short || m.label]; }).concat([['__formats', 'Formats'], ['__avatars', 'Avatars & photos'], ['__habillage', 'Habillage'], ['__commun', 'Commun à plusieurs modules']]);
+    var parts = [];
+    groups.forEach(function (g) {
+      var mem = G.nodes.filter(function (n) { return home[n.id] === g[0] && n.id !== g[0]; }); if (!mem.length && !G.byId[g[0]]) return;
+      var hub = G.byId[g[0]], rings = [], r = hub ? hub.r + 18 : 0, fams = {};
+      mem.forEach(function (n) { (fams[n.fam] = fams[n.fam] || []).push(n); });
+      FAM_ORDER.forEach(function (f) {
+        var L = fams[f]; if (!L) return;
+        L.sort(function (a, b) { return f === 'video' ? vidOrder(a, b) : ((b.videos || 0) - (a.videos || 0)) || nat(a.id, b.id); });
+        var step = f === 'video' ? 8 : f === 'hub' ? 80 : Math.max(14, (Math.max.apply(null, L.map(function (n) { return n.r; })) || 5) * 2 + 5), k = 0;
+        while (k < L.length) {
+          var rr = r === 0 ? step : r + step / 2, cap = Math.max(6, Math.floor(2 * Math.PI * rr / step)), left = L.length - k;
+          // le reste de la famille tient sur un anneau un peu plus large : un seul anneau (pas un petit bout tout seul)
+          if (left <= cap * 1.7) { rr = Math.max(rr, left * step / (2 * Math.PI)); cap = left; }
+          var take = L.slice(k, k + cap), a0 = -Math.PI / 2 + (rings.length * 0.7);
+          take.forEach(function (n, q) { var a = a0 + q / take.length * 2 * Math.PI; n.lx = Math.cos(a) * rr; n.ly = Math.sin(a) * rr; });
+          rings.push(rr); r = rr + step / 2 + 4; k += cap;
+        }
+        r += f === 'video' ? 0 : 8;
+      });
+      parts.push({ id: g[0], label: g[1], hub: hub, mem: mem, R: Math.max(110, r) });   // 110 : place pour le titre de l'amas
     });
-    var Rmax = Math.max.apply(null, parts.map(function (q) { return q.R; }).concat([0]));
-    var cols = Math.ceil(Math.sqrt(groups.length * 1.6)), cellW = Math.max(560, 2 * Rmax + 110), cellH = Math.max(520, 2 * Rmax + 90);
-    groups.forEach(function (g, gi) {
-      var q = parts[gi], cx = (gi % cols - (cols - 1) / 2) * cellW, cy = (Math.floor(gi / cols) - (Math.ceil(groups.length / cols) - 1) / 2) * cellH;
-      var hub = G.byId[g[0]]; if (hub) { hub.gx = cx; hub.gy = cy; }
-      q.br.forEach(function (n, i) { var a = i * ga, rr = 34 + 15 * Math.sqrt(i + 0.5); n.gx = cx + Math.cos(a) * rr; n.gy = cy + Math.sin(a) * rr; });
-      q.vv.forEach(function (n, i) { var a = i * ga, rr = Math.sqrt((q.Rb + 14) * (q.Rb + 14) + 85 * (i + 0.5)); n.gx = cx + Math.cos(a) * rr; n.gy = cy + Math.sin(a) * rr; });
-      titles.push({ x: cx, y: cy - q.R - 22, label: String(g[1]).toUpperCase(), n: q.br.length + q.vv.length });
+    // rangées : largeur visée ≈ 1,6 × la racine de la surface totale
+    var gap = 120, area = parts.reduce(function (a, q) { return a + Math.pow(2 * q.R + gap, 2); }, 0), maxW = Math.max(1400, Math.sqrt(area) * 1.6);
+    var rows = [], row = null;
+    parts.forEach(function (q) { var w = 2 * q.R + gap; if (!row || row.w + w > maxW) { row = { items: [], w: 0, h: 0 }; rows.push(row); } row.items.push(q); row.w += w; row.h = Math.max(row.h, 2 * q.R + gap + 40); });
+    var totH = rows.reduce(function (a, r0) { return a + r0.h; }, 0), y = -totH / 2, titles = [];
+    rows.forEach(function (r0) {
+      var x = -r0.w / 2, cy = y + r0.h / 2 + 20;
+      r0.items.forEach(function (q) {
+        var cx = x + q.R + gap / 2; x += 2 * q.R + gap;
+        if (q.hub) { q.hub.gx = cx; q.hub.gy = cy; q.hub.grp = q.id; }
+        q.mem.forEach(function (n) { n.gx = cx + n.lx; n.gy = cy + n.ly; n.grp = q.id; });
+        titles.push({ x: cx, y: cy - q.R - 18, label: String(q.label).toUpperCase(), n: q.mem.length });
+      });
+      y += r0.h;
     });
     G.nodes.forEach(function (n) { if (n.gx == null) { n.gx = n.cx; n.gy = n.cy; } });
     this.titlesG = titles;
   };
+
   P.layoutIles = function () {
     var G = this.g, ga = Math.PI * (3 - Math.sqrt(5));
     var CONT = [
@@ -712,7 +745,7 @@
 
   // ── animation ──
   P.tick = function (now) {
-    if (!this.g || !this.W || this.needStart || !this.el.isConnected) return;
+    if (!this.g || !this.W || this.needStart || !this.el.isConnected || this.onScreen === false) return;
     this.step(now);
     this.draw(performance.now()); this.dirty = false;   // les câbles s'animent toujours : rendu continu
   };
@@ -765,7 +798,14 @@
       ctx.setLineDash([]); ctx.globalAlpha = 1;
     }
     ctx.font = '600 10px ' + MF; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; try { ctx.letterSpacing = '1.4px'; } catch (e) { /* rien */ }
-    if (showT && tA > 0.02 && (this.titlesCur || this.titlesC)) { ctx.fillStyle = T.title; (this.titlesCur || this.titlesC).forEach(function (t) { ctx.globalAlpha = tA * (F ? 0.3 : 0.95) * (self.entry ? clamp(tt / 900, 0, 1) : 1); ctx.fillText(t.label + '  ' + t.n, t.x * c.k + c.x, t.y * c.k + c.y); }); }
+    if (showT && tA > 0.02 && (this.titlesCur || this.titlesC)) {
+      ctx.fillStyle = T.title; var tbox = [];
+      (this.titlesCur || this.titlesC).forEach(function (t) {
+        var txt = t.label + '  ' + t.n, w = ctx.measureText(txt).width, x = t.x * c.k + c.x, y = t.y * c.k + c.y;
+        if (tbox.some(function (q) { return Math.abs(q[0] - x) < (q[2] + w) / 2 + 8 && Math.abs(q[1] - y) < 14; })) return;   // titre qui en recouvrirait un autre : pas dessiné
+        tbox.push([x, y, w]); ctx.globalAlpha = tA * (F ? 0.3 : 0.95) * (self.entry ? clamp(tt / 900, 0, 1) : 1); ctx.fillText(txt, x, y);
+      });
+    }
     if (showT && tB > 0.02 && this.headsP) {
       ctx.fillStyle = T.title; var colPx = 270 * c.k;
       // en-tête de colonne seulement s'il tient dans la largeur de la colonne (sinon les titres se chevauchent)
@@ -777,8 +817,10 @@
     try { ctx.letterSpacing = '0px'; } catch (e) { /* rien */ }
     var hl = function (l) { return Pp ? Pp.links.has(l) : center ? (l.s === center || l.t === center) : false; };
     var groups = {}, hot = [];
+    var amasOn = this.appliedView === 'amas';   // Amas : câbles entre deux amas cachés au repos
     G.links.forEach(function (l) {
       if (!l.vis || l.s.ap <= 0.02 || l.t.ap <= 0.02) return;
+      if (amasOn && l.s.grp !== l.t.grp && !hl(l)) return;
       var pr = self.entry ? clamp((tt - l.dl) / 650, 0, 1) : 1; if (pr <= 0) return;
       if (hl(l)) hot.push([l, pr]); else { var key = l.type + '|' + (l.type === 'video-brique' ? FAMC.video : l.s.fam === 'hub' ? l.t.color : l.s.color); (groups[key] = groups[key] || []).push([l, pr]); }
     });
@@ -833,17 +875,14 @@
       } else if (st === 'cometes') {
         ctx.setLineDash([]); ctx.strokeStyle = col; ctx.globalAlpha = aK * 0.18; ctx.lineWidth = lw; ctx.stroke();
         arr.forEach(function (x) {
-          var l = x[0], pr = x[1], a1 = S(l.s), a2 = S(l.t), x1 = a1[0], y1 = a1[1], x2 = a2[0], y2 = a2[1]; if (off(x1, y1, x2, y2)) return;
+          var l = x[0], pr = x[1], a1 = S(l.s), a2 = S(l.t), x1 = a1[0], y1 = a1[1], x2 = a2[0], y2 = a2[1]; if (off(x1, y1, x2, y2) || Math.abs(x2 - x1) + Math.abs(y2 - y1) < 40) return;
           var q = self.cps(l.s, l.t, x1, y1, x2, y2, l.sg), per = 2600 + l.ph * 2600, h0 = ((now + l.ph * per * 7) % (per * 1.6)) / per; if (h0 > Math.min(1, pr)) return;
-          for (var k = 0; k < 9; k++) { var t = h0 - k * 0.022; if (t < 0) break; var px = bz(x1, q[0], q[2], x2, t), py = bz(y1, q[1], q[3], y2, t), f = 1 - k / 9; ctx.fillStyle = k ? col : (dark ? '#fff' : col); ctx.globalAlpha = aK * (k ? 0.55 * f * f : 1); ctx.beginPath(); ctx.arc(px, py, (k ? 1.1 + 1.6 * f : 2.6) * Math.max(0.8, lw * 0.9), 0, TAU); ctx.fill(); }
+          for (var k = 0; k < 6; k++) { var t = h0 - k * 0.033; if (t < 0) break; var px = bz(x1, q[0], q[2], x2, t), py = bz(y1, q[1], q[3], y2, t), f = 1 - k / 6; ctx.fillStyle = k ? col : (dark ? '#fff' : col); ctx.globalAlpha = aK * (k ? 0.55 * f * f : 1); ctx.beginPath(); ctx.arc(px, py, (k ? 1.1 + 1.6 * f : 2.6) * Math.max(0.8, lw * 0.9), 0, TAU); ctx.fill(); }
           var hx = bz(x1, q[0], q[2], x2, h0), hy = bz(y1, q[1], q[3], y2, h0); ctx.fillStyle = col; ctx.globalAlpha = aK * 0.25; ctx.beginPath(); ctx.arc(hx, hy, 7, 0, TAU); ctx.fill();
         });
-      } else {   // Flux
-        arr.forEach(function (x) {
-          var l = x[0], pr = x[1], a1 = S(l.s), a2 = S(l.t); if (off(a1[0], a1[1], a2[0], a2[1])) return;
-          ctx.setLineDash([7, 9]); ctx.lineDashOffset = -((now / (14 + (TI[type] || 0) * 3) + l.ph * 40) % 16);
-          ctx.beginPath(); path(l, pr); ctx.strokeStyle = col; ctx.globalAlpha = aK * 0.55; ctx.lineWidth = lw * 1.6 + 0.6; ctx.stroke();
-        });
+      } else {   // Flux : le tracé du groupe repassé en pointillés qui avancent (un seul trait par groupe : fluide)
+        ctx.setLineDash([7, 9]); ctx.lineDashOffset = -((now / (14 + (TI[type] || 0) * 3)) % 16);
+        ctx.strokeStyle = col; ctx.globalAlpha = aK * 0.55; ctx.lineWidth = lw * 1.6 + 0.6; ctx.stroke();
       }
       ctx.globalCompositeOperation = 'source-over'; ctx.setLineDash([]);
     });
@@ -852,7 +891,7 @@
     hot.forEach(function (x) {
       var l = x[0], pr = x[1]; if (pr <= 0) return;
       var col = Pp ? ACC : (l.s === center ? (l.t.fam === 'hub' ? l.s.color : l.t.color) : (l.s.fam === 'hub' ? l.t.color : l.s.color)) || ACC, lw = (LT[l.type] ? LT[l.type][1] : 0.6) * lwS * 1.9 + (Pp ? 0.4 : 0);
-      ctx.shadowColor = col; ctx.shadowBlur = dark ? 12 : 5; ctx.globalAlpha = 0.9; ctx.strokeStyle = col; ctx.lineWidth = lw;
+      ctx.shadowColor = col; ctx.shadowBlur = hot.length > 40 ? 0 : dark ? 12 : 5; ctx.globalAlpha = 0.9; ctx.strokeStyle = col; ctx.lineWidth = lw;
       ctx.beginPath(); path(l, pr); ctx.stroke(); ctx.shadowBlur = 0;
       ctx.setLineDash([6, 10]); ctx.lineDashOffset = -((now / 16) % 16); ctx.globalAlpha = dark ? 0.85 : 0.75; ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(0.8, lw * 0.55); ctx.stroke(); ctx.setLineDash([]);
       if (pr >= 1) pts.push([l, col]);
