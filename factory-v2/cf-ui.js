@@ -3220,7 +3220,8 @@
     // 25/10 : recto et verso côte à côte (carte, titre de séjour) ; une seule image pour un passeport ou un justificatif
     var side = function (u, kd, lbl) {
       return kd === 'img' ? '<img class="cf-idh-img" src="' + esc(u) + '" alt="' + esc(lbl + ' · ' + who) + '" data-idimg="' + esc(x.id) + '" referrerpolicy="no-referrer" decoding="async">'
-        : '<div class="cf-idh-ph" data-prev="' + kd + '">' + svg(IC.eye, 18) + esc(lbl + ' en ' + (kd === 'pdf' ? 'PDF' : 'HEIC') + ' : pas d’aperçu dans la page, ouvre-la') + '</div>';
+        : '<div class="cf-idh-ph" data-prev="' + kd + '">' + svg(IC.eye, 18) + esc(lbl + ' en ' + (kd === 'pdf' ? 'PDF' : 'HEIC') + ' : pas d’aperçu dans la page')
+          + '<button type="button" class="cf-link-btn" data-act="bx-id-view" data-id="' + esc(x.id) + '"' + kv + '>' + (ui.bx.busy['idv:' + x.id] ? 'Ouverture…' : 'Ouvrir') + '</button></div>';
     };
     if (P && P.url && (P.state === 'ok' || P.state === 'loading')) prev = P.back
       ? '<div class="cf-idh-two">' + side(P.url, P.kind, 'Recto') + side(P.back, P.kindBack, 'Verso') + '</div>'
@@ -3231,7 +3232,8 @@
     return '<div class="cf-idh-row" data-hid="' + esc(x.id) + '"><div class="cf-idh-prev">' + prev + '</div>'
       + '<div class="cf-bx-main"><b>' + esc(who) + '</b><span class="cf-meta">' + esc([bxIdLabel(x), x.email || 'e-mail inconnu', t ? 'déposé le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue'].join(' · ')) + '</span>'
       + bxDeclLines(x) + bxIdExtra(x)
-      + '<span class="cf-bx-acts cf-idh-acts"><button type="button" class="cf-btn is-sm" data-act="bx-id-view" data-id="' + esc(x.id) + '"' + kv + '>' + svg(IC.external, 12) + (ui.bx.busy['idv:' + x.id] ? 'Ouverture…' : 'Ouvrir en grand') + '</button>'
+      // Axel 27/10 : plus de bouton « Ouvrir en grand » : loupe au survol de l'image (idLoupe) ; PDF / HEIC : lien « Ouvrir » dans l'aperçu
+      + '<span class="cf-bx-acts cf-idh-acts">'
       + '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-id-ko" data-id="' + esc(x.id) + '"' + dis + '>Refuser</button>'
       + '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-id-ok" data-id="' + esc(x.id) + '"' + dis + '>' + svg(IC.check, 12) + (ui.bx.busy[k] ? 'Enregistrement…' : 'Valider') + '</button></span></div></div>';
   }
@@ -3249,7 +3251,7 @@
           : 'destruction de l’image non confirmée par BloxAI : vérifie que la copie a disparu')) + '</span></div>';
     }).join('') + '</div>' : '';
     return '<section class="cf-card cf-idh" data-block="home-id" aria-labelledby="cfIdhT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfIdhT">Pièces à vérifier <span class="cf-badge">' + n + '</span></h2>'
-      + '<span class="cf-meta">' + esc('au premier retrait : pièce d’identité (recto + verso) puis justificatif de domicile. Pièce : compare avec le nom de la fiche, puis Valider (date de naissance et nom lus) ou Refuser (motif). Justificatif : moins de 3 mois, au nom et à l’adresse de la fiche. L’image est détruite dès ta décision.') + '</span></div></div>'
+      + '</div></div>'
       + msg + doneH
       + (n ? '<div class="cf-idh-list">' + L.slice(0, BX_PREV_MAX).map(homeIdRow).join('') + '</div>'
         + (n > BX_PREV_MAX ? '<button type="button" class="cf-link-btn" data-act="home-go" data-tab="trackads">' + esc('+ ' + (n - BX_PREV_MAX) + ' ' + plural(n - BX_PREV_MAX, 'autre', 'autres') + ' dans l’onglet BloxAI') + '</button>' : '')
@@ -5586,7 +5588,28 @@
       if (mp) montHover(mp, e.clientX); else if (montCur && montCur.hot) montHide();
       var bp = e.target && e.target.closest ? e.target.closest('.cf-bxplot') : null;   // courbes BloxAI (16/10)
       if (bp) bxHover(bp, e.clientX); else if (bxHot) bxHide();
+      idLoupe(e);
     });
+    // Loupe des pièces d'identité (Axel 27/10) : au survol d'une image, un rond grossi (×3 au moins, jusqu'à la taille réelle de la photo) suit la souris. Posé sur <body>
+    // (le tableau de bord redessine ses blocs), jamais capturé par la souris, caché dès qu'on quitte l'image.
+    var loupe = null;
+    function idLoupe(e) {
+      var img = e.target && e.target.closest ? e.target.closest('.cf-idh-img') : null;
+      if (!img || !img.naturalWidth) { if (loupe) loupe.style.display = 'none'; return; }
+      if (!loupe) { loupe = document.createElement('div'); loupe.className = 'cf-loupe'; loupe.setAttribute('aria-hidden', 'true'); document.body.appendChild(loupe); }
+      // image en object-fit: contain : zone réellement dessinée dans la boîte de l'élément
+      var r = img.getBoundingClientRect(), k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+      var w = img.naturalWidth * k, h = img.naturalHeight * k, ox = r.left + (r.width - w) / 2, oy = r.top + (r.height - h) / 2;
+      var fx = (e.clientX - ox) / w, fy = (e.clientY - oy) / h;
+      if (fx < 0 || fx > 1 || fy < 0 || fy > 1) { loupe.style.display = 'none'; return; }
+      var Z = Math.min(8, Math.max(3, 1 / k)), D = 240, bw = w * Z, bh = h * Z;   // au moins la résolution réelle de la photo (texte lisible)
+      loupe.style.backgroundImage = 'url("' + img.currentSrc.replace(/"/g, '%22') + '")';
+      loupe.style.backgroundSize = bw + 'px ' + bh + 'px';
+      loupe.style.backgroundPosition = (D / 2 - fx * bw) + 'px ' + (D / 2 - fy * bh) + 'px';
+      loupe.style.left = (e.clientX - D / 2) + 'px'; loupe.style.top = (e.clientY - D / 2) + 'px';
+      loupe.style.display = 'block';
+    }
+    document.addEventListener('scroll', function () { if (loupe) loupe.style.display = 'none'; }, true);
     var onTouch = function (e) {
       var t = e.touches && e.touches[0], plot = t && e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
       if (plot) hover(plot, t.clientX); else if (evoCur || dmCur) evoHide();
