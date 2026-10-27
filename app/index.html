@@ -6046,13 +6046,13 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-27-1600'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-27-1630'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
 const DC_OUVERT = true;   // OUVERT le 24/10 (Axel) — secret serveur DECUPLEUR_OUVERT=1 posé avec
-const DC_PLANS = ['pro', 'elite'];
-if(DC_OUVERT){ try{ document.querySelectorAll('[data-dc-exclu]').forEach(function(e){ e.textContent = 'Décuplage de vidéo'; }); }catch(_){} }   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const DC_PLANS = ['starter', 'pro', 'elite'];   // 27/10 (Axel : « passer le décupleur pour tout le monde ») : tous les plans payants ; Free = choix d'un plan
+/* 27/10 : le Décupleur n'est plus une exclusivité Pro → la carte Pro du paywall garde « AvatarAds × Claude » (data-dc-exclu) */   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 // 13/10 (Axel : « ça bug souvent… ton compte n'a pas pu se charger ») : après une veille, Safari réutilise une connexion à
@@ -13899,15 +13899,15 @@ const DC_VARIANTS = [5, 10, 20, 50];
 const DC_CR_PER_VARIANT = 0.5;                       // 10 variantes = 5 crédits
 // Changement de personnage (Wan 3.0, kie, 720p) : 10 crédits par seconde gardée (Axel 24/10). Coût ≈ 0,17 $ / s (kie facture
 // référence + sortie) → marge ≥ 60 % partout sauf l'Élite 90 annuel (~58 %).
-// TOUT le Décupleur (variantes + personnage) est réservé Pro / Élite (DC_PLANS, Axel 24/10 : raison d'upgrader pour un Free /
-// Starter) ; owner / developer passent. Free / Starter : paywall au clic sur « Décupler » ou sur « Changer le personnage ».
+// 27/10 : TOUT le Décupleur ouvert à tous les plans payants (DC_PLANS, avant : Pro / Élite seulement) ; owner / developer passent.
+// Free : feuille des plans au clic sur « Décupler » ou sur « Changer le personnage ».
 const DC_PERSO_CR_SEC = 10;
 function _dcPlanOk(){
   try{ const p = String((currentMember && currentMember.plan) || '').toLowerCase(); return !!currentMember && (!!currentMember.is_owner || p === 'developer' || DC_PLANS.includes(p)); }catch(_){ return false; }
 }
 const _dcPersoOk = _dcPlanOk;
 function _dcPaywall(){
-  try{ showPlansSheet('Option réservée à Pro et Élite', 'Upgrade ton plan maintenant'); }catch(_){ toast('Option réservée à Pro et Élite'); }
+  try{ showPlansSheet('Le Décupleur est inclus dans tous les plans', 'Choisis ton plan pour commencer'); }catch(_){ toast('Le Décupleur est inclus dans tous les plans'); }
 }
 // Crédits d'un lancement : variantes + changement de personnage à la seconde gardée (arrondie au-dessus, comme kie)
 // Crédits d'un lancement = ce qui sera DÉBITÉ (spendCreditsFor arrondit au crédit supérieur) : ceil(N × 0,5) pour les
@@ -13970,7 +13970,7 @@ const _dc = {
   play:null,                  // 25/10 : variante ouverte dans le lecteur (numéro 1…n)
   modal:null,                 // 'face' | 'adv'
   alt:{ mirror:true, pixels:true, tint:true, audio:true, text:true },
-  textPos:'Aléatoire',
+  textPos:'Haut',   // 27/10 (Axel) : texte choc en haut par défaut
   phase:'idle', pct:0, nudge:null, stageIdx:0, runId:0,
   _tick:null, _linkIv:null, _runIv:null, _nudgeT:null, _mq:false,
 };
@@ -14352,7 +14352,7 @@ function _dcCardsRender(){
     +   (on&&img ? '<span style="width:100%;height:100%;background:url('+img.url+') center/cover"></span>' : _dcI('user', 16, 'color:var(--accent-2)'))+'</span>'
     + '<span class="col" style="line-height:1.3;min-width:0">'
     +   '<span style="font-weight:600;font-size:14px">Changer le personnage</span>'
-    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(!_dcPersoOk() ? 'Réservé Pro et Élite' : on ? (img ? (_dc.faces.length > 1 ? _dc.faces.length + ' personnages · ' : '') + DC_PERSO_CR_SEC + ' crédits / seconde' : 'Photo à ajouter') : 'Photo à ajouter')+'</span>'
+    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(!_dcPersoOk() ? 'Inclus dans tous les plans' : on ? (img ? (_dc.faces.length > 1 ? _dc.faces.length + ' personnages · ' : '') + DC_PERSO_CR_SEC + ' crédits / seconde' : 'Photo à ajouter') : 'Photo à ajouter')+'</span>'
     + '</span></button>'
     + '<button onclick="_dcOpen(\'adv\')" class="row" style="'+card+';border:1px solid var(--border);background:var(--surface)">'
     + '<span style="width:36px;height:36px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">'+_dcI('sliders', 16, 'color:var(--accent-2)')+'</span>'
@@ -14731,6 +14731,9 @@ function _dcPlayOpen(k){
     +     '<button class="btn btn-ghost btn-sm" onclick="_dcPlayClose()" aria-label="Fermer">'+_dcI('close', 14)+'<span>Fermer</span></button>'
     +   '</div>'
     + '</div></div>';
+  _dcPlayKeys();
+}
+function _dcPlayKeys(){
   if(!_dc._playKey){
     _dc._playKey = (e) => {
       if(_dc.play == null) return;
@@ -14746,6 +14749,31 @@ function _dcPlayOpen(k){
 function _dcPlayClose(){ _dc.play = null; const el = document.getElementById('dcPlayer'); if(el){ const v = el.querySelector('video'); if(v) try{ v.pause(); }catch(_){} el.innerHTML = ''; } }
 
 /* ---------- résultat ---------- */
+// 27/10 (Axel) : avec un changement de personnage, la vidéo du personnage (sans altération) en PREMIER dans la grille
+function _dcPersoUrl(){ const m = (_dc.res && _dc.res.master) || (_dc.face && _dc.master); return m && m.url ? m.url : null; }
+function _dcPersoTile(){
+  const u = _dcPersoUrl(); if(!u) return '';
+  return '<div role="button" tabindex="0" aria-label="Lire la vidéo du personnage" onclick="_dcPlayPerso()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();_dcPlayPerso()}" style="position:relative;aspect-ratio:9 / 16;border-radius:12px;overflow:hidden;border:1px solid var(--accent-line);cursor:pointer;background:var(--surface-2)">'
+    + '<video src="'+_dcEsc(u)+'#t=0.1" muted playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none"></video>'
+    + '<span class="mono" style="position:absolute;left:6px;top:6px;font-size:9.5px;color:#fff;background:var(--accent);padding:2px 6px;border-radius:5px">PERSONNAGE</span>'
+    + '<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.35)">'+_dcI('play', 16, 'color:#fff;margin-left:2px')+'</span>'
+    + '<a href="'+_dcEsc(u)+'" download="personnage.mp4" title="Télécharger" onclick="event.stopPropagation()" style="position:absolute;right:6px;bottom:6px;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff">'+_dcI('download', 14)+'</a>'
+    + '</div>';
+}
+function _dcPlayPerso(){
+  const u = _dcPersoUrl(); if(!u) return;
+  _dc.play = 0; _dcPlayKeys();
+  let el = document.getElementById('dcPlayer');
+  if(!el){ el = document.createElement('div'); el.id = 'dcPlayer'; document.body.appendChild(el); }
+  el.innerHTML = '<div role="dialog" aria-modal="true" aria-label="Vidéo du personnage" onclick="if(event.target===this)_dcPlayClose()" style="position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.85)">'
+    + '<div class="col" style="align-items:center;gap:12px;max-width:100%">'
+    +   '<video src="'+_dcEsc(u)+'" controls autoplay playsinline style="display:block;max-height:calc(100dvh - 130px);max-width:min(92vw,480px);border-radius:16px;background:#000"></video>'
+    +   '<div class="row gap10" style="align-items:center;flex-wrap:wrap;justify-content:center">'
+    +     '<a class="btn btn-primary btn-sm" href="'+_dcEsc(u)+'" download="personnage.mp4" style="text-decoration:none">'+_dcI('download', 14)+'<span>Télécharger</span></a>'
+    +     '<button class="btn btn-ghost btn-sm" onclick="_dcPlayClose()" aria-label="Fermer">'+_dcI('close', 14)+'<span>Fermer</span></button>'
+    +   '</div>'
+    + '</div></div>';
+}
 function _dcTile(i){
   const v = _dcVar(i + 1);
   const num = '<span class="mono" style="position:absolute;left:6px;top:6px;font-size:9.5px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:5px">#'+String(i+1).padStart(2,'0')+'</span>';
@@ -14810,7 +14838,7 @@ function _dcDoneHTML(mob){
     +   '</div>'
     +   (r && r.variants.length ? '<p class="faint" style="font-size:12.5px;margin:-8px 0 14px">Touche une vidéo pour la regarder.</p>' : '')
     +   '<div style="display:grid;grid-template-columns:repeat('+cols+',minmax(0,1fr));gap:'+(mob?8:12)+'px">'
-    +     Array.from({length:n}).map((_, i) => _dcTile(i)).join('')
+    +     _dcPersoTile() + Array.from({length:n}).map((_, i) => _dcTile(i)).join('')
     +   '</div>'
     + '</div></div>';
 }
@@ -14834,7 +14862,7 @@ function _dcLiveHTML(mob){
     +   '</div>'
     +   (prets ? '<p class="faint" style="font-size:12.5px;margin:-8px 0 14px">Touche une vidéo pour la regarder. « Tout télécharger » arrive à la fin du lot.</p>' : '')
     +   '<div style="display:grid;grid-template-columns:repeat('+cols+',minmax(0,1fr));gap:'+(mob?8:12)+'px">'
-    +     Array.from({length:n}).map((_, i) => _dcTile(i)).join('')
+    +     _dcPersoTile() + Array.from({length:n}).map((_, i) => _dcTile(i)).join('')
     +   '</div>'
     + '</div></div>';
 }

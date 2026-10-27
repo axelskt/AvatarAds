@@ -328,7 +328,7 @@ serve(async (req: Request) => {
       const { plan: dcPlan, isOwner: dcOwner, err: dcErr } = await userPlan(user.id)
       if (dcErr) return json({ error: 'Vérification du compte impossible — réessaie dans un instant' }, 503)
       const dcExempt = dcOwner || dcPlan === 'developer'
-      if (!dcExempt && !(decupleurOuvert() && DC_PLANS.includes(dcPlan))) return json({ error: 'Option réservée à Pro et Élite' }, 403)
+      if (!dcExempt && !(decupleurOuvert() && DC_PLANS.includes(dcPlan))) return json({ error: 'Le Décupleur est inclus dans tous les plans : choisis un plan pour commencer' }, 403)
       const _g = await billableGate({ userId: user.id, proxy: 'render-job-dc', requireDebit: !dcExempt && body.action === 'decupleur', debitMinutes: 60, rateMax: 30 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
       {
         const { count, error: cErr } = await service.from('render_jobs').select('id', { count: 'exact', head: true })

@@ -4,7 +4,7 @@
 // owner / developer SEULEMENT — l'ouverture se fait par le secret DECUPLEUR_OUVERT=1 (+ DC_OUVERT dans l'app), en même
 // temps que le tirage des crédits côté app (render-job / kie-proxy, voir les commentaires « À L'OUVERTURE »).
 
-export const DC_PLANS = ['pro', 'elite']
+export const DC_PLANS = ['starter', 'pro', 'elite']   // 27/10 (Axel) : ouvert à tous les plans payants (avant : Pro / Élite)
 export const decupleurOuvert = () => Deno.env.get('DECUPLEUR_OUVERT') === '1'
 export const DC_VARIANTES = [5, 10, 20, 50]
 export const DC_CR_VARIANTE = 0.5          // = DC_CR_PER_VARIANT de l'app (10 variantes = 5 crédits)

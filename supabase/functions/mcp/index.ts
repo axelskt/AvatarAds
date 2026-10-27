@@ -1427,7 +1427,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
     tools.push({
       name: 'decupler_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // carte : vidéo (+ photo du personnage) → progression → grille des variantes + ZIP
-      description: `Le DÉCUPLEUR d'AvatarAds : UNE vidéo → ${DC_VARIANTES.join(', ')} VARIANTES toutes différentes (miroir, cadrage, grain, teinte, empreinte sonore, textes choc), pour publier la même vidéo plusieurs fois sans être vu comme un doublon. Option change_character : AVANT de décupler, la personne de la vidéo est remplacée par celle d'une photo (mêmes mouvements, avatar identique à la photo ; ${DC_PERSO_MAX} s gardées au plus). Coût : ${DC_CR_VARIANTE} crédit par variante (arrondi au-dessus : 10 variantes = ${Math.ceil(10 * DC_CR_VARIANTE)} crédits) + ${DC_PERSO_CR_SEC} crédits par seconde gardée avec le changement de personnage. Réservé aux plans Pro et Élite. Débité au lancement, rendu si échec. ❓ Si le nombre de variantes n'est pas dans le message, pose UNE question courte (5, 10, 20 ou 50 ?), puis appelle l'outil. 🎬 LA VIDÉO : lien TikTok / Instagram collé par l'utilisateur → link ; vidéo jointe au chat (que tu ne reçois pas) → appelle SANS fichier, la CARTE la fait déposer ; URL directe d'un MP4 déjà en ligne → video_url. Photo du nouveau personnage : jointe au chat → rien, la carte la fait déposer ; déjà en ligne → image_url. Pas de devis ; n'appelle aucun check ensuite (la carte suit tout et affiche les variantes). ⛔ Ne nomme JAMAIS le moteur technique : parle du « Décupleur d'AvatarAds ».`,
+      description: `Le DÉCUPLEUR d'AvatarAds : UNE vidéo → ${DC_VARIANTES.join(', ')} VARIANTES toutes différentes (miroir, cadrage, grain, teinte, empreinte sonore, textes choc), pour publier la même vidéo plusieurs fois sans être vu comme un doublon. Option change_character : AVANT de décupler, la personne de la vidéo est remplacée par celle d'une photo (mêmes mouvements, avatar identique à la photo ; ${DC_PERSO_MAX} s gardées au plus). Coût : ${DC_CR_VARIANTE} crédit par variante (arrondi au-dessus : 10 variantes = ${Math.ceil(10 * DC_CR_VARIANTE)} crédits) + ${DC_PERSO_CR_SEC} crédits par seconde gardée avec le changement de personnage. Inclus dans tous les plans payants. Débité au lancement, rendu si échec. ❓ Si le nombre de variantes n'est pas dans le message, pose UNE question courte (5, 10, 20 ou 50 ?), puis appelle l'outil. 🎬 LA VIDÉO : lien TikTok / Instagram collé par l'utilisateur → link ; vidéo jointe au chat (que tu ne reçois pas) → appelle SANS fichier, la CARTE la fait déposer ; URL directe d'un MP4 déjà en ligne → video_url. Photo du nouveau personnage : jointe au chat → rien, la carte la fait déposer ; déjà en ligne → image_url. Pas de devis ; n'appelle aucun check ensuite (la carte suit tout et affiche les variantes). ⛔ Ne nomme JAMAIS le moteur technique : parle du « Décupleur d'AvatarAds ».`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -3423,7 +3423,7 @@ const OMNI_EDIT_SEC: Record<string, number> = { '720p': 3, '1080p': 4 }   // = C
 const MC_SEC = { std: 2, hd: 3, v3: 6, v26pro: 3, topaz: 1 }
 const mcRate = (model: unknown, quality: unknown) => model === '3.0' ? MC_SEC.v3 : (quality === '1080p' ? MC_SEC.hd : MC_SEC.std)
 const MC_PRO_PLANS = ['pro', 'elite']                                       // 1080p et Motion 3.0 : Pro & Élite (comme l'app)
-// Décupleur (Axel 24/10) : owner / developer pendant les tests ; Pro / Élite une fois DECUPLEUR_OUVERT=1 (comme l'app)
+// Décupleur : tous les plans payants (DC_PLANS, 27/10) une fois DECUPLEUR_OUVERT=1 (comme l'app)
 const droitDecupleur = (p: Record<string, unknown>) => isUnlimited(p) || (decupleurOuvert() && DC_PLANS.includes(String(p.plan || '').toLowerCase()))
 const VT_OP = /^(vn|vns|ve|vm|vmr|vu|vur|vd|vdg|vk|vkr|df|dfs|dw|dwg|dj):/   // étapes + réservations (voir « ÉTAPES RÉSERVES ») ; d… = Décupleur
 const VT_STALE_MIN = 60                                                     // kie : file jusqu'à ~25 min + reprise 2.6 : jamais remboursé en cours de route
@@ -3864,7 +3864,7 @@ async function runDecupler(profile: Record<string, unknown>, args: Record<string
   if (!droitDecupleur(profile)) {
     const plan = String(profile.plan || 'free').toLowerCase()
     return toolErr(decupleurOuvert()
-      ? `Le Décupleur est réservé aux plans Pro et Élite (plan actuel : ${PLAN_LABEL[plan] || plan}). Upgrade ton plan sur ${APP_URL}`
+      ? `Le Décupleur est inclus dans tous les plans payants (plan actuel : ${PLAN_LABEL[plan] || plan}). Choisis un plan sur ${APP_URL}`
       : 'Le Décupleur arrive bientôt sur Claude.')
   }
   const n = DC_VARIANTES.includes(Number(args.variants)) ? Number(args.variants) : 10

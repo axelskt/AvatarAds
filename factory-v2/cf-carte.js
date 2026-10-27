@@ -20,7 +20,7 @@
 
   // ── règles de la carte (usine/lots/carte.py) ──
   var MOD = { 'mcp-claude': 'Claude (MCP)', 'omni': 'Omni', 'image-ia': 'Images IA', 'static-ads': 'Pubs statiques', 'motion-control': 'Motion Control',
-    'express': 'Express', 'montage-ia': 'Montage IA', 'nettoyage-audio': 'Nettoyage audio', 'generique': 'Générique (toutes démos)' };
+    'express': 'Express', 'montage-ia': 'Montage IA', 'nettoyage-audio': 'Nettoyage audio', 'decupleur': 'Décupleur', 'generique': 'Générique (toutes démos)' };
   var REGLES = {
     'avatar-photo': "l'avatar et ses photos ; 'ready' = photo actuelle, 'ancienne' = ancienne photo dont les briques déjà générées restent utilisables",
     'photo-hook': 'cette photo a une vraie vidéo de ce hook (dit par cet avatar dans ce décor)',
@@ -74,7 +74,7 @@
         return;
       }
       if (st !== 'ready' && !(k === 'texte-choc' && st === 'draft')) return;
-      if (k === 'hook') N(b.id, 'hook', m.transcript || m.script || b.label, { status: st, compatible: m.compatible_subjects, hookDemos: m.hook_demos });
+      if (k === 'hook') N(b.id, 'hook', m.transcript || m.script || b.label, { status: st, compatible: m.compatible_subjects, hookDemos: m.hook_demos, media: m.media, image: m.cover || m.poster });
       else if (k === 'hook-demo') N(b.id, 'hook_demo', b.label, { status: st, media: m.media, image: m.poster || m.cover });
       else if (k === 'liaison') N(b.id, 'liaison', m.transcript || b.label, { status: st, generique: b.subject === 'generique' });
       else if (k === 'contenu') N(b.id, m.muette || /^C-[A-Z]+M-/.test(b.id) ? 'demo_muette' : 'demo', b.label, { status: st, module: m.module || b.subject, media: m.media });
@@ -162,14 +162,14 @@
     'format': ['Brique → format', 0.5], 'habillage': ['Habillage → format', 0.65], 'reaction-demo': ['Réaction → démo', 0.9], 'video-brique': ['Vidéo → brique', 0.45] };
   var LT_ORDER = Object.keys(LT);
   var IDLE_A = { 'avatar-photo': .4, 'photo-hook': .36, 'photo-cta': .36, 'hook-liaison': .07, 'hook-module': .2, 'hook-hookdemo': .22, 'liaison-module': .16, 'demo-module': .3, 'transfo-module': .3, 'module-cta': .26, 'choc-module': .16, 'format': .045, 'habillage': .08, 'reaction-demo': .22, 'video-brique': .018 };
-  var MOD_ORDER = ['M:mcp-claude', 'M:omni', 'M:image-ia', 'M:motion-control', 'M:express', 'M:static-ads', 'M:montage-ia', 'M:nettoyage-audio', 'M:generique'];
+  var MOD_ORDER = ['M:mcp-claude', 'M:omni', 'M:image-ia', 'M:motion-control', 'M:express', 'M:static-ads', 'M:montage-ia', 'M:nettoyage-audio', 'M:decupleur', 'M:generique'];
   var FAM_ORDER = ['hub', 'avatar', 'photo', 'hook', 'hook_demo', 'liaison', 'demo', 'demo_muette', 'transformation', 'cta', 'texte_choc', 'style_choc', 'musique', 'sous_titre', 'reaction', 'video'];
   var TH = {
     light: { bg: '#F6F4F1', card: '#FFFFFF', line: 'rgba(0,0,0,.08)', ink: '#1b1814', muted: '#8A857E', soft: '#F4F0EA', soft2: '#FAF8F5', hub: '#2F2A26', tip: '#1b1814', tipInk: '#FFFFFF', tipMuted: '#b8afa3', title: '#a39b91' },
     dark: { bg: '#121014', card: '#1C191F', line: 'rgba(255,255,255,.09)', ink: '#F1ECE6', muted: '#8A857E', soft: '#262229', soft2: '#221E25', hub: '#EDE6DC', tip: '#F1ECE6', tipInk: '#1C191F', tipMuted: '#6f6860', title: '#6f6860' }
   };
   var ANCH = { avatar: [-1120, -40], hook: [-680, -30], hook_demo: [-760, -480], liaison: [-360, -480], cta: [600, -480], texte_choc: [390, 480], musique: [-730, 510], style_choc: [-420, 610], sous_titre: [-110, 550], reaction: [980, 330] };
-  var HUB_POS = { 'M:mcp-claude': [-110, -170], 'M:omni': [200, -260], 'M:image-ia': [420, -40], 'M:motion-control': [200, 190], 'M:express': [-130, 130], 'M:static-ads': [480, 210], 'M:montage-ia': [580, -200], 'M:nettoyage-audio': [-60, -390], 'M:generique': [150, -30] };
+  var HUB_POS = { 'M:mcp-claude': [-110, -170], 'M:omni': [200, -260], 'M:image-ia': [420, -40], 'M:motion-control': [200, 190], 'M:express': [-130, 130], 'M:static-ads': [480, 210], 'M:montage-ia': [580, -200], 'M:nettoyage-audio': [-60, -390], 'M:decupleur': [-330, 260], 'M:generique': [150, -30] };
   var FMT_POS = { parlee: [-470, 330], muette: [800, 120] };   // formats : une colonne par bande, près de l'ancien carrefour de la maquette
   var COLS_TOP = [['fmt:parlee', 'Format'], ['avatar', 'Avatar'], ['photo', 'Photo'], ['hook', 'Hook'], ['hook_demo', 'Hook démo'], ['liaison', 'Liaison'], ['module', 'Module'], ['demo', 'Démo'], ['cta', 'CTA']];
   var COLS_BOT = [['fmt:muette', 'Format'], ['reaction', 'Réaction'], ['texte_choc', 'Texte choc'], ['demo_muette', 'Démo muette'], ['musique', 'Musique'], ['style_choc', 'Style'], ['sous_titre', 'Sous-titres'], ['transformation', 'Transformation']];
