@@ -62,7 +62,7 @@ def main():
         os.makedirs(os.path.join(d, nom))
         # résolution d'origine (Axel 26/10 : « même résolution que le hook ») : plus de passage en 720p avant la carte
         run('ffmpeg', '-v', 'error', '-y', '-i', src, '-vf', 'fps=30', '-t', '6', os.path.join(d, nom, '%03d.png'))
-    conf = {'fps': round(fps, 3), 'groupes': banque['groupes'], 'une_ligne': True, 'carte': {'w': 320, 'marge': 36}}
+    conf = {'fps': round(fps, 3), 'groupes': banque['groupes'], 'une_ligne': True, 'carte': {'w': 440, 'marge': 20}}   # Axel 27/10 : démos du hook agrandies (320 → 440)
     if opt.get('--couleur'): conf['couleur'] = opt['--couleur']
     if opt.get('--teinte'): conf['teinte'] = opt['--teinte']
     json.dump(conf, open(os.path.join(d, 'incruste.json'), 'w'), ensure_ascii=False)
