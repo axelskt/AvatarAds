@@ -14,7 +14,9 @@
 #   4. jours et ordre réécrits à partir du lendemain du dernier post figé (heures du kit = simple ordre, Axel poste à la main).
 # Retrait du stock : journal factory_kit_pending AVANT bx_kit_withdraw (une coupure est rattrapée par kit-recharge), puis
 # insertion des posts, puis effacement du journal. Rien n'est supprimé.
-# usage : python3 usine/lots/repartir.py [--go]   (sans --go : plan seulement)
+# usage : python3 usine/lots/repartir.py [--go] [--kit VF-0972,VF-0973]   (sans --go : plan seulement)
+#   --kit : vidéos du stock commun à mettre DANS LE KIT quoi qu'il arrive (Axel 27/10 : « mets-les dans le kit si elles sont
+#   validées »), même si la réserve des diffuseurs n'est pas pleine
 import json, os, re, sys
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -22,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from outils import q, bx_q, log
 
 GO = '--go' in sys.argv
+FORCE = set(sys.argv[sys.argv.index('--kit') + 1].split(',')) if '--kit' in sys.argv else set()
 PARIS = ZoneInfo('Europe/Paris')
 HRS = {'avataradss': [12, 14, 16, 18, 20], 'leoadsia': [12, 16, 20], 'ialebd.axel': [11, 13, 15, 17, 19]}   # = kit-recharge
 BX_RESERVE = 35
@@ -129,7 +132,8 @@ vo = {r['template'] for i in range(0, len(op), 200) for r in q("select template 
 # 21/10 : la réserve des diffuseurs se compte HORS fond vert / voix off (sinon ces vidéos, les plus récentes, la remplissaient et
 # les diffuseurs ne gardaient plus rien)
 nvo = [vf for vf in op if vf not in vo]
-take = [vf for vf in op if (vf in vo or vf in nvo[:max(0, len(nvo) - BX_RESERVE)]) and vf not in inkit][::-1]
+take = [vf for vf in op if (vf in vo or vf in FORCE or vf in nvo[:max(0, len(nvo) - BX_RESERVE)]) and vf not in inkit][::-1]
+if FORCE - set(op) - inkit: log('⚠ hors stock commun (pas ouvertes dans BloxAI) : ' + ' '.join(sorted(FORCE - set(op) - inkit)))
 log('stock BloxAI : %d ouvertes, %d gardées pour les diffuseurs, %d à prendre' % (len(op), len(op) - len(take), len(take)))
 qc = {}
 for i in range(0, len(take), 200):
