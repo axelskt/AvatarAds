@@ -162,11 +162,12 @@ try { execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','color=c=black:s=64
 const VENC = HW ? ['-c:v','h264_videotoolbox','-b:v','20M','-maxrate','26M','-bufsize','40M','-profile:v','high'] : ['-c:v','libx264','-crf','20','-preset','medium'];
 const fileKey = f => { const st = statSync(f), fd = openSync(f, 'r'), h = createHash('sha1'), n = Math.min(st.size, 4 << 20), b = Buffer.alloc(n);
   readSync(fd, b, 0, n, 0); h.update(b); readSync(fd, b, 0, n, Math.max(0, st.size - n)); h.update(b); closeSync(fd); h.update(String(st.size)); return h.digest('hex').slice(0, 16); };
-const DEMO_SPEED = +(OPT['demo-speed'] || process.env.CF_DEMO_SPEED || 1.08);
+const DEMO_SPEED = +(OPT['demo-speed'] || process.env.CF_DEMO_SPEED || 1.05);   // Axel 27/10 : 1,05x (1,08x « un peu trop rapide »)
 function workingDemo(src) {
   const pr = execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=width,height,r_frame_rate','-of','csv=p=0', src]).toString().trim().split(',');
   const [w, h] = [+pr[0], +pr[1]], fps = (() => { const [a, b] = String(pr[2] || '30/1').split('/').map(Number); return b ? a / b : a; })();
-  // Axel 26/10 : toute démo AVEC son passe en 1,08x (voix à hauteur normale, atempo) ; une démo muette reste à 1x.
+  // Axel 26/10 : toute démo AVEC son passe en accéléré (1,05x depuis le 27/10, 1,08x avant ; voix à hauteur normale, atempo) ;
+  // une démo muette reste à 1x.
   // La vitesse est dans le nom du cache → la démo accélérée est retranscrite (sous-titres calés sur la nouvelle vitesse).
   const sonore = execFileSync('ffprobe', ['-v','error','-select_streams','a','-show_entries','stream=index','-of','csv=p=0', src]).toString().trim() !== '';
   const vit = sonore ? DEMO_SPEED : 1;

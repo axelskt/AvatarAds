@@ -109,7 +109,7 @@ def publish(j, vf):
         if j.get('vo'): row['brick_combo']['voix_off'] = j['vo']   # 21/10 : format voix off Motion Control (TX-M…)
         if j.get('fv'): row['brick_combo']['fond_vert'] = j['fv']   # 21/10 : format fond vert (avatar détouré devant TX-…)
         if j.get('incruste'):   # 26/10 : texte incrusté (F-AP-INCRUSTE) — couleur du mot fort + Hook démo de la banque
-            row['brick_combo'].update(incruste=True, incruste_style=j['incruste'], hook_demos=j.get('hd') or [], demo_vitesse=1.08)
+            row['brick_combo'].update(incruste=True, incruste_style=j['incruste'], hook_demos=j.get('hd') or [], demo_vitesse=float(os.environ.get('CF_DEMO_SPEED') or 1.05))
         if j.get('split'):   # 23/10 : format split (A / B) et résultats « Hook démo » montrés en haut
             row['brick_combo']['split'] = j['split']; row['brick_combo']['hook_demos'] = j.get('hd') or []
     else:
