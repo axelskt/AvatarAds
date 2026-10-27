@@ -964,15 +964,49 @@
         return uid ? { userId: uid, name: txt(x.name, 60), ig: bxHandle(x.handle_ig), tt: bxHandle(x.handle_tt), claimed: bxCount(x.claimed),
           submitted: bxCount(x.submitted), expired: bxCount(x.expired), abandoned: bxCount(x.abandoned), reliability: bxRate(x.reliability),
           views: bxCount(x.views), validViews: bxCount(x.valid_views), vpp: bxNum(x.views_per_pub), medianH: bxNum(x.median_submit_hours),
-          pausedUntil: ms(x.paused_until) } : null;
+          pausedUntil: ms(x.paused_until),
+          // 27/10 (onglet BloxAI v2) : fiche du diffuseur — gagné = payé + en demande + solde non demandé ; réseaux publiés / reliés
+          pubs: bxCount(x.publications), firstAt: ms(x.first_at), networks: bxNetList(x.networks),
+          likes: bxCount(x.likes), comments: bxCount(x.comments), shares: bxCount(x.shares), saves: bxCount(x.saves),
+          earned: bxCount(x.earned_cents), paid: bxCount(x.paid_cents), requested: bxCount(x.requested_cents), balance: bxNum(x.balance_cents),
+          igOn: x.ig_connected === true, ttOn: x.tt_connected === true } : null;
       }).filter(Boolean) : null,
       byVf: byVf,
+      // 27/10 (onglet BloxAI v2) : un point par jour depuis la 1re inscription (6 mois au moins) — Performance et croissance
+      daily: bxDaily(b.daily),
+      // 27/10 : missions une par une (3 000 plus récentes) — Cycle d'une mission et fiche du diffuseur
+      missions: Array.isArray(b.missions_list) ? bxArr(b.missions_list, 3000).map(function (x) {
+        x = bxObj(x);
+        var id = bxId(x.id);
+        return id ? { id: id, missionId: bxId(x.mission_id), vf: bxVf(x.vf), userId: bxUid(x.user_id), name: txt(x.name, 60),
+          status: bxIn(x.status, ['active', 'submitted', 'abandoned', 'expired']), pub: bxIn(x.pub_status, BX_PUB_ST),
+          assigned: ms(x.assigned_at), downloaded: ms(x.downloaded_at), deadline: ms(x.deadline_at), submitted: ms(x.submitted_at),
+          ended: ms(x.ended_at), decided: ms(x.decided_at), networks: bxNetList(x.networks),
+          views: bxCount(x.views), validViews: bxCount(x.valid_views), likes: bxCount(x.likes), comments: bxCount(x.comments),
+          shares: bxCount(x.shares), saves: bxCount(x.saves), earned: bxNum(x.earned_cents) } : null;
+      }).filter(Boolean) : null,
       series: Array.isArray(b.series_30d) ? bxArr(b.series_30d, 400).map(function (d) {
         d = bxObj(d);
         return bxDay(d.day) ? { day: d.day, claimed: bxCount(d.claimed), submitted: bxCount(d.submitted), expired: bxCount(d.expired),
           abandoned: bxCount(d.abandoned), views: bxCount(d.views) } : null;
       }).filter(Boolean).sort(asc) : null
     };
+  }
+  function bxNetList(v) { return Array.isArray(v) ? v.map(function (n) { return bxIn(n, BX_NETS); }).filter(Boolean).filter(function (n, i, a) { return a.indexOf(n) === i; }) : []; }
+  // 27/10 : daily = { first_day, signups_before, days: [{ day, active, claimed, publications, signups, valid, refus, failed,
+  // views, likes, comments, shares, saves }] } (du plus ancien au plus récent) ; null = BloxAI d'avant le 27/10
+  function bxDaily(v) {
+    v = bxObj(v);
+    if (!Array.isArray(v.days)) return null;
+    var K = ['active', 'claimed', 'publications', 'signups', 'valid', 'refus', 'failed', 'views', 'likes', 'comments', 'shares', 'saves'];
+    var days = bxArr(v.days, 800).map(function (d) {
+      d = bxObj(d);
+      if (!bxDay(d.day)) return null;
+      var o = { day: d.day };
+      K.forEach(function (k) { o[k] = bxCount(d[k]) || 0; });
+      return o;
+    }).filter(Boolean).sort(function (a, b) { return a.day < b.day ? -1 : a.day > b.day ? 1 : 0; });
+    return { first: bxDay(v.first_day) ? v.first_day : null, before: bxCount(v.signups_before) || 0, days: days };
   }
   function loadBx(opts) {
     var force = !!(opts && opts.force), fresh = !!(opts && opts.fresh), S = CF.bx;

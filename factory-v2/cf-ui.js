@@ -244,7 +244,7 @@
     // Pipeline (Fabrication) : étape ouverte ('gen' | 'ready'), tuile / avatar / module choisis, période de la courbe des montages
     pipeStage: null, pipeVar: null, pipeAv: null, pipeMod: null, pipePer: '7j',
     // BloxAI (16/10, ex-TrackAds) : tri du classement, listes dépliées, actions en cours (clé → 1), dernier message
-    bx: { sort: 'fiab', allRank: false, allCheck: false, busy: {}, msg: null,
+    bx: { per: '28j', uper: 'all', view: 'combo', hidden: {}, mt: null, mAll: false, rsort: 'rate', allRank: false, allCheck: false, busy: {}, msg: null,
       // 18/10 (round 7, R7-16) : aperçus des pièces de l'Accueil (id → { state, url, kind, at, error }) et dernières décisions
       // (image détruite ou non, selon la réponse réelle de BloxAI)
       idPrev: {}, idDone: [] } };
@@ -2617,17 +2617,13 @@
   var BX_AST = { active: ['en cours', 'is-pend'], submitted: ['liens envoyés', 'is-ok'], abandoned: ['abandonnée', 'is-ko'], expired: ['échouée · 24 h dépassées', 'is-ko'] };
   var BX_PST = { verif: ['en suivi', 'is-pend'], valid: ['validée', 'is-ok'], refus: ['refusée', 'is-ko'] };
   var BX_NET = { instagram: ['Instagram', /(^|\.)instagram\.com$/i], tiktok: ['TikTok', /(^|\.)tiktok\.com$/i], youtube: ['YouTube', /(^|\.)(youtube\.com|youtu\.be)$/i] };
-  var BX_SORT = [['fiab', 'Fiabilité'], ['vues', 'Vues'], ['rapid', 'Rapidité']];
-  var BX_LIST_MAX = 15, BX_RANK_MAX = 20;
-  // Courbe des missions : 3 séries, palette catégorielle validée (validate_palette.js, toutes paires, CVD ΔE ≥ 9) ; une
-  // échelle par graphique (vues à part, jamais deux axes) ; légende avec totaux + bulle : jamais la couleur seule.
-  var BX_SER = [{ k: 'claimed', l: 'prises', c: '#2a78d6' }, { k: 'lost', l: 'échouées ou abandonnées', c: '#eb6834' }, { k: 'submitted', l: 'envoyées', c: '#1baf7a' }];
-  var bxCharts = {}, bxHot = false;
+  var BX_LIST_MAX = 15;
 
   function ensureBx() {
     if (CF.status !== 'ready') return;
     CF.loadBx();
     CF.loadProd();   // kit à programmer (factory_posts) et fiches des vidéos finales (VF)
+    bxIdPrevLoad(60);   // 27/10 : Paiements = mêmes aperçus (et loupe) que l'Accueil
   }
   function fEur(c) { return c == null ? null : fDec(c / 100, 2) + NB + '€'; }
   function bxN(v) { return v == null ? '—' : fInt(v); }
@@ -2867,15 +2863,397 @@
         : '<section class="cf-card">' + emptyLine('—', B.why) + '<button type="button" class="cf-btn is-sm cf-bx-go" data-act="bx-refresh">' + svg(IC.refresh, 13) + 'Réessayer</button></section>') + '</div>';
     }
     return '<div class="cf-prod cf-bx">' + head + top
-      + phead('01', 'Stock commun') + bxStockHTML(D)
-      + phead('02', 'Missions') + bxCycleHTML(D) + bxSeriesHTML(D)
-      + phead('03', 'À vérifier', 'liens collés par les diffuseurs') + bxCheckHTML(D)
-      + phead('04', 'Diffuseurs', 'inscriptions · classement') + bxUsersHTML(D) + bxRankHTML(D)
-      + phead('05', 'Paiements', 'pièces d’identité · versements') + '<div class="cf-prow2 is-b">' + bxIdHTML(D) + bxPayHTML(D) + '</div>'
+      + bxPerfHTML(D)
+      + bxMissionsHTML(D) + bxRankHTML2(D)
+      + phead('03', 'Stock commun') + bxStockHTML(D)
+      + phead('04', 'À vérifier') + bxCheckHTML(D)
+      + phead('05', 'Paiements') + '<div class="cf-prow2 is-b">' + bxIdHTML2(D) + bxPayHTML(D) + '</div>'
       + '</div>';
   }
 
-  // ── 01 · stock commun (missions BloxAI) et kit (factory_posts « à faire ») ──
+  // ══ 27/10 · onglet BloxAI refait d'après la maquette d'Axel (« Performance », « Missions », « Classement des users »,
+  // fiche diffuseur) — chaque chiffre a UNE place : plus de « Cycle des missions », « Sur 30 jours », « Diffuseurs » ni
+  // ancien classement (doublons). Données : daily / missions_list / ranking de bx_factory_stats (migration BloxAI 27/10).
+  var BX_PER = [['24h', '24' + NB + 'h', 1], ['7j', '7' + NB + 'j', 7], ['28j', '28' + NB + 'j', 28], ['6m', '6 mois', 182], ['all', 'All time', null]];
+  var BX_UPER = [['7j', '7' + NB + 'j', 7], ['28j', '28' + NB + 'j', 28], ['all', 'All time', null]];
+  var BX_PSER = [
+    { k: 'active', label: 'users actifs', c: 'var(--cf-c-pviews)', ic: IC.users },
+    { k: 'publications', label: 'publications', c: 'var(--cf-c-posts)', ic: IC.play },
+    { k: 'views', label: 'vues', c: 'var(--cf-c-views)', ic: IC.eye },
+    { k: 'likes', label: 'likes', c: 'var(--cf-c-reach)', ic: IC.heart },
+    { k: 'comments', label: 'commentaires', c: 'var(--cf-c-inter)', ic: IC.chat },
+    { k: 'saves', label: 'enreg.', c: 'var(--cf-c-engaged)', ic: IC.save },
+    { k: 'shares', label: 'partages', c: 'var(--cf-warn)', ic: IC.send }
+  ];
+  var BX_MT = [
+    { k: 'valid', label: 'Validées', c: 'var(--cf-ok)', bg: 'var(--cf-ok-bg)', ic: IC.check },
+    { k: 'active', label: 'En cours', c: 'var(--cf-warn)', bg: 'var(--cf-warn-bg)', ic: IC.clock },
+    { k: 'verif', label: 'À vérifier', c: 'var(--cf-c-inter)', bg: 'var(--cf-bx2-blue-bg)', ic: IC.search },
+    { k: 'refus', label: 'Refusées', c: 'var(--cf-c-reach)', bg: 'var(--cf-bx2-pink-bg)', ic: 'M18 6 6 18M6 6l12 12' },
+    { k: 'failed', label: 'Échouées', c: 'var(--cf-err)', bg: 'var(--cf-err-bg)', ic: IC.alert }
+  ];
+  var BX_MPILL = { valid: 'validée', active: 'en cours', verif: 'à vérifier', refus: 'refusée' };
+  var BX_RSORT = [['rate', 'Fiabilité'], ['views', 'Vues des publications'], ['perPub', 'Vues par publication'], ['speed', 'Rapidité']];
+  var BX_RANK_N = 10, BX_MLIST_N = 30;
+  var bxCur = null;   // courbe « Évolution » affichée, lue par la bulle de survol (sans redessiner l'onglet)
+
+  function bxPer() { var k = ui.bx.per || '28j'; return BX_PER.filter(function (p) { return p[0] === k; })[0] || BX_PER[2]; }
+  function bxEur(c) { return c == null ? '—' : fEur(Math.round(c)); }
+  // statut d'une mission pour les 5 cases du cycle : en cours, échouée (24 h dépassées ou abandonnée), puis selon ses liens
+  function bxMState(m) {
+    return m.status === 'active' ? 'active' : m.status === 'expired' || m.status === 'abandoned' ? 'failed'
+      : m.pub === 'valid' ? 'valid' : m.pub === 'refus' ? 'refus' : 'verif';
+  }
+  function bxRankBy(D) { var o = {}; (D.ranking || []).forEach(function (r) { o[r.userId] = r; }); return o; }
+  function bxWho(r, name) { var h = r && (r.tt || r.ig); return h ? '@' + h : name || (r && r.name) || 'diffuseur'; }
+  function bxNetPill(r) {
+    if (!r) return '';
+    var n = r.networks && r.networks.length ? r.networks[0] : r.ttOn || r.tt ? 'tiktok' : r.igOn || r.ig ? 'instagram' : null;
+    if (!n) return '';
+    var on = n === 'instagram' ? r.igOn : n === 'tiktok' ? r.ttOn : false;
+    return '<span class="cf-bx2-pill' + (on ? ' is-on' : '') + '">' + esc(BX_NET[n][0] + ' · ' + (on ? 'connecté' : 'public')) + '</span>';
+  }
+
+  // ── Performance : chiffres de la période, à partir du point par jour ──
+  function bxPerfModel(D) {
+    var Y = D.daily, P = bxPer(), days = Y ? Y.days : [], n = days.length;
+    var nd = P[2] == null ? n : Math.min(n, P[2]), sel = days.slice(n - nd);
+    var from = sel.length ? ymdDate(sel[0].day).getTime() - 12 * 36e5 : Date.now();
+    var sum = function (k, L) { return (L || sel).reduce(function (s, d) { return s + (d[k] || 0); }, 0); };
+    var users = {};
+    (D.missions || []).forEach(function (m) { if (m.assigned != null && m.assigned >= from && m.userId) users[m.userId] = 1; });
+    var c = { active: D.missions ? Object.keys(users).length : null, publications: sum('publications'), views: sum('views'), likes: sum('likes'),
+      comments: sum('comments'), saves: sum('saves'), shares: sum('shares') };
+    // vues par publication : missions envoyées sur la période (un lien par réseau)
+    var nPub = 0, vPub = 0;
+    (D.missions || []).forEach(function (m) { if (m.submitted != null && m.submitted >= from) { nPub += Math.max(1, m.networks.length); vPub += m.views || 0; } });
+    var dec = sum('valid') + sum('refus') + sum('failed');
+    var chart = sel.length >= 2 ? sel : days.slice(Math.max(0, n - 2));
+    return { Y: Y, P: P, sel: sel, chart: chart, from: from, c: c, lab: P[2] == null ? 'depuis le lancement' : 'sur ' + P[1],
+      nPub: nPub, vPub: vPub, rate: dec ? sum('valid') / dec : null, v24: days.length ? days[days.length - 1].views : null };
+  }
+  function bxPerfHTML(D) {
+    var R = bxPerfModel(D), hid = ui.bx.hidden || {};
+    var seg = '<div class="cf-seg" role="group" aria-label="Période">' + BX_PER.map(function (p) {
+      var on = p[0] === R.P[0];
+      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="bx-per" data-k="' + p[0] + '" aria-pressed="' + on + '">' + esc(p[1]) + '</button>';
+    }).join('') + '</div>';
+    var head = '<div class="cf-phead cf-bx2-ph"><span class="cf-pnum">01</span><h2 class="cf-ph2">Performance</h2><span class="cf-bx2-tools">'
+      + '<span class="cf-bx2-live"><i></i>vues 24' + NB + 'h · <b>' + esc(bxN(R.v24)) + '</b></span>' + seg + '</span></div>';
+    if (!R.Y) return head + '<section class="cf-card">' + emptyLine('—', 'courbes jour par jour ' + BX_NR) + '</section>';
+    var cards = '<div class="cf-icards cf-bx2-cards">' + BX_PSER.map(function (s) {
+      var v = R.c[s.k], on = !hid[s.k];
+      var sub = s.k === 'active' ? 'sur ' + bxN(D.users.total) + ' inscrits · ' + R.lab : s.k === 'publications' ? 'publiées ' + R.lab
+        : s.k === 'views' ? 'vues gagnées ' + R.lab : (R.c.views ? fPct(v, R.c.views) + ' des vues' : '—');
+      return '<button type="button" class="cf-icard ' + (on ? 'is-on' : 'is-off') + '" style="--c:' + s.c + '" data-act="bx-ser" data-k="' + s.k + '" aria-pressed="' + on + '">'
+        + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(s.ic, 14) + '</span><span class="cf-icard-l">' + esc(s.label) + '</span>'
+        + '<span class="cf-icard-ck" aria-hidden="true">' + (on ? svg('M5 12l5 5L20 7', 10) : '') + '</span></span>'
+        + '<span class="cf-icard-v' + (v == null ? ' is-na' : '') + '">' + esc(v == null ? '—' : v >= 1e4 ? fK(Math.round(v / 100) * 100).replace('.', ',') : fInt(v)) + '</span>'
+        + '<span class="cf-icard-s">' + esc(sub) + '</span></button>';
+    }).join('') + '</div>';
+    return head + '<section class="cf-bx2-perf">' + cards + bxEvoHTML(R) + bxRatesHTML(D, R) + bxGrowthHTML(D) + '</section>';
+  }
+  function bxEvoHTML(R) {
+    var view = ui.bx.view === 'detail' ? 'detail' : 'combo', hid = ui.bx.hidden || {};
+    var act = BX_PSER.filter(function (s) { return !hid[s.k]; });
+    var seg = '<div class="cf-seg" role="group" aria-label="Vue">' + [['combo', 'Combiné'], ['detail', 'Détail']].map(function (x) {
+      var on = x[0] === view;
+      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="bx-view" data-k="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>';
+    }).join('') + '</div>';
+    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Évolution · ' + esc(R.P[0] === 'all' ? 'depuis le lancement' : R.P[1]) + '</h3>' + seg + '</div>';
+    var L = R.chart, n = L.length;
+    var tot = R.c.views + R.c.likes + R.c.comments + R.c.saves + R.c.shares + R.c.publications;
+    if (!n || !tot && !R.c.active) { bxCur = null; return '<div class="cf-evo">' + head + '<div class="cf-evo-msg">Aucune activité sur la période.</div>' + bxEngHTML(R) + '</div>'; }
+    if (!act.length) { bxCur = null; return '<div class="cf-evo">' + head + '<div class="cf-evo-msg">Coche au moins une carte.</div>' + bxEngHTML(R) + '</div>'; }
+    var xi = [0, Math.round((n - 1) / 4), Math.round((n - 1) / 2), Math.round(3 * (n - 1) / 4), n - 1].filter(function (v, i, a) { return a.indexOf(v) === i; });
+    var xl = xi.map(function (i) { return '<span>' + esc(dm(ymdDate(L[i].day))) + '</span>'; }).join('');
+    if (view === 'detail') {
+      bxCur = null;
+      // barres : un point par jour jusqu'à 35 jours, sinon par semaine (lisible sur 6 mois)
+      var wk = n > 35, B = [];
+      if (wk) for (var i = 0; i < n; i += 7) B.push(L.slice(i, i + 7)); else B = L.map(function (d) { return [d]; });
+      var panels = act.map(function (s) {
+        // users actifs : max du groupe (une même personne active plusieurs jours n'est pas comptée plusieurs fois)
+        var vals = B.map(function (g) { return g.reduce(function (a, d) { return s.k === 'active' ? Math.max(a, d[s.k] || 0) : a + (d[s.k] || 0); }, 0); });
+        var mx = Math.max.apply(null, vals.concat([1]));
+        var bars = vals.map(function (v, j) {
+          var d0 = ymdDate(B[j][0].day), lab = wk ? 'semaine du ' + dm(d0) : d0.toLocaleDateString('fr-FR', { weekday: 'short' }) + ' ' + dm(d0);
+          return '<span class="cf-bx2-bar" title="' + esc(lab + ' : ' + fInt(v)) + '"><i style="height:' + (v / mx * 100).toFixed(1) + '%;opacity:' + (j === vals.length - 1 ? 1 : .55) + '"></i></span>';
+        }).join('');
+        var v = R.c[s.k];
+        return '<div class="cf-bx2-pan" style="--c:' + s.c + '"><div class="cf-bx2-pan-h"><span><i class="cf-sq" style="background:' + s.c + '"></i>' + esc(s.label) + '</span>'
+          + '<span><b>' + esc(v == null ? '—' : fInt(v)) + '</b><em>' + esc(R.lab) + '</em></span></div>'
+          + '<div class="cf-bx2-bars">' + bars + '</div>'
+          + '<div class="cf-bx2-px"><span>' + esc(dm(ymdDate(L[0].day))) + '</span><span>' + esc(dm(ymdDate(L[Math.floor((n - 1) / 2)].day))) + '</span><span>' + esc(dm(ymdDate(L[n - 1].day))) + '</span></div></div>';
+      }).join('');
+      return '<div class="cf-evo">' + head + '<div class="cf-bx2-pans">' + panels + '</div>' + bxEngHTML(R) + '</div>';
+    }
+    var max = 1;
+    act.forEach(function (s) { L.forEach(function (d) { if (d[s.k] > max) max = d[s.k]; }); });
+    var top = Math.max(2, Math.ceil(Math.log10(max + 1)));
+    var Yf = function (v) { return 300 - (Math.log10(Math.max(0, v) + 1) / top) * 290; };
+    var Xp = function (i) { return n > 1 ? i / (n - 1) * 1000 : 500; };
+    var paths = act.map(function (s) {
+      var d = L.map(function (x, i) { return (i ? 'L' : 'M') + Xp(i).toFixed(1) + ',' + Yf(x[s.k] || 0).toFixed(1); }).join(' ');
+      return '<path d="' + d + '" style="stroke:' + s.c + '" fill="none" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    }).join('');
+    var ticks = []; for (var e = 0; e <= top; e++) { var tv = e ? Math.pow(10, e) : 0; ticks.push({ label: e ? fK(tv) : '0', top: Yf(tv) / 3 }); }
+    var y = ticks.map(function (t) { return '<span style="top:' + t.top.toFixed(2) + '%">' + esc(t.label) + '</span>'; }).join('');
+    var grid = ticks.map(function (t, i) { return '<i class="cf-evo-grid' + (i ? '' : ' is-zero') + '" style="top:' + t.top.toFixed(2) + '%"></i>'; }).join('');
+    var lg = BX_PSER.map(function (s) {
+      var v = R.c[s.k];
+      return '<div class="cf-evo-lg' + (hid[s.k] ? ' is-off' : '') + '"><span class="cf-sq" style="background:' + s.c + '"></span><b>' + esc(v == null ? '—' : fInt(v)) + '</b><span>' + esc(s.label) + '</span></div>';
+    }).join('');
+    bxCur = { L: L, n: n, act: act, Y: Yf };
+    return '<div class="cf-evo">' + head
+      + '<div class="cf-evo-body"><div class="cf-evo-y" aria-hidden="true">' + y + '</div><div class="cf-evo-main">'
+      + '<div class="cf-evo-plot" data-chart="bx" role="img" aria-label="Activité BloxAI jour par jour, échelle logarithmique">' + grid
+      + '<svg class="cf-evo-svg" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">' + paths + '</svg>'
+      + '<div class="cf-evo-hover" hidden></div></div>'
+      + '<div class="cf-evo-x" aria-hidden="true">' + xl + '</div>'
+      + '</div><div class="cf-evo-legend"><div class="cf-over">total période</div>' + lg + '</div></div>' + bxEngHTML(R) + '</div>';
+  }
+  // bulle : valeur du jour + cumul depuis le début de la période
+  function bxEvoHover(plot, clientX) {
+    var ch = bxCur;
+    if (!ch || ch.n < 1) return;
+    var r = plot.getBoundingClientRect();
+    if (!r.width) return;
+    var i = Math.max(0, Math.min(ch.n - 1, ch.n > 1 ? Math.round((clientX - r.left) / r.width * (ch.n - 1)) : 0));
+    var box = plot.querySelector('.cf-evo-hover');
+    if (!box || (box._i === i && !box.hidden)) return;
+    box._i = i;
+    var x = ch.n > 1 ? i / (ch.n - 1) * 100 : 50, dots = '', rows = '';
+    ch.act.forEach(function (s) {
+      var v = ch.L[i][s.k] || 0, cum = 0;
+      for (var q = 0; q <= i; q++) cum += ch.L[q][s.k] || 0;
+      dots += '<span class="cf-evo-dot" style="left:' + x + '%;top:' + (ch.Y(v) / 3).toFixed(2) + '%;background:' + s.c + '"></span>';
+      rows += '<div class="cf-evo-tr"><span><span class="cf-sq" style="background:' + s.c + '"></span>' + esc(s.label) + '</span><span>' + esc(fInt(v)) + '</span><b>' + esc(s.k === 'active' ? '—' : fInt(cum)) + '</b></div>';
+    });
+    var d = ymdDate(ch.L[i].day);
+    box.innerHTML = '<span class="cf-evo-vl" style="left:' + x + '%"></span>' + dots
+      + '<div class="cf-evo-tip"><div class="cf-evo-tr is-h"><span>' + esc(d.toLocaleDateString('fr-FR', { weekday: 'short' }) + ' ' + dm(d)) + '</span><span>jour</span><span>cumul</span></div>' + rows + '</div>';
+    box.hidden = false;
+    var tip = box.querySelector('.cf-evo-tip'), W = r.width, w = tip.offsetWidth, px = x / 100 * W;
+    tip.style.left = Math.max(0, Math.min(W - w, px + 12 + w <= W ? px + 12 : px - 12 - w)) + 'px';
+  }
+  function bxEngHTML(R) {
+    var c = R.c, it = c.likes + c.comments + c.saves + c.shares;
+    var segs = [['likes', 'likes', 'var(--cf-c-reach)'], ['comments', 'commentaires', 'var(--cf-c-inter)'], ['saves', 'enreg.', 'var(--cf-c-engaged)'], ['shares', 'partages', 'var(--cf-warn)']];
+    var bar = it ? segs.map(function (s) { return c[s[0]] ? '<span style="width:' + (c[s[0]] / it * 100).toFixed(2) + '%;background:' + s[2] + '"></span>' : ''; }).join('') : '';
+    var lg = segs.map(function (s) { return '<span><i class="cf-sq" style="background:' + s[2] + '"></i>' + esc(s[1] + ' · ' + (it ? fShare(c[s[0]] / it * 100) : '—')) + '</span>'; }).join('');
+    return '<div class="cf-bx2-eng"><div class="cf-bx2-eng-k"><span class="cf-meta">engagement / vues</span><b>' + esc(c.views ? fPct(it, c.views) : '—') + '</b>'
+      + '<span class="cf-meta">' + esc(fInt(c.publications) + ' ' + plural(c.publications, 'publication') + ' ' + R.lab) + '</span></div>'
+      + '<div class="cf-bx2-eng-b"><div class="cf-stack">' + (bar || '<span style="width:100%;background:var(--cf-track)"></span>') + '</div><div class="cf-bx2-eng-l">' + lg + '</div></div></div>';
+  }
+  function bxRatesHTML(D, R) {
+    var RK = D.ranking || [], sold = 0, req = 0, earned = 0;
+    RK.forEach(function (r) { sold += Math.max(0, r.balance || 0); req += r.requested || 0; earned += r.earned || 0; });
+    var paid = D.money ? D.money.paid : null, perPub = R.nPub ? R.vPub / R.nPub : null, best = 0;
+    RK.forEach(function (r) { if (r.vpp != null && r.vpp > best) best = r.vpp; });
+    var card = function (ic, l, v, cls, bar, sub) {
+      return '<div class="cf-bx2-rate"><span class="cf-bx2-rate-ic">' + svg(ic, 15) + '</span><span class="cf-meta">' + esc(l) + '</span>'
+        + '<b class="' + cls + '">' + esc(v) + '</b><span class="cf-bx2-rate-bar"><i style="width:' + Math.max(0, Math.min(100, bar * 100)).toFixed(1) + '%"></i></span>'
+        + '<span class="cf-meta">' + esc(sub) + '</span></div>';
+    };
+    return '<div class="cf-bx2-rates">'
+      + card('M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6', 'Solde non demandé', bxEur(sold), 'is-acc', earned ? sold / earned : 0,
+        'à verser (demandes en attente) : ' + bxEur(req) + ' · déjà payé ' + bxEur(paid))
+      + card(IC.eye, 'Vues par publication', perPub == null ? '—' : fInt(Math.round(perPub)), '', best ? perPub / best : 0,
+        fInt(R.nPub) + ' ' + plural(R.nPub, 'publication') + ' · ' + R.lab)
+      + card(IC.check, 'Taux de réussite', R.rate == null ? '—' : fDec(R.rate * 100, 1) + NB + '%', '', R.rate || 0, R.lab)
+      + '</div>';
+  }
+  // croissance des inscrits (cumul) : par jour sur 7 j, par semaine sur 28 j, par mois depuis le lancement
+  function bxGrowthHTML(D) {
+    var Y = D.daily, k = ui.bx.uper || 'all', P = BX_UPER.filter(function (p) { return p[0] === k; })[0] || BX_UPER[2];
+    var seg = '<div class="cf-seg is-sm" role="group" aria-label="Période des inscriptions">' + BX_UPER.map(function (p) {
+      var on = p[0] === P[0];
+      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="bx-uper" data-k="' + p[0] + '" aria-pressed="' + on + '">' + esc(p[1]) + '</button>';
+    }).join('') + '</div>';
+    var days = Y ? Y.days : [], cum = [], acc = Y ? Y.before : 0;
+    days.forEach(function (d) { acc += d.signups; cum.push({ day: d.day, v: acc }); });
+    var pts = [];
+    if (P[0] === '7j') pts = cum.slice(-8);
+    else if (P[0] === '28j') { for (var i = cum.length - 1; i >= 0 && pts.length < 5; i -= 7) pts.unshift(cum[i]); }
+    else {
+      var seen = {};
+      cum.forEach(function (c2) { if (c2.v || Object.keys(seen).length) seen[c2.day.slice(0, 7)] = c2; });
+      pts = Object.keys(seen).sort().map(function (m) { return seen[m]; });
+      if (pts.length) pts.unshift({ day: pts[0].day, v: Y.before + 0, start: true });
+    }
+    var now = cum.length ? cum[cum.length - 1].v : D.users.total, first = pts.length ? pts[0].v : 0;
+    var delta = P[0] === 'all' ? '+' + fInt(now - (Y ? Y.before : 0)) + ' depuis le lancement' : fSigned(now - first) + ' sur ' + P[1];
+    var mx = Math.max.apply(null, pts.map(function (p) { return p.v; }).concat([1])), n = pts.length;
+    var X = function (i) { return n > 1 ? i / (n - 1) * 1000 : 500; }, Yv = function (v) { return 190 - v / mx * 170; };
+    var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Yv(p.v).toFixed(1); }).join(' ');
+    var area = n ? line + ' L1000,200 L0,200 Z' : '';
+    var dots = pts.map(function (p, i) {
+      var l = (n > 1 ? i / (n - 1) * 100 : 50).toFixed(2) + '%', t = (Yv(p.v) / 2).toFixed(2) + '%';
+      return '<i class="cf-bx2-gdot" style="left:' + l + ';top:' + t + '"></i><span class="cf-bx2-gv" style="left:' + l + ';top:' + t + '">' + esc(fInt(p.v)) + '</span>';
+    }).join('');
+    var xl = pts.map(function (p) {
+      var d = ymdDate(p.day);
+      return '<span>' + esc(P[0] === 'all' ? (p.start ? 'début' : d.toLocaleDateString('fr-FR', { month: 'short' })) : dm(d)) + '</span>';
+    }).join('');
+    return '<div class="cf-card cf-bx2-grow"><div class="cf-bx2-grow-h"><div><h3 class="cf-h2">Croissance users</h3><span class="cf-meta">BloxAI · cumulé</span>' + seg + '</div>'
+      + '<div class="cf-bx2-grow-n"><b>' + esc(bxN(now)) + '</b><span class="cf-meta">' + esc(delta) + '</span></div></div>'
+      + (n < 2 ? '<div class="cf-evo-msg">Pas encore assez d’inscriptions pour une courbe.</div>'
+        : '<div class="cf-bx2-gplot"><svg viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="' + area + '" class="cf-bx2-garea"/><path d="' + line + '" class="cf-bx2-gline" vector-effect="non-scaling-stroke"/></svg>' + dots + '</div>'
+          + '<div class="cf-evo-x">' + xl + '</div>')
+      + '</div>';
+  }
+
+  // ── Missions : 5 cases cliquables (liste de la case ouverte) + barre de répartition ──
+  function bxMissionsHTML(D) {
+    var M = D.missions, by = bxRankBy(D);
+    var head = '<div class="cf-phead"><span class="cf-pnum">02</span><h2 class="cf-ph2">Missions BloxAI</h2></div>';
+    if (!M) return head + '<section class="cf-card">' + emptyLine('—', 'missions ' + BX_NR) + '</section>';
+    var cnt = { valid: 0, active: 0, verif: 0, refus: 0, failed: 0 };
+    M.forEach(function (m) { cnt[bxMState(m)]++; });
+    var Y = D.daily, d28 = Y ? Y.days.slice(-28) : [], s = function (k) { return d28.reduce(function (a, d) { return a + d[k]; }, 0); };
+    var dec = s('valid') + s('refus') + s('failed'), rate = dec ? fDec(s('valid') / dec * 100, 1) + NB + '%' : '—';
+    var open = ui.bx.mt && cnt[ui.bx.mt] != null ? ui.bx.mt : null;
+    var tiles = '<div class="cf-bx2-mts">' + BX_MT.map(function (t) {
+      var on = t.k === open;
+      return '<button type="button" class="cf-bx2-mt' + (on ? ' is-on' : '') + '" style="--c:' + t.c + ';--bg:' + t.bg + '" data-act="bx-mt" data-k="' + t.k + '" aria-pressed="' + on + '">'
+        + '<span class="cf-bx2-mt-h"><span class="cf-bx2-mt-ic">' + svg(t.ic, 16) + '</span><b>' + esc(fInt(cnt[t.k])) + '</b></span>'
+        + '<span class="cf-bx2-mt-l">' + esc(t.label) + '</span></button>';
+    }).join('') + '</div>';
+    var tot = M.length;
+    var segs = '<div class="cf-bx2-msegs" aria-hidden="true">' + BX_MT.map(function (t) {
+      return cnt[t.k] ? '<span style="flex:' + cnt[t.k] + ';background:' + t.c + '"></span>' : '';
+    }).join('') + (tot ? '' : '<span style="flex:1;background:var(--cf-track)"></span>') + '</div>';
+    var list = '';
+    if (open) {
+      var L = M.filter(function (m) { return bxMState(m) === open; }), all = ui.bx.mAll, shown = all ? L : L.slice(0, BX_MLIST_N);
+      var T = BX_MT.filter(function (t) { return t.k === open; })[0];
+      list = '<div class="cf-over cf-bx2-mlt">' + esc('missions ' + T.label.toLowerCase()) + '</div>'
+        + (L.length ? '<div class="cf-bx2-mlist"><div class="cf-bx2-mrow is-h"><span>User</span><span>Vidéo</span><span>Prise</span><span>Statut</span><span>Délai 24' + NB + 'h</span></div>'
+          + shown.map(function (m) { return bxMRow(m, by[m.userId], open); }).join('') + '</div>'
+          + (L.length > BX_MLIST_N ? '<button type="button" class="cf-btn is-sm cf-bx2-more" data-act="bx-mall">' + esc(all ? 'Réduire' : 'Voir les ' + fInt(L.length) + ' missions') + '</button>' : '')
+          : '<div class="cf-empty-s cf-dashed">Aucune mission ' + esc(T.label.toLowerCase()) + '.</div>');
+    }
+    return head + '<section class="cf-card cf-bx2-missions"><div class="cf-bx2-mh"><h3 class="cf-h2">Cycle d’une mission</h3>'
+      + '<span class="cf-bx2-mtot"><b>' + esc(fInt(tot)) + '</b><span class="cf-meta">' + esc(plural(tot, 'mission') + ' · réussite sur 28' + NB + 'j : ' + rate) + '</span></span></div>'
+      + tiles + segs + list + '</section>';
+  }
+  function bxDelay(m) {
+    var H = 36e5, span = m.deadline != null && m.assigned != null ? m.deadline - m.assigned : 24 * H;
+    if (m.status === 'expired') return { w: 1, c: 'var(--cf-err)', t: 'expirée' };
+    if (m.status === 'abandoned') return { w: 1, c: 'var(--cf-err)', t: 'abandonnée' };
+    if (m.status === 'active') {
+      var left = m.deadline != null ? m.deadline - Date.now() : null;
+      return { w: left == null ? 0 : 1 - Math.max(0, left) / span, c: 'var(--cf-warn)', t: left == null ? 'en cours' : 'reste ' + fHours(Math.max(0, left) / H) };
+    }
+    var used = m.submitted != null && m.assigned != null ? m.submitted - m.assigned : null;
+    return { w: used == null ? 0 : Math.min(1, used / span), c: 'var(--cf-ok)', t: used == null ? 'URL collée' : 'URL collée en ' + fHours(used / H) };
+  }
+  function bxMRow(m, r, st) {
+    var T = BX_MT.filter(function (t) { return t.k === st; })[0], d = bxDelay(m);
+    var pill = st === 'failed' ? (m.status === 'abandoned' ? 'abandonnée' : 'échouée') : BX_MPILL[st];
+    return '<div class="cf-bx2-mrow"><span class="cf-bx2-u"><button type="button" class="cf-bx2-ulink" data-act="bx-user" data-uid="' + esc(m.userId || '') + '">' + esc(bxWho(r, m.name)) + '</button>'
+      + '<span class="cf-meta">' + esc('M-' + String(m.missionId || m.id).padStart(4, '0')) + '</span></span>'
+      + '<span>' + bxVfChip(m.vf) + '</span>'
+      + '<span class="cf-meta">' + esc(m.assigned != null ? ago(m.assigned) : '—') + '</span>'
+      + '<span><span class="cf-bx2-st" style="--c:' + T.c + ';--bg:' + T.bg + '">' + esc(pill) + '</span></span>'
+      + '<span class="cf-bx2-dl"><span class="cf-bx2-dbar"><i style="width:' + (d.w * 100).toFixed(1) + '%;background:' + d.c + '"></i></span><span class="cf-meta">' + esc(d.t) + '</span></span></div>';
+  }
+
+  // ── Classement des users : 4 tris, 10 lignes (puis tous), un clic ouvre la fiche ──
+  function bxRankStats(r) {
+    var fin = (r.submitted || 0) + (r.expired || 0) + (r.abandoned || 0);
+    return { rate: r.reliability != null ? r.reliability : fin ? (r.submitted || 0) / fin : null, perPub: r.vpp != null ? r.vpp : r.pubs ? (r.views || 0) / r.pubs : null };
+  }
+  function bxRankHTML2(D) {
+    var R = D.ranking, srt = ui.bx.rsort || 'rate';
+    var seg = '<div class="cf-seg" role="group" aria-label="Tri du classement">' + BX_RSORT.map(function (x) {
+      var on = x[0] === srt;
+      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="bx-rsort" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
+    }).join('') + '</div>';
+    var head = '<div class="cf-card-h"><div><h3 class="cf-h2">Classement des users</h3></div></div>' + seg;
+    if (!R) return '<section class="cf-card">' + head + emptyLine('—', 'classement ' + BX_NR) + '</section>';
+    if (!R.length) return '<section class="cf-card">' + head + '<div class="cf-empty-s cf-dashed">Aucun user BloxAI n’a encore pris de mission.</div></section>';
+    var nn = function (v, d) { return v == null ? d : v; };
+    var L = R.map(function (r) { return { r: r, s: bxRankStats(r) }; }).sort(function (a, b) {
+      if (srt === 'views') return nn(b.r.views, -1) - nn(a.r.views, -1);
+      if (srt === 'perPub') return nn(b.s.perPub, -1) - nn(a.s.perPub, -1);
+      if (srt === 'speed') return nn(a.r.medianH, Infinity) - nn(b.r.medianH, Infinity) || nn(b.s.rate, -1) - nn(a.s.rate, -1);
+      return nn(b.s.rate, -1) - nn(a.s.rate, -1) || nn(b.r.pubs, -1) - nn(a.r.pubs, -1) || nn(b.r.views, -1) - nn(a.r.views, -1);
+    });
+    var shown = ui.bx.allRank ? L : L.slice(0, BX_RANK_N);
+    var rows = shown.map(function (x, i) {
+      var r = x.r, s = x.s, rc = s.rate == null ? 'var(--cf-mute-3)' : s.rate >= .85 ? 'var(--cf-ok)' : s.rate >= .6 ? 'var(--cf-warn)' : 'var(--cf-err)';
+      var pause = r.pausedUntil != null && r.pausedUntil > Date.now() ? '<span class="cf-bx2-pill is-ko">en pause</span>' : '';
+      var rate = s.rate == null ? '—' : fDec(s.rate * 100, 0) + NB + '%';
+      return '<button type="button" class="cf-bx2-rrow" data-act="bx-user" data-uid="' + esc(r.userId) + '">'
+        + '<span class="cf-bx2-rn' + (i < 3 ? ' is-top' : '') + '">#' + (i + 1) + '</span>'
+        + '<span class="cf-bx2-u"><b>' + esc(bxWho(r)) + '</b>' + bxNetPill(r) + pause + '</span>'
+        + '<span class="cf-bx2-c is-r" data-c="pubs">' + esc(bxN(r.pubs)) + '</span>'
+        + '<span class="cf-bx2-c" data-c="rate"><span class="cf-bx2-dbar"><i style="width:' + ((s.rate || 0) * 100).toFixed(1) + '%;background:' + rc + '"></i></span><span class="cf-meta">' + esc(rate) + '</span></span>'
+        + '<span class="cf-bx2-c is-r cf-meta" data-c="delay">' + esc(r.medianH == null ? '—' : fHours(r.medianH)) + '</span>'
+        + '<span class="cf-bx2-c is-r is-b" data-c="views">' + esc(bxN(r.views)) + '</span>'
+        + '<span class="cf-bx2-c is-r cf-meta" data-c="vpp">' + esc(s.perPub == null ? '—' : fInt(Math.round(s.perPub))) + '</span>'
+        + '<span class="cf-bx2-c is-r is-b is-acc" data-c="pay">' + esc(bxEur(r.balance)) + '</span>'
+        + '<span class="cf-bx2-rsub cf-meta">' + esc(fInt(r.pubs || 0) + ' ' + plural(r.pubs || 0, 'publication') + ' · réussite ' + rate + ' · délai moy. '
+          + (r.medianH == null ? '—' : fHours(r.medianH)) + ' · ' + (s.perPub == null ? '—' : fInt(Math.round(s.perPub))) + ' vues par publication') + '</span></button>';
+    }).join('');
+    return '<section class="cf-card cf-bx2-rank">' + head + '<div class="cf-bx2-rlist"><div class="cf-bx2-rrow is-h"><span>#</span><span>user</span><span class="is-r" data-c="pubs">publications</span>'
+      + '<span data-c="rate">réussite</span><span class="is-r" data-c="delay">délai moy.</span><span class="is-r" data-c="views">vues des publications</span>'
+      + '<span class="is-r" data-c="vpp">vues par publication</span><span class="is-r" data-c="pay">solde non demandé</span></div>' + rows + '</div>'
+      + (L.length > BX_RANK_N ? '<button type="button" class="cf-btn is-sm cf-bx2-more" data-act="bx-all-rank">' + esc(ui.bx.allRank ? 'Réduire' : 'Voir les ' + fInt(L.length) + ' users') + '</button>' : '')
+      + '</section>';
+  }
+
+  // ── Fiche d'un user (fenêtre) : chiffres, gagné = payé + en demande + solde, vues par mission, historique ──
+  function bxUserSheetHTML(uid) {
+    var D = CF.bx.data, r = D && (D.ranking || []).filter(function (x) { return x.userId === uid; })[0];
+    var M = D && D.missions ? D.missions.filter(function (m) { return m.userId === uid; }) : [];
+    if (!D || (!r && !M.length)) return '<h2 class="cf-h2" id="cfModalTitle">User introuvable</h2><p class="cf-dim">Il n’est plus dans les données BloxAI : actualise l’onglet.</p>';
+    var name = M.length ? M[0].name : r && r.name;
+    var cnt = { valid: 0, failed: 0 }, H = 36e5;
+    M.forEach(function (m) { var s = bxMState(m); if (cnt[s] != null) cnt[s]++; });
+    var s = r ? bxRankStats(r) : { rate: null, perPub: null }, first = r && r.firstAt != null ? r.firstAt : M.length ? M[M.length - 1].assigned : null;
+    var nets = r && r.networks.length ? r.networks.map(function (n) { return BX_NET[n][0]; }).join(' · ') : '';
+    var t = function (v, l, cls) { return '<div class="cf-bx2-ut' + (cls ? ' ' + cls : '') + '"><b>' + esc(v) + '</b><span>' + esc(l) + '</span></div>'; };
+    var na = function (v) { return v == null ? '—' : fInt(v); };
+    var stats = '<div class="cf-bx2-uts">' + t(fInt(cnt.valid), 'validées', 'is-ok') + t(fInt(cnt.failed), 'échouées', 'is-ko')
+      + t(s.rate == null ? '—' : fDec(s.rate * 100, 0) + NB + '%', 'taux de réussite') + t(r && r.medianH != null ? fHours(r.medianH) : '—', 'délai moyen de publication')
+      + t(fInt(M.length), 'missions totales') + t(na(r && r.views), 'vues des publications') + t(s.perPub == null ? '—' : fInt(Math.round(s.perPub)), 'vues par publication')
+      + t(na(r && r.likes), 'likes') + t(na(r && r.comments), 'commentaires') + t(na(r && r.shares), 'partages') + t(na(r && r.saves), 'enreg.') + '</div>';
+    var pay = r ? '<div class="cf-bx2-ueq">' + [[bxEur(r.earned), 'gagné', ''], ['=', null], [bxEur(r.paid), 'déjà payé', ''], ['+', null], [bxEur(r.requested), 'en demande', ''], ['+', null], [bxEur(Math.max(0, r.balance || 0)), 'solde non demandé', 'is-acc']]
+      .map(function (x) { return x[1] == null ? '<span class="cf-bx2-op">' + x[0] + '</span>' : '<div class="cf-bx2-ue ' + x[2] + '"><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></div>'; }).join('') + '</div>' : '';
+    var C = M.slice().reverse(), mx = Math.max.apply(null, C.map(function (m) { return m.views || 0; }).concat([1]));
+    var bars = C.length ? '<div class="cf-over">vues des publications par mission</div><div class="cf-bx2-ubars">' + C.map(function (m) {
+      var st = bxMState(m), fail = st === 'failed', v = m.views || 0;
+      return '<span class="cf-bx2-ubar" title="' + esc((m.vf || 'VF ?') + ' · ' + (m.assigned != null ? dm(new Date(m.assigned)) : '') + ' · ' + fInt(v) + ' vues' + (m.earned ? ' · ' + bxEur(m.earned) : '')) + '">'
+        + '<em>' + (fail ? '×' : esc(fInt(v))) + '</em><i class="' + (fail ? 'is-fail' : '') + '" style="height:' + (fail ? 2 : Math.max(2, v / mx * 100)).toFixed(1) + '%"></i></span>';
+    }).join('') + '</div>' : '';
+    var hist = M.length ? '<div class="cf-over">historique des missions</div><div class="cf-bx2-hist">' + M.map(function (m) {
+      var st = bxMState(m), T = BX_MT.filter(function (x) { return x.k === st; })[0];
+      var pill = st === 'failed' ? (m.status === 'abandoned' ? 'abandonnée' : 'échouée') : BX_MPILL[st];
+      var del = st === 'active' ? bxDelay(m).t : st === 'failed' ? (m.status === 'abandoned' ? 'rendue' : 'aucune URL à temps')
+        : m.submitted != null && m.assigned != null ? 'postée en ' + fHours((m.submitted - m.assigned) / H) : 'postée';
+      return '<div class="cf-bx2-hr"><span class="cf-meta">' + esc(m.assigned != null ? dm(new Date(m.assigned)) : '—') + '</span><span>' + bxVfChip(m.vf) + '</span>'
+        + '<span class="cf-bx2-st" style="--c:' + T.c + ';--bg:' + T.bg + '">' + esc(pill) + '</span><span class="cf-meta">' + esc(del) + '</span>'
+        + '<b>' + esc(fInt(m.views || 0)) + '</b><span class="cf-bx2-hpay">' + esc(m.earned ? bxEur(m.earned) : '—') + '</span></div>';
+    }).join('') + '</div>' : '<div class="cf-empty-s cf-dashed">Aucune mission pour l’instant.</div>';
+    return '<div class="cf-bx2-uh"><h2 class="cf-h2" id="cfModalTitle">' + esc(bxWho(r, name)) + '</h2>' + (nets ? '<span class="cf-bx2-pill">' + esc(nets) + '</span>' : '') + '</div>'
+      + '<div class="cf-meta">' + esc(fInt(M.length) + ' ' + plural(M.length, 'mission') + (first != null ? ' · première ' + ago(first) : '')) + '</div>'
+      + stats + pay + bars + hist;
+  }
+
+  // ── Paiements : pièces (aperçu + loupe, comme l'Accueil) et versements ──
+  function bxIdHTML2(D) {
+    var L = D.identity;
+    var head = bxHead('Pièces et justificatifs', '', L ? L.length : null)
+      + (D.identityUndeleted ? '<div class="cf-bx-why is-warn">' + esc(D.identityUndeleted + ' ' + plural(D.identityUndeleted, 'copie déjà décidée', 'copies déjà décidées') + ' encore dans le stockage BloxAI : nouvel essai automatique') + '</div>' : '');
+    if (!L) return '<section class="cf-card" data-block="bx-id">' + head + emptyLine('—', 'pièces d’identité ' + BX_NR) + '</section>';
+    if (!L.length) return '<section class="cf-card" data-block="bx-id">' + head + '<div class="cf-empty-s cf-dashed">Aucune pièce à vérifier.</div></section>';
+    return '<section class="cf-card cf-idh" data-block="bx-id">' + head + '<div class="cf-idh-list">' + L.map(homeIdRow).join('') + '</div></section>';
+  }
+
+  // ── 03 · stock commun (missions BloxAI) et kit (factory_posts « à faire ») ──
   function bxStockHTML(D) {
     var K = D.stock, St = D.settings, PS = CF.prod, PD = PS.data, kitT = PD ? PD.qc.kitTodo : null;
     var kitV = PD ? (kitT == null ? '—' : fInt(kitT)) : (PS.loading || PS.state === 'idle' ? '…' : '—');
@@ -2893,105 +3271,6 @@
     return '<section class="cf-card" data-block="bx-stock">' + chead('Stock commun et kit') + tiles + '</section>';   // Axel 27/10 : sans texte d'aide ni réglages
   }
 
-  // ── 02 · cycle des missions + publications des diffuseurs ──
-  function bxCycleHTML(D) {
-    var A = D.asg, P = D.pub, d24 = A.d24;
-    var fin = A.submitted != null && A.expired != null && A.abandoned != null ? A.submitted + A.expired + A.abandoned : null;
-    var k = '<div class="cf-mkpis">'
-      + bxKpi('active', 'En cours', bxN(A.active), A.active == null ? BX_NR : (A.downloadedActive == null ? '' : 'dont ' + fInt(A.downloadedActive) + ' ' + plural(A.downloadedActive, 'téléchargée') + ' · ') + '24' + NB + 'h pour publier')
-      + bxKpi('submitted', 'Envoyées', bxN(A.submitted), A.submitted == null ? BX_NR : 'liens collés à temps')
-      + bxKpi('verif', 'En suivi', bxN(P.verif), P.verif == null ? BX_NR : 'publications · ' + bxN(bxToCheckN(D)) + ' à vérifier')
-      + bxKpi('valid', 'Validées', bxN(P.valid), P.valid == null ? BX_NR : 'publications · vues comptées')
-      + bxKpi('refus', 'Refusées', bxN(P.refus), P.refus == null ? BX_NR : 'publications refusées (motif)')
-      + bxKpi('expired', 'Échouées', bxN(A.expired), A.expired == null ? BX_NR : 'délai de 24' + NB + 'h dépassé')
-      + bxKpi('abandoned', 'Abandonnées', bxN(A.abandoned), A.abandoned == null ? BX_NR : 'rendues par le diffuseur')
-      + bxKpi('rate', 'Réussite', fin ? fPct(A.submitted, fin) : '—', fin == null ? BX_NR : fin ? 'envoyées ÷ missions terminées' : 'aucune mission terminée')
-      + '</div>';
-    var d = [[d24.claimed, 'prise', 'prises'], [d24.submitted, 'envoyée', 'envoyées'], [d24.expired, 'échouée', 'échouées'], [d24.abandoned, 'abandonnée', 'abandonnées']];
-    var last = 'Dernières 24' + NB + 'h : ' + d.map(function (x) { return x[0] == null ? '— ' + x[2] : fInt(x[0]) + ' ' + plural(x[0], x[1], x[2]); }).join(' · ');
-    var eng = '<div class="cf-mkpis">' + [['views', 'Vues', P.views], ['validViews', 'Vues validées', P.validViews], ['likes', 'Likes', P.likes], ['comments', 'Commentaires', P.comments],
-      ['shares', 'Partages', P.shares], ['saves', 'Enregistrements', P.saves]].map(function (x) {
-      return bxKpi(x[0], x[1], bxN(x[2]), x[2] == null ? BX_NR : x[0] === 'validViews' ? 'comptées dans les gains' : 'toutes publications');
-    }).join('') + '</div>';
-    return '<section class="cf-card" data-block="bx-cycle">' + chead('Cycle des missions') + k   // Axel 27/10 : sans le schéma des 4 étapes
-      + '<div class="cf-meta">' + esc(last) + '</div></section>'
-      + '<section class="cf-card" data-block="bx-pubs">' + chead('Publications des diffuseurs', 'vues relues sur Instagram, TikTok et YouTube') + eng + '</section>';
-  }
-
-  // ── 02 · séries 30 j : missions par jour (lignes) et vues par jour (barres), une échelle chacune ──
-  function bxXLabels(days, n) {
-    return '<div class="cf-mx">' + [0, Math.round((n - 1) / 2), n - 1].filter(function (k, j, a) { return a.indexOf(k) === j; })
-      .map(function (k) { return '<span>' + esc(dm(ymdDate(days[k]))) + '</span>'; }).join('') + '</div>';
-  }
-  function bxBars(key, title, days, vals, unit) {
-    var n = days.length, known = vals.filter(function (v) { return v != null; });
-    var tot = known.reduce(function (a, v) { return a + v; }, 0), mx = Math.max(1, Math.max.apply(null, known.concat([0])));
-    bxCharts[key] = { n: n, days: days, bars: true, rows: [{ l: unit[1], c: 'var(--cf-accent)', v: vals }] };
-    return '<div class="cf-mchart"><div class="cf-mchart-h"><span class="cf-mchart-t">' + esc(title) + '</span><span class="cf-meta">' + esc(known.length ? fInt(tot) + ' ' + plural(tot, unit[0], unit[1]) + ' sur ' + n + NB + 'j' : BX_NR) + '</span></div>'
-      + '<div class="cf-mplot cf-bxplot is-bars" data-bx="' + key + '" role="img" aria-label="' + esc(title + ' : ' + fInt(tot) + ' ' + plural(tot, unit[0], unit[1]) + ' sur ' + n + ' jours, maximum ' + fInt(mx) + ' par jour') + '">'
-      + '<span class="cf-bx-ymax" aria-hidden="true">' + esc(fInt(mx)) + '</span>'
-      + '<div class="cf-bx-bars" aria-hidden="true">' + vals.map(function (v) {
-        return '<i' + (v == null ? ' class="is-na"' : '') + ' style="height:' + (v ? Math.max(2, v / mx * 100) : 0).toFixed(1) + '%"></i>';
-      }).join('') + '</div><div class="cf-bxhover" hidden></div></div>' + bxXLabels(days, n) + '</div>';
-  }
-  function bxSeriesHTML(D) {
-    var ser = D.series, head = chead('Sur 30 jours');
-    if (!ser) return '<section class="cf-card" data-block="bx-series">' + head + emptyLine('—', 'série 30' + NB + 'j ' + BX_NR) + '</section>';
-    if (!ser.length) return '<section class="cf-card" data-block="bx-series">' + head + '<div class="cf-empty-s">Aucun jour dans la série.</div></section>';
-    var n = ser.length, days = ser.map(function (x) { return x.day; });
-    var z = function (v) { return v == null ? 0 : v; };
-    var vals = { claimed: ser.map(function (x) { return z(x.claimed); }), submitted: ser.map(function (x) { return z(x.submitted); }),
-      lost: ser.map(function (x) { return z(x.expired) + z(x.abandoned); }) };
-    var tot = function (k) { return vals[k].reduce(function (a, x) { return a + x; }, 0); };
-    var top = Math.max(1, Math.max.apply(null, vals.claimed.concat(vals.submitted, vals.lost))), mx = top * 1.15;
-    var X = function (i) { return n > 1 ? i / (n - 1) * 1000 : 500; }, Y = function (v) { return 150 - v / mx * 150; };
-    var paths = BX_SER.map(function (s2) {
-      return '<path d="' + vals[s2.k].map(function (v, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ')
-        + '" fill="none" stroke="' + s2.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
-    }).join('');
-    bxCharts.miss = { n: n, days: days, bars: false, rows: [
-      { l: 'prises', c: BX_SER[0].c, v: vals.claimed }, { l: 'envoyées', c: BX_SER[2].c, v: vals.submitted },
-      { l: 'échouées ou abandonnées', c: BX_SER[1].c, v: vals.lost },
-      { l: '· échouées', sub: true, v: ser.map(function (x) { return x.expired; }) }, { l: '· abandonnées', sub: true, v: ser.map(function (x) { return x.abandoned; }) }] };
-    var legend = '<div class="cf-bx-leg">' + BX_SER.map(function (s2) {
-      return '<span><i style="background:' + s2.c + '"></i>' + esc(s2.l) + ' <b>' + esc(fInt(tot(s2.k))) + '</b></span>';
-    }).join('') + '</div>';
-    var miss = '<div class="cf-mchart"><div class="cf-mchart-h"><span class="cf-mchart-t">Missions par jour</span></div>' + legend
-      + '<div class="cf-mplot cf-bxplot" data-bx="miss" role="img" aria-label="' + esc('Missions par jour sur ' + n + ' jours : ' + fInt(tot('claimed')) + ' prises, ' + fInt(tot('submitted')) + ' envoyées, ' + fInt(tot('lost')) + ' échouées ou abandonnées') + '">'
-      + '<span class="cf-bx-ymax" aria-hidden="true">' + esc(fInt(top)) + '</span><div class="cf-mgrid" aria-hidden="true"><i></i><i></i><i></i></div>'
-      + '<svg viewBox="0 0 1000 150" preserveAspectRatio="none" aria-hidden="true" focusable="false">' + paths + '</svg><div class="cf-bxhover" hidden></div></div>'
-      + bxXLabels(days, n) + '</div>';
-    return '<section class="cf-card" data-block="bx-series">' + head + '<div class="cf-bx-charts">' + miss
-      + bxBars('views', 'Vues par jour', days, ser.map(function (x) { return x.views; }), ['vue', 'vues']) + '</div></section>';
-  }
-  // bulle d'une courbe BloxAI : le jour survolé (souris ou doigt), sans redessiner le panneau
-  function bxHover(plot, clientX) {
-    var ch = bxCharts[plot.getAttribute('data-bx')];
-    if (!ch || !ch.n) return;
-    var rc = plot.getBoundingClientRect();
-    if (!rc.width) return;
-    var f = Math.max(0, Math.min(1, (clientX - rc.left) / rc.width));
-    var i = ch.bars ? Math.min(ch.n - 1, Math.floor(f * ch.n)) : Math.round(f * (ch.n - 1));
-    var box = plot.querySelector('.cf-bxhover');
-    if (!box || (box._i === i && !box.hidden)) return;
-    box._i = i;
-    var x = ch.bars ? (i + 0.5) / ch.n * 100 : ch.n > 1 ? i / (ch.n - 1) * 100 : 50;
-    box.innerHTML = '<span class="cf-mvl" style="left:' + x.toFixed(2) + '%"></span><div class="cf-mtip" style="left:' + x.toFixed(2) + '%;transform:translateX(' + (i > ch.n / 2 ? 'calc(-100% - 12px)' : '12px') + ')">'
-      + '<span class="cf-mtip-d">' + esc(dmy(ymdDate(ch.days[i]))) + '</span>'
-      + ch.rows.map(function (r) {
-        var v = r.v[i];
-        return '<span class="cf-mtip-r' + (r.sub ? ' is-gap' : '') + '"><span>' + (r.c ? '<i style="background:' + r.c + '"></i>' : '') + esc(r.l) + '</span><b>' + esc(v == null ? '—' : fInt(v)) + '</b></span>';
-      }).join('') + '</div>';
-    box.hidden = false;
-    bxHot = true;
-  }
-  function bxHide() {
-    bxHot = false;
-    [].forEach.call(document.querySelectorAll('.cf-bxhover'), function (b) { b.hidden = true; b._i = null; });
-  }
-
-  // ── 03 · à vérifier : liens en attente de vérification, puis en suivi pas encore regardés (du plus ancien au plus récent),
-  //    puis les derniers refus ──
   function bxCheckRow(x, D) {
     var net = BX_NET[x.network], u = safeUrl(x.url || '', net[1]), k = 'pub:' + x.id, dis = bxDis(k);
     var t = x.created != null ? new Date(x.created) : null, end = bxTrackEnd(x, D), live = bxTracking(x, D);
@@ -3071,73 +3350,7 @@
   }
 
   // ── 04 · diffuseurs : inscriptions et classement ──
-  function bxUsersHTML(D) {
-    var U = D.users, sg = U.signups;
-    var tiles = '<div class="cf-stiles">'
-      + bxTile('total', bxN(U.total), 'Inscrits', U.total == null ? BX_NR : 'comptes BloxAI', 'is-acc')
-      + bxTile('onboarded', bxN(U.onboarded), 'Profil terminé', U.onboarded == null ? BX_NR : 'peuvent demander une mission', '')
-      + bxTile('active7', bxN(U.active7), 'Actifs · 7' + NB + 'j', U.active7 == null ? BX_NR : 'ont pris une mission', '')
-      + bxTile('ig', bxN(U.ig), 'Instagram relié', U.ig == null ? BX_NR : 'connexion directe', '')
-      + bxTile('tt', bxN(U.tt), 'TikTok relié', U.tt == null ? BX_NR : 'connexion directe', '')
-      + bxTile('paused', bxN(U.paused), 'En pause', U.paused == null ? BX_NR : 'après trop d’échecs en 7' + NB + 'j', U.paused ? 'is-err' : '')
-      + '</div>';
-    var chart = !sg ? emptyLine('—', 'inscriptions par jour ' + BX_NR) : !sg.length ? '<div class="cf-empty-s">Aucune inscription sur 30' + NB + 'j.</div>'
-      : bxBars('signups', 'Inscriptions par jour', sg.map(function (x) { return x.day; }), sg.map(function (x) { return x.n; }), ['inscription', 'inscriptions']);
-    return '<section class="cf-card" data-block="bx-users">' + chead('Diffuseurs') + tiles + chart + '</section>';
-  }
-  function bxRankRow(x, i) {
-    var hs = [x.ig ? 'IG @' + x.ig : '', x.tt ? 'TikTok @' + x.tt : ''].filter(Boolean).join(' · ') || 'aucun compte relié';
-    var pause = x.pausedUntil != null && x.pausedUntil > Date.now() ? '<span class="cf-qchip is-ko">' + esc('en pause jusqu’au ' + dm(new Date(x.pausedUntil)) + ' à ' + hm(new Date(x.pausedUntil))) + '</span>' : '';
-    var m = function (k, v, l) { return '<span class="cf-bx-rk-m" data-m="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span>' + esc(l) + '</span></span>'; };
-    var mis = [[x.claimed, 'prise', 'prises'], [x.submitted, 'envoyée', 'envoyées'], [x.expired, 'échouée', 'échouées'], [x.abandoned, 'abandonnée', 'abandonnées']]
-      .map(function (y) { return y[0] == null ? '— ' + y[2] : fInt(y[0]) + ' ' + plural(y[0], y[1], y[2]); }).join(' · ');
-    return '<div class="cf-bx-rk"><span class="cf-bx-rk-n">' + (i + 1) + '</span>'
-      + '<span class="cf-bx-main"><b>' + esc(x.name || 'diffuseur') + '</b><span class="cf-meta">' + esc(hs) + '</span><span class="cf-meta">' + esc(mis) + '</span>' + pause + '</span>'
-      + m('fiab', x.reliability == null ? '—' : fDec(x.reliability * 100, 0) + NB + '%', 'fiabilité')
-      + m('vues', bxN(x.views), x.validViews == null ? 'vues' : 'vues · ' + fInt(x.validViews) + ' validées')
-      + m('vpp', x.vpp == null ? '—' : fInt(x.vpp), 'vues / publication')
-      + m('rapid', x.medianH == null ? '—' : fHours(x.medianH), 'délai médian') + '</div>';
-  }
-  function bxRankHTML(D) {
-    var R = D.ranking, srt = ui.bx.sort;
-    var seg = '<div class="cf-seg" role="group" aria-label="Tri du classement">' + BX_SORT.map(function (x) {
-      var on = x[0] === srt;
-      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="bx-sort" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
-    }).join('') + '</div>';
-    var head = chead('Classement des diffuseurs', '', seg);
-    if (!R) return '<section class="cf-card" data-block="bx-rank">' + head + emptyLine('—', 'classement ' + BX_NR) + '</section>';
-    if (!R.length) return '<section class="cf-card" data-block="bx-rank">' + head + '<div class="cf-empty-s cf-dashed">Aucun diffuseur n’a encore pris de mission.</div></section>';
-    var nn = function (v, dflt) { return v == null ? dflt : v; };
-    var L = R.slice().sort(function (a, b) {
-      if (srt === 'vues') return nn(b.views, -1) - nn(a.views, -1);
-      if (srt === 'rapid') return nn(a.medianH, Infinity) - nn(b.medianH, Infinity) || nn(b.reliability, -1) - nn(a.reliability, -1);
-      return nn(b.reliability, -1) - nn(a.reliability, -1) || nn(b.views, -1) - nn(a.views, -1);
-    });
-    var shown = ui.bx.allRank ? L : L.slice(0, BX_RANK_MAX);
-    return '<section class="cf-card" data-block="bx-rank">' + head + '<div class="cf-bx-list">' + shown.map(bxRankRow).join('') + '</div>'
-      + (L.length > BX_RANK_MAX ? '<button type="button" class="cf-link-btn" data-act="bx-all-rank">' + esc(ui.bx.allRank ? 'Réduire le classement' : 'Voir les ' + L.length + ' diffuseurs') + '</button>' : '')
-      + '</section>';
-  }
-
   // ── 05 · pièces d'identité (avant le premier versement) et versements ──
-  function bxIdHTML(D) {
-    var L = D.identity;
-    var head = bxHead('Pièces et justificatifs', '', L ? L.length : null)
-      + (D.identityUndeleted ? '<div class="cf-bx-why is-warn">' + esc(D.identityUndeleted + ' ' + plural(D.identityUndeleted, 'copie déjà décidée', 'copies déjà décidées') + ' encore dans le stockage BloxAI : nouvel essai automatique') + '</div>' : '');
-    if (!L) return '<section class="cf-card" data-block="bx-id">' + head + emptyLine('—', 'pièces d’identité ' + BX_NR) + '</section>';
-    if (!L.length) return '<section class="cf-card" data-block="bx-id">' + head + '<div class="cf-empty-s cf-dashed">Aucune pièce à vérifier.</div></section>';
-    return '<section class="cf-card" data-block="bx-id">' + head + '<div class="cf-bx-list">' + L.map(function (x) {
-      var k = 'id:' + x.id, dis = bxDis(k), kv = bxDis('idv:' + x.id), t = x.created != null ? new Date(x.created) : null;
-      // 18/10 (round 6, R2) : nom légal déclaré à la 1re acceptation des conditions (non modifiable) et nom déclaré actuel,
-      // à comparer avec la pièce avant « Valider »
-      return '<div class="cf-bx-row is-id" data-idrow="' + esc(x.id) + '" data-kind="' + esc(x.kind) + '"><span class="cf-bx-main"><b>' + esc(x.name || 'diffuseur') + '</b>'
-        + '<span class="cf-meta">' + esc([bxIdLabel(x), x.email || 'e-mail inconnu', t ? 'déposé le ' + dmy(t) + ' à ' + hm(t) : 'date inconnue'].join(' · ')) + '</span>'
-        + bxDeclLines(x) + bxIdExtra(x) + '</span>'
-        + '<span class="cf-bx-acts"><button type="button" class="cf-btn is-sm" data-act="bx-id-view" data-id="' + esc(x.id) + '"' + kv + '>' + svg(IC.eye, 12) + (ui.bx.busy['idv:' + x.id] ? 'Ouverture…' : 'Voir') + '</button>'
-        + '<button type="button" class="cf-btn is-sm is-ko" data-act="bx-id-ko" data-id="' + esc(x.id) + '"' + dis + '>Refuser</button>'
-        + '<button type="button" class="cf-btn is-sm is-okb" data-act="bx-id-ok" data-id="' + esc(x.id) + '"' + dis + '>' + svg(IC.check, 12) + (ui.bx.busy[k] ? 'Enregistrement…' : 'Valider') + '</button></span></div>';
-    }).join('') + '</div></section>';
-  }
   // 25/10 : type de la demande (pièce d'identité recto + verso / passeport, ou justificatif de domicile)
   function bxIdLabel(x) {
     if (x.kind === 'address') return 'Justificatif de domicile';
@@ -3186,8 +3399,8 @@
       schedule();
     });
   }
-  function bxIdPrevLoad() {
-    var D = CF.bx.data, L = D && D.identity ? D.identity.slice(0, BX_PREV_MAX) : [], P = ui.bx.idPrev, on = {};
+  function bxIdPrevLoad(max) {
+    var D = CF.bx.data, L = D && D.identity ? D.identity.slice(0, max || BX_PREV_MAX) : [], P = ui.bx.idPrev, on = {};
     L.forEach(function (x) { on[x.id] = 1; });
     Object.keys(P).forEach(function (id) { if (!on[id]) delete P[id]; });   // pièce décidée ou sortie de la liste : URL oubliée
     L.forEach(function (x) {
@@ -3242,9 +3455,8 @@
   function bxIban(s) { return String(s).replace(/(.{4})(?=.)/g, '$1 '); }
   function bxPayHTML(D) {
     var M = D.money, P = M.payouts;
-    var k = function (c, l) { return '<div class="cf-pay-k"><b class="' + (c ? 'is-v' : '') + '">' + esc(c == null ? '—' : fEur(c)) + '</b><span>' + esc(l) + '</span></div>'; };
-    var head = bxHead('Versements', '', P ? P.length : null)
-      + '<div class="cf-pay-ks cf-bx-payks">' + k(M.validated, 'Gains validés') + k(M.paid, 'Déjà versé') + k(M.unpaid, 'Solde non versé') + '</div>';
+    // 27/10 : plus de résumé gains / déjà versé / solde ici (doublon de la carte « Solde non demandé » de Performance)
+    var head = bxHead('Versements', '', P ? P.length : null);
     if (!P) return '<section class="cf-card" data-block="bx-pay">' + head + emptyLine('—', 'versements ' + BX_NR) + '</section>';
     var defer = bxDeferHTML(M.deferred);
     if (!P.length) return '<section class="cf-card" data-block="bx-pay">' + head + '<div class="cf-empty-s cf-dashed">Aucun versement à faire.</div>' + defer + '</section>';   // defer : reportés et gelés (18/10)
@@ -5308,11 +5520,13 @@
       box.classList.toggle('is-wide', wide);
       // fiche brique / rendu vidéo de la Production : fenêtre de la maquette (padding 22, fermeture 32 px alignée sur le titre,
       // centrée aussi sur téléphone)
-      var sheet = !!(ui.modal && !wide && (ui.modal.brick || ui.modal.video || ui.modal.vf || ui.modal.asm || ui.modal.fmtEx));
+      var sheet = !!(ui.modal && !wide && (ui.modal.brick || ui.modal.video || ui.modal.vf || ui.modal.asm || ui.modal.fmtEx || ui.modal.bxUser));
+      box.classList.toggle('is-bxu', !!(ui.modal && ui.modal.bxUser && !ui.modal.brick));
       box.classList.toggle('is-sheet', sheet);
       box.classList.toggle('is-vf', !!(ui.modal && !wide && (ui.modal.vf || ui.modal.asm) && !ui.modal.brick));   // fiche vidéo finale / assemblage : 560 px (maquette)
       $('cfModal').classList.toggle('is-center', sheet);
     }
+    if (ui.modal.bxUser) { setHTML($('cfModalBody'), bxUserSheetHTML(ui.modal.bxUser)); return; }   // 27/10 : fiche d'un user BloxAI
     if (ui.modal.brick) { setHTML($('cfModalBody'), brickSheetHTML(ui.modal.brick)); return; }
     if (ui.modal.asm) { setHTML($('cfModalBody'), asmSheetHTML(ui.modal.asm)); return; }
     if (ui.modal.qc) { renderQcModal(); return; }
@@ -5445,8 +5659,15 @@
       else if (act === 'net-more') { ui.netN = (ui.netN || 5) + 10; schedule(); }
       // ── onglet BloxAI (16/10) : lecture, tri, listes, décisions d'administration (motif ou confirmation dans le clic) ──
       else if (act === 'bx-refresh') CF.loadBx({ force: true, fresh: true });
-      else if (act === 'bx-sort') { var bs = el.getAttribute('data-k'); if (BX_SORT.some(function (x) { return x[0] === bs; })) { ui.bx.sort = bs; render(); } }
+      else if (act === 'bx-per') { var bp2 = el.getAttribute('data-k'); if (BX_PER.some(function (x) { return x[0] === bp2; })) { ui.bx.per = bp2; render(); } }
+      else if (act === 'bx-uper') { var bu = el.getAttribute('data-k'); if (BX_UPER.some(function (x) { return x[0] === bu; })) { ui.bx.uper = bu; render(); } }
+      else if (act === 'bx-view') { ui.bx.view = el.getAttribute('data-k') === 'detail' ? 'detail' : 'combo'; render(); }
+      else if (act === 'bx-ser') { var bk = el.getAttribute('data-k'); ui.bx.hidden = ui.bx.hidden || {}; ui.bx.hidden[bk] = !ui.bx.hidden[bk]; render(); }
+      else if (act === 'bx-mt') { var mk = el.getAttribute('data-k'); ui.bx.mt = ui.bx.mt === mk ? null : mk; ui.bx.mAll = false; render(); }
+      else if (act === 'bx-mall') { ui.bx.mAll = !ui.bx.mAll; render(); }
+      else if (act === 'bx-rsort') { var rs = el.getAttribute('data-k'); if (BX_RSORT.some(function (x) { return x[0] === rs; })) { ui.bx.rsort = rs; render(); } }
       else if (act === 'bx-all-rank') { ui.bx.allRank = !ui.bx.allRank; render(); }
+      else if (act === 'bx-user') { var uid = el.getAttribute('data-uid'); if (uid) { if (ui.modal) { ui.modal = { bxUser: uid }; renderModal(); } else openModal({ bxUser: uid }, el); } }
       else if (act === 'bx-all-check') { ui.bx.allCheck = !ui.bx.allCheck; render(); }
       else if (act === 'bx-pub-ok') bxPubDecide(el.getAttribute('data-id'), 'validate');
       else if (act === 'bx-pub-frozen') bxPubDecide(el.getAttribute('data-id'), 'validate_frozen');
@@ -5561,14 +5782,12 @@
     });
 
     // Bulle des courbes (Évolution du Compte, Activité de l'Auto-DM) : souris et doigt, sans redessiner le panneau.
-    var hover = function (plot, x) { var t = plot.getAttribute('data-chart'); if (t === 'dm') dmHover(plot, x); else if (t === 'net') netHover(plot, x); else evoHover(plot, x); };
+    var hover = function (plot, x) { var t = plot.getAttribute('data-chart'); if (t === 'dm') dmHover(plot, x); else if (t === 'net') netHover(plot, x); else if (t === 'bx') bxEvoHover(plot, x); else evoHover(plot, x); };
     document.addEventListener('mousemove', function (e) {
       var plot = e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
-      if (plot) hover(plot, e.clientX); else if (evoCur || dmCur) evoHide();
+      if (plot) hover(plot, e.clientX); else if (evoCur || dmCur || bxCur || netCur) evoHide();
       var mp = e.target && e.target.closest ? e.target.closest('.cf-mplot:not(.cf-bxplot)') : null;   // courbe des montages (pipeline)
       if (mp) montHover(mp, e.clientX); else if (montCur && montCur.hot) montHide();
-      var bp = e.target && e.target.closest ? e.target.closest('.cf-bxplot') : null;   // courbes BloxAI (16/10)
-      if (bp) bxHover(bp, e.clientX); else if (bxHot) bxHide();
       idLoupe(e);
     });
     // Loupe des pièces d'identité (Axel 27/10) : au survol d'une image, un rond grossi (×3 au moins, jusqu'à la taille réelle de la photo) suit la souris. Posé sur <body>
@@ -5593,11 +5812,9 @@
     document.addEventListener('scroll', function () { if (loupe) loupe.style.display = 'none'; }, true);
     var onTouch = function (e) {
       var t = e.touches && e.touches[0], plot = t && e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
-      if (plot) hover(plot, t.clientX); else if (evoCur || dmCur) evoHide();
+      if (plot) hover(plot, t.clientX); else if (evoCur || dmCur || bxCur || netCur) evoHide();
       var mp = t && e.target && e.target.closest ? e.target.closest('.cf-mplot:not(.cf-bxplot)') : null;
       if (mp) montHover(mp, t.clientX); else if (montCur && montCur.hot) montHide();
-      var bp = t && e.target && e.target.closest ? e.target.closest('.cf-bxplot') : null;
-      if (bp) bxHover(bp, t.clientX); else if (bxHot) bxHide();
     };
     document.addEventListener('touchstart', onTouch, { passive: true });
     document.addEventListener('touchmove', onTouch, { passive: true });
