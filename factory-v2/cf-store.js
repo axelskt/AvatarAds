@@ -131,6 +131,7 @@
     boot: { t0: Date.now(), step: 'démarrage', stepAt: Date.now(), net: null },   // 07/10 : étape du démarrage (écran d'accès)
     tts: newSlot(),   // 07/10 : stats TikTok (tiktok-auth?action=stats) — @, abonnés, likes, vues de chaque vidéo
     fmt: newSlot(),   // 24/10 : catalogue des formats + leurs stats (RPC factory_format_stats)
+    carte: newSlot(),   // 27/10 : Carte des briques (RPC factory_carte_data, construite par cf-carte.js)
     bx: newSlot(),    // 16/10 : BloxAI (stock commun, missions, diffuseurs, versements) — edge bloxai?action=stats
     oauth: null,
     tkOauth: null,
@@ -156,6 +157,7 @@
     loadProd: loadProd,
     loadProviders: loadProviders,
     loadFormats: loadFormats,
+    loadCarte: loadCarte,
     loadYt: loadYt,
     loadTk: loadTk,
     loadTts: loadTts,
@@ -211,7 +213,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
-  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.tts = newSlot(); CF.bx = newSlot(); CF.fmt = newSlot(); CF.oauth = null; CF.tkOauth = null; CF.ttsOauth = null; }
+  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.tts = newSlot(); CF.bx = newSlot(); CF.fmt = newSlot(); CF.carte = newSlot(); CF.oauth = null; CF.tkOauth = null; CF.ttsOauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -1756,6 +1758,36 @@
     })();
     inflight.fmt = p;
     emit('fmt');
+    return p;
+  }
+
+  // 27/10 : Carte des briques — données brutes (briques, clips, vidéos, stats Instagram, formats), lues à l'ouverture de
+  // l'onglet Carte seulement (~1 Mo) ; le graphe est construit par CFCarte.build avec la matrice hook → liaison
+  function loadCarte(opts) {
+    var force = !!(opts && opts.force), S = CF.carte;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    if (inflight.carte) return inflight.carte;
+    if (!force && isFresh(S)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      var patch;
+      logNet('rpc factory_carte_data');
+      try {
+        var r = await sb.rpc('factory_carte_data');
+        var d = r.data;
+        if (r.error) patch = { state: 'error', kind: 'rpc', error: 'factory_carte_data : ' + errText(r.error) };
+        else if (!d || typeof d !== 'object' || d.error) patch = { state: 'error', kind: 'rpc', error: d && d.error === 'forbidden' ? 'réservé au propriétaire' : 'factory_carte_data : réponse vide' };
+        else patch = { state: 'ready', kind: null, error: null, data: { fetchedAt: Date.now(), raw: d } };
+      } catch (e) { patch = { state: 'error', kind: 'http', error: 'factory_carte_data : ' + errText(e) }; }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.carte === p) delete inflight.carte;
+      emit('carte');
+      return S;
+    })();
+    inflight.carte = p;
+    emit('carte');
     return p;
   }
 

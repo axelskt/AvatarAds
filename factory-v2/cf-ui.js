@@ -331,8 +331,9 @@
       if (ui.tab === 'compte') ensureCompte();
       else if (ui.tab === 'dm') ensureDm();
       else if (ui.tab === 'home') ensureHome();
-      else if (ui.tab === 'prod') ensureProd();
+      else if (ui.tab === 'prod') { ensureProd(); if (ui.brTab === 'carte') CF.loadCarte(); }
       else if (ui.tab === 'trackads') ensureBx();
+      carteMount();
     } else if (ui.modal) {
       closeModal();
     }
@@ -1492,7 +1493,7 @@
       + pipeHTML(M) + qcFileHTML(M)
       + '<div class="cf-prow2 is-b">' + perfCardHTML('top') + perfCardHTML('low') + '</div>'
       + phead('03', 'Formats', '') + fmtHTML()
-      + phead('04', 'Briques', 'bibliothèque · assemblages · fraîcheur')
+      + phead('04', 'Briques', 'bibliothèque · assemblages · fraîcheur · carte')
       + bricksTabHTML(M) + '</div>';
   }
 
@@ -2268,12 +2269,27 @@
   }
 
   // ── 03 · Briques : Bibliothèque · Assemblages (recettes de hooks) · Fraîcheur ──
+  // Carte des briques : UN canvas pour toute la session (animation, caméra, sélection gardées), replacé dans l'emplacement
+  // de l'onglet après chaque rendu du panneau ; graphe reconstruit seulement quand de nouvelles données arrivent
+  var carte = null, carteData = null;
+  function carteMount() {
+    var slot = ui.tab === 'prod' && ui.brTab === 'carte' ? document.querySelector('.cf-carte-slot') : null;
+    if (!slot) return;
+    if (!window.CFCarte) { slot.textContent = 'Carte indisponible : script cf-carte.js non chargé.'; return; }
+    if (!carte) carte = window.CFCarte.create();
+    if (carte.el.parentNode !== slot) slot.appendChild(carte.el);
+    var S = CF.carte;
+    if (S.data && S.data !== carteData) { carteData = S.data; carte.setData(window.CFCarte.build(S.data.raw, window.CF_HOOK_LIAISON || {})); }
+    else if (!S.data) carte.setLoading(S.state === 'error' ? 'Carte illisible : ' + S.error : 'Chargement des briques…');
+  }
   function bricksTabHTML(M) {
-    var tabs = [['lib', 'Bibliothèque'], ['rec', 'Assemblages'], ['fresh', 'Fraîcheur']];
+    var tabs = [['lib', 'Bibliothèque'], ['rec', 'Assemblages'], ['fresh', 'Fraîcheur'], ['carte', 'Carte']];
     var seg = '<div class="cf-btabs" role="group" aria-label="Briques">' + tabs.map(function (x) {
       var on = x[0] === ui.brTab;
       return '<button type="button" class="cf-btab' + (on ? ' is-on' : '') + '" data-act="br-tab" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
     }).join('') + '</div>';
+    // 27/10 : Carte des briques (cf-carte.js) — un emplacement vide, le canvas y est replacé après chaque rendu (carteMount)
+    if (ui.brTab === 'carte') return '<div class="cf-bricks">' + seg + '<div class="cf-carte-slot" data-block="bricks-carte"></div></div>';
     var body = !M.D ? naBody(M) : ui.brTab === 'rec' ? recipesHTML(M) : ui.brTab === 'fresh' ? freshHTML(M) : libHTML(M);
     var cls = ui.brTab === 'rec' && M.D ? ' cf-asm' : ui.brTab === 'lib' ? ' cf-lib' : '';
     return '<div class="cf-bricks">' + seg + '<section class="cf-card' + cls + '" data-block="bricks-' + ui.brTab + '">' + body + '</section></div>';
@@ -2946,8 +2962,10 @@
       var sub = s.k === 'active' ? 'sur ' + bxN(D.users.total) + ' inscrits · ' + R.lab : s.k === 'publications' ? 'publiées ' + R.lab
         : s.k === 'views' ? 'vues gagnées ' + R.lab : (R.c.views ? fPct(v, R.c.views) + ' des vues' : '—');
       return '<button type="button" class="cf-icard ' + (on ? 'is-on' : 'is-off') + '" style="--c:' + s.c + '" data-act="bx-ser" data-k="' + s.k + '" aria-pressed="' + on + '">'
-        + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(s.ic, 14) + '</span><span class="cf-icard-l">' + esc(s.label) + '</span>'
+        // libellé sur sa propre ligne, sous l'icône (maquette) : jamais coupé par la coche
+        + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(s.ic, 14) + '</span>'
         + '<span class="cf-icard-ck" aria-hidden="true">' + (on ? svg('M5 12l5 5L20 7', 10) : '') + '</span></span>'
+        + '<span class="cf-bx2-cl">' + esc(s.label) + '</span>'
         + '<span class="cf-icard-v' + (v == null ? ' is-na' : '') + '">' + esc(v == null ? '—' : v >= 1e4 ? fK(Math.round(v / 100) * 100).replace('.', ',') : fInt(v)) + '</span>'
         + '<span class="cf-icard-s">' + esc(sub) + '</span></button>';
     }).join('') + '</div>';
@@ -3172,8 +3190,12 @@
       return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="bx-rsort" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
     }).join('') + '</div>';
     var head = '<div class="cf-card-h"><div><h3 class="cf-h2">Classement des users</h3></div></div>' + seg;
-    if (!R) return '<section class="cf-card">' + head + emptyLine('—', 'classement ' + BX_NR) + '</section>';
-    if (!R.length) return '<section class="cf-card">' + head + '<div class="cf-empty-s cf-dashed">Aucun user BloxAI n’a encore pris de mission.</div></section>';
+    if (!R) return '<section class="cf-card cf-bx2-rank">' + head + emptyLine('—', 'classement ' + BX_NR) + '</section>';
+    // en-tête du tableau, même quand il est vide (délimitation de la maquette)
+    var thead = '<div class="cf-bx2-rrow is-h"><span>#</span><span>user</span><span class="is-r" data-c="pubs">publications</span>'
+      + '<span data-c="rate">réussite</span><span class="is-r" data-c="delay">délai moy.</span><span class="is-r" data-c="views">vues des publications</span>'
+      + '<span class="is-r" data-c="vpp">vues par publication</span><span class="is-r" data-c="pay">solde non demandé</span></div>';
+    if (!R.length) return '<section class="cf-card cf-bx2-rank">' + head + '<div class="cf-bx2-rlist">' + thead + '<div class="cf-bx2-rempty">Aucun user BloxAI n’a encore pris de mission.</div></div></section>';
     var nn = function (v, d) { return v == null ? d : v; };
     var L = R.map(function (r) { return { r: r, s: bxRankStats(r) }; }).sort(function (a, b) {
       if (srt === 'views') return nn(b.r.views, -1) - nn(a.r.views, -1);
@@ -3198,9 +3220,7 @@
         + '<span class="cf-bx2-rsub cf-meta">' + esc(fInt(r.pubs || 0) + ' ' + plural(r.pubs || 0, 'publication') + ' · réussite ' + rate + ' · délai moy. '
           + (r.medianH == null ? '—' : fHours(r.medianH)) + ' · ' + (s.perPub == null ? '—' : fInt(Math.round(s.perPub))) + ' vues par publication') + '</span></button>';
     }).join('');
-    return '<section class="cf-card cf-bx2-rank">' + head + '<div class="cf-bx2-rlist"><div class="cf-bx2-rrow is-h"><span>#</span><span>user</span><span class="is-r" data-c="pubs">publications</span>'
-      + '<span data-c="rate">réussite</span><span class="is-r" data-c="delay">délai moy.</span><span class="is-r" data-c="views">vues des publications</span>'
-      + '<span class="is-r" data-c="vpp">vues par publication</span><span class="is-r" data-c="pay">solde non demandé</span></div>' + rows + '</div>'
+    return '<section class="cf-card cf-bx2-rank">' + head + '<div class="cf-bx2-rlist">' + thead + rows + '</div>'
       + (L.length > BX_RANK_N ? '<button type="button" class="cf-btn is-sm cf-bx2-more" data-act="bx-all-rank">' + esc(ui.bx.allRank ? 'Réduire' : 'Voir les ' + fInt(L.length) + ' users') + '</button>' : '')
       + '</section>';
   }
@@ -3259,16 +3279,20 @@
     var kitV = PD ? (kitT == null ? '—' : fInt(kitT)) : (PS.loading || PS.state === 'idle' ? '…' : '—');
     var kitS = PD ? (kitT == null ? 'kit illisible (factory_posts)' : '')
       : PS.state === 'error' ? 'production illisible : ' + PS.error : 'chargement de la production';
-    var tiles = '<div class="cf-stiles">'
-      + bxTile('open', bxN(K.open), 'Stock commun', K.open == null ? BX_NR : '', 'is-acc')
-      + bxTile('avail', bxN(K.available), 'Ouvertes aux diffuseurs', K.available == null ? BX_NR : '', K.available === 0 ? 'is-err' : '')
-      + bxTile('kit', kitV, 'Kit à programmer', kitS, '')
-      + bxTile('assigned', bxN(K.assigned), 'En mission', K.assigned == null ? BX_NR : '', '')
-      + bxTile('done', bxN(K.done), 'Publiées par les diffuseurs', K.done == null ? BX_NR : '', '')
-      + bxTile('kitTotal', bxN(K.kit), 'Passées au kit', K.kit == null ? BX_NR : '', '')
-      + bxTile('retired', bxN(K.retired), 'Retirées', K.retired == null ? BX_NR : '', '')
+    // Axel 27/10 : même design que les cases du « Cycle d'une mission » ; plus de « Ouvertes aux diffuseurs » (= le stock
+    // commun moins la réserve du kit) ni de « Retirées » ; « Kit à programmer » = ton stock (posts « à faire » du kit)
+    var T = function (k, v, l, c, bg, ic, sub) {
+      return '<div class="cf-bx2-mt is-static" style="--c:' + c + ';--bg:' + bg + '" data-s="' + k + '"><span class="cf-bx2-mt-h"><span class="cf-bx2-mt-ic">' + svg(ic, 16) + '</span>'
+        + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b></span><span class="cf-bx2-mt-l">' + esc(l) + '</span>' + (sub ? '<span class="cf-meta">' + esc(sub) + '</span>' : '') + '</div>';
+    };
+    var tiles = '<div class="cf-bx2-mts">'
+      + T('open', bxN(K.open), 'Stock commun', 'var(--cf-accent)', 'var(--cf-accent-50)', IC.layers, K.open == null ? BX_NR : '')
+      + T('kit', kitV, 'Ton stock (kit)', 'var(--cf-c-inter)', 'var(--cf-bx2-blue-bg)', IC.grid, kitS)
+      + T('assigned', bxN(K.assigned), 'En mission', 'var(--cf-warn)', 'var(--cf-warn-bg)', IC.clock, K.assigned == null ? BX_NR : '')
+      + T('done', bxN(K.done), 'Publiées par les diffuseurs', 'var(--cf-ok)', 'var(--cf-ok-bg)', IC.check, K.done == null ? BX_NR : '')
+      + T('kitTotal', bxN(K.kit), 'Passées dans ton kit (total)', 'var(--cf-c-pviews)', 'var(--cf-bx2-violet-bg)', IC.down, K.kit == null ? BX_NR : '')
       + '</div>';
-    return '<section class="cf-card" data-block="bx-stock">' + chead('Stock commun et kit') + tiles + '</section>';   // Axel 27/10 : sans texte d'aide ni réglages
+    return '<section class="cf-card cf-bx2-missions" data-block="bx-stock"><h3 class="cf-h2">Stock commun et kit</h3>' + tiles + '</section>';
   }
 
   function bxCheckRow(x, D) {
@@ -5725,7 +5749,7 @@
       else if (act === 'av-img') { var ai = parseInt(el.getAttribute('data-i'), 10); if (ui.modal && ui.modal.brick && ai >= 0 && ai < 40) { ui.modal.avImg = ai; renderModal(); var ab = document.querySelector('#cfModalBody [data-act="av-img"][data-i="' + ai + '"]'); if (ab) ab.focus(); } }
       else if (act === 'rec-all') { ui.recAll = !ui.recAll; render(); }
       else if (act === 'fresh-kind') { if (PERF_KINDS.some(function (x) { return x[0] === el.getAttribute('data-k'); })) { ui.freshKind = el.getAttribute('data-k'); render(); } }
-      else if (act === 'br-tab') { if (['lib', 'rec', 'fresh'].indexOf(el.getAttribute('data-k')) >= 0) { ui.brTab = el.getAttribute('data-k'); render(); } }
+      else if (act === 'br-tab') { if (['lib', 'rec', 'fresh', 'carte'].indexOf(el.getAttribute('data-k')) >= 0) { ui.brTab = el.getAttribute('data-k'); render(); } }
       else if (act === 'lib-kind') { var lk = el.getAttribute('data-k'); if (PKM[lk]) { ui.libKind = ui.libKind === lk ? null : lk; ui.libQuery = ''; render(); } }
       else if (act === 'rec-play') recPlay(el.getAttribute('data-rid'), el);
       // pipeline (Fabrication) : étape, tuile, avatar, module, période ; fiche d'une vidéo finale (lecture seule)
