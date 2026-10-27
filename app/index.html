@@ -6046,7 +6046,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-27-1540'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-27-1600'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -14590,7 +14590,9 @@ async function _dcRun(){
     if(!alive() || (e && e._dcAnnule)) return;
     console.warn('[décupleur]', e);
     _dc.phase = 'idle'; _dcRender();
-    if(!(e && e._dcSilence)) toast((e && e.message) || 'Le décuplage a échoué');   // débit refusé : spendCreditsFor a déjà prévenu
+    // 27/10 : refus du moteur sur de vrais visages (message anglais du fournisseur) → phrase claire, crédits déjà rendus
+    const m = (e && e.message) || '';
+    if(!(e && e._dcSilence)) toast(/real human faces/i.test(m) ? 'Changement de personnage refusé : la photo ou la vidéo montre de vraies personnes. Utilise une photo d\'avatar IA.' : (m || 'Le décuplage a échoué'));   // débit refusé : spendCreditsFor a déjà prévenu
   }
 }
 function _dcCancel(){
@@ -14698,7 +14700,7 @@ function _dcEta(k){
 }
 function _dcTickTimers(){
   const $ = (id) => document.getElementById(id), now = Date.now();
-  if($('dcRunTime') && _dc.t0) $('dcRunTime').textContent = _dcT((now - _dc.t0) / 1000) + ' écoulées';
+  if($('dcRunTime') && _dc.t0) $('dcRunTime').textContent = _dcT((now - _dc.t0) / 1000);   // 27/10 (Axel) : sans « écoulées »
   const L = _dc.live; if(_dc.phase !== 'live' || !L) return;
   if($('dcLiveTime')) $('dcLiveTime').textContent = _dcT((now - (_dc.t0 || L.t0)) / 1000);
   for(let k = 1; k <= L.n; k++){
