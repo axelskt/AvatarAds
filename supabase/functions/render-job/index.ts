@@ -360,7 +360,7 @@ serve(async (req: Request) => {
           if (n * (b - a) > DC_BUDGET_S + 1) return json({ error: `Trop long pour ×${n} : garde ${Math.floor(DC_BUDGET_S / n)} s maximum` }, 400)
           const al = (body.alt && typeof body.alt === 'object' && !Array.isArray(body.alt)) ? body.alt as Record<string, unknown> : {}
           const alt = { mirror: al.mirror === true, pixels: al.pixels === true, tint: al.tint === true, audio: al.audio === true, text: al.text === true }
-          const textPos = ['Haut', 'Centre', 'Bas', 'Aléatoire'].includes(String(body.textPos)) ? String(body.textPos) : 'Aléatoire'
+          const textPos = ['Haut', 'Centre', 'Bas', 'Aléatoire'].includes(String(body.textPos)) ? String(body.textPos) : 'Haut'   // 27/10 (Axel) : texte choc en haut par défaut
           if (body.master != null && body.master !== '') {
             // vidéo du changement de personnage = un résultat kie rapatrié dans le dossier du compte, rien d'autre
             const m = cheminSur(user.id, body.master)

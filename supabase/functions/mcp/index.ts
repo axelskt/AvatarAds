@@ -1438,7 +1438,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
           image_url: { type: 'string', description: "Optionnel, avec change_character : URL http(s) d'une photo DÉJÀ en ligne du nouveau personnage (ex. un avatar créé avec generate_image). Photo jointe au chat : ne mets rien, la carte la fait déposer." },
           duration_seconds: { type: 'integer', minimum: 1, maximum: DC_PASSAGE_MAX, description: `Optionnel : ne garder que les N premières secondes (défaut : le maximum, ${DC_PASSAGE_MAX} s — ${DC_PERSO_MAX} s avec le changement de personnage).` },
           alterations: { type: 'array', items: { type: 'string', enum: ['miroir', 'pixels', 'teinte', 'son', 'textes'] }, description: "Optionnel : altérations à appliquer (défaut : toutes). « textes » = textes choc sur une variante sur deux." },
-          text_position: { type: 'string', enum: ['Haut', 'Centre', 'Bas', 'Aléatoire'], description: 'Position des textes choc (défaut Aléatoire).' },
+          text_position: { type: 'string', enum: ['Haut', 'Centre', 'Bas', 'Aléatoire'], description: 'Position des textes choc (défaut Haut).' },
         },
       },
     })
@@ -3879,7 +3879,7 @@ async function runDecupler(profile: Record<string, unknown>, args: Record<string
   const choisies = Array.isArray(args.alterations) ? (args.alterations as unknown[]).map(String) : null
   const alt: Record<string, boolean> = { mirror: true, pixels: true, tint: true, audio: true, text: true }
   if (choisies) for (const [fr, en] of Object.entries(NOMS)) alt[en] = choisies.includes(fr)
-  const textPos = ['Haut', 'Centre', 'Bas', 'Aléatoire'].includes(String(args.text_position)) ? String(args.text_position) : 'Aléatoire'
+  const textPos = ['Haut', 'Centre', 'Bas', 'Aléatoire'].includes(String(args.text_position)) ? String(args.text_position) : 'Haut'   // 27/10 (Axel) : en haut par défaut
   const c = await vtCarte(profile, 'decup', { n, perso, alt, text_pos: textPos, max_dur: maxDur, ...(lien ? { lien } : {}) }, lien ? { ...args, video_url: '' } : args)
   if ('content' in c) return c
   const varCost = Math.ceil(n * DC_CR_VARIANTE)
@@ -3916,7 +3916,7 @@ async function dcLancerLot(job: Record<string, unknown>, de: string, base: strin
   const pj = (job.params || {}) as Record<string, unknown>
   const { data: rj, error } = await svc.from('render_jobs').insert({ user_id: String(job.user_id), status: 'queued', input_video: base, avatar_clips: [],
     assets: master ? [{ id: 'master', path: master, kind: 'video' }] : [],
-    plan: { __compose: 'decupleur', a: 0, b: keep, n: Number(pj.n) || 10, alt: pj.alt || {}, textPos: pj.text_pos || 'Aléatoire', seed: Math.floor(Math.random() * 2147483647), duration: keep } })
+    plan: { __compose: 'decupleur', a: 0, b: keep, n: Number(pj.n) || 10, alt: pj.alt || {}, textPos: pj.text_pos || 'Haut', seed: Math.floor(Math.random() * 2147483647), duration: keep } })
     .select('id').single()
   if (error || !rj) { await vtEchec(job, 'Lancement du décuplage impossible — crédits rendus, réessaie.', de); return }
   await vtPasser(job, de, 'dj:' + rj.id, { ...patch, lot_at: Date.now() })
