@@ -3062,9 +3062,6 @@
     var rank = function (x) { return x.status !== 'verif' ? 3 : bxHeld(x) ? 0 : x.checked != null ? 2 : 1; };
     var sorted = L.map(function (x, i) { return { x: x, i: i }; }).sort(function (a, b) { return rank(a.x) - rank(b.x) || a.i - b.i; }).map(function (o) { return o.x; });
     var nList = sorted.filter(function (x) { return rank(x) === 1; }).length, nFlag = sorted.filter(function (x) { return rank(x) <= 1 && bxFlagged(x); }).length;
-    if (nH) sub += ' · ' + nH + ' en attente de vérification (aucun gain sans ta décision)';
-    if (nFlag) sub += ' · ' + nFlag + ' ' + plural(nFlag, 'lien signalé', 'liens signalés') + ' par le relevé des vues (à vérifier : jamais de refus automatique)';
-    if (nV != null && nV > nList) sub += ' · les ' + nList + ' plus ' + plural(nList, 'ancien', 'anciens') + ' affichés sur ' + fInt(nV);
     var head = bxHead('À vérifier', '', nV);
     if (!L.length) return '<section class="cf-card" data-block="bx-check">' + head + '<div class="cf-empty-s cf-dashed">Aucune publication à vérifier.</div></section>';
     var shown = ui.bx.allCheck ? sorted : sorted.slice(0, BX_LIST_MAX);
