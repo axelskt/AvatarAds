@@ -168,7 +168,7 @@ async function keepCover(id: string, src: string): Promise<{ url: string, bytes:
 }
 
 // ── Rapprochement vidéo TikTok → vidéo de l'usine (07/10) : code commun dans _shared/cover-match.ts (Instagram aussi) ──
-const { matchCover, scoreVf } = coverMatcher(svc, decodeCover)
+const { scoreVf } = coverMatcher(svc, decodeCover)   // matchCover : serveur de l'usine (27/10)
 
 // Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
 const MEDIA_PREFIX = `${SB_URL}/storage/v1/object/public/factory-media/`
@@ -296,6 +296,10 @@ Deno.serve(async (req) => {
     const n = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : null)
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())
     const seen = new Set<string>(), accounts: Record<string, unknown>[] = []
+    // 27/10 : avec ~1 000 empreintes, rapprocher ici dépassait le temps de calcul de l'edge (« CPU Time exceeded », HTTP 546
+    // à chaque lecture depuis au moins le 25/10). Le rapprochement par l'image est parti sur le serveur de l'usine ; il ne
+    // reste ici que la lecture du texte choc des « à vérifier », 2 par appel pour tout l'appel.
+    let matchBudget = 2
     for (const r of rows) {
       const a: Record<string, unknown> = { env: r.env, open_id: r.open_id, username: r.handle, display_name: r.display_name, avatar: r.avatar_url, videos: [] }
       try {
@@ -350,13 +354,15 @@ Deno.serve(async (req) => {
               K.set(String(v.id), { ...(K.get(String(v.id)) || {}), cover_copy: kc.url })
             }))
           }
-          // rapprochement des vidéos jamais rapprochées (8 au plus par lecture : temps de calcul de l'edge limité) ; 12/10 : les
+          // rapprochement des vidéos jamais rapprochées (matchBudget pour tout l'appel : temps de calcul de l'edge limité) ; 12/10 : les
           // « à vérifier » / « hors usine » dont le texte choc n'a pas encore été lu repassent une fois (lecture du texte choc)
+          // 27/10 : les vidéos jamais rapprochées (match_state vide) le sont sur le serveur de l'usine (usine/cover-match.mjs,
+          // tkCoverTick, toutes les 5 min) comme les reels Instagram : ici, seule la lecture du texte choc des « à vérifier »
           const unmatched = [
-            ...vids.filter((v) => { const k: any = K.get(String(v.id)); return k?.cover_copy && !k.match_state }),
             ...vids.filter((v) => { const k: any = K.get(String(v.id)); return k?.cover_copy && (k.match_state === 'unsure' || k.match_state === 'none') && k.cover_text == null }),
-          ].slice(0, 8)
+          ].slice(0, Math.max(0, matchBudget))
           for (const v of unmatched) {
+            matchBudget--
             const k: any = K.get(String(v.id))
             let bytes = got.get(String(v.id))
             if (!bytes) {
@@ -365,9 +371,7 @@ Deno.serve(async (req) => {
             }
             if (!bytes) continue
             const dur = typeof v.duration === 'number' ? v.duration : null
-            const m = k.match_state ? { vf: k.vf ?? null, state: k.match_state, score: k.match_score ?? null, candidates: k.candidates || [] }
-              : await matchCover(bytes, dur, String(v.title || ''))
-            if (!m) continue
+            const m = { vf: k.vf ?? null, state: k.match_state, score: k.match_score ?? null, candidates: k.candidates || [] }
             const upd: Record<string, unknown> = { vf: m.vf, match_state: m.state, match_score: m.score, candidates: m.candidates }
             // 12/10 : pas sûr par l'image → on lit le texte choc de la couverture et on ne garde que les vidéos qui le portent
             if (m.state !== 'auto') {

@@ -92,9 +92,12 @@ export function coverMatcher(svc: Svc, decodeCover: Decode) {
   async function scoreVf(bytes: Uint8Array, vf: string): Promise<{ score: number, frames: boolean } | null> {
     const img = await decodeCover(bytes)
     if (!img) return null
-    const f = (await loadFp()).find((x) => x.vf === vf)
-    if (!f) return null
-    let best = Math.min(...f.thumbs.map((t) => fpCoverScore(img.gray, img.w, img.h, t)))
+    // 27/10 : la seule vidéo demandée, lue directement (charger les ~1 000 empreintes dépassait le budget CPU de l'edge)
+    const { data: fr } = await svc.from('factory_fp').select('video_url, thumbs').eq('vf', vf).limit(1)
+    const r0 = fr && fr[0]
+    if (!r0 || !Array.isArray(r0.thumbs) || !r0.thumbs.length) return null
+    const f = { url: String(r0.video_url), thumbs: r0.thumbs.map((t: string) => b64ToBytes(t)) }
+    let best = Math.min(...f.thumbs.map((t: Uint8Array) => fpCoverScore(img.gray, img.w, img.h, t)))
     const { data } = await svc.from('factory_fp_frames').select('thumb').eq('video_url', f.url)
     for (const r of data || []) best = Math.min(best, fpCoverScore(img.gray, img.w, img.h, b64ToBytes(String(r.thumb))))
     return { score: +best.toFixed(1), frames: (data || []).length > 0 }

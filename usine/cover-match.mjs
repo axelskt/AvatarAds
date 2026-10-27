@@ -126,3 +126,26 @@ export async function igCoverTick(max = 4) {
   }
   return { traites: out.length, resultats: out };
 }
+
+// Vidéos TikTok jamais rapprochées (27/10) : tiktok-auth les enregistre avec leur couverture copiée (cover_copy) mais ne les
+// compare plus aux empreintes (« CPU Time exceeded » sur l'edge dès ~1 000 vidéos d'usine) : c'est fait ici, toutes les 5 min,
+// avec la durée TikTok (à 1,5 s près) et la légende. tiktok-auth lit ensuite le texte choc des « à vérifier ».
+export async function tkCoverTick(max = 6) {
+  if (!KEY) return { erreur: 'SUPABASE_SERVICE_ROLE_KEY absente' };
+  const { data, error } = await from('tiktok_videos').select('id,cover_copy,duration,title').is('match_state', 'null').not('cover_copy', 'is', 'null').order('created.desc').limit(max);
+  if (error) return { erreur: error.message };
+  const out = [];
+  for (const v of data || []) {
+    const id = String(v.id), filt = 'id=eq.' + enc(id) + '&match_state=is.null';
+    try {
+      const r = await fetch(String(v.cover_copy), { signal: AbortSignal.timeout(10000) });
+      const bytes = r.ok ? new Uint8Array(await r.arrayBuffer()) : new Uint8Array(0);
+      if (!bytes.length) { out.push({ id, etat: 'couverture illisible (' + r.status + ')' }); continue; }   // retentée au passage suivant
+      const m = await matchCover(bytes, typeof v.duration === 'number' ? v.duration : null, String(v.title || ''));
+      if (!m) { await patch('tiktok_videos', filt, { match_state: 'none', candidates: [] }); out.push({ id, etat: 'décodage impossible' }); continue; }
+      await patch('tiktok_videos', filt, { vf: m.vf, match_state: m.state, match_score: m.score, candidates: m.candidates });
+      out.push({ id, etat: m.state, vf: m.vf, score: m.score });
+    } catch (e) { out.push({ id, erreur: String(e.message || e).slice(0, 120) }); }
+  }
+  return { traites: out.length, resultats: out };
+}

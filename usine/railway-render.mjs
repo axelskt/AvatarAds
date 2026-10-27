@@ -12,7 +12,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, createHash, timingSafeEqual } from 'node:crypto';
 import { fingerprint, denseFrames } from './fingerprint.mjs';
-import { igCoverTick } from './cover-match.mjs';
+import { igCoverTick, tkCoverTick } from './cover-match.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SB = process.env.SUPABASE_URL || 'https://guvwgiejzkiodghywpwj.supabase.co', KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -120,7 +120,10 @@ setInterval(loop, 4000);
 // Reels Instagram en file (ig_media_match, mis par le relevé quotidien ig-insights) : reconnus ici toutes les 5 min — sur
 // l'edge, comparer une couverture à toutes les empreintes dépassait le budget CPU (07/10). 1er passage 1 min après le démarrage.
 const igTick = () => igCoverTick().then(r => { if (r.traites || r.erreur) console.log('reels IG', JSON.stringify(r).slice(0, 600)); }).catch(e => console.error('reels IG :', String(e.message || e).slice(0, 200)));
+// 27/10 : vidéos TikTok jamais rapprochées, même raison (tiktok-auth dépassait le budget CPU de l'edge)
+const tkTick = () => tkCoverTick().then(r => { if (r.traites || r.erreur) console.log('vidéos TikTok', JSON.stringify(r).slice(0, 600)); }).catch(e => console.error('vidéos TikTok :', String(e.message || e).slice(0, 200)));
 setTimeout(igTick, 60e3); setInterval(igTick, 5 * 60e3);
+setTimeout(tkTick, 90e3); setInterval(tkTick, 5 * 60e3);
 
 const ready = prepare().then(() => true).catch(e => { console.error('préparation :', e.message); return false; });
 http.createServer(async (req, res) => {
