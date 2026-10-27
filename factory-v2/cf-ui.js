@@ -2935,7 +2935,7 @@
       }).join('') + '</div><div class="cf-bxhover" hidden></div></div>' + bxXLabels(days, n) + '</div>';
   }
   function bxSeriesHTML(D) {
-    var ser = D.series, head = chead('Sur 30 jours', 'jours de Paris · survole une courbe pour le détail du jour');
+    var ser = D.series, head = chead('Sur 30 jours');
     if (!ser) return '<section class="cf-card" data-block="bx-series">' + head + emptyLine('—', 'série 30' + NB + 'j ' + BX_NR) + '</section>';
     if (!ser.length) return '<section class="cf-card" data-block="bx-series">' + head + '<div class="cf-empty-s">Aucun jour dans la série.</div></section>';
     var n = ser.length, days = ser.map(function (x) { return x.day; });
