@@ -1286,7 +1286,7 @@ i.is-gap { background: var(--cf-ink); }
 /* Réseaux (Accueil, 29/09) : YouTube + Instagram + TikTok cochables, 5 chiffres avec objectif, courbe, verdict par vidéo */
 .cf-net { gap: 16px; }
 .cf-net .cf-card-h { align-items: center; }
-.cf-acards.cf-net-pf { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cf-acards.cf-net-pf { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .cf-net-cards { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .cf-net-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; border-top: 1px solid var(--cf-line); padding-top: 14px; }
 .cf-net-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -1303,7 +1303,8 @@ i.is-gap { background: var(--cf-ink); }
 .cf-stiles.is-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 900px) { .cf-net-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 639px) {
-  .cf-acards.cf-net-pf, .cf-accts .cf-acards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cf-acards.cf-net-pf { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .cf-accts .cf-acards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .cf-accts .cf-icard { padding: 10px; min-width: 0; }
   .cf-accts .cf-icard-v { font-size: 20px; }
   .cf-accts .cf-acard-unit { display: none; }

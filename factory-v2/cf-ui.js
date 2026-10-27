@@ -795,7 +795,7 @@
   // likes et commentaires = vidéos PUBLIÉES dans la période (stats à vie de chaque vidéo) ; abonnés = total actuel, et
   // sur la courbe le gain par jour (Instagram : historique Insights ; YouTube : relevé quotidien social_daily).
   var NET_PF = [
-    { k: 'yt', label: 'YouTube', c: '#e0342b', ic: 'M22 8.5a3 3 0 0 0-2.1-2.1C18 6 12 6 12 6s-6 0-7.9.4A3 3 0 0 0 2 8.5 31 31 0 0 0 2 12a31 31 0 0 0 .1 3.5 3 3 0 0 0 2 2.1c1.9.4 7.9.4 7.9.4s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.1-3.5zM10 15V9l5 3z' },
+    // Axel 27/10 : YouTube retiré de Réseaux (sel.yt toujours faux)
     { k: 'ig', label: 'Instagram', c: 'var(--cf-c-reach)', ic: IC.insta },
     { k: 'tt', label: 'TikTok', c: '#1b1814', ic: 'M9 12a4 4 0 1 0 4 4V4c.5 2.5 2.5 4 5 4' }
   ];
@@ -812,14 +812,14 @@
   var NET_ALL_FROM = new Date(2026, 6, 15).getTime();   // « All time » = depuis le 15/07/2026
   var NET_RANGES = [['7j', '7' + NB + 'j', 7], ['30j', '30' + NB + 'j', 30], ['90j', '90' + NB + 'j', 90], ['all', 'All time', null]];
   function netSel() {
-    var d = { yt: true, ig: true, tt: true };
-    try { var v = JSON.parse(localStorage.getItem('cf_net') || 'null'); if (v && (v.yt || v.ig || v.tt)) d = { yt: !!v.yt, ig: !!v.ig, tt: v.tt == null ? true : !!v.tt }; } catch (e) { /* stockage bloqué */ }
+    var d = { yt: false, ig: true, tt: true };
+    try { var v = JSON.parse(localStorage.getItem('cf_net') || 'null'); if (v && (v.ig || v.tt)) d = { yt: false, ig: !!v.ig, tt: v.tt == null ? true : !!v.tt }; } catch (e) { /* stockage bloqué */ }
     return d;
   }
   // Comptes TikTok lisibles (07/10) : ceux dont le profil a répondu (un compte en erreur n'additionne rien).
   function ttLive() { var D = CF.tts.data; return D ? D.accounts.filter(function (a) { return !a.error; }) : []; }
   function netToggle(k) {
-    var s = netSel(); if (k !== 'yt' && k !== 'ig' && k !== 'tt') return;
+    var s = netSel(); if (k !== 'ig' && k !== 'tt') return;
     s[k] = !s[k]; if (!s.yt && !s.ig && !s.tt) return;   // au moins un réseau reste affiché
     try { localStorage.setItem('cf_net', JSON.stringify(s)); } catch (e) { /* */ }
     schedule();
@@ -2854,8 +2854,8 @@
 
   function bxHTML() {
     var B = bxModel(), D = B.D, S = B.S;
-    var sub = D ? 'Stock commun · missions · diffuseurs · versements · relevé BloxAI ' + ago(D.generatedAt || D.fetchedAt) : longDate(new Date());
-    var head = '<section class="cf-title cf-bx-title"><div><h1>BloxAI</h1><div class="cf-sub">' + esc(sub) + '</div></div>'
+    var sub = D ? '' : longDate(new Date());   // Axel 27/10 : plus de sous-titre ni d'heure du relevé
+    var head = '<section class="cf-title cf-bx-title"><div><h1>BloxAI</h1>' + (sub ? '<div class="cf-sub">' + esc(sub) + '</div>' : '') + '</div>'
       + '<button type="button" class="cf-btn is-sm" data-act="bx-refresh"' + (S.loading ? ' disabled' : '') + '>' + svg(IC.refresh, 13) + (S.loading ? 'Lecture…' : 'Actualiser') + '</button></section>';
     var top = '';
     if (S.state === 'error' && D) top += banner('err', IC.alert, '<b>BloxAI : lecture impossible</b> · ' + esc(S.error) + ' · chiffres de ' + esc(hm(new Date(D.fetchedAt))) + ' conservés');
@@ -2867,8 +2867,8 @@
         : '<section class="cf-card">' + emptyLine('—', B.why) + '<button type="button" class="cf-btn is-sm cf-bx-go" data-act="bx-refresh">' + svg(IC.refresh, 13) + 'Réessayer</button></section>') + '</div>';
     }
     return '<div class="cf-prod cf-bx">' + head + top
-      + phead('01', 'Stock commun', 'une vidéo validée part sur un seul compte : kit d’Axel ou diffuseur') + bxStockHTML(D)
-      + phead('02', 'Missions', '24' + NB + 'h pour publier et coller les liens') + bxCycleHTML(D) + bxSeriesHTML(D)
+      + phead('01', 'Stock commun') + bxStockHTML(D)
+      + phead('02', 'Missions') + bxCycleHTML(D) + bxSeriesHTML(D)
       + phead('03', 'À vérifier', 'liens collés par les diffuseurs') + bxCheckHTML(D)
       + phead('04', 'Diffuseurs', 'inscriptions · classement') + bxUsersHTML(D) + bxRankHTML(D)
       + phead('05', 'Paiements', 'pièces d’identité · versements') + '<div class="cf-prow2 is-b">' + bxIdHTML(D) + bxPayHTML(D) + '</div>'
@@ -2879,37 +2879,24 @@
   function bxStockHTML(D) {
     var K = D.stock, St = D.settings, PS = CF.prod, PD = PS.data, kitT = PD ? PD.qc.kitTodo : null;
     var kitV = PD ? (kitT == null ? '—' : fInt(kitT)) : (PS.loading || PS.state === 'idle' ? '…' : '—');
-    var kitF = PD ? PD.qc.kitFar : null;
-    var kitS = PD ? (kitT == null ? 'kit illisible (factory_posts)' : 'posts « à faire » des comptes Instagram' + (kitF ? ' · dont ' + fInt(kitF) + ' au-delà de J+7' : ''))
+    var kitS = PD ? (kitT == null ? 'kit illisible (factory_posts)' : '')
       : PS.state === 'error' ? 'production illisible : ' + PS.error : 'chargement de la production';
     var tiles = '<div class="cf-stiles">'
-      + bxTile('open', bxN(K.open), 'Stock commun', K.open == null ? BX_NR : 'vidéos validées en attente' + (St.kitBuffer == null ? '' : ' · dont ' + fInt(Math.min(K.open, St.kitBuffer)) + ' en réserve pour le kit'), 'is-acc')
-      + bxTile('avail', bxN(K.available), 'Ouvertes aux diffuseurs', K.available == null ? BX_NR : 'au-delà de la réserve du kit (' + bxN(St.kitBuffer) + ')', K.available === 0 ? 'is-err' : '')
+      + bxTile('open', bxN(K.open), 'Stock commun', K.open == null ? BX_NR : '', 'is-acc')
+      + bxTile('avail', bxN(K.available), 'Ouvertes aux diffuseurs', K.available == null ? BX_NR : '', K.available === 0 ? 'is-err' : '')
       + bxTile('kit', kitV, 'Kit à programmer', kitS, '')
-      + bxTile('assigned', bxN(K.assigned), 'En mission', K.assigned == null ? BX_NR : 'prises · 24' + NB + 'h pour publier', '')
-      + bxTile('done', bxN(K.done), 'Publiées par les diffuseurs', K.done == null ? BX_NR : 'missions terminées (liens envoyés)', '')
-      + bxTile('kitTotal', bxN(K.kit), 'Passées au kit', K.kit == null ? BX_NR : 'retirées du stock pour les comptes d’Axel (total)', '')
-      + bxTile('retired', bxN(K.retired), 'Retirées', K.retired == null ? BX_NR : 'sorties du stock à la main', '')
+      + bxTile('assigned', bxN(K.assigned), 'En mission', K.assigned == null ? BX_NR : '', '')
+      + bxTile('done', bxN(K.done), 'Publiées par les diffuseurs', K.done == null ? BX_NR : '', '')
+      + bxTile('kitTotal', bxN(K.kit), 'Passées au kit', K.kit == null ? BX_NR : '', '')
+      + bxTile('retired', bxN(K.retired), 'Retirées', K.retired == null ? BX_NR : '', '')
       + '</div>';
-    var rules = [St.kitBuffer != null ? 'réserve du kit ' + fInt(St.kitBuffer) + ' ' + plural(St.kitBuffer, 'vidéo') : null,
-      St.deadlineH != null ? 'délai ' + fDec(St.deadlineH, 0) + NB + 'h' : null,
-      St.cooldownMin != null ? fDec(St.cooldownMin, 0) + NB + 'min entre deux missions' : null,
-      St.pauseFailures != null && St.pauseWindowDays != null && St.pauseHours != null ? 'pause de ' + fDec(St.pauseHours, 0) + NB + 'h après ' + St.pauseFailures + ' échecs en ' + St.pauseWindowDays + NB + 'j' : null,
-      St.trackingDays != null ? 'vues suivies ' + St.trackingDays + NB + 'j' : null,
-      St.rateCentsPer1000 != null ? fEur(St.rateCentsPer1000) + ' / 1' + NB + '000 vues validées' : null,
-      St.payoutMinCents != null ? 'versement dès ' + fEur(St.payoutMinCents) : null].filter(Boolean);
-    return '<section class="cf-card" data-block="bx-stock">' + chead('Stock commun et kit', 'comptes d’Axel servis en premier : le kit garde 7 jours d’avance, le reste est ouvert aux diffuseurs') + tiles
-      + '<div class="cf-meta">' + esc('Réglages BloxAI : ' + (rules.length ? rules.join(' · ') : '—')) + '</div></section>';
+    return '<section class="cf-card" data-block="bx-stock">' + chead('Stock commun et kit') + tiles + '</section>';   // Axel 27/10 : sans texte d'aide ni réglages
   }
 
   // ── 02 · cycle des missions + publications des diffuseurs ──
   function bxCycleHTML(D) {
     var A = D.asg, P = D.pub, d24 = A.d24;
     var fin = A.submitted != null && A.expired != null && A.abandoned != null ? A.submitted + A.expired + A.abandoned : null;
-    var flow = '<ol class="cf-bx-flow">' + [['01', 'Prise', 'par un diffuseur'], ['02', 'En cours', '24' + NB + 'h pour publier et coller les liens'],
-      ['03', 'En suivi', 'liens collés · vues suivies ' + bxTrackDays(D) + NB + 'j · refus possible'], ['04', 'Validée ou refusée', 'par toi seulement : conforme et vues relues dans les 48' + NB + 'h avant la fin → validée avec ses vues ; sinon en attente de vérification']].map(function (x) {
-      return '<li><span class="cf-pnum">' + x[0] + '</span><b>' + esc(x[1]) + '</b><span>' + esc(x[2]) + '</span></li>';
-    }).join('') + '</ol><div class="cf-meta">Échouée (24' + NB + 'h dépassées) ou abandonnée : la vidéo revient tout de suite dans le stock, jamais re-proposée au même diffuseur.</div>';
     var k = '<div class="cf-mkpis">'
       + bxKpi('active', 'En cours', bxN(A.active), A.active == null ? BX_NR : (A.downloadedActive == null ? '' : 'dont ' + fInt(A.downloadedActive) + ' ' + plural(A.downloadedActive, 'téléchargée') + ' · ') + '24' + NB + 'h pour publier')
       + bxKpi('submitted', 'Envoyées', bxN(A.submitted), A.submitted == null ? BX_NR : 'liens collés à temps')
@@ -2926,7 +2913,7 @@
       ['shares', 'Partages', P.shares], ['saves', 'Enregistrements', P.saves]].map(function (x) {
       return bxKpi(x[0], x[1], bxN(x[2]), x[2] == null ? BX_NR : x[0] === 'validViews' ? 'comptées dans les gains' : 'toutes publications');
     }).join('') + '</div>';
-    return '<section class="cf-card" data-block="bx-cycle">' + chead('Cycle des missions', 'mission = 24' + NB + 'h pour publier ET coller les liens') + flow + k
+    return '<section class="cf-card" data-block="bx-cycle">' + chead('Cycle des missions') + k   // Axel 27/10 : sans le schéma des 4 étapes
       + '<div class="cf-meta">' + esc(last) + '</div></section>'
       + '<section class="cf-card" data-block="bx-pubs">' + chead('Publications des diffuseurs', 'vues relues sur Instagram, TikTok et YouTube') + eng + '</section>';
   }
@@ -3069,10 +3056,7 @@
   }
   function bxCheckHTML(D) {
     var L = D.toCheck, nV = L ? bxToCheckN(D) : null, td = bxTrackDays(D), nH = bxHeldN(D);
-    var sub = 'ouvre le lien, vérifie la vidéo et la mention Publicité : Valider (conforme : la vidéo sort de la liste, ses gains seront comptés à la fin des '
-      + td + NB + 'jours de suivi) ou Refuser (motif visible par le diffuseur). Rien n’est validé ni refusé sans toi : sans « Valider », ou sans vues relues dans les 48' + NB + 'h avant la fin, le lien passe « En attente de vérification »'
-      + ' ; suivi fini : « Valider avec les vues figées » (chiffre de BloxAI, rien de tapé) ou Refuser';
-    if (!L) return '<section class="cf-card" data-block="bx-check">' + bxHead('À vérifier', sub, nV) + emptyLine('—', 'liste ' + BX_NR) + '</section>';
+    if (!L) return '<section class="cf-card" data-block="bx-check">' + bxHead('À vérifier', '', nV) + emptyLine('—', 'liste ' + BX_NR) + '</section>';
     // ordre : en attente de vérification d'abord (gains bloqués), puis l'ordre de BloxAI — à vérifier du plus ancien au plus
     // récent, (déjà conformes, s'il y en a), puis les derniers refus
     var rank = function (x) { return x.status !== 'verif' ? 3 : bxHeld(x) ? 0 : x.checked != null ? 2 : 1; };
@@ -3081,7 +3065,7 @@
     if (nH) sub += ' · ' + nH + ' en attente de vérification (aucun gain sans ta décision)';
     if (nFlag) sub += ' · ' + nFlag + ' ' + plural(nFlag, 'lien signalé', 'liens signalés') + ' par le relevé des vues (à vérifier : jamais de refus automatique)';
     if (nV != null && nV > nList) sub += ' · les ' + nList + ' plus ' + plural(nList, 'ancien', 'anciens') + ' affichés sur ' + fInt(nV);
-    var head = bxHead('À vérifier', sub, nV);
+    var head = bxHead('À vérifier', '', nV);
     if (!L.length) return '<section class="cf-card" data-block="bx-check">' + head + '<div class="cf-empty-s cf-dashed">Aucune publication à vérifier.</div></section>';
     var shown = ui.bx.allCheck ? sorted : sorted.slice(0, BX_LIST_MAX);
     return '<section class="cf-card" data-block="bx-check">' + head + '<div class="cf-bx-list">' + shown.map(function (x) { return bxCheckRow(x, D); }).join('') + '</div>'
@@ -3102,7 +3086,7 @@
       + '</div>';
     var chart = !sg ? emptyLine('—', 'inscriptions par jour ' + BX_NR) : !sg.length ? '<div class="cf-empty-s">Aucune inscription sur 30' + NB + 'j.</div>'
       : bxBars('signups', 'Inscriptions par jour', sg.map(function (x) { return x.day; }), sg.map(function (x) { return x.n; }), ['inscription', 'inscriptions']);
-    return '<section class="cf-card" data-block="bx-users">' + chead('Diffuseurs', 'comptes BloxAI · connexions Instagram et TikTok') + tiles + chart + '</section>';
+    return '<section class="cf-card" data-block="bx-users">' + chead('Diffuseurs') + tiles + chart + '</section>';
   }
   function bxRankRow(x, i) {
     var hs = [x.ig ? 'IG @' + x.ig : '', x.tt ? 'TikTok @' + x.tt : ''].filter(Boolean).join(' · ') || 'aucun compte relié';
@@ -3123,7 +3107,7 @@
       var on = x[0] === srt;
       return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="bx-sort" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
     }).join('') + '</div>';
-    var head = chead('Classement des diffuseurs', 'fiabilité = envoyées ÷ (envoyées + échouées + abandonnées) · rapidité = délai médian entre la prise et l’envoi', seg);
+    var head = chead('Classement des diffuseurs', '', seg);
     if (!R) return '<section class="cf-card" data-block="bx-rank">' + head + emptyLine('—', 'classement ' + BX_NR) + '</section>';
     if (!R.length) return '<section class="cf-card" data-block="bx-rank">' + head + '<div class="cf-empty-s cf-dashed">Aucun diffuseur n’a encore pris de mission.</div></section>';
     var nn = function (v, dflt) { return v == null ? dflt : v; };
@@ -3141,7 +3125,7 @@
   // ── 05 · pièces d'identité (avant le premier versement) et versements ──
   function bxIdHTML(D) {
     var L = D.identity;
-    var head = bxHead('Pièces et justificatifs', 'au premier retrait : pièce d’identité (recto + verso, ou passeport), puis IBAN au nom de la fiche, puis justificatif de domicile · âge (18 ans révolus) et nom vérifiés à la main · la pièce doit contenir le nom de la fiche · copies supprimées après la décision', L ? L.length : null)
+    var head = bxHead('Pièces et justificatifs', '', L ? L.length : null)
       + (D.identityUndeleted ? '<div class="cf-bx-why is-warn">' + esc(D.identityUndeleted + ' ' + plural(D.identityUndeleted, 'copie déjà décidée', 'copies déjà décidées') + ' encore dans le stockage BloxAI : nouvel essai automatique') + '</div>' : '');
     if (!L) return '<section class="cf-card" data-block="bx-id">' + head + emptyLine('—', 'pièces d’identité ' + BX_NR) + '</section>';
     if (!L.length) return '<section class="cf-card" data-block="bx-id">' + head + '<div class="cf-empty-s cf-dashed">Aucune pièce à vérifier.</div></section>';
@@ -3178,7 +3162,7 @@
   // nom légal déclaré à la 1re acceptation, nom déclaré actuel, nom réécrit depuis (onglet BloxAI et Accueil, 18/10)
   function bxDeclLines(x) {
     var dm = bxDeclMoved(x);
-    return (x.declaredKnown ? (x.declaredFirst ? '<span class="cf-bx-how" data-decl-first="1">' + esc('nom légal déclaré à la 1re acceptation des conditions : ' + x.declaredFirst) + '</span>'
+    return (x.declaredKnown ? (x.declaredFirst ? '<span class="cf-bx-how" data-decl-first="1">' + esc('1re acceptation : ' + x.declaredFirst) + '</span>'
         + '<span class="cf-bx-how" data-decl-cur="1">' + esc('nom déclaré actuel : ' + (x.declaredCurrent || '—')) + '</span>'
       : '<span class="cf-bx-why is-warn" data-decl-first="0">aucun nom légal déclaré à l’acceptation des conditions : compare la pièce avec le diffuseur</span>') : '')
       + (dm ? '<span class="cf-bx-why is-warn" data-decl-moved="1">' + esc(dm + ' : la pièce doit être au nom de la 1re acceptation') + '</span>' : '');
@@ -3262,7 +3246,7 @@
   function bxPayHTML(D) {
     var M = D.money, P = M.payouts;
     var k = function (c, l) { return '<div class="cf-pay-k"><b class="' + (c ? 'is-v' : '') + '">' + esc(c == null ? '—' : fEur(c)) + '</b><span>' + esc(l) + '</span></div>'; };
-    var head = bxHead('Versements', 'le 1er du mois · le 15 pour les paliers Pro et Elite · Elite : à la demande', P ? P.length : null)
+    var head = bxHead('Versements', '', P ? P.length : null)
       + '<div class="cf-pay-ks cf-bx-payks">' + k(M.validated, 'Gains validés') + k(M.paid, 'Déjà versé') + k(M.unpaid, 'Solde non versé') + '</div>';
     if (!P) return '<section class="cf-card" data-block="bx-pay">' + head + emptyLine('—', 'versements ' + BX_NR) + '</section>';
     var defer = bxDeferHTML(M.deferred);
