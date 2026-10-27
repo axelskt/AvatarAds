@@ -6046,7 +6046,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-27-1630'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-27-1700'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -8237,7 +8237,7 @@ function _applyStartTool(){
   try{ if(window.location.search) history.replaceState(null, '', window.location.pathname + window.location.hash); }catch(e){}
   // 06/10 : bouton des e-mails « 0 crédit » (?start=recharge) → ouvre directement la fenêtre « Recharger des crédits »
   if(t === 'recharge'){ setTimeout(function(){ try{ openCreditsModal(null, true); }catch(e){} }, 400); return true; }
-  var MAP = { montage:'montage', motion:'motion', images:'imagegen', express:'express', gen:'generator', audio:'audioclean', omni:'omni' };
+  var MAP = { montage:'montage', motion:'motion', images:'imagegen', express:'express', gen:'generator', audio:'audioclean', omni:'omni', decupleur:'decupleur' };   // 27/10 : carte Décupleur de la page d'accueil
   var view = MAP[t];
   if(!view) return false;
   var go = function(){ try{ nav(view); window.scrollTo(0,0); }catch(e){} };

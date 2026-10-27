@@ -713,6 +713,10 @@ video::-webkit-media-controls{display:none!important}
       <div class="feat-mock" data-feat="avatar" style="padding:16px"><div class="feat-demo vidwrap">
         <div class="feat-vid"><video src="assets/lp/avatar-ia-lp.mp4" poster="assets/lp/avatar-ia-lp.webp" muted loop playsinline preload="metadata" aria-label="Démo Avatar IA : des visages IA réalistes générés pour présenter ton produit"></video></div>
       </div></div>
+      <!-- décupleur (27/10) : une vidéo + 2 personnages → la vidéo du personnage puis 10 variantes -->
+      <div class="feat-mock" data-feat="decupleur" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="assets/lp/decupleur-lp.mp4" poster="assets/lp/decupleur-lp.webp" muted loop playsinline preload="metadata" aria-label="Démo Décupleur : une vidéo, deux personnages changés, puis 10 variantes toutes différentes"></video></div>
+      </div></div>
       <!-- motion control -->
       <div class="feat-mock" data-feat="motion" style="padding:16px"><div class="feat-demo vidwrap">
         <div class="feat-vid"><video src="assets/lp/motion-control-lp.mp4" poster="assets/lp/motion-control-lp.webp" muted loop playsinline preload="metadata" aria-label="Démo Motion Control : une image fixe animée en vidéo qui bouge"></video></div>
@@ -1173,6 +1177,7 @@ document.querySelectorAll('[data-countup]').forEach(function(el){
 
 /* ══════════ Features — onglets ══════════ */
 var FEAT_TABS=[
+  { id:"decupleur", tab:"Décupleur", t:"Une vidéo, des dizaines de versions uniques", d:"Dépose une vidéo, change le personnage si tu veux, et récupère 10, 20 ou 50 variantes toutes différentes, prêtes à poster." },   // 27/10 (Axel) : en premier
   { id:"motion", tab:"Motion Control", t:"Une image fixe qui prend vie", d:"Anime n'importe quelle photo : le mouvement se génère, la vidéo est prête à poster." },
   { id:"avatar", tab:"Avatar IA", t:"Un avatar pour chaque marque", d:"Des visages IA réalistes, style UGC — choisis le tien, il présente ton produit face caméra. Sans casting, sans tournage." },
   { id:"audio", tab:"Nettoyage audio", t:"Un audio propre, automatiquement", d:"Bruit de fond, volume, silences — nettoyés d'un coup pour un son net et pro." },
@@ -1393,7 +1398,7 @@ revealScan();
     ["express","Express","Vidéo depuis un texte",200,"bolt","texte → vidéo","assets/lp/express-lp.mp4"],
     ["motion","Motion Control","Transfère un mouvement sur une image",265,"mask","vidéo + image → vidéo","assets/lp/motion-control-lp.mp4"],
     ["images","Image IA","Visuels 4K en 1 prompt",330,"image","texte → image","assets/lp/images-ia-lp.mp4"],
-    ["montage","Montage IA","Ton audio transformé en vidéo virale",18,"film","audio → vidéo","assets/lp/montage-ia-lp.mp4"],
+    ["decupleur","Décupleur","Une vidéo, des dizaines de versions uniques",18,"film","vidéo → ×10 vidéos","assets/lp/decupleur-lp.mp4"],   // 27/10 (Axel) : à la place de Montage IA
     ["gen","Générateur","Avatar IA + voix + sous-titres",150,"sparkle","image + audio → vidéo","assets/lp/generateur-lp.mp4"],
     ["omni","Omni","Transforme n'importe quel objet en un clic",30,"sparkle","vidéo → vidéo","assets/lp/omni-lp.mp4"]
   ];
