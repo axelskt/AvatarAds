@@ -6046,7 +6046,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-27-1520'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-27-1540'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -14424,7 +14424,7 @@ function _dcModalRender(){
         +     (F.length < DC_PERSOS_MAX ? '<div class="col" style="gap:6px;align-items:center">' + rond(_dcI('plus', 20, '', 'faint'), 'var(--surface-2)', '_dcFacePick(null)', 'Ajouter un personnage') + (F.length > 1 ? '<span class="mono faint" style="font-size:10.5px">&nbsp;</span>' : '') + '</div>' : '')
         +   '</div>'
         +   '<span style="font-weight:700;font-size:14.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(F.length > 1 ? F.length + ' personnages' : _dcEsc(F[0].name))+'</span>'
-        +   '<span class="faint" style="font-size:12px">'+(F.length > 1 ? 'De gauche à droite dans la vidéo' : 'Cliquer pour remplacer')+'</span>'
+        +   (F.length > 1 ? '' : '<span class="faint" style="font-size:12px">Cliquer pour remplacer</span>')
         + '</div>';
     // 27/10 (Axel) : plus d'interrupteur « Activer » — une photo chargée = activé, aucune = désactivé
     body =

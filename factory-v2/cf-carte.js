@@ -29,7 +29,7 @@
     'hook-liaison': 'matrice validée par Axel : cette liaison peut suivre ce hook (format long)',
     'hook-module': 'ce hook va avec les démos de ce module (Générique = toutes)',
     'demo-module': 'module montré par la démo',
-    'module-cta': 'CTA de fin : démo Claude (MCP) → CTA-CLAUDE ; autres démos → AIDE, MONTAGE, PLAN, SITE, café en rotation',
+    'module-cta': 'CTA de fin, d\'après son sujet dans Production : CTA Claude → démos Claude (MCP) ; CTA général → toutes les autres démos',
     'choc-module': 'texte choc compatible avec les démos de ce module (Générique = toutes) ; logos=true → texte à logos, prioritaire 2 fois sur 3 sur les démos Claude',
     'transfo-module': 'transformation avant/après de ce module',
     'format': 'brique utilisée dans au moins une vidéo de ce format',
@@ -78,7 +78,7 @@
       else if (k === 'hook-demo') N(b.id, 'hook_demo', b.label, { status: st, media: m.media, image: m.poster || m.cover });
       else if (k === 'liaison') N(b.id, 'liaison', m.transcript || b.label, { status: st, generique: b.subject === 'generique' });
       else if (k === 'contenu') N(b.id, m.muette || /^C-[A-Z]+M-/.test(b.id) ? 'demo_muette' : 'demo', b.label, { status: st, module: m.module || b.subject, media: m.media });
-      else if (k === 'cta') N(b.id, 'cta', m.transcript || m.script || b.label, { keyword: m.keyword, status: st });
+      else if (k === 'cta') N(b.id, 'cta', m.transcript || m.script || b.label, { keyword: m.keyword, status: st, sujet: b.subject });
       else if (k === 'texte-choc') N(b.id, 'texte_choc', m.text || b.label, { status: st, logos: !!LOGOS[b.id], compatible: m.compatible_subjects });
       else if (['style-choc', 'musique', 'sous-titre', 'transformation', 'reaction'].indexOf(k) >= 0)
         N(b.id, k.replace('-', '_'), b.label, { status: st, image: m.cover || m.poster, media: m.media, module: b.subject });
@@ -92,8 +92,15 @@
       else if (k === 'texte_choc') (n.compatible || ['generique']).forEach(function (s) { L(i, 'M:' + s, 'choc-module'); });
       else if (k === 'transformation') L(i, 'M:' + (n.module || 'omni'), 'transfo-module');
     });
-    L('M:mcp-claude', 'CTA-CLAUDE', 'module-cta');
-    ['CTA-AIDE', 'CTA-MONTAGE', 'CTA-PLAN', 'CTA-SITE-tuto', 'CTA-cafe'].forEach(function (c) { Object.keys(MOD).forEach(function (m) { if (m !== 'mcp-claude') L('M:' + m, c, 'module-cta'); }); });
+    // 27/10 (Axel : « à chaque fois qu'on ajoute des hooks ou quoi, mets à jour la carte ») : CTA reliés d'après leur sujet en base,
+    // plus une liste écrite à la main — un CTA ajouté dans Production apparaît relié tout seul (mcp-claude → Claude (MCP),
+    // général → toutes les autres démos)
+    order.forEach(function (i) {
+      var n = nodes[i]; if (n.kind !== 'cta') return;
+      if (n.sujet === 'mcp-claude') L('M:mcp-claude', i, 'module-cta');
+      else if (n.sujet === 'general' || !n.sujet) Object.keys(MOD).forEach(function (m) { if (m !== 'mcp-claude') L('M:' + m, i, 'module-cta'); });
+      else if (MOD[n.sujet]) L('M:' + n.sujet, i, 'module-cta');
+    });
     // historique + statistiques (une statistique avec recette mais sans numéro VF compte quand même : clé IG-<média>)
     var pick = function (c) { var o = {}; Object.keys(c || {}).forEach(function (k) { if (KEYS.indexOf(k) >= 0 && c[k] && !(Array.isArray(c[k]) && !c[k].length)) o[k] = c[k]; }); return o; };
     var ids = function (c) { var u = {}; Object.keys(c).forEach(function (k) { if (k !== 'voice' && k !== 'format') [].concat(c[k]).forEach(function (x) { if (typeof x === 'string') u[x] = 1; }); }); return Object.keys(u); };
