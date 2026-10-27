@@ -6046,7 +6046,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-27-1500'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-27-1520'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -13940,6 +13940,7 @@ const _DC_IC = {
   download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
   regen:'<path d="M3 12a9 9 0 019-9 9 9 0 016.7 3M21 12a9 9 0 01-9 9 9 9 0 01-6.7-3M21 3v5h-5M3 21v-5h5"/>',
   close:'<path d="M6 6l12 12M18 6L6 18"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
   image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
   grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   palette:'<path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/>',
@@ -14351,7 +14352,7 @@ function _dcCardsRender(){
     +   (on&&img ? '<span style="width:100%;height:100%;background:url('+img.url+') center/cover"></span>' : _dcI('user', 16, 'color:var(--accent-2)'))+'</span>'
     + '<span class="col" style="line-height:1.3;min-width:0">'
     +   '<span style="font-weight:600;font-size:14px">Changer le personnage</span>'
-    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(!_dcPersoOk() ? 'Réservé Pro et Élite' : on ? (img ? (_dc.faces.length > 1 ? _dc.faces.length + ' personnages · ' : '') + DC_PERSO_CR_SEC + ' crédits / seconde' : 'Photo à ajouter') : 'Désactivé')+'</span>'
+    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(!_dcPersoOk() ? 'Réservé Pro et Élite' : on ? (img ? (_dc.faces.length > 1 ? _dc.faces.length + ' personnages · ' : '') + DC_PERSO_CR_SEC + ' crédits / seconde' : 'Photo à ajouter') : 'Photo à ajouter')+'</span>'
     + '</span></button>'
     + '<button onclick="_dcOpen(\'adv\')" class="row" style="'+card+';border:1px solid var(--border);background:var(--surface)">'
     + '<span style="width:36px;height:36px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">'+_dcI('sliders', 16, 'color:var(--accent-2)')+'</span>'
@@ -14402,33 +14403,34 @@ function _dcModalRender(){
   const title = _dc.modal === 'face' ? 'Changer le personnage' : 'Paramètres avancés';
   let body = '';
   if(_dc.modal === 'face'){
-    const F = _dc.faces, multi = F.length > 1, dim = 'opacity:'+(_dc.face?1:.55);
-    const places = multi ? DC_PLACES_MULTI : DC_PLACES_UN;
+    // 27/10 (Axel : « garde l'écran et la possibilité de mettre plusieurs personnages, c'est tout ») : l'écran d'origine ; une fois
+    // une photo ajoutée, la zone montre les personnages côte à côte (placés dans la vidéo dans cet ordre, de gauche à droite)
+    // + un rond « + » pour en ajouter un (3 au plus)
+    const F = _dc.faces, PL = { gauche:'Gauche', centre:'Centre', droite:'Droite' };
+    const rond = (inner, bg, onclick, title) => '<button type="button" onclick="'+onclick+'" title="'+title+'" style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:'+bg+';border:1px solid var(--border-2)">'+inner+'</button>';
+    const zone = !F.length
+      ? '<button onclick="_dcFacePick(null)" class="col" style="width:100%;gap:10px;align-items:center;justify-content:center;padding:22px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1)">'
+        +   '<span style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:var(--surface-2);border:1px solid var(--border-2)">'+_dcI('image', 22, '', 'faint')+'</span>'
+        +   '<span style="font-weight:700;font-size:14.5px">Ajoute la photo de l\'avatar</span>'
+        +   '<span class="faint" style="font-size:12px">Visage et corps · JPG · PNG</span>'
+        + '</button>'
+      : '<div class="col" style="width:100%;gap:10px;align-items:center;justify-content:center;padding:22px 16px;border-radius:14px;border:1px dashed var(--accent-line);background:var(--accent-soft)">'
+        +   '<div class="row" style="gap:14px;justify-content:center;flex-wrap:wrap">'
+        +     F.map((x, k) => '<div class="col" style="gap:6px;align-items:center;position:relative">'
+                + rond('<span style="width:100%;height:100%;background:url('+x.url+') center/cover"></span>', _DC_FACE_GRAD, '_dcFacePick('+k+')', 'Remplacer la photo')
+                + '<button type="button" onclick="_dcFaceDel('+k+')" title="Retirer" style="position:absolute;top:-4px;right:-4px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2)">'+_dcI('close', 11)+'</button>'
+                + (F.length > 1 ? '<span class="mono faint" style="font-size:10.5px">'+(PL[x.pos] || '')+'</span>' : '')
+                + '</div>').join('')
+        +     (F.length < DC_PERSOS_MAX ? '<div class="col" style="gap:6px;align-items:center">' + rond(_dcI('plus', 20, '', 'faint'), 'var(--surface-2)', '_dcFacePick(null)', 'Ajouter un personnage') + (F.length > 1 ? '<span class="mono faint" style="font-size:10.5px">&nbsp;</span>' : '') + '</div>' : '')
+        +   '</div>'
+        +   '<span style="font-weight:700;font-size:14.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(F.length > 1 ? F.length + ' personnages' : _dcEsc(F[0].name))+'</span>'
+        +   '<span class="faint" style="font-size:12px">'+(F.length > 1 ? 'De gauche à droite dans la vidéo' : 'Cliquer pour remplacer')+'</span>'
+        + '</div>';
+    // 27/10 (Axel) : plus d'interrupteur « Activer » — une photo chargée = activé, aucune = désactivé
     body =
-      '<div class="row" style="justify-content:space-between;align-items:center;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--panel-1);margin-bottom:12px">'
-      + '<span style="font-weight:600;font-size:14px">Activer</span>' + _dcToggleHTML(_dc.face, '_dcFaceToggle()') + '</div>'
-      + (F.length
-        // 27/10 : un bloc par personnage — photo (clic = remplacer), place dans la vidéo, retirer
-        ? '<div class="col" style="gap:8px;'+dim+'">' + F.map((x, k) =>
-            '<div class="col" style="gap:10px;padding:11px 12px;border-radius:14px;border:1px solid var(--accent-line);background:var(--accent-soft)">'
-            + '<div class="row" style="gap:11px;align-items:center">'
-            +   '<button onclick="_dcFacePick('+k+')" title="Remplacer la photo" style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;overflow:hidden;border:1px solid var(--border-2);background:'+_DC_FACE_GRAD+'"><span style="display:block;width:100%;height:100%;background:url('+x.url+') center/cover"></span></button>'
-            +   '<span class="col" style="min-width:0;flex:1;line-height:1.3"><span style="font-weight:700;font-size:13.5px">Personnage '+(k + 1)+'</span><span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_dcEsc(x.name)+'</span></span>'
-            +   '<button class="btn-quiet" onclick="_dcFaceDel('+k+')" title="Retirer ce personnage">'+_dcI('close', 15)+'</button>'
-            + '</div>'
-            + '<div class="seg" style="width:100%">' + places.map(p => '<button class="'+(x.pos===p[0]?'on':'')+'" style="flex:1" onclick="_dcFacePos('+k+',\''+p[0]+'\')">'+p[1]+'</button>').join('') + '</div>'
-            + '</div>').join('')
-          + (F.length < DC_PERSOS_MAX
-            ? '<button onclick="_dcFacePick(null)" class="row" style="width:100%;gap:8px;align-items:center;justify-content:center;padding:12px;border-radius:12px;border:1px dashed var(--border-2);background:var(--panel-1);font-weight:600;font-size:13.5px">'+_dcI('user', 15, 'color:var(--accent-2)')+'Ajouter un personnage</button>'
-            : '')
-          + '</div>'
-        : '<button onclick="_dcFacePick(null)" class="col" style="width:100%;gap:10px;align-items:center;justify-content:center;padding:22px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);'+dim+'">'
-          +   '<span style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:var(--surface-2);border:1px solid var(--border-2)">'+_dcI('image', 22, '', 'faint')+'</span>'
-          +   '<span style="font-weight:700;font-size:14.5px">Ajoute la photo de l\'avatar</span>'
-          +   '<span class="faint" style="font-size:12px">Visage et corps · JPG · PNG</span>'
-          + '</button>')
+      zone
       + '<div class="row" style="justify-content:space-between;margin-top:14px">'
-      +   '<span class="mono faint" style="font-size:11px">720p'+(multi ? ' · ' + F.length + ' personnages' : '')+'</span>'
+      +   '<span class="mono faint" style="font-size:11px">720p</span>'
       +   '<span class="mono" style="font-size:11px;color:var(--accent-2)">'+DC_PERSO_CR_SEC+' crédits / seconde</span>'
       + '</div>'
       + '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="_dcClose()">Valider</button>';
@@ -14460,19 +14462,13 @@ function _dcModalRender(){
     + '</div></div>';
 }
 function _dcFaceToggle(){ _dc.face = !_dc.face; _dcClampKeep(); _dcTrimPaint(); _dcModalRender(); _dcCardsRender(); _dcCtaRender(); }
-// 27/10 : plusieurs personnages — 1 seul = « Principal » par défaut (la personne face caméra) ; dès 2 : gauche / droite / centre,
-// chaque place une seule fois (le serveur revérifie : kie-proxy, placesDecupleur)
+// 27/10 : plusieurs personnages (3 au plus), placés dans l'ordre de gauche à droite (le serveur revérifie : kie-proxy, placesDecupleur)
 const DC_PERSOS_MAX = 3;
-const DC_PLACES_UN = [['principal','Principal'], ['gauche','Gauche'], ['centre','Centre'], ['droite','Droite']];
-const DC_PLACES_MULTI = [['gauche','Gauche'], ['centre','Centre'], ['droite','Droite']];
 function _dcFaceSync(){
-  const F = _dc.faces;
-  if(F.length > 1){   // places distinctes : on garde celles déjà choisies, on complète gauche → droite → centre
-    const libres = ['gauche','droite','centre'].filter(p => !F.some(x => x.pos === p));
-    const vus = new Set();
-    F.forEach(x => { if(x.pos === 'principal' || !DC_PLACES_MULTI.some(p => p[0] === x.pos) || vus.has(x.pos)) x.pos = libres.shift(); vus.add(x.pos); });
-  } else if(F.length === 1 && !F[0].pos) F[0].pos = 'principal';
-  _dc.faceImg = F[0] || null;
+  // places = ordre d'ajout : 1 = la personne principale ; 2 = gauche, droite ; 3 = gauche, centre, droite
+  const F = _dc.faces, P = F.length === 1 ? ['principal'] : F.length === 2 ? ['gauche','droite'] : ['gauche','centre','droite'];
+  F.forEach((x, k) => { x.pos = P[k]; });
+  _dc.faceImg = F[0] || null; _dc.face = F.length > 0;
   _dcClampKeep(); _dcTrimPaint(); _dcModalRender(); _dcCardsRender(); _dcCtaRender();
 }
 function _dcFacePick(k){ _dc.facePick = k; document.getElementById('dcFaceFile').click(); }
@@ -14485,15 +14481,10 @@ function _dcPickFace(inp){
   else if(_dc.faces.length < DC_PERSOS_MAX) _dc.faces.push(neuf);
   _dc.face = true; _dcFaceSync();
 }
-function _dcFacePos(k, p){
-  const F = _dc.faces, x = F[k]; if(!x) return;
-  const autre = F.find((y, i) => i !== k && y.pos === p); if(autre) autre.pos = x.pos;   // place prise : les deux échangent
-  x.pos = p; _dcFaceSync();
-}
 function _dcFaceDel(k){
   const x = _dc.faces[k]; if(!x) return;
   try{ URL.revokeObjectURL(x.url); }catch(_){}
-  _dc.faces.splice(k, 1); if(_dc.faces.length === 1) _dc.faces[0].pos = 'principal';
+  _dc.faces.splice(k, 1);
   if(!_dc.faces.length) _dc.face = false;
   _dcFaceSync();
 }
