@@ -3280,7 +3280,8 @@
     var kitS = PD ? (kitT == null ? 'kit illisible (factory_posts)' : '')
       : PS.state === 'error' ? 'production illisible : ' + PS.error : 'chargement de la production';
     // Axel 27/10 : même design que les cases du « Cycle d'une mission » ; plus de « Ouvertes aux diffuseurs » (= le stock
-    // commun moins la réserve du kit) ni de « Retirées » ; « Kit à programmer » = ton stock (posts « à faire » du kit)
+    // commun moins la réserve du kit) ni de « Retirées » ; « Kit à programmer » = ton stock (posts « à faire » du kit) ;
+    // ni « En mission » (= En cours du cycle) ni « Publiées par les diffuseurs » (= validées + à vérifier + refusées)
     var T = function (k, v, l, c, bg, ic, sub) {
       return '<div class="cf-bx2-mt is-static" style="--c:' + c + ';--bg:' + bg + '" data-s="' + k + '"><span class="cf-bx2-mt-h"><span class="cf-bx2-mt-ic">' + svg(ic, 16) + '</span>'
         + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b></span><span class="cf-bx2-mt-l">' + esc(l) + '</span>' + (sub ? '<span class="cf-meta">' + esc(sub) + '</span>' : '') + '</div>';
@@ -3288,8 +3289,6 @@
     var tiles = '<div class="cf-bx2-mts">'
       + T('open', bxN(K.open), 'Stock commun', 'var(--cf-accent)', 'var(--cf-accent-50)', IC.layers, K.open == null ? BX_NR : '')
       + T('kit', kitV, 'Ton stock (kit)', 'var(--cf-c-inter)', 'var(--cf-bx2-blue-bg)', IC.grid, kitS)
-      + T('assigned', bxN(K.assigned), 'En mission', 'var(--cf-warn)', 'var(--cf-warn-bg)', IC.clock, K.assigned == null ? BX_NR : '')
-      + T('done', bxN(K.done), 'Publiées par les diffuseurs', 'var(--cf-ok)', 'var(--cf-ok-bg)', IC.check, K.done == null ? BX_NR : '')
       + T('kitTotal', bxN(K.kit), 'Passées dans ton kit (total)', 'var(--cf-c-pviews)', 'var(--cf-bx2-violet-bg)', IC.down, K.kit == null ? BX_NR : '')
       + '</div>';
     return '<section class="cf-card cf-bx2-missions" data-block="bx-stock"><h3 class="cf-h2">Stock commun et kit</h3>' + tiles + '</section>';

@@ -122,10 +122,11 @@
       else videos.push({ vf: vf, date: p.publiee_le, statut: 'publiée', recette: c, publication: p });
       ids(c).forEach(function (b) { vues[b] = (vues[b] || 0) + (s.views || 0); npub[b] = (npub[b] || 0) + 1; });
     });
-    // carrefours « format » : les formats qui ont au moins une vidéo, reliés aux briques de leurs vidéos
-    Object.keys(fmtUse).sort(function (a, b) { return ((FMT[a].ordre || 0) - (FMT[b].ordre || 0)) || (a < b ? -1 : 1); }).forEach(function (f) {
-      var F = FMT[f]; N('F:' + f, 'format', F.nom || f, { famille: F.famille, band: PARLEE[F.famille] ? 'parlee' : 'muette', statutFmt: F.statut });
-      Object.keys(fmtUse[f]).forEach(function (b) { var n = nodes[b]; if (n && n.kind !== 'avatar' && n.kind !== 'photo') L(b, 'F:' + f, ['musique', 'style_choc', 'sous_titre'].indexOf(n.kind) >= 0 ? 'habillage' : 'format'); });
+    // carrefours « format » (Axel 27/10 : « avoir tous les formats, les 15 ») : tous les formats actifs ou en test, plus un format
+    // arrêté qui a encore des vidéos sur la carte ; reliés aux briques de leurs vidéos (un format sans vidéo reste seul)
+    (raw.formats || []).filter(function (F) { return F && F.id && (F.statut !== 'arrete' || fmtUse[F.id]); }).forEach(function (F) {
+      var f = F.id; N('F:' + f, 'format', F.nom || f, { famille: F.famille, band: PARLEE[F.famille] ? 'parlee' : 'muette', statutFmt: F.statut });
+      Object.keys(fmtUse[f] || {}).forEach(function (b) { var n = nodes[b]; if (n && n.kind !== 'avatar' && n.kind !== 'photo') L(b, 'F:' + f, ['musique', 'style_choc', 'sous_titre'].indexOf(n.kind) >= 0 ? 'habillage' : 'format'); });
     });
     var out = order.map(function (i) { return nodes[i]; });
     out.forEach(function (n) { if (use[n.id]) n.videos = use[n.id]; if (npub[n.id]) { n.publiees = npub[n.id]; n.vues = vues[n.id]; } });
@@ -426,7 +427,7 @@
     var h1 = maxTot(COLS_TOP), h2 = maxTot(COLS_BOT), cy1 = -430, cy2 = Math.max(470, cy1 + h1 / 2 + 300 + h2 / 2);
     var t1 = band(COLS_TOP, cy1, 0), t2 = band(COLS_BOT, cy2, 1);
     this.headsP = heads;
-    this.bandsP = [{ x: x0 - 40, y: t1 - 34, label: 'Vidéo parlée', sub: 'photo → hook → liaison → démo → CTA' }, { x: x0 - 40, y: t2 - 34, label: 'Texte + musique · habillage', sub: 'réaction → texte choc → démo muette + musique' }];
+    this.bandsP = [{ x: x0 - 40, yh: t1, label: 'Vidéo parlée', sub: 'photo → hook → liaison → démo → CTA' }, { x: x0 - 40, yh: t2, label: 'Texte + musique · habillage', sub: 'réaction → texte choc → démo muette + musique' }];
   };
   P.layoutOrb = function () {
     var G = this.g;
@@ -696,9 +697,11 @@
     if (showT && tA > 0.02 && (this.titlesCur || this.titlesC)) { ctx.fillStyle = T.title; (this.titlesCur || this.titlesC).forEach(function (t) { ctx.globalAlpha = tA * (F ? 0.3 : 0.95) * (self.entry ? clamp(tt / 900, 0, 1) : 1); ctx.fillText(t.label + '  ' + t.n, t.x * c.k + c.x, t.y * c.k + c.y); }); }
     if (showT && tB > 0.02 && this.headsP) {
       ctx.fillStyle = T.title; var colPx = 270 * c.k;
-      this.headsP.forEach(function (h) { var txt = colPx > 120 ? h.label + '  ' + h.n : colPx > 62 ? h.label : ''; if (!txt) return; ctx.globalAlpha = tB * (F ? 0.4 : 1); ctx.fillText(txt, h.x * c.k + c.x, h.y * c.k + c.y); });
+      // en-tête de colonne seulement s'il tient dans la largeur de la colonne (sinon les titres se chevauchent)
+      this.headsP.forEach(function (h) { var txt = h.label + '  ' + h.n; if (ctx.measureText(txt).width > colPx - 10) txt = h.label; if (ctx.measureText(txt).width > colPx - 10) return; ctx.globalAlpha = tB * (F ? 0.4 : 1); ctx.fillText(txt, h.x * c.k + c.x, h.y * c.k + c.y); });
       ctx.textAlign = 'left';
-      this.bandsP.forEach(function (b) { ctx.globalAlpha = tB * 0.95; ctx.fillStyle = T.ink; ctx.font = '700 11px ' + MF; ctx.fillText(b.label.toUpperCase(), b.x * c.k + c.x, b.y * c.k + c.y); if (colPx > 70) { var w = ctx.measureText(b.label.toUpperCase()).width; ctx.fillStyle = T.muted; ctx.font = '500 10.5px ' + MF; ctx.fillText('  ' + b.sub, b.x * c.k + c.x + w, b.y * c.k + c.y); } });
+      // titre de bande : 18 px au-dessus des en-têtes de colonnes, quel que soit le zoom
+      this.bandsP.forEach(function (b) { var by = b.yh * c.k + c.y - 18; ctx.globalAlpha = tB * 0.95; ctx.fillStyle = T.ink; ctx.font = '700 11px ' + MF; ctx.fillText(b.label.toUpperCase(), b.x * c.k + c.x, by); if (colPx > 70) { var w = ctx.measureText(b.label.toUpperCase()).width; ctx.fillStyle = T.muted; ctx.font = '500 10.5px ' + MF; ctx.fillText('  ' + b.sub, b.x * c.k + c.x + w, by); } });
     }
     try { ctx.letterSpacing = '0px'; } catch (e) { /* rien */ }
     var hl = function (l) { return Pp ? Pp.links.has(l) : center ? (l.s === center || l.t === center) : false; };
@@ -816,12 +819,12 @@
       if (n === center) { var pu = (now % 1500) / 1500; ctx.globalAlpha = (1 - pu) * 0.7; ctx.strokeStyle = hub ? T.hub : n.color; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, rs + 3 + pu * 20, 0, 6.283); ctx.stroke(); ctx.globalAlpha = al; }
       if (n.id === sel) { ctx.globalAlpha = 1; ctx.strokeStyle = ACC; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, y, rs + 4, 0, 6.283); ctx.stroke(); }
       var parc = self.pv > 0.5;
-      if (hub) { if ((showT && !parc) || (F && inF && (center || F.size <= 40))) labels.push([n, x, y, rs, al, true]); }
+      if (hub) { if (showT || (F && inF && (center || F.size <= 40))) labels.push([n, x, y, rs, al, true]); }
       else if (parc ? (n === self.hoverN || n === center || (F && inF && (center ? F.size <= 60 : F.size <= 30))) : ((F && inF && (F.size <= 70 || n === center)) || rs >= 9.5 || n === self.hoverN)) labels.push([n, x, y, rs, al, false]);
     });
     labels.forEach(function (z) {
       var n = z[0], x = z[1], y = z[2], rs = z[3], al = z[4], hub = z[5];
-      if (hub && n.kind === 'module' && self.pv > 0.5) {
+      if (hub && self.pv > 0.5) {   // Parcours : nom à gauche du carrefour (module ou format)
         ctx.font = '650 10.5px ' + SF; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.globalAlpha = Math.max(0.35, al); ctx.fillStyle = T.ink; ctx.fillText(n.short, x - rs - 7, y);
       } else if (hub) {
         ctx.font = '650 11px ' + SF; var txt = n.short, w = ctx.measureText(txt).width + 14, yy = y + rs + (n.kind === 'format' ? 11 : 6);
