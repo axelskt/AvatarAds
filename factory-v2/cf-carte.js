@@ -512,63 +512,45 @@
     G.nodes.forEach(function (n) { if (n.ox == null) { n.ox = n.cx; n.oy = n.cy; } });
     this.titlesO = titles;
   };
-  // Amas (refait 27/10, Axel : « fais-le mieux, je ne suis pas fan ») : un amas par module (démos, hooks, liaisons, CTA de ce
-  // module), puis Formats, Avatars & photos, Habillage, Commun ; dans chaque amas, une famille = un anneau de sa couleur autour
-  // du carrefour (vidéos à l'extérieur) ; amas rangés en rangées. Câbles entre deux amas cachés au repos (visibles au survol).
   P.layoutClu = function () {
-    var G = this.g, home = {};
-    var HAB = ['texte_choc', 'style_choc', 'musique', 'sous_titre', 'reaction'];
+    var G = this.g, mods = G.nodes.filter(function (n) { return n.kind === 'module'; }).sort(function (a, b) { return MOD_ORDER.indexOf(a.id) - MOD_ORDER.indexOf(b.id); }), home = {};
     G.nodes.forEach(function (n) {
-      if (n.kind === 'module') { home[n.id] = n.id; return; }
-      if (n.kind === 'format') { home[n.id] = '__formats'; return; }
-      if (n.kind === 'avatar' || n.kind === 'photo') { home[n.id] = '__avatars'; return; }
-      if (HAB.indexOf(n.kind) >= 0) { home[n.id] = '__habillage'; return; }
+      if (n.kind === 'module') return;
+      if (n.kind === 'format') { home[n.id] = '__fmt'; return; }   // formats : en couronne autour de « Commun à tous » (plus empilés au centre)
       if (n.kind === 'video') { home[n.id] = n.mod && G.byId['M:' + n.mod] ? 'M:' + n.mod : '__commun'; return; }
-      var m = n.module && G.byId['M:' + n.module] ? 'M:' + n.module : null;
+      var m = n.module ? G.byId['M:' + n.module] : null;
       if (!m) {
-        var cnt = {}; (G.adj[n.id] || []).forEach(function (l) { var o = l.s === n ? l.t : l.s; if (o.kind === 'module' && o.id !== 'M:generique') cnt[o.id] = (cnt[o.id] || 0) + 1; });
-        var ks = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a] || MOD_ORDER.indexOf(a) - MOD_ORDER.indexOf(b); });
-        if (ks.length === 1 || (ks.length > 1 && cnt[ks[0]] > cnt[ks[1]])) m = ks[0];
+        var cnt = {}; (G.adj[n.id] || []).forEach(function (l) { var o = l.s === n ? l.t : l.s; if (o.kind === 'module') cnt[o.id] = (cnt[o.id] || 0) + 1; });
+        var best = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; })[0];
+        if (best && ['hook', 'liaison', 'cta', 'demo', 'demo_muette', 'transformation'].indexOf(n.kind) >= 0) m = G.byId[best];
       }
-      home[n.id] = m || '__commun';
+      home[n.id] = m ? m.id : '__commun';
     });
-    var mods = G.nodes.filter(function (n) { return n.kind === 'module'; }).sort(function (a, b) { return MOD_ORDER.indexOf(a.id) - MOD_ORDER.indexOf(b.id); });
-    var groups = mods.map(function (m) { return [m.id, m.short || m.label]; }).concat([['__formats', 'Formats'], ['__avatars', 'Avatars & photos'], ['__habillage', 'Habillage'], ['__commun', 'Commun à plusieurs modules']]);
-    var parts = [];
-    groups.forEach(function (g) {
-      var mem = G.nodes.filter(function (n) { return home[n.id] === g[0] && n.id !== g[0]; }); if (!mem.length && !G.byId[g[0]]) return;
-      var hub = G.byId[g[0]], rings = [], r = hub ? hub.r + 18 : 0, fams = {};
-      mem.forEach(function (n) { (fams[n.fam] = fams[n.fam] || []).push(n); });
-      FAM_ORDER.forEach(function (f) {
-        var L = fams[f]; if (!L) return;
-        L.sort(function (a, b) { return f === 'video' ? vidOrder(a, b) : ((b.videos || 0) - (a.videos || 0)) || nat(a.id, b.id); });
-        var step = f === 'video' ? 8 : f === 'hub' ? 80 : Math.max(14, (Math.max.apply(null, L.map(function (n) { return n.r; })) || 5) * 2 + 5), k = 0;
-        while (k < L.length) {
-          var rr = r === 0 ? step : r + step / 2, cap = Math.max(6, Math.floor(2 * Math.PI * rr / step)), left = L.length - k;
-          // le reste de la famille tient sur un anneau un peu plus large : un seul anneau (pas un petit bout tout seul)
-          if (left <= cap * 1.7) { rr = Math.max(rr, left * step / (2 * Math.PI)); cap = left; }
-          var take = L.slice(k, k + cap), a0 = -Math.PI / 2 + (rings.length * 0.7);
-          take.forEach(function (n, q) { var a = a0 + q / take.length * 2 * Math.PI; n.lx = Math.cos(a) * rr; n.ly = Math.sin(a) * rr; });
-          rings.push(rr); r = rr + step / 2 + 4; k += cap;
-        }
-        r += f === 'video' ? 0 : 8;
-      });
-      parts.push({ id: g[0], label: g[1], hub: hub, mem: mem, R: Math.max(110, r) });   // 110 : place pour le titre de l'amas
+    var groups = mods.map(function (m) { return [m.id, m.short || m.label]; }).concat([['__commun', 'Commun à tous']]), ga = Math.PI * (3 - Math.sqrt(5)), titles = [];
+    // briques en spirale autour du module, vidéos en couronne autour des briques ; la grille s'agrandit avec le plus gros amas
+    var parts = groups.map(function (g) {
+      var mem = G.nodes.filter(function (n) { return home[n.id] === g[0]; }), br = mem.filter(function (n) { return n.kind !== 'video'; }), vv = mem.filter(function (n) { return n.kind === 'video'; }).sort(vidOrder);
+      br.sort(function (a, b) { return FAM_ORDER.indexOf(a.fam) - FAM_ORDER.indexOf(b.fam) || (b.r || 0) - (a.r || 0); });
+      var Rb = 34 + 15 * Math.sqrt(br.length + 0.5), R = vv.length ? Math.sqrt((Rb + 14) * (Rb + 14) + 85 * vv.length) : Rb;
+      // 27/10 (Axel) : les formats en deux colonnes de part et d'autre du « Commun à tous » (vidéo parlée à gauche, texte + musique
+      // à droite), un par ligne : leurs noms ne se recouvrent plus
+      var fm = g[0] === '__commun' ? G.nodes.filter(function (n) { return home[n.id] === '__fmt'; }) : [];
+      return { br: br, vv: vv, Rb: Rb, fm: fm, R: fm.length ? Math.max(R, fm.length / 2 * 48) : R };
     });
-    // rangées : largeur visée ≈ 1,6 × la racine de la surface totale
-    var gap = 120, area = parts.reduce(function (a, q) { return a + Math.pow(2 * q.R + gap, 2); }, 0), maxW = Math.max(1400, Math.sqrt(area) * 1.6);
-    var rows = [], row = null;
-    parts.forEach(function (q) { var w = 2 * q.R + gap; if (!row || row.w + w > maxW) { row = { items: [], w: 0, h: 0 }; rows.push(row); } row.items.push(q); row.w += w; row.h = Math.max(row.h, 2 * q.R + gap + 40); });
-    var totH = rows.reduce(function (a, r0) { return a + r0.h; }, 0), y = -totH / 2, titles = [];
-    rows.forEach(function (r0) {
-      var x = -r0.w / 2, cy = y + r0.h / 2 + 20;
-      r0.items.forEach(function (q) {
-        var cx = x + q.R + gap / 2; x += 2 * q.R + gap;
-        if (q.hub) { q.hub.gx = cx; q.hub.gy = cy; q.hub.grp = q.id; }
-        q.mem.forEach(function (n) { n.gx = cx + n.lx; n.gy = cy + n.ly; n.grp = q.id; });
-        titles.push({ x: cx, y: cy - q.R - 18, label: String(q.label).toUpperCase(), n: q.mem.length });
+    // grille des modules ; « Commun à tous » (avec l'anneau des formats, plus large) centré en dessous
+    var nm = groups.length - 1, Rmax = Math.max.apply(null, parts.slice(0, nm).map(function (q) { return q.R; }).concat([0]));
+    var cols = Math.ceil(Math.sqrt(nm * 1.6)), cellW = Math.max(560, 2 * Rmax + 110), cellH = Math.max(520, 2 * Rmax + 90), nrows = Math.ceil(nm / cols);
+    groups.forEach(function (g, gi) {
+      var q = parts[gi], last = gi === nm;
+      var cx = last ? 0 : (gi % cols - (cols - 1) / 2) * cellW, cy = last ? (nrows - 1) / 2 * cellH + cellH / 2 + q.R + 40 : (Math.floor(gi / cols) - (nrows - 1) / 2) * cellH;
+      var hub = G.byId[g[0]]; if (hub) { hub.gx = cx; hub.gy = cy; }
+      q.br.forEach(function (n, i) { var a = i * ga, rr = 34 + 15 * Math.sqrt(i + 0.5); n.gx = cx + Math.cos(a) * rr; n.gy = cy + Math.sin(a) * rr; });
+      q.vv.forEach(function (n, i) { var a = i * ga, rr = Math.sqrt((q.Rb + 14) * (q.Rb + 14) + 85 * (i + 0.5)); n.gx = cx + Math.cos(a) * rr; n.gy = cy + Math.sin(a) * rr; });
+      ['parlee', 'muette'].forEach(function (bd, side) {
+        var col = q.fm.filter(function (n) { return (n.band || 'parlee') === bd; }).sort(function (a, b) { return nat(a.label, b.label); }), stp = 96;
+        col.forEach(function (n, i) { n.gx = cx + (side ? 1 : -1) * (q.R + 230); n.gy = cy + (i - (col.length - 1) / 2) * stp; });
       });
-      y += r0.h;
+      titles.push({ x: cx, y: cy - q.R - 22, label: String(g[1]).toUpperCase(), n: q.br.length + q.vv.length });
     });
     G.nodes.forEach(function (n) { if (n.gx == null) { n.gx = n.cx; n.gy = n.cy; } });
     this.titlesG = titles;
@@ -817,10 +799,8 @@
     try { ctx.letterSpacing = '0px'; } catch (e) { /* rien */ }
     var hl = function (l) { return Pp ? Pp.links.has(l) : center ? (l.s === center || l.t === center) : false; };
     var groups = {}, hot = [];
-    var amasOn = this.appliedView === 'amas';   // Amas : câbles entre deux amas cachés au repos
     G.links.forEach(function (l) {
       if (!l.vis || l.s.ap <= 0.02 || l.t.ap <= 0.02) return;
-      if (amasOn && l.s.grp !== l.t.grp && !hl(l)) return;
       var pr = self.entry ? clamp((tt - l.dl) / 650, 0, 1) : 1; if (pr <= 0) return;
       if (hl(l)) hot.push([l, pr]); else { var key = l.type + '|' + (l.type === 'video-brique' ? FAMC.video : l.s.fam === 'hub' ? l.t.color : l.s.color); (groups[key] = groups[key] || []).push([l, pr]); }
     });
