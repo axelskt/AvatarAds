@@ -6046,7 +6046,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-26-1200'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-27-1500'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -13919,7 +13919,7 @@ const _dcExempt = () => { try{ return !!currentMember && (!!currentMember.is_own
 // signature du changement de personnage (même source, même passage, même photo → résultat réutilisé, jamais repayé)
 function _dcSig(){
   const fi = _dc.faceImg && _dc.faceImg.file;
-  return [_dc.src && _dc.src.key, Number(_dc.a).toFixed(2), Number(_dc.b).toFixed(2), _dc.faceImg && _dc.faceImg.name, fi && fi.size, fi && fi.lastModified].join('|');
+  return [_dc.src && _dc.src.key, Number(_dc.a).toFixed(2), Number(_dc.b).toFixed(2), _dc.faces.map(x => [x.name, x.file && x.file.size, x.file && x.file.lastModified, x.pos].join(':')).join(','), _dc.faceImg && _dc.faceImg.name, fi && fi.size, fi && fi.lastModified].join('|');
 }
 const DC_ALTER = [
   { id:'mirror', ic:'copy2',    t:'Effet miroir' },
@@ -13961,7 +13961,8 @@ const _dc = {
   link:'', linkErr:false, linkErrMsg:'', linkLoad:null,
   a:0, b:0, t:0, play:true,
   variants:10,
-  face:false, faceImg:null,   // { name, url, file }
+  face:false, faceImg:null,   // { name, url, file } = faces[0] (gardé pour les anciens appels)
+  faces:[], facePick:null,    // 27/10 (Axel : « un personnage à droite et un à gauche ») : [{ name, url, file, pos }], 3 au plus ; pos = principal | gauche | centre | droite
   master:null,                // résultat du changement de personnage gardé : { sig, cutKey, masterKey, cutDur, url }
   res:null,                   // dernier lot : { variants:[{n,url,play,poster}], zip, controle, faibles, keep, master }
   live:null,                  // 25/10 : lot EN COURS montré en grille : { n, t0, keep, ready:{ [n]:{url,play,poster,at} } }
@@ -14350,7 +14351,7 @@ function _dcCardsRender(){
     +   (on&&img ? '<span style="width:100%;height:100%;background:url('+img.url+') center/cover"></span>' : _dcI('user', 16, 'color:var(--accent-2)'))+'</span>'
     + '<span class="col" style="line-height:1.3;min-width:0">'
     +   '<span style="font-weight:600;font-size:14px">Changer le personnage</span>'
-    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(!_dcPersoOk() ? 'Réservé Pro et Élite' : on ? (img ? DC_PERSO_CR_SEC + ' crédits / seconde' : 'Photo à ajouter') : 'Désactivé')+'</span>'
+    +   '<span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(!_dcPersoOk() ? 'Réservé Pro et Élite' : on ? (img ? (_dc.faces.length > 1 ? _dc.faces.length + ' personnages · ' : '') + DC_PERSO_CR_SEC + ' crédits / seconde' : 'Photo à ajouter') : 'Désactivé')+'</span>'
     + '</span></button>'
     + '<button onclick="_dcOpen(\'adv\')" class="row" style="'+card+';border:1px solid var(--border);background:var(--surface)">'
     + '<span style="width:36px;height:36px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">'+_dcI('sliders', 16, 'color:var(--accent-2)')+'</span>'
@@ -14401,18 +14402,33 @@ function _dcModalRender(){
   const title = _dc.modal === 'face' ? 'Changer le personnage' : 'Paramètres avancés';
   let body = '';
   if(_dc.modal === 'face'){
-    const img = _dc.faceImg;
+    const F = _dc.faces, multi = F.length > 1, dim = 'opacity:'+(_dc.face?1:.55);
+    const places = multi ? DC_PLACES_MULTI : DC_PLACES_UN;
     body =
       '<div class="row" style="justify-content:space-between;align-items:center;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--panel-1);margin-bottom:12px">'
       + '<span style="font-weight:600;font-size:14px">Activer</span>' + _dcToggleHTML(_dc.face, '_dcFaceToggle()') + '</div>'
-      + '<button onclick="document.getElementById(\'dcFaceFile\').click()" class="col" style="width:100%;gap:10px;align-items:center;justify-content:center;padding:22px 16px;border-radius:14px;border:1px dashed '+(img?'var(--accent-line)':'var(--border-2)')+';background:'+(img?'var(--accent-soft)':'var(--panel-1)')+';opacity:'+(_dc.face?1:.55)+'">'
-      +   '<span style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:'+(img?_DC_FACE_GRAD:'var(--surface-2)')+';border:1px solid var(--border-2)">'
-      +     (img ? '<span style="width:100%;height:100%;background:url('+img.url+') center/cover"></span>' : _dcI('image', 22, '', 'faint'))+'</span>'
-      +   '<span style="font-weight:700;font-size:14.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(img ? _dcEsc(img.name) : 'Ajoute la photo de l\'avatar')+'</span>'
-      +   '<span class="faint" style="font-size:12px">'+(img ? 'Cliquer pour remplacer' : 'Visage et corps · JPG · PNG')+'</span>'
-      + '</button>'
+      + (F.length
+        // 27/10 : un bloc par personnage — photo (clic = remplacer), place dans la vidéo, retirer
+        ? '<div class="col" style="gap:8px;'+dim+'">' + F.map((x, k) =>
+            '<div class="col" style="gap:10px;padding:11px 12px;border-radius:14px;border:1px solid var(--accent-line);background:var(--accent-soft)">'
+            + '<div class="row" style="gap:11px;align-items:center">'
+            +   '<button onclick="_dcFacePick('+k+')" title="Remplacer la photo" style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;overflow:hidden;border:1px solid var(--border-2);background:'+_DC_FACE_GRAD+'"><span style="display:block;width:100%;height:100%;background:url('+x.url+') center/cover"></span></button>'
+            +   '<span class="col" style="min-width:0;flex:1;line-height:1.3"><span style="font-weight:700;font-size:13.5px">Personnage '+(k + 1)+'</span><span class="faint" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_dcEsc(x.name)+'</span></span>'
+            +   '<button class="btn-quiet" onclick="_dcFaceDel('+k+')" title="Retirer ce personnage">'+_dcI('close', 15)+'</button>'
+            + '</div>'
+            + '<div class="seg" style="width:100%">' + places.map(p => '<button class="'+(x.pos===p[0]?'on':'')+'" style="flex:1" onclick="_dcFacePos('+k+',\''+p[0]+'\')">'+p[1]+'</button>').join('') + '</div>'
+            + '</div>').join('')
+          + (F.length < DC_PERSOS_MAX
+            ? '<button onclick="_dcFacePick(null)" class="row" style="width:100%;gap:8px;align-items:center;justify-content:center;padding:12px;border-radius:12px;border:1px dashed var(--border-2);background:var(--panel-1);font-weight:600;font-size:13.5px">'+_dcI('user', 15, 'color:var(--accent-2)')+'Ajouter un personnage</button>'
+            : '')
+          + '</div>'
+        : '<button onclick="_dcFacePick(null)" class="col" style="width:100%;gap:10px;align-items:center;justify-content:center;padding:22px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);'+dim+'">'
+          +   '<span style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:var(--surface-2);border:1px solid var(--border-2)">'+_dcI('image', 22, '', 'faint')+'</span>'
+          +   '<span style="font-weight:700;font-size:14.5px">Ajoute la photo de l\'avatar</span>'
+          +   '<span class="faint" style="font-size:12px">Visage et corps · JPG · PNG</span>'
+          + '</button>')
       + '<div class="row" style="justify-content:space-between;margin-top:14px">'
-      +   '<span class="mono faint" style="font-size:11px">720p</span>'
+      +   '<span class="mono faint" style="font-size:11px">720p'+(multi ? ' · ' + F.length + ' personnages' : '')+'</span>'
       +   '<span class="mono" style="font-size:11px;color:var(--accent-2)">'+DC_PERSO_CR_SEC+' crédits / seconde</span>'
       + '</div>'
       + '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="_dcClose()">Valider</button>';
@@ -14444,12 +14460,42 @@ function _dcModalRender(){
     + '</div></div>';
 }
 function _dcFaceToggle(){ _dc.face = !_dc.face; _dcClampKeep(); _dcTrimPaint(); _dcModalRender(); _dcCardsRender(); _dcCtaRender(); }
+// 27/10 : plusieurs personnages — 1 seul = « Principal » par défaut (la personne face caméra) ; dès 2 : gauche / droite / centre,
+// chaque place une seule fois (le serveur revérifie : kie-proxy, placesDecupleur)
+const DC_PERSOS_MAX = 3;
+const DC_PLACES_UN = [['principal','Principal'], ['gauche','Gauche'], ['centre','Centre'], ['droite','Droite']];
+const DC_PLACES_MULTI = [['gauche','Gauche'], ['centre','Centre'], ['droite','Droite']];
+function _dcFaceSync(){
+  const F = _dc.faces;
+  if(F.length > 1){   // places distinctes : on garde celles déjà choisies, on complète gauche → droite → centre
+    const libres = ['gauche','droite','centre'].filter(p => !F.some(x => x.pos === p));
+    const vus = new Set();
+    F.forEach(x => { if(x.pos === 'principal' || !DC_PLACES_MULTI.some(p => p[0] === x.pos) || vus.has(x.pos)) x.pos = libres.shift(); vus.add(x.pos); });
+  } else if(F.length === 1 && !F[0].pos) F[0].pos = 'principal';
+  _dc.faceImg = F[0] || null;
+  _dcClampKeep(); _dcTrimPaint(); _dcModalRender(); _dcCardsRender(); _dcCtaRender();
+}
+function _dcFacePick(k){ _dc.facePick = k; document.getElementById('dcFaceFile').click(); }
 function _dcPickFace(inp){
   const f = inp.files && inp.files[0]; inp.value = ''; if(!f) return;
   if(!/^image\/(jpeg|png)$/.test(f.type) && !/\.(jpe?g|png)$/i.test(f.name)){ toast('Photo JPG ou PNG'); return; }
-  if(_dc.faceImg){ try{ URL.revokeObjectURL(_dc.faceImg.url); }catch(_){} }
-  _dc.faceImg = { name:f.name, url:URL.createObjectURL(f), file:f }; _dc.face = true;
-  _dcClampKeep(); _dcTrimPaint(); _dcModalRender(); _dcCardsRender(); _dcCtaRender();
+  const k = _dc.facePick; _dc.facePick = null;
+  const neuf = { name:f.name, url:URL.createObjectURL(f), file:f, pos:null };
+  if(k != null && _dc.faces[k]){ try{ URL.revokeObjectURL(_dc.faces[k].url); }catch(_){} neuf.pos = _dc.faces[k].pos; _dc.faces[k] = neuf; }
+  else if(_dc.faces.length < DC_PERSOS_MAX) _dc.faces.push(neuf);
+  _dc.face = true; _dcFaceSync();
+}
+function _dcFacePos(k, p){
+  const F = _dc.faces, x = F[k]; if(!x) return;
+  const autre = F.find((y, i) => i !== k && y.pos === p); if(autre) autre.pos = x.pos;   // place prise : les deux échangent
+  x.pos = p; _dcFaceSync();
+}
+function _dcFaceDel(k){
+  const x = _dc.faces[k]; if(!x) return;
+  try{ URL.revokeObjectURL(x.url); }catch(_){}
+  _dc.faces.splice(k, 1); if(_dc.faces.length === 1) _dc.faces[0].pos = 'principal';
+  if(!_dc.faces.length) _dc.face = false;
+  _dcFaceSync();
 }
 function _dcAltToggle(id){ _dc.alt[id] = !_dc.alt[id]; _dcModalRender(); _dcCardsRender(); }
 function _dcTextPos(p){ _dc.textPos = p; _dcModalRender(); }
@@ -14495,13 +14541,14 @@ async function _dcRun(){
     let input = _dc.src.key, a = _dc.a, b = _dc.b, master = null;
     // 2) changement de personnage : passage découpé → Wan 3.0 (kie) — résultat gardé pour les lots suivants
     if(_dc.face){
-      const fi = _dc.faceImg.file;
+      const persos = _dc.faces.slice(0, DC_PERSOS_MAX);
       const sig = _dcSig();
       if(!(_dc.master && _dc.master.sig === sig)){
         const cut = await _dcJob({ action:'dc-cut', input_video: input, a, b }, alive, null, 10);
         if(!cut.url) throw new Error('Découpe du passage impossible');
         etape('Changement du personnage', 10);
-        const img = await _kieUpload(fi);
+        const imgs = [];
+        for(const x of persos) imgs.push(await _kieUpload(x.file));   // une photo par personnage, dans l'ordre (Image1, Image2…)
         // débit AVANT le fournisseur (skill credits-securite) : DC_PERSO_CR_SEC × la durée envoyée ; kie-proxy mesure la
         // référence et tire EXACTEMENT ce montant sur CETTE op (x-aa-op). Owner / developer : rien débité, aucune op.
         const persoSec = Math.ceil(b - a - 0.01);
@@ -14510,7 +14557,7 @@ async function _dcRun(){
         const t0 = Date.now();
         let res;
         try{
-          res = await _kieRun('wan-3', { video_url: cut.url, image_url: img, resolution: '720P', aspect_ratio: _dcAspect(), duration: persoSec, audio: false },
+          res = await _kieRun('wan-3', { video_url: cut.url, image_url: imgs[0], image_urls: imgs, positions: persos.map(x => x.pos || 'principal'), resolution: '720P', aspect_ratio: _dcAspect(), duration: persoSec, audio: false },
             { op: opWan, every: 6000, maxPolls: 300, onTick: () => etape('Changement du personnage', 10 + 45 * (1 - Math.exp(-(Date.now() - t0) / 240000))) });
         }catch(err){
           // refus ou échec net → crédits rendus (le serveur l'a souvent déjà fait : refund_credits répond alors « déjà rendu ») ;

@@ -38,3 +38,35 @@ export const DC_WAN_PROMPT = [
   'Photorealistic, natural smartphone footage: real skin texture with pores and small imperfections, natural light on the new person that matches the scene.',
   'Never: beauty filter, skin smoothing, plastic or waxy skin, cartoon, CGI or painted look, blur, flicker, morphing face, identity drift, invented movement, extra or missing fingers, distorted hands.',
 ].join(' ')
+
+// 27/10 (Axel : « mettre plusieurs personnages, un à droite et un à gauche ») : jusqu'à DC_PERSOS_MAX photos dans UNE génération
+// (Wan 3.0 référence : Image1, Image2… dans l'ordre d'envoi), chacune remplace la personne à SA place dans l'image.
+// Un seul personnage sans place = DC_WAN_PROMPT tel quel (la personne principale). Même prix (par seconde gardée).
+export const DC_PERSOS_MAX = 3
+export const DC_PLACES = ['principal', 'gauche', 'centre', 'droite'] as const
+const PLACE_EN: Record<string, string> = { gauche: 'on the LEFT side of the frame', centre: 'in the CENTER of the frame', droite: 'on the RIGHT side of the frame' }
+// places valides : 1 personnage = une place (principal par défaut) ; plusieurs = gauche / centre / droite, chacune une seule fois
+export function placesDecupleur(raw: unknown, n: number): string[] | null {
+  if (n < 1 || n > DC_PERSOS_MAX) return null
+  const arr = Array.isArray(raw) ? raw.map((x) => String(x ?? '').toLowerCase()) : []
+  if (n === 1) { const p = arr[0] || 'principal'; return (DC_PLACES as readonly string[]).includes(p) ? [p] : null }
+  if (arr.length !== n || arr.some((p) => !PLACE_EN[p]) || new Set(arr).size !== n) return null
+  return arr
+}
+export function dcWanPrompt(places: string[]): string {
+  if (places.length === 1 && places[0] === 'principal') return DC_WAN_PROMPT
+  const who = places.map((p, i) => `Image${i + 1} is the new character for the person ${PLACE_EN[p]}.`).join(' ')
+  const one = places.length === 1
+  return [
+    `Video editing task: character replacement only. Video1 is the source video. ${who}`,
+    one ? `Replace ONLY the person ${PLACE_EN[places[0]]} in Video1 with the person in Image1. Every other person stays exactly as in Video1.`
+        : `Replace each of these people in Video1 with their own image: ${places.map((p, i) => `the person ${PLACE_EN[p]} becomes the person in Image${i + 1}`).join('; ')}. Never swap them, never merge them, never give two people the same face. Any other person stays exactly as in Video1.`,
+    `Each new person must be a 1:1 match of their image: exactly the same face, facial features, skin tone, hair color, length and style, body shape and proportions, clothing and accessories, identical in every frame from the first to the last.`,
+    `Take NOTHING of the original people’s appearance (face, hair, body, clothes): take only their movement.`,
+    `Motion comes ONLY from Video1: each new person performs exactly the same movements as the person they replace, at the same moments and the same speed — same body pose, gestures, hand movements, head movements, gaze direction, facial expressions and mouth movements (the lips follow the original speech of Video1 exactly). Same position, size and framing of each person in the frame.`,
+    'Do not invent, add, exaggerate, smooth out or skip any movement.',
+    'Everything else stays exactly as in Video1: camera framing, camera movement and handheld shake, background and every object, lighting and color grade, timing, duration, speed, aspect ratio, and any on-screen text or overlays. Do not add, remove or move any object, person, text or logo. No cut, no transition, no new camera angle, no zoom.',
+    'Photorealistic, natural smartphone footage: real skin texture with pores and small imperfections, natural light on the new people that matches the scene.',
+    'Never: beauty filter, skin smoothing, plastic or waxy skin, cartoon, CGI or painted look, blur, flicker, morphing face, identity drift, invented movement, extra or missing fingers, distorted hands.',
+  ].join(' ')
+}

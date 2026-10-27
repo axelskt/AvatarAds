@@ -64,7 +64,7 @@ import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as dow
 import { preparerVideoFal, preparerVideoWan, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : vidéo du client copiée + mesurée, comme fal-proxy
 import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
 import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
-import { DC_WAN_PROMPT, DC_PLANS, DC_PERSO_CR_SEC, DC_PERSO_MAX, decupleurOuvert } from '../_shared/decupleur.ts'   // Décupleur : prompt du changement de personnage (UNE version, partagée avec le MCP)
+import { dcWanPrompt, placesDecupleur, DC_PERSOS_MAX, DC_PLANS, DC_PERSO_CR_SEC, DC_PERSO_MAX, decupleurOuvert } from '../_shared/decupleur.ts'   // Décupleur : prompt du changement de personnage (UNE version, partagée avec le MCP)
 
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
@@ -168,12 +168,18 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
     // de référence 1–15 s (le passage gardé, découpé par le moteur), durée produite entière 2–15 s (référence + sortie ≤ 30 s),
     // pas de son généré (le moteur remet le son d'origine), 720P par défaut (Axel : 720p). Prompt SERVEUR (DC_WAN_PROMPT,
     // _shared/decupleur.ts) : celui du client est ignoré — même consigne pour l'app et le MCP.
-    const vid = okInput(b.video_url, uid), img = okInput(b.image_url, uid)
-    if (!vid || !img) return { error: 'video_url / image_url : URL de notre storage uniquement' }
-    const prompt = DC_WAN_PROMPT
+    // 27/10 : plusieurs personnages (image_urls + positions : gauche / centre / droite), sinon image_url seule (personne principale)
+    const vid = okInput(b.video_url, uid)
+    const rawImgs = Array.isArray(b.image_urls) && b.image_urls.length ? b.image_urls : [b.image_url]
+    if (rawImgs.length > DC_PERSOS_MAX) return { error: `${DC_PERSOS_MAX} personnages au plus` }
+    const imgs = rawImgs.map((u: unknown) => okInput(u, uid))
+    if (!vid || imgs.some((x: string | null) => !x)) return { error: 'video_url / image_url : URL de notre storage uniquement' }
+    const places = placesDecupleur(b.positions, imgs.length)
+    if (!places) return { error: 'positions : une place par personnage (gauche, centre ou droite), chacune une seule fois' }
+    const prompt = dcWanPrompt(places)
     const d = Math.round(Number(b.duration) || 5)
     const input: Record<string, unknown> = {
-      prompt, reference_video_urls: [vid], reference_image_urls: [img],
+      prompt, reference_video_urls: [vid], reference_image_urls: imgs,
       resolution: pick(b.resolution, ['480P', '720P', '1080P'] as const, '720P'),
       aspect_ratio: pick(b.aspect_ratio, ['adaptive', '16:9', '4:3', '1:1', '3:4', '9:16'] as const, 'adaptive'),
       duration: Math.min(15, Math.max(2, d)), audio: b.audio === true, nsfw_checker: false,
