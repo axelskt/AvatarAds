@@ -718,7 +718,7 @@ video::-webkit-media-controls{display:none!important}
       </div></div>
       <!-- multiplier (27/10) -->
       <div class="feat-mock" data-feat="decupleur" style="padding:16px"><div class="feat-demo vidwrap">
-        <div class="feat-vid"><video src="/assets/lp/en/decupleur-lp.mp4" poster="/assets/lp/en/decupleur-lp.webp" muted loop playsinline preload="metadata" aria-label="Multiplier demo: one video, two characters swapped, then 10 different variants"></video></div>
+        <div class="feat-vid"><video src="/assets/lp/en/decupleur-lp.mp4?v=2" poster="/assets/lp/en/decupleur-lp.webp?v=2" muted loop playsinline preload="metadata" aria-label="Multiplier demo: one video, two characters swapped, then 10 different variants"></video></div>
       </div></div>
       <!-- motion control -->
       <div class="feat-mock" data-feat="motion" style="padding:16px"><div class="feat-demo vidwrap">
@@ -1180,7 +1180,7 @@ document.querySelectorAll('[data-countup]').forEach(function(el){
 
 /* ══════════ Features — onglets ══════════ */
 var FEAT_TABS=[
-  { id:"decupleur", tab:"Multiplier", t:"One video, dozens of unique versions", d:"Drop a video, swap the character if you like, and get 10, 20 or 50 variants that are all different, ready to post." },
+  { id:"decupleur", tab:"Multiplier", t:"One video, dozens of unique versions", d:"Drop a video, swap the character and get 10, 20 or 50 different variants." },
   { id:"motion", tab:"Motion Control", t:"A still image that comes to life", d:"Animate any photo: the motion is generated and the video is ready to post." },
   { id:"avatar", tab:"AI Avatar", t:"An avatar for every brand", d:"Realistic UGC-style AI faces — pick yours and it presents your product to the camera. No casting, no shoot." },
   { id:"audio", tab:"Audio Cleanup", t:"Clean audio, automatically", d:"Background noise, volume, silences — cleaned up in one go for crisp, professional sound." },
@@ -1401,7 +1401,7 @@ revealScan();
     ["express","Express","Video from text",200,"bolt","text → video","/assets/lp/express-lp.mp4"],
     ["motion","Motion Control","Transfer a motion onto an image",265,"mask","video + image → video","/assets/lp/en/motion-control-lp.mp4"],
     ["images","AI Image","4K visuals in 1 prompt",330,"image","text → image","/assets/lp/images-ia-lp.mp4"],
-    ["decupleur","Multiplier","One video, dozens of unique versions",18,"film","video → ×10 videos","/assets/lp/en/decupleur-lp.mp4"],
+    ["decupleur","Multiplier","One video, dozens of unique versions",18,"film","video → videos","/assets/lp/en/decupleur-lp.mp4?v=2"],
     ["gen","Generator","AI avatar + voice + captions",150,"sparkle","image + audio → video","/assets/lp/en/generateur-lp.mp4"],
     ["omni","Omni","Transform any object in one click",30,"sparkle","video → video","/assets/lp/en/omni-lp.mp4?v=2"]
   ];
