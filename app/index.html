@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-30-1200'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-0900'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -38862,27 +38862,37 @@ let _acDenoisedBuf = null;  // #151 : buffer débruité complet, source du déru
 // Piste audio d'un fichier vidéo → WAV pleine qualité (decodeAudioData lit le MP4)
 async function _acExtractAudioWav(file){
   const stem = file.name.replace(/\.[^.]+$/, '');
-  try {
+  const natif = async () => {
     const ac  = new (window.AudioContext || window.webkitAudioContext)();
     const dec = await ac.decodeAudioData(await file.arrayBuffer());
     await ac.close();
-    if(dec && dec.length) return new File([_audioBufferToWavBlob(dec)], stem + '.wav', { type:'audio/wav' });
-  } catch(e){ console.warn('_acExtractAudioWav : décodage navigateur impossible, passage par ffmpeg', e); }
-  // Axel 30/10 : un .MOV d'iPhone (HEVC + audio spatial + pistes de données) n'est pas lisible par decodeAudioData :
-  // ffmpeg ne prend que sa première piste audio (AAC stéréo).
-  toast('Vidéo .mov — extraction du son (quelques secondes)…');
-  await _loadFFmpeg();
-  const ff = _ffmpegInst, ext = (/\.([a-z0-9]{2,5})$/i.exec(file.name) || [,'mov'])[1].toLowerCase();
-  const entree = 'ac_in.' + ext, sortie = 'ac_out.wav';
-  await ff.FS('writeFile', entree, new Uint8Array(await file.arrayBuffer()));
+    if(!dec || !dec.length) throw new Error('aucune piste audio');
+    return new File([_audioBufferToWavBlob(dec)], stem + '.wav', { type:'audio/wav' });
+  };
+  // Axel 30/10 : « le son est horrible en .mov ». Un .MOV d'iPhone porte une piste AAC stéréo ET une piste spatiale à 4 canaux :
+  // le décodage du navigateur peut mal les mélanger et rééchantillonne. On convertit donc D'ABORD : ffmpeg sort la seule piste AAC
+  // en WAV 48 kHz sans perte, puis le nettoyage habituel s'applique. Autres vidéos : navigateur, ffmpeg s'il refuse.
+  const mov = /quicktime/i.test(file.type) || /\.mov$/i.test(file.name);
+  if(!mov){ try { return await natif(); } catch(e){ console.warn('_acExtractAudioWav : décodage navigateur impossible', e); } }
   try {
-    await ff.run('-i', entree, '-map', '0:a:0', '-vn', '-ac', '2', '-ar', '48000', '-c:a', 'pcm_s16le', sortie);
-    const wav = await ff.FS('readFile', sortie);
-    if(!wav || wav.length < 1000) throw new Error('aucune piste audio');
-    return new File([wav], stem + '.wav', { type:'audio/wav' });
-  } finally {
-    try{ await ff.FS('unlink', entree); }catch(_){}
-    try{ await ff.FS('unlink', sortie); }catch(_){}
+    toast('Conversion du son de la vidéo…');
+    await _loadFFmpeg();
+    const ff = _ffmpegInst, ext = (/\.([a-z0-9]{2,5})$/i.exec(file.name) || [,'mov'])[1].toLowerCase();
+    const entree = 'ac_in.' + ext, sortie = 'ac_out.wav';
+    await ff.FS('writeFile', entree, new Uint8Array(await file.arrayBuffer()));
+    try {
+      await ff.run('-i', entree, '-map', '0:a:0', '-vn', '-ac', '2', '-ar', '48000', '-c:a', 'pcm_s16le', sortie);
+      const wav = await ff.FS('readFile', sortie);
+      if(!wav || wav.length < 1000) throw new Error('aucune piste audio');
+      return new File([wav], stem + '.wav', { type:'audio/wav' });
+    } finally {
+      try{ await ff.FS('unlink', entree); }catch(_){}
+      try{ await ff.FS('unlink', sortie); }catch(_){}
+    }
+  } catch(e){
+    if(!mov) throw e;
+    console.warn('_acExtractAudioWav : ffmpeg impossible (vidéo très lourde ?), décodage navigateur', e);
+    return natif();
   }
 }
 
