@@ -33,6 +33,8 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 //   MCP      <uid>/mcp-montage-<ts>.<ext> · <uid>/mcp-avatar[-<n>]-<ts>.<ext> ·
 //            <uid>/mcp-as-<slug>-<ts>.<ext> · <uid>/mcp-retouche/<job>-brut.mp4 ·
 //            <uid>/mcp-veo/<job>.<ext> · <uid>/mcp-src/<job>-src.<ext> (mc-ref)
+//   MCP (préfixe serveur, lot Décupleur seulement — cheminPrepDecupleur) mcp-prep/<uid>/<rendu>.mp4 ·
+//            mcp-prep/<uid>/<job>-perso.mp4
 // Un chemin qui COMMENCE par l'uid mais contient un segment parent (« .. », y compris
 // encodé « %2e%2e ») est normalisé par l'URL de l'API de stockage et peut viser le
 // fichier d'un autre compte : on refuse donc %, \, ?, #, les caractères de contrôle,
@@ -73,6 +75,24 @@ export function fichiersVoixJob(job) {
   return [job.input_video, ...(Array.isArray(job.assets) ? job.assets : []).map((a) => a && a.path)].filter((p) => cheminVoixPrep(uid, p))
 }
 
+// Lot Décupleur lancé par le MCP (30/10, audit Décupleur faille 1) : son entrée (la vidéo préparée mcp-prep/<uid>/<rendu>.mp4)
+// et la vidéo du personnage (mcp-prep/<uid>/<job>-perso.mp4) vivent sous mcp-prep/ — préfixe que seul le serveur écrit (les
+// policies storage n'ouvrent au client que render-media/<son uid>/). Avant, l'entrée était COPIÉE dans <uid>/mcp-src/ : le
+// client la supprimait pendant la génération du personnage, le lot échouait et tout était remboursé, personnage compris.
+// Admis pour un job 'decupleur' de CE compte seulement (render_jobs n'est inséré que par le serveur : aucune policy INSERT).
+export function cheminPrepDecupleur(uid, p) {
+  if (typeof uid !== 'string' || !UUID.test(uid) || typeof p !== 'string') return false
+  return new RegExp('^mcp-prep/' + uid + '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-perso)?\\.mp4$').test(p)
+}
+const estDecupleurJob = (job) => !!(job && job.plan && job.plan.__compose === 'decupleur')
+// Un chemin que CE job a le droit de lire (règle du point de téléchargement du worker, en plus d'entreesJobSures)
+export function cheminLisibleJob(job, p) {
+  const uid = String((job && job.user_id) || '')
+  if (cheminSur(uid, p)) return true
+  if (estVoixJob(job) && cheminVoixPrep(uid, p)) return true
+  return estDecupleurJob(job) && cheminPrepDecupleur(uid, p)
+}
+
 // Toutes les entrées d'un job (vidéo de base, assets[].path, avatar_clips) vérifiées
 // AVANT le premier téléchargement. Absent = vide ; toute autre forme = refusée.
 export function entreesJobSures(job) {
@@ -80,8 +100,10 @@ export function entreesJobSures(job) {
   const uid = String(job.user_id || '')
   const liste = (x) => (Array.isArray(x) ? x : x == null ? [] : [null])
   const videoSure = cheminSur(uid, job.input_video) || (estVoixJob(job) && /-src\.mp4$/.test(String(job.input_video)) && cheminVoixPrep(uid, job.input_video))
+    || (estDecupleurJob(job) && cheminPrepDecupleur(uid, job.input_video) && !/-perso\.mp4$/.test(String(job.input_video)))
   if (!videoSure || !liste(job.avatar_clips).every((p) => cheminSur(uid, p))) return false
-  return liste(job.assets).every((a) => cheminSur(uid, a && a.path) || entreeVoixJob(job, a))
+  return liste(job.assets).every((a) => cheminSur(uid, a && a.path) || entreeVoixJob(job, a)
+    || (estDecupleurJob(job) && !!a && a.id === 'master' && cheminPrepDecupleur(uid, a.path)))
 }
 
 // Clé de la vidéo produite. Contrat avec le MCP (02/10) : la vidéo PRÉPARÉE d'un job

@@ -713,6 +713,7 @@ function aaPollStatus(u){
     if(j.status==='done' && j.url){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } aaSetPct(100); setTimeout(function(){ aaMedia(j.url, j.kind||'image', ''); }, 350); return; }
     if(j.status==='failed'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } var pt=document.getElementById('pt'); if(pt) pt.textContent=j.msg||(aaPrev?'La vidéo a échoué (crédits de la vidéo rendus) — ta photo de départ est gardée, aussi dans ta Bibliothèque.':'Échec de la génération — réessaie.');
       var pw=document.querySelector('.aa-pw'); if(pw) pw.style.display='none';
+      if(aaSafeUrl(j.perso)&&pt&&pt.parentNode&&!document.getElementById('dcp')){ var bp=document.createElement('button'); bp.className='aa-a aa-rg'; bp.id='dcp'; bp.type='button'; bp.style.cssText='border:none;cursor:pointer;margin:10px auto 4px;display:block'; bp.textContent='Vidéo du personnage'; bp.onclick=function(){ aaSend('ui/open-link', { url:aaSafeUrl(j.perso) }); }; pt.parentNode.insertBefore(bp, pt.nextSibling); }
       if(aaPrev&&!document.getElementById('dlp')){ var pv2=document.getElementById('pv'); if(pv2&&!pv2.firstChild){ var im2=document.createElement('img'); im2.alt=''; im2.style.cssText='display:block;max-width:100%;max-height:420px;margin:12px auto 4px;border-radius:12px'; im2.addEventListener('load', aaKick); im2.src=aaPrev; pv2.appendChild(im2); }
         if(pv2){ var bd=document.createElement('button'); bd.className='aa-a aa-rg'; bd.id='dlp'; bd.type='button'; bd.style.cssText='border:none;cursor:pointer;margin:6px auto 10px;display:block'; bd.textContent='Télécharger la photo'; bd.onclick=function(){ aaSend('ui/open-link', { url:'https://mcp.avatarads.fr/i/'+aaJobId+'?photo=1&download=photo-depart.png' }); }; pv2.appendChild(bd); } }
       aaKick(); }
@@ -3860,6 +3861,10 @@ async function runMotionControl(profile: Record<string, unknown>, args: Record<s
 // hors du dossier réinscriptible) → durée MESURÉE → débit (variantes + personnage) → [dw:<tâche> changement de personnage
 // chez kie (Wan 3.0, prompt DC_WAN_PROMPT, sans son) → copie du résultat] → dj:<rendu> N variantes (decupleur) → done.
 // Réservations (compare-and-swap) : dfs, vns, dwg. Toujours en cours après VT_STALE_MIN → remboursé (filet commun).
+// 30/10 (audit Décupleur, faille 1) : entrée du lot ET vidéo du personnage sous mcp-prep/<uid>/ (préfixe que seul le serveur
+// écrit ; avant : <uid>/mcp-src/, le client pouvait supprimer l'entrée pendant le personnage → lot en échec → 100 % rendus,
+// personnage gardé). Vidéo du personnage déposée = DUE : credits_cost ramené à la part variantes (dcPersoDu), entrée revérifiée
+// avant le lot ; tout échec ensuite ne rend que les variantes et la carte livre quand même le personnage.
 async function runDecupler(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
   if (!droitDecupleur(profile)) {
     const plan = String(profile.plan || 'free').toLowerCase()
@@ -3918,8 +3923,33 @@ async function dcLancerLot(job: Record<string, unknown>, de: string, base: strin
     assets: master ? [{ id: 'master', path: master, kind: 'video' }] : [],
     plan: { __compose: 'decupleur', a: 0, b: keep, n: Number(pj.n) || 10, alt: pj.alt || {}, textPos: pj.text_pos || 'Haut', seed: Math.floor(Math.random() * 2147483647), duration: keep } })
     .select('id').single()
-  if (error || !rj) { await vtEchec(job, 'Lancement du décuplage impossible — crédits rendus, réessaie.', de); return }
+  if (error || !rj) { await vtEchec(job, master ? `Lancement du décuplage impossible — crédits des variantes rendus ; ${DC_PERSO_GARDE}` : 'Lancement du décuplage impossible — crédits rendus, réessaie.', de); return }
   await vtPasser(job, de, 'dj:' + rj.id, { ...patch, lot_at: Date.now() })
+}
+// Vidéo du personnage d'un Décupleur MCP : mcp-prep/<uid>/<job>-perso.mp4 (30/10). L'ancienne place <uid>/mcp-src/<job>-perso.mp4
+// reste lue pour un job lancé avant le correctif.
+const DC_PERSO_GARDE = 'la vidéo du personnage reste téléchargeable ci-dessous.'
+const dcPersoChemin = (uid: string, jobId: string) => `mcp-prep/${uid}/${jobId}-perso.mp4`
+function dcPersoSur(uid: string, jobId: string, p: unknown): string | null {
+  const s = String(p || ''), U = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+  if (!U.test(uid) || !U.test(jobId)) return null
+  if (s === dcPersoChemin(uid, jobId)) return s
+  return s === `${uid}/mcp-src/${jobId}-perso.mp4` && cheminSur(uid, s) ? s : null
+}
+// Vidéo du personnage DÉPOSÉE = due (même règle que la photo de départ d'Express, l. « photo LIVRÉE ») : credits_cost ramené à
+// la part variantes, sous compare-and-swap (job en cours, non remboursé, étape réservée par CE suivi, montant lu). Tous les
+// remboursements ensuite — lot en échec, entrée disparue, filet VT_STALE_MIN — ne rendent plus que les variantes (ils
+// plafonnent à credits_cost). perso_path n'est posé qu'ici : la carte ne livre le personnage que s'il est payé.
+async function dcPersoDu(job: Record<string, unknown>, res: string, varCost: number, master: string): Promise<boolean> {
+  const { data: cur } = await svc.from('mcp_jobs').select('credits_cost, refunded, status, op_name, params').eq('id', String(job.id)).maybeSingle()
+  if (!cur || cur.status !== 'running' || cur.refunded || cur.op_name !== res) return false
+  const avant = Number(cur.credits_cost) || 0, apres = Math.min(avant, varCost)
+  const params = { ...((cur.params || {}) as Record<string, unknown>), perso_path: master, perso_du: avant - apres }
+  const { data } = await svc.from('mcp_jobs').update({ credits_cost: apres, params, updated_at: new Date().toISOString() })
+    .eq('id', String(job.id)).eq('status', 'running').eq('refunded', false).eq('op_name', res).eq('credits_cost', avant).select('id')
+  if (!data || !data.length) return false
+  job.credits_cost = apres; job.params = params
+  return true
 }
 async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
   const userId = String(job.user_id), op = String(job.op_name || ''), pj = (job.params || {}) as Record<string, unknown>
@@ -3959,11 +3989,10 @@ async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
     const cost = Math.ceil(n * DC_CR_VARIANTE) + persoSec * DC_PERSO_CR_SEC
     const bal = await spendForJob(userId, String(job.id), cost)
     if (bal === null || bal === -1 || bal === -2) { await vtEchec(job, `Crédits insuffisants : il en faut ${cost}. Recharge sur avatarads.fr`, res); return }
-    // entrée du lot = copie de la vidéo préparée dans le dossier du compte (le moteur ne lit que <uid>/…) ; le passage [0, keep]
-    // est fixé par le plan : une copie remplacée entre-temps ne peut pas allonger le travail payé
-    const base = `${userId}/mcp-src/${job.id}-prep.mp4`
-    const cp = await svc.storage.from('render-media').copy(prep, base)
-    if (cp.error) { await vtEchec(job, 'Préparation de la vidéo impossible — crédits rendus, réessaie.', res); return }
+    // entrée du lot = la vidéo préparée ELLE-MÊME, sous mcp-prep/<uid>/ : le client ne peut ni la supprimer ni la remplacer
+    // (30/10, audit Décupleur faille 1 — avant : copie dans <uid>/mcp-src/, supprimable). Le moteur l'admet pour un lot
+    // Décupleur de ce compte (render-worker/securite.mjs, cheminPrepDecupleur). Passage [0, keep] fixé par le plan.
+    const base = prep
     const patch = { dur: Math.round(dur * 100) / 100, keep: Math.round(keep * 1000) / 1000, bill: cost, base_path: base }
     if (perso) {
       const refUrl = await signRender(prep, 3 * 3600), charUrl = await signPath(String(pj.char_path || ''), 3 * 3600)
@@ -3994,10 +4023,17 @@ async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
     const res = 'dwg:' + op.slice(3)
     if (!(await vtPasser(job, op, res))) return
     const dl = await kieDownload(rec.urls[0])
-    const master = `${userId}/mcp-src/${job.id}-perso.mp4`
+    const master = dcPersoChemin(userId, String(job.id))   // mcp-prep/<uid>/ : jamais dans un dossier que le client modifie
     const up = dl && dl.buf.byteLength > 1000 ? await svc.storage.from('render-media').upload(master, new Uint8Array(dl.buf), { contentType: 'video/mp4', upsert: true }) : null
     if (!up || up.error) { await vtPasser(job, res, op); return }   // nouvel essai au passage suivant (le filet borne)
-    await dcLancerLot(job, res, String(pj.base_path || ''), Number(pj.keep) || 0, master, { perso_path: master })
+    // personnage déposé → part personnage DUE (credits_cost = part variantes) AVANT tout ce qui peut encore échouer
+    if (!(await dcPersoDu(job, res, Math.ceil(n * DC_CR_VARIANTE), master))) { await vtPasser(job, res, op); return }
+    // l'entrée du lot existe encore ? null = absente → pas de lot ; undefined = stockage muet → nouvel essai au passage suivant
+    const base = String(pj.base_path || '')
+    const info = base ? await fichierInfo('render-media', base) : null
+    if (info === undefined) { await vtPasser(job, res, op); return }
+    if (!info) { await vtEchec(job, `La vidéo de départ n'est plus disponible — crédits des variantes rendus ; ${DC_PERSO_GARDE}`, res); return }
+    await dcLancerLot(job, res, base, Number(pj.keep) || 0, master, { perso_path: master })
     return
   }
 
@@ -4005,7 +4041,7 @@ async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
   if (op.startsWith('dj:')) {
     const { data: rj } = await svc.from('render_jobs').select('status, output_url, progress').eq('id', op.slice(3)).maybeSingle()
     if (!rj) return
-    if (rj.status === 'failed') { await vtEchec(job, 'La fabrication des variantes a échoué — crédits rendus, réessaie.'); return }
+    if (rj.status === 'failed') { await vtEchec(job, pj.perso_path ? `La fabrication des variantes a échoué — crédits des variantes rendus ; ${DC_PERSO_GARDE}` : 'La fabrication des variantes a échoué — crédits rendus, réessaie.'); return }
     if (rj.status !== 'done' || !rj.output_url) {
       if (rj.progress != null && Number(rj.progress) !== Number(pj.lot_pct)) await svc.from('mcp_jobs').update({ params: { ...pj, lot_pct: Number(rj.progress) } }).eq('id', String(job.id)).eq('status', 'running').eq('op_name', op)
       return
@@ -4024,7 +4060,14 @@ async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
 // Réponse /status d'un Décupleur : avancement par étape ; fini → variantes signées (2 h), ZIP, vidéo du personnage
 async function statutDecupleur(j: Record<string, unknown>): Promise<Record<string, unknown>> {
   const pj = (j.params || {}) as Record<string, unknown>, op = String(j.op_name || ''), perso = pj.perso === true
-  if (j.status === 'failed') return { status: 'failed', kind: 'variants', progress: 100, error: 'failed', msg: String(pj.user_msg || '') || 'Le décuplage a échoué — crédits rendus.' }
+  // vidéo du personnage : livrée avec les variantes ; sur un ÉCHEC, seulement si elle est restée PAYÉE (perso_du, posé par
+  // dcPersoDu en même temps que credits_cost baissé) — jamais pour un job d'avant le correctif remboursé à 100 %
+  const persoLien = async (surEchec = false) => {
+    const p = perso && (!surEchec || typeof pj.perso_du === 'number') ? dcPersoSur(String(j.user_id), String(j.id), pj.perso_path) : null
+    if (!p || (surEchec && !p.startsWith('mcp-prep/'))) return null
+    return (await svc.storage.from('render-media').createSignedUrl(p, 7200, { download: 'personnage.mp4' })).data?.signedUrl ?? null
+  }
+  if (j.status === 'failed') return { status: 'failed', kind: 'variants', progress: 100, error: 'failed', msg: String(pj.user_msg || '') || 'Le décuplage a échoué — crédits rendus.', perso: await persoLien(true) }
   if (j.status !== 'done') {
     const base = perso ? 58 : 15
     let p = 8
@@ -4044,7 +4087,7 @@ async function statutDecupleur(j: Record<string, unknown>): Promise<Record<strin
     vs.length ? st.createSignedUrls(vs.map((v) => `${prefixe}/${v.affiche}`), 7200) : Promise.resolve({ data: [] }),
   ])
   const zip = m.zip ? (await st.createSignedUrl(`${prefixe}/variantes.zip`, 7200, { download: 'variantes.zip' })).data?.signedUrl ?? null : null
-  const persoUrl = perso && cheminSur(uid, pj.perso_path) ? (await st.createSignedUrl(String(pj.perso_path), 7200, { download: 'personnage.mp4' })).data?.signedUrl ?? null : null
+  const persoUrl = await persoLien()
   return { status: 'done', kind: 'variants', progress: 100, error: null, zip, perso: persoUrl, controle: m.controle ?? null, faibles: m.faibles ?? 0, passage: m.passage ?? null,
     variants: vs.map((_, i) => ({ url: (dl.data ?? [])[i]?.signedUrl ?? null, poster: (af.data ?? [])[i]?.signedUrl ?? null })) }
 }

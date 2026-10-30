@@ -39,7 +39,7 @@ import { finsAffichageAvatar } from './dynamic-engine.mjs'
 import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs'   // prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from './hedra-prompts.mjs'   // prompt lipsync Hedra PARTAGÉ (shared/hedra-prompts.json, 27/09)
 // Audit 02/10 : garde-fous partagés (chemins de stockage, plan assaini, GSAP embarqué) — voir securite.mjs
-import { cheminSur, entreesJobSures, cleSortieJob, assainirPlan, installerGsap, NOM_CATALOGUE, NOM_EMOJI, NOM_SFX,
+import { cheminSur, cheminLisibleJob, entreesJobSures, cleSortieJob, assainirPlan, installerGsap, NOM_CATALOGUE, NOM_EMOJI, NOM_SFX,
   musiqueBanqueSure, horsBornes, BORNES_MEDIA, origineStockage, prochainJob, cheminVoixPrep, fichiersVoixJob } from './securite.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -3604,8 +3604,9 @@ async function pollLoop() {
           throw new Error(MSG_ENTREE_REFUSEE)
         }
         const dl = async (path, dest) => {
-          // défense en profondeur : même règle au point de téléchargement (+ les fichiers privés d'un job 'motion-voix', voir securite.mjs)
-          if (!cheminSur(uidJob, path) && !(job.plan && job.plan.__compose === 'motion-voix' && cheminVoixPrep(uidJob, path))) throw new Error(MSG_ENTREE_REFUSEE)
+          // défense en profondeur : même règle au point de téléchargement (+ les fichiers privés d'un job 'motion-voix' et, 30/10,
+          // l'entrée / la vidéo du personnage d'un lot Décupleur du MCP sous mcp-prep/<uid>/ : voir securite.mjs cheminLisibleJob)
+          if (!cheminLisibleJob(job, path)) throw new Error(MSG_ENTREE_REFUSEE)
           const { data, error } = await sb.storage.from('render-media').download(path)
           if (error) throw new Error('download ' + path + ': ' + error.message)
           writeFileSync(dest, Buffer.from(await data.arrayBuffer()))
