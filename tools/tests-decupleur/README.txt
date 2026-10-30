@@ -81,13 +81,52 @@ Déploiement des failles 3 et 4 (depuis une copie propre du commit, jamais depui
       render-job crée TOUS les jobs Décupleur par render_job_dc_creer (absente → 503 « Création impossible » pour tous).
    2. Fonction render-job : supabase functions deploy render-job (et mcp si la faille 2 n'est pas encore en ligne).
    3. render-worker sur Railway (worker.mjs, securite.mjs, decupleur.mjs). Il fonctionne aussi avant la migration (prise
-      habituelle si render_claim_dc est absente, plafond lu par prochainJob). Variable optionnelle DC_MOTEURS_MAX (défaut 2) :
-      toujours STRICTEMENT inférieure au nombre de moteurs.
+      habituelle si render_claim_dc est absente, plafond lu par prochainJob). Variable optionnelle DC_MOTEURS_MAX (défaut 2,
+      depuis la relecture : dc-fetch + dc-cut + mc-ref ensemble) : toujours STRICTEMENT inférieure au nombre de moteurs.
    4. Moteur local du Mac (DC_LOCAL=1) : il ne prend que les lots « decupleur », jamais dc-fetch / dc-cut — rien d'obligatoire
       (git pull dans ~/.avatarads/moteur + relance pour garder sa copie à jour).
-Reste hors de ce lot : la route MCP « decupler_video » (supabase/functions/mcp, ~l. 5832) crée ses dc-fetch / mc-ref avec son
-propre comptage non atomique (2 en cours). Les moteurs la bornent quand même (plafond global de render_claim_dc, 1 par compte
-en priorité) et ses dc-fetch comptent dans le quota de render-job.
+CORRIGÉ (relecture du 30/10) : la phrase qui figurait ici (« la route MCP decupler_video reste hors lot ; les moteurs la bornent
+quand même ») était FAUSSE. mc-ref n'était pas dans DC_COURTS et restait dans la liste prioritaire de pollLoop : gratuit, servi
+devant tous les rendus payés et le Rendu prioritaire, sans plafond global ; et le MCP créait dc-fetch / mc-ref par « comptage
+puis insertion » sans verrou (30 /start simultanés = 30 jobs, aucun quota de liens). Traité par le lot ci-dessous.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Relecture du 30/10 des failles 3 et 4 (5 remarques, toutes vérifiées dans le code et corrigées) :
+   a. mc-ref (préparation GRATUITE des cartes Claude : Omni, Motion Control, Décupleur) rouvrait la faille 3 → il entre dans
+      DC_COURTS (render-worker/securite.mjs) : plafond global de render_claim_dc (dc-fetch + dc-cut + mc-ref ≤ DC_MOTEURS_MAX),
+      1 par compte en priorité, plus dans la classe prioritaire de pollLoop. Son ffmpeg (execFileSync SANS délai, boucle Node
+      bloquée, battement compris) devient asynchrone, ≤ 10 min, sondes ffprobe ≤ 30 s, entrée ≤ 4096 px (BORNES_MEDIA['mc-ref']).
+   b. La faille 4 se contournait par le MCP → /start (decup, omni_edit, motion) et l'étape df: → mc-ref créent leurs jobs par
+      render_job_dc_creer (creerPrepMcp) : verrou par compte, liens 1 en cours et 6 par 10 min (comptés avec ceux de l'app), 2
+      préparations en cours. Refus → la carte redevient « pending » et reçoit 429 « busy » (elle relance seule toutes les 15 s) ;
+      fonction absente / hoquet → 500 « prep », carte close sans débit (jamais l'ancienne insertion sans plafond).
+   c. dc-cut sans quota ni bornes, découpes gardées d'avance dans la file → UN travail gratuit court (dc-fetch, dc-cut, mc-ref)
+      en file ou en cours par compte, app et MCP confondus (court_en_cours) : chaque nouveau job arrive APRÈS ceux des autres
+      clients ; 10 découpes par 10 min (pas de quota owner / developer) ; découpe : entrée ≤ 4096 px, sortie ≤ 60 i/s
+      (normaliser), réencodage ≤ 5 min (DC_CUT_MS, au lieu de 10). Effet pour un client honnête de l'app : une découpe lancée
+      PENDANT une récupération de lien reçoit 429 « Une récupération ou une découpe de vidéo est déjà en cours » (parcours
+      normal : lien → découpe → variantes, l'un après l'autre : inchangé).
+   d. README faux sur mc-ref → corrigé (ci-dessus).
+   e. Erreur durable de render_claim_dc (42501, PGRST203, délai…) = 6 moteurs qui rebouclaient sur le même dc-fetch → après
+      toute prise refusée (erreur ou plafond), le moteur met ces jobs en PAUSE 5 s (dcFile.pauseJusqua, prochainJob les traite
+      comme « plafond atteint » sans lecture) et sert les autres rendus.
+   Migration 20261030140000 MODIFIÉE EN PLACE (vérifié le 30/10 en lecture seule : ni render_job_dc_creer ni render_claim_dc
+   n'existent en ligne) : render_job_dc_creer prend 3 paramètres de plus (p_compte, p_court_en_cours_max défaut 1, p_cut_quota
+   défaut 10) et accepte mc-ref ; render_claim_dc compte et prend aussi mc-ref.
+Bancs (aucun réseau sauf PGlite en cache, aucune vraie vidéo, aucune base en ligne) :
+   · test-faille34-mcp.ts (NOUVEAU) : code RÉEL de mcp/index.ts (/start, /status) sur la base factice avec latence —
+     30 /start simultanés (lien, Omni, fichier), parcours honnête, quota, étape df:, panne, deux comptes ;
+       deno run --allow-env --allow-read --import-map=import_map_file.json test-faille34-mcp.ts
+   · test-faille3-file.mjs : + R1-R4 (bancs adverses des relecteurs : dc-cut lents, 30 mc-ref, 2 × 30 dc-fetch MCP, prise en panne) ;
+   · test-faille4-rafale.ts : S2, S6, S6b (1 travail court, quota de découpes, préparation MCP en file) ;
+   · test-faille34-sql.ts : B2 (préparations MCP, court_en_cours, quota de découpes), D (mc-ref dans render_claim_dc), E (signature).
+A/B : bash tools/tests-decupleur/ab-faille34.sh   (AVANT = 02a160f2, 1er correctif = 9e56e41d, APRÈS = dépôt)
+   → AVANT        21/35 (+1 sans objet), 7/21, 10/17
+   → 1er correctif 33/37 (30 dc-cut → 3 en file), 15/24 (6/6 moteurs pris par 30 mc-ref, 1er montage payé à t=300 s ; client
+                  honnête servi à t=1800 s derrière 2 × 3 dc-cut ; prise en panne : 0/10 montages servis, 3606 appels),
+                  10/17 (30 /start → 30 jobs gratuits)
+   → APRÈS        37/37, 24/24 (2/6 moteurs au plus, client honnête à t=300 s, 10/10 montages et 6 appels en panne), 20/20,
+                  SQL 37/37.
 
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 Failles 6, 7 et 8 (30/10). Aucun réseau (sauf PGlite pris dans le cache npm de Deno), aucune vraie vidéo, aucun fournisseur.
@@ -126,16 +165,29 @@ A/B : bash tools/tests-decupleur/ab-faille5.sh   (AVANT = 3c00be72) → AVANT 19
 &download accepté par wan-3). Déploiement : aucune migration ; kie-proxy et reconcile-kie (ordre indifférent).
 
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-PLAN DE DÉPLOIEMENT UNIQUE des failles 2 à 8 (contrôle final 30/10, commit de fusion 4f370d8b). Remplace les ordres partiels
-ci-dessus, qui datent d'avant la fusion.
+PLAN DE DÉPLOIEMENT UNIQUE des failles 2 à 8 (contrôle final 30/10, commit de fusion 4f370d8b ; mis à jour pour la relecture
+des failles 3-4 : commit qui suit 9e56e41d sur dc-fix-securite). Remplace les ordres partiels ci-dessus, qui datent d'avant la
+fusion. Ordre de la relecture vérifié : tant que la migration n'est pas appliquée, le NOUVEAU moteur prend mc-ref / dc-fetch /
+dc-cut par la prise habituelle sous le plafond lu (render_claim_dc absente) ; l'ANCIEN moteur, après la migration, garde sa
+prise habituelle. Seules les FONCTIONS (render-job, mcp) exigent la migration : elles passent en dernier.
    Piège : les migrations en ligne sont enregistrées sous d'AUTRES numéros que les fichiers du dépôt (apply_migration) ;
    « supabase db push » voudrait rejouer ou refuserait tout l'historique. Chaque migration est appliquée SEULE (apply_migration
    avec son nom, ou supabase db query --linked -f <fichier>).
-   0. Copie propre : main avancée jusqu'au commit fusionné ; « git status --porcelain » vide dans le dossier de déploiement.
-   1. Migration 20261030140000_decupleur_file_atomique.sql (AVANT render-job), puis 20261030180800_render_jobs_trace_privee.sql.
+   0. Copie propre : main avancée jusqu'au DERNIER commit de dc-fix-securite (relecture 3-4 comprise) ; « git status --porcelain »
+      vide dans le dossier de déploiement ; « grep -c creerPrepMcp supabase/functions/mcp/index.ts » ≥ 1.
+   1. Migration 20261030140000_decupleur_file_atomique.sql (AVANT render-job ET mcp : depuis la relecture du 30/10, le MCP crée
+      aussi ses préparations par render_job_dc_creer — sans la migration, toute carte Omni / Motion Control / Décupleur
+      échouerait en « préparation impossible », sans débit), puis 20261030180800_render_jobs_trace_privee.sql.
+      Contrôle après : select pg_get_function_identity_arguments('public.render_job_dc_creer'::regproc) → 11 paramètres
+      (… p_compte text[], p_court_en_cours_max integer, p_cut_quota integer).
    2. git push de main (aucun rendu « rendering » en cours : le push redéploie Railway et tue le rendu en vol) → render-worker
       Railway (Dockerfile tini + decupleur / worker / securite) et site GitHub Pages (app/index.html) partent ensemble.
    3. Moteur local du Mac : launchctl kickstart -k gui/$(id -u)/fr.avatarads.decupleur-local (il refait fetch + reset sur
       origin/main au démarrage) ; journal ~/Library/Logs/avatarads-decupleur.log → « code à jour : <commit> ».
    4. Fonctions : render-job, mcp, kie-proxy, reconcile-kie (fal-proxy, google-ai-proxy, provider-watch, reconcile-fal-orphans
-      importent _shared/kie.ts, mais kieOwnedBy est inchangé : rien à redéployer).
+      importent _shared/kie.ts, mais kieOwnedBy est inchangé : rien à redéployer). _shared/decupleur.ts gagne des constantes
+      (DC_FETCH_QUOTA, DC_CUT_QUOTA, DC_FETCH_FENETRE_S, DC_COURT_EN_COURS_MAX) : kie-proxy l'importe sans les utiliser, il part
+      de toute façon dans cette étape.
+   Après (lecture seule) : aucun job « mc-ref » resté « queued » plus de 2 min
+      (select count(*) from render_jobs where status = 'queued' and plan->>'__compose' = 'mc-ref' and created_at < now() - interval '2 minutes')
+      et, dans les journaux Railway, aucune ligne « render_claim_dc : » en boucle (une erreur = pause de 5 s par moteur).

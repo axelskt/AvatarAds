@@ -15,6 +15,7 @@ for (const m of ['log', 'warn', 'error', 'info'] as const) (console as any)[m] =
 globalThis.fetch = (async (u: unknown) => { throw new Error('réseau interdit dans le banc : ' + String(u)) }) as typeof fetch
 
 const db = new FakeDB(); (globalThis as any).__db = db
+if (Deno.env.get('MIGRATION') === '1er') (globalThis as any).__migration1er = true   // ab-faille34.sh : base du 1er correctif
 const st = new FakeStorage(); (globalThis as any).__st = st
 const MODULE = Deno.env.get('RJ_MODULE') || new URL('../../supabase/functions/render-job/index.ts', import.meta.url).pathname
 const source = Deno.readTextFileSync(MODULE)
@@ -43,6 +44,8 @@ let nOk = 0, nKo = 0, nSans = 0
 const ok = (nom: string, c: boolean, detail = '') => { if (c) nOk++; else nKo++; keep(`${c ? '  ✓' : '  ✗'} ${nom}${c || !detail ? '' : '  → ' + detail}`) }
 const sansObjet = (nom: string) => { nSans++; keep(`  · ${nom} : sans objet sur cette version (pas de render_job_dc_creer)`) }
 keep(`render-job : ${MODULE}${atomique ? '' : '  (version SANS création atomique)'}`)
+// relecture 30/10 : le modèle de render_job_dc_creer (fake-supabase-file.ts) applique « 1 travail gratuit court par compte »
+// et le quota de découpes même quand render-job ne les passe pas (valeurs par défaut de la fonction SQL)
 
 // ── S1. Faille 4 : 30 récupérations de lien envoyées au même instant par un abonné Pro ──
 // S1 : requêtes en phase (latence fixe : les 30 comptages passent avant la 1re insertion, le cas de l'audit) ;
@@ -70,6 +73,7 @@ reset()
   const crees = jobsDe(db, PRO, 'dc-cut').length
   keep(`     → ${crees} jobs dc-cut créés`)
   ok('au plus 3 découpes créées', crees <= 3, `${crees} créées`)
+  ok('relecture 30/10 : au plus 1 découpe en file ou en cours (aucune gardée d’avance dans la file)', crees <= 1, `${crees} créées`)
   ok('les refus sont des 429 « déjà en cours »', rs.filter((r) => r.status !== 200).every((r) => r.status === 429 && /en cours/.test(String(r.j.error))))
 }
 
@@ -104,8 +108,9 @@ reset()
   const r = await appel('tok-pro', { action: 'dc-fetch', url: LIEN })
   ok('acceptée', r.status === 200, JSON.stringify(r))
 }
-// ── S6. Une récupération en cours n'empêche pas la découpe du même compte ──
-keep('S6. dc-fetch en cours, puis 2e dc-fetch et dc-cut')
+// ── S6. Une récupération en cours : 2e récupération et découpe attendent (relecture 30/10 : 1 travail gratuit court par compte),
+//        puis la découpe passe dès la vidéo arrivée (parcours de l'app : lien → découpe → variantes, l'un après l'autre) ──
+keep('S6. dc-fetch en cours, puis 2e dc-fetch et dc-cut ; puis dc-cut une fois la vidéo arrivée')
 reset()
 {
   const r1 = await appel('tok-pro', { action: 'dc-fetch', url: LIEN })
@@ -113,7 +118,29 @@ reset()
   const r3 = await appel('tok-pro', { action: 'dc-cut', input_video: `${PRO}/src.mp4`, a: 2, b: 9 })
   ok('1re récupération acceptée', r1.status === 200, JSON.stringify(r1))
   ok('2e récupération refusée tant que la 1re tourne (message clair)', r2.status === 429 && /récupération/.test(String(r2.j.error)), JSON.stringify(r2))
-  ok('la découpe passe (plafond de 3 non atteint)', r3.status === 200, JSON.stringify(r3))
+  ok('découpe pendant la récupération : 429 lisible (récupération ou découpe en cours)', r3.status === 429 && /récupération ou une découpe/.test(String(r3.j.error)), JSON.stringify(r3))
+  finir(PRO)
+  const r4 = await appel('tok-pro', { action: 'dc-cut', input_video: `${PRO}/src.mp4`, a: 2, b: 9 })
+  ok('vidéo arrivée : la découpe passe', r4.status === 200, JSON.stringify(r4))
+  const r5 = await appel('tok-pro', { action: 'decupleur', input_video: `${PRO}/src.mp4`, a: 2, b: 9, n: 5, alt: {}, textPos: 'Haut', ops: [] })
+  ok('un lot de variantes n’est pas un travail court : jamais bloqué par la découpe en cours (refus seulement faute de réservation)', r5.status === 402, JSON.stringify(r5))
+}
+
+// ── S6b. Relecture 30/10 : quota de découpes (10 par 10 min), et une préparation MCP (mc-ref) en cours bloque la découpe ──
+keep('S6b. 11 dc-cut à la suite ; dc-cut pendant une préparation mc-ref du MCP')
+reset()
+{
+  const s11: number[] = []
+  for (let i = 0; i < 11; i++) { s11.push((await appel('tok-pro', { action: 'dc-cut', input_video: `${PRO}/src.mp4`, a: 0, b: 5 })).status); finir(PRO) }
+  keep(`     → statuts : ${s11.join(' ')}`)
+  ok('les 10 premières passent, la 11e est refusée (429)', s11.slice(0, 10).every((x) => x === 200) && s11[10] === 429, s11.join(' '))
+  reset()
+  const now = new Date().toISOString()
+  db.rows('render_jobs').push({ id: crypto.randomUUID(), user_id: PRO, status: 'queued', plan: { __compose: 'mc-ref', maxDur: 30 }, input_video: `${PRO}/mcp-src/x-src.mp4`, assets: [], avatar_clips: [], created_at: now, updated_at: now, attempts: 0 })
+  const r = await appel('tok-pro', { action: 'dc-cut', input_video: `${PRO}/src.mp4`, a: 0, b: 5 })
+  ok('préparation MCP du même compte en file : découpe refusée 429 (1 travail gratuit court par compte, app et MCP confondus)', r.status === 429, JSON.stringify(r))
+  const r2 = await appel('tok-owner', { action: 'dc-cut', input_video: `${OWNER}/src.mp4`, a: 0, b: 5 })
+  ok('un autre compte n’est pas touché', r2.status === 200, JSON.stringify(r2))
 }
 
 // ── S7. Client honnête : un lien TikTok normal de 30 s ──

@@ -21,7 +21,8 @@ import { billableGate, userPlan, reserveStrict, reserveEnforce, requirePlan, PLA
   MONTAGE_DUREE_MAX, RENDU_DUREE_MAX, RETOUCHE_OCTETS_MAX, RETOUCHE_EN_COURS_MAX, MOTION_ASSETS, fichierDuFlux, opMotionRecente,
   opFondVideo, opRenduMontage, tailleObjet } from '../_shared/guard.ts'
 import { cheminSur, planClientRenderJob } from '../_shared/storage-path.ts'
-import { lienDecupleur, lienEstLive, DC_MSG_LIVE, DC_VARIANTES, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_PLANS, DC_CR_VARIANTE, decupleurOuvert } from '../_shared/decupleur.ts'
+import { lienDecupleur, lienEstLive, DC_MSG_LIVE, DC_VARIANTES, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_PLANS, DC_CR_VARIANTE, decupleurOuvert,
+  DC_FETCH_QUOTA, DC_CUT_QUOTA, DC_FETCH_FENETRE_S, DC_COURT_EN_COURS_MAX } from '../_shared/decupleur.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -31,8 +32,10 @@ const CORS = {
 // Clés de job d'un rendu (une par op tirée, 3 au plus) — MÊMES clés dans render-worker/worker.mjs (reservationJob).
 const DC_COMPOSES = ['dc-fetch', 'dc-cut', 'decupleur']
 // 30/10 (audit Décupleur, failles 3 et 4) : bornes appliquées ATOMIQUEMENT par render_job_dc_creer (migration 20261030140000) —
-// 3 jobs Décupleur en cours par compte (comme avant), 1 récupération de lien (dc-fetch) en cours, 6 récupérations par 10 min.
-const DC_EN_COURS_MAX = 3, DC_FETCH_EN_COURS_MAX = 1, DC_FETCH_QUOTA = 6, DC_FETCH_FENETRE_S = 600
+// 3 jobs Décupleur en cours par compte (comme avant), 1 récupération de lien (dc-fetch) en cours, 6 récupérations par 10 min ;
+// relecture 30/10 : 1 travail gratuit court (récupération, découpe, préparation MCP) en file ou en cours par compte, 10
+// découpes par 10 min (constantes partagées avec le MCP : _shared/decupleur.ts).
+const DC_EN_COURS_MAX = 3, DC_FETCH_EN_COURS_MAX = 1
 const cleRendu = (id: string) => ['render:' + id, 'render:' + id + '#1', 'render:' + id + '#2']
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -393,20 +396,24 @@ serve(async (req: Request) => {
       // 30/10 (audit Décupleur, failles 3 et 4) : le comptage ci-dessus ne fait que refuser tôt (avant un tirage de crédits) ;
       // c'est render_job_dc_creer qui décide, ATOMIQUEMENT : verrou par compte, comptage et insertion dans la même transaction
       // (30 demandes simultanées lisaient toutes « 0 en cours » et créaient 30 jobs). Elle borne aussi la récupération par
-      // lien : 1 dc-fetch en cours par compte, 6 par 10 min (pas de quota pour owner / developer). Fonction absente ou hoquet
+      // lien : 1 dc-fetch en cours par compte, 6 par 10 min (pas de quota pour owner / developer). Relecture 30/10 : UN travail
+      // gratuit court (dc-fetch, dc-cut, ou préparation mc-ref du MCP) en file ou en cours par compte — plus de découpes
+      // gardées d'avance dans la file devant les autres clients — et 10 découpes par 10 min. Fonction absente ou hoquet
       // → refus (jamais l'ancienne insertion sans plafond) ; le tirage éventuel est rendu.
       const rendre = async () => { if (tire) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: tire.op, p_cost: tire.amt }) } catch (_) { /* best-effort */ } } }
       let cree = null as { ok?: boolean; id?: string; raison?: string } | null
       try {
         const { data: _c, error: _ce } = await service.rpc('render_job_dc_creer', { p_user: user.id, p_plan: plan, p_input: input, p_assets: assets,
-          p_en_cours_max: DC_EN_COURS_MAX, p_fetch_en_cours_max: DC_FETCH_EN_COURS_MAX, p_fetch_quota: dcExempt ? null : DC_FETCH_QUOTA, p_fetch_fenetre_s: DC_FETCH_FENETRE_S })
+          p_en_cours_max: DC_EN_COURS_MAX, p_fetch_en_cours_max: DC_FETCH_EN_COURS_MAX, p_fetch_quota: dcExempt ? null : DC_FETCH_QUOTA, p_fetch_fenetre_s: DC_FETCH_FENETRE_S,
+          p_court_en_cours_max: DC_COURT_EN_COURS_MAX, p_cut_quota: dcExempt ? null : DC_CUT_QUOTA })
         if (_ce) console.warn('render_job_dc_creer :', _ce.message); else cree = (_c ?? null) as { ok?: boolean; id?: string; raison?: string } | null
       } catch (e) { console.warn('render_job_dc_creer :', (e as Error).message) }
       if (!cree || (cree.ok && !cree.id)) { await rendre(); return json({ error: 'Création impossible — réessaie dans un instant' }, 503) }
       if (!cree.ok) {
         await rendre()
         if (cree.raison === 'fetch_en_cours') return json({ error: 'Une vidéo est déjà en cours de récupération — attends qu\'elle arrive' }, 429)
-        if (cree.raison === 'quota') return json({ error: 'Trop de liens récupérés en peu de temps — réessaie dans quelques minutes' }, 429)
+        if (cree.raison === 'court_en_cours') return json({ error: 'Une récupération ou une découpe de vidéo est déjà en cours — attends qu\'elle se termine' }, 429)
+        if (cree.raison === 'quota') return json({ error: body.action === 'dc-cut' ? 'Trop de découpes en peu de temps — réessaie dans quelques minutes' : 'Trop de liens récupérés en peu de temps — réessaie dans quelques minutes' }, 429)
         return json({ error: 'Un décuplage est déjà en cours — attends qu\'il se termine' }, 429)
       }
       const data = { id: String(cree.id) }

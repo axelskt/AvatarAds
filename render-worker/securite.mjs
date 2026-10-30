@@ -347,6 +347,10 @@ export const BORNES_MEDIA = {
   'gen-subs': { dureeMax: 305, coteMax: 4096 },
   retouche: { dureeMax: 15, coteMax: 2160 },
   motion: { dureeMax: 305, coteMax: 4096 },
+  // 30/10 (relecture Décupleur) : préparation mc-ref des outils Claude (Omni, Motion Control, Décupleur). Gratuite : elle était
+  // encodée sans délai ni bornes. La sortie est coupée à 10, 30 ou 60 s (plan.maxDur) : une source longue ne coûte rien de plus
+  // (« seules les N premières secondes ») ; on borne la résolution (8K et plus refusés) et l'absurde (plus d'1 h).
+  'mc-ref': { dureeMax: 3600, coteMax: 4096 },
 }
 export function horsBornes(mesure, bornes) {
   if (!mesure || !bornes) return null
@@ -367,7 +371,11 @@ export function horsBornes(mesure, bornes) {
 // render_claim_dc) ; (2) dans la classe prioritaire, UN seul par compte : un compte qui en a déjà un en cours voit les
 // suivants servis dans l'ordre normal de la file (plus jamais devant les montages, l'Express ou le « Rendu prioritaire »).
 // Sans `dc` : comportement d'avant.
-export const DC_COURTS = ['dc-fetch', 'dc-cut']
+// Relecture 30/10 : mc-ref (préparation GRATUITE d'une vidéo des outils Claude) en fait partie — il était resté dans la
+// classe prioritaire, sans plafond global : 30 /start simultanés prenaient les 6 moteurs. `dc.pauseJusqua` (horodatage ms) :
+// après un échec de render_claim_dc (erreur durable ou plafond lu en retard), ce moteur traite ces jobs comme « plafond
+// atteint » quelques secondes — il sert les autres rendus au lieu de reboucler sur le même job (toute la file bloquée).
+export const DC_COURTS = ['dc-fetch', 'dc-cut', 'mc-ref']
 export const DC_VIVANT_MS = 30 * 60_000   // même fenêtre que render_claim_dc (reprise des orphelins : 30 min sans battement)
 export async function prochainJob(sb, dernierCompte, prioritaires, local = null, dc = null) {
   // 26/10 (Axel : « sur le compte dev, que le Décupleur passe en local, pas par Railway ») : un moteur lancé sur le Mac
@@ -388,7 +396,8 @@ export async function prochainJob(sb, dernierCompte, prioritaires, local = null,
   // dc-fetch / dc-cut en cours sur tous les moteurs (lecture illisible = plafond atteint : ils attendent le tour suivant)
   const courts = dc && Array.isArray(dc.courts) && dc.courts.length ? dc.courts : null
   let dcPlein = false, dcOccupes = []
-  if (courts) {
+  if (courts && Number(dc.pauseJusqua) > Date.now()) dcPlein = true   // pause locale après un échec de prise : aucune lecture
+  else if (courts) {
     const { data: enCours, error } = await sb.from('render_jobs').select('user_id').eq('status', 'rendering')
       .in('plan->>__compose', courts).gte('updated_at', new Date(Date.now() - DC_VIVANT_MS).toISOString()).limit(200)
     const l = !error && Array.isArray(enCours) ? enCours : null

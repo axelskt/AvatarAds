@@ -15,7 +15,7 @@
 
 import { retoucheVideo } from './retouche.mjs'
 import { dcFetch, dcCut, dcVariantes, dcErreurClient, dcTraceClient, DC_COMPOSES } from './decupleur.mjs'   // Décupleur (24/10) : lien → MP4, passage gardé, N variantes ; 30/10 : messages client (faille 8)
-import { execFileSync, execSync, spawnSync } from 'node:child_process'
+import { execFileSync, execSync, spawnSync, spawn } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync, statSync, renameSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { ANIM_EMOJI_SET } from './anim-pack.mjs'
@@ -246,6 +246,21 @@ function exigerBornes(file, quoi) {
 // compose en quelques minutes — ce délai n'est qu'un filet contre un fichier pathologique.
 const FFMPEG_MAX_MS = 30 * 60 * 1000
 const HF_RENDU_MAX_MS = 40 * 60 * 1000
+// 30/10 (relecture Décupleur) : ffmpeg ASYNCHRONE avec délai (SIGKILL au-delà). Un execFileSync bloque la boucle Node : plus de
+// battement du job ni de sonde — le job passait « orphelin » au bout de 30 min et un autre moteur le reprenait. Rejette
+// « ffmpeg <code|signal> : <dernière ligne> » (journal du moteur ; le MCP ne montre au client qu'un message neutre).
+const MCREF_MAX_MS = 10 * 60 * 1000
+function ffmpegAsync(args, ms) {
+  return new Promise((resolve, reject) => {
+    const p = spawn('ffmpeg', ['-nostdin', '-v', 'error', ...args], { stdio: ['ignore', 'ignore', 'pipe'] })
+    let err = ''
+    const t = setTimeout(() => { p.kill('SIGKILL') }, ms)
+    p.stderr.on('data', (d) => { if (err.length < 4000) err += d })
+    p.on('error', (e) => { clearTimeout(t); reject(e) })
+    p.on('close', (code, sig) => { clearTimeout(t); code === 0 ? resolve() : reject(new Error('ffmpeg ' + (sig || code) + ' : ' + err.trim().split('\n').pop())) })
+  })
+}
+const ffprobeBorne = (file, entries) => execFileSync('ffprobe', ['-v', 'error', '-show_entries', entries, '-of', 'csv=p=0', file], { timeout: 30000 }).toString().trim()
 
 // sonie intégrée d'un fichier (LUFS) — sert à savoir combien il MANQUE, plutôt
 // que de laisser loudnorm re-traiter une voix déjà masterisée par l'app.
@@ -1076,12 +1091,14 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null,
   // minimum), côtés ramenés dans 340–1920 px. Ré-encodée à chaque fois : quelques secondes, jamais de surprise de codec.
   if (plan.__compose === 'mc-ref') {
     const src = join(jobDir, 'base.mp4')
-    const [w, h] = (ffprobe(src, 'stream=width,height').split('\n').find((l) => /^\d+,\d+/.test(l.trim())) || '0,0').split(',').map(Number)
-    const dur = parseFloat(ffprobe(src, 'format=duration')) || 0
+    // relecture 30/10 : préparation GRATUITE → travail borné (résolution ≤ 4096 px, sondes ffprobe ≤ 30 s, encodage ≤ 10 min, asynchrone)
+    exigerBornes(src, 'mc-ref')
+    const [w, h] = (ffprobeBorne(src, 'stream=width,height').split('\n').find((l) => /^\d+,\d+/.test(l.trim())) || '0,0').split(',').map(Number)
+    const dur = parseFloat(ffprobeBorne(src, 'format=duration')) || 0
     const maxDur = Number(plan.maxDur) || 30, garde = Math.min(dur, maxDur), pad = plan.minDur && garde > 0 && garde < 3.3 ? Math.max(0.4, 3.6 - garde) : 0
     const mn = Math.min(w || 720, h || 1280), mx = Math.max(w || 720, h || 1280)
     const k = mn < 340 ? 720 / mn : mx > 1920 ? 1920 / mx : 1
-    const hasA = !!ffprobe(src, 'stream=codec_type').split('\n').find((l) => l.trim() === 'audio')
+    const hasA = !!ffprobeBorne(src, 'stream=codec_type').split('\n').find((l) => l.trim() === 'audio')
     // échelle relative (iw/ih) : ffmpeg redresse d'abord une vidéo de téléphone tournée (rotation dans les métadonnées) → une
     // vidéo portrait reste portrait (audit 02/10 : l'ancien scale=largeur:hauteur lisait les dimensions codées, avant rotation, et
     // écrasait un portrait iPhone en paysage). k ne dépend que du plus petit / plus grand côté : invariant par rotation.
@@ -1096,7 +1113,7 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null,
     const args = ['-y', '-i', src, '-t', String(maxDur + pad), '-vf', `${geo},setsar=1,format=yuv420p${pad ? `,tpad=stop_mode=clone:stop_duration=${pad.toFixed(2)}` : ''}`]
     if (hasA) args.push('-af', pad ? `apad=pad_dur=${pad.toFixed(2)}` : 'anull', '-c:a', 'aac', '-b:a', '128k'); else args.push('-an')
     args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-movflags', '+faststart', outPath)
-    execFileSync('ffmpeg', args, { stdio: 'pipe' })
+    await ffmpegAsync(args, MCREF_MAX_MS)
     console.log(`✓ mc-ref ${w}x${h} (codé) ${dur.toFixed(2)}s → ${plan.crop916 ? 'recadrée 9:16/16:9' : '×' + k.toFixed(3)}${pad ? ' +' + pad.toFixed(2) + 's' : ''}${dur > maxDur + 0.5 ? ' coupée à ' + maxDur + 's' : ''}`)
     return
   }
@@ -3538,16 +3555,22 @@ async function pollLoop() {
   // Désormais : au plus DC_MOTEURS_MAX (2 par défaut) de ces jobs en même temps sur tous les moteurs (prise en charge
   // atomique : render_claim_dc, migration 20261030140000), un seul par compte en priorité (prochainJob). Avec 6 moteurs, 4
   // restent toujours aux montages, à l'Express, au Générateur… Régler DC_MOTEURS_MAX à moins que le nombre de moteurs.
+  // Relecture 30/10 : mc-ref (préparation gratuite des outils Claude) compte dans ce plafond (DC_COURTS, securite.mjs). Une prise
+  // refusée par render_claim_dc (erreur autre que « fonction absente », ou plafond atteint entre la lecture et la prise) met
+  // ces jobs en PAUSE sur ce moteur pendant DC_PAUSE_MS : il sert les autres rendus au lieu de reboucler sur le même job (une
+  // erreur durable — droits, surcharge ambiguë, délai — bloquait sinon les 6 moteurs et martelait la base).
   const DC_MOTEURS_MAX = Math.max(1, Math.floor(Number(process.env.DC_MOTEURS_MAX || 2)) || 2)
-  const dcFile = { courts: DC_COURTS, max: DC_MOTEURS_MAX }
+  const DC_PAUSE_MS = 5000
+  const dcFile = { courts: DC_COURTS, max: DC_MOTEURS_MAX, pauseJusqua: 0 }
   let claimDcAbsent = false
   if (DC_LOCAL_SEUL) console.log(`🖥  moteur LOCAL : Décupleur des comptes propriétaire / developer seulement (${dcLocal.ids.size} compte(s))`)
 
   for (;;) {
     try {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
-      // + préparation des vidéos MCP (02/10)
-      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix'], dcLocal, dcFile)   // motion-voix : simple mux (copie du flux vidéo), quelques secondes ; dc-fetch / dc-cut : dcFile (plafond global, 1 par compte en priorité)
+      // (la préparation des vidéos MCP, mc-ref, y était aussi : depuis la relecture du 30/10 elle passe par dcFile — gratuite,
+      // donc sous le plafond global et 1 par compte en priorité)
+      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'motion-voix'], dcLocal, dcFile)   // motion-voix : simple mux (copie du flux vidéo), quelques secondes ; dc-fetch / dc-cut / mc-ref : dcFile (plafond global, 1 par compte en priorité)
       if (!cand) {
         if (Date.now() - dernierBalayage > 5 * 60_000) await reprendreOrphelins()
         // 15/10 : attente qui S'ALLONGE quand la file reste vide (2 s → 12 s, + un peu de hasard pour que les 6 moteurs ne
@@ -3569,15 +3592,16 @@ async function pollLoop() {
       if (estDcCourt && !claimDcAbsent) {
         const { data: pris, error: eDc } = await sb.rpc('render_claim_dc', { p_job: job.id, p_max: DC_MOTEURS_MAX })
         if (!eDc) claimed = pris === true ? [{ id: job.id }] : []
-        else if (eDc.code === 'PGRST202' || eDc.code === '42883') { claimDcAbsent = true; console.warn('render_claim_dc absente : prise habituelle des dc-fetch / dc-cut (appliquer la migration 20261030140000)') }
-        else { console.warn('render_claim_dc :', eDc.message); claimed = [] }
+        else if (eDc.code === 'PGRST202' || eDc.code === '42883') { claimDcAbsent = true; console.warn('render_claim_dc absente : prise habituelle des dc-fetch / dc-cut / mc-ref (appliquer la migration 20261030140000)') }
+        else { console.warn('render_claim_dc :', eDc.code || '', eDc.message); claimed = [] }
+        if (claimed !== null && !claimed.length) dcFile.pauseJusqua = Date.now() + DC_PAUSE_MS   // pause locale (voir DC_PAUSE_MS)
       }
       if (claimed === null) {
         ({ data: claimed } = await sb.from('render_jobs')
           .update({ status: 'rendering', updated_at: new Date().toISOString(), attempts: (job.attempts || 0) + 1 })
           .eq('id', job.id).eq('status', 'queued').select('id'))
       }
-      if (!claimed || !claimed.length) { if (estDcCourt) await new Promise((r) => setTimeout(r, 500)); continue }
+      if (!claimed || !claimed.length) continue   // pris ailleurs ; dc refusé : pause locale, le tour suivant sert les autres rendus
 
       jobEnCours = job.id
       dernierCompte = job.user_id

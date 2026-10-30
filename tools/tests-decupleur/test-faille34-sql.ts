@@ -40,7 +40,7 @@ await db.exec(sql)
 await db.exec(sql)   // rejouable (create or replace)
 const q = async (s: string, p: unknown[] = []) => (await db.query(s, p)).rows as Record<string, any>[]
 const vider = () => db.exec('delete from public.render_jobs')
-const plan = (c: string) => JSON.stringify(c === 'dc-fetch' ? { __compose: c, lien: 'https://www.tiktok.com/@a/video/1', duration: 1 } : { __compose: c, a: 0, b: 5, duration: 5 })
+const plan = (c: string) => JSON.stringify(c === 'dc-fetch' ? { __compose: c, lien: 'https://www.tiktok.com/@a/video/1', duration: 1 } : c === 'mc-ref' ? { __compose: c, maxDur: 30 } : { __compose: c, a: 0, b: 5, duration: 5 })
 const creer = async (u: string, c: string, extra = '') =>
   (await q(`select public.render_job_dc_creer($1::uuid, $2::jsonb, $3, '[]'::jsonb${extra}) as r`, [u, plan(c), `${u}/dc-lien-${Math.random()}.mp4`]))[0].r as { ok: boolean; id?: string; raison?: string }
 const nb = async (u: string, c?: string) => Number((await q(`select count(*)::int n from public.render_jobs where user_id = $1 ${c ? `and plan->>'__compose' = '${c}'` : ''}`, [u]))[0].n)
@@ -64,11 +64,47 @@ console.log('B. APRÈS : render_job_dc_creer, 30 appels « simultanés »')
   ok(`dc-fetch : 1 seul créé (1 en cours par compte) — ${await nb(U1)} créé(s)`, (await nb(U1)) === 1)
   ok('les 29 autres : refus « fetch_en_cours »', rs.filter((r) => !r.ok).length === 29 && rs.filter((r) => !r.ok).every((r) => r.raison === 'fetch_en_cours'), JSON.stringify(rs.slice(0, 3)))
   await vider()
-  await Promise.all(Array.from({ length: 30 }, () => creer(U1, 'dc-cut')))
-  ok(`dc-cut : 3 créés au plus — ${await nb(U1)}`, (await nb(U1)) === 3)
+  const rc = await Promise.all(Array.from({ length: 30 }, () => creer(U1, 'dc-cut')))
+  ok(`dc-cut : 1 seul créé (relecture 30/10 : 1 travail gratuit court par compte) — ${await nb(U1)}`, (await nb(U1)) === 1)
+  ok('les 29 autres : refus « court_en_cours »', rc.filter((r) => !r.ok).length === 29 && rc.filter((r) => !r.ok).every((r) => r.raison === 'court_en_cours'), JSON.stringify(rc.slice(0, 2)))
   await vider()
-  await Promise.all([...Array.from({ length: 10 }, () => creer(U1, 'decupleur')), ...Array.from({ length: 10 }, () => creer(U2, 'dc-cut'))])
-  ok('deux comptes : 3 chacun, indépendants', (await nb(U1)) === 3 && (await nb(U2)) === 3, `${await nb(U1)} / ${await nb(U2)}`)
+  await Promise.all([...Array.from({ length: 10 }, () => creer(U1, 'decupleur')), ...Array.from({ length: 10 }, () => creer(U2, 'decupleur'))])
+  ok('deux comptes : 3 lots chacun, indépendants', (await nb(U1)) === 3 && (await nb(U2)) === 3, `${await nb(U1)} / ${await nb(U2)}`)
+}
+
+console.log('B2. Relecture 30/10 : préparations du MCP (mc-ref, dc-fetch) par la même fonction')
+{
+  await vider()
+  const MCP = `, 2, 1, 6, 600, array['mc-ref','dc-fetch','decupleur']::text[]`
+  const OMNI = `, 2, 1, 6, 600, array['mc-ref']::text[]`
+  const rs = await Promise.all(Array.from({ length: 30 }, () => creer(U1, 'mc-ref', OMNI)))
+  ok(`30 /start Omni simultanés : 1 mc-ref créé — ${await nb(U1, 'mc-ref')}`, (await nb(U1, 'mc-ref')) === 1 && rs.filter((r) => r.ok).length === 1, JSON.stringify(rs.slice(0, 2)))
+  await vider()
+  await Promise.all(Array.from({ length: 30 }, () => creer(U1, 'dc-fetch', MCP)))
+  ok(`30 /start Décupleur (lien) simultanés : 1 dc-fetch — ${await nb(U1, 'dc-fetch')}`, (await nb(U1, 'dc-fetch')) === 1)
+  await vider()
+  for (let i = 0; i < 6; i++) { await creer(U1, 'dc-fetch', MCP); await q(`update public.render_jobs set status = 'done'`) }
+  const r7 = await creer(U1, 'dc-fetch', MCP)
+  ok('MCP : 7e lien en 10 min refusé « quota » (compté avec ceux de l’app)', !r7.ok && r7.raison === 'quota', JSON.stringify(r7))
+  await vider()
+  await creer(U1, 'dc-fetch')   // récupération lancée depuis l'app
+  const m = await creer(U1, 'mc-ref', OMNI)
+  ok('récupération de l’app en cours : préparation MCP du même compte refusée « court_en_cours »', !m.ok && m.raison === 'court_en_cours', JSON.stringify(m))
+  ok('… un autre compte passe', (await creer(U2, 'mc-ref', OMNI)).ok)
+  await q(`update public.render_jobs set status = 'done'`)
+  ok('récupération terminée : la préparation (suite du parcours) passe', (await creer(U1, 'mc-ref', OMNI)).ok)
+  await vider()
+  // lot de variantes en cours : ni la découpe ni la préparation ne sont bloquées par la règle des travaux courts
+  await creer(U1, 'decupleur')
+  ok('lot de variantes en cours : la découpe passe (un lot n’est pas un travail court)', (await creer(U1, 'dc-cut')).ok)
+  await vider()
+  for (let i = 0; i < 10; i++) { await creer(U1, 'dc-cut'); await q(`update public.render_jobs set status = 'done'`) }
+  const c11 = await creer(U1, 'dc-cut')
+  ok('11e découpe en 10 min : refus « quota » (10 par défaut)', !c11.ok && c11.raison === 'quota', JSON.stringify(c11))
+  ok('quota de découpes null (owner / developer) : passe', (await creer(U1, 'dc-cut', ', 3, 1, null, 600, null, 1, null')).ok)
+  let err = ''
+  try { await creer(U1, 'mc-ref', `, 2, 1, 6, 600, array['gen-subs']::text[]`) } catch (e) { err = String((e as Error).message) }
+  ok('p_compte hors Décupleur / préparations : refusé', /invalide/.test(err), err)
 }
 
 console.log('C. Règles')
@@ -94,6 +130,7 @@ console.log('C. Règles')
   const r7 = await creer(U1, 'dc-fetch')
   ok('7e récupération en 10 min (échecs compris) : refus « quota »', !r7.ok && r7.raison === 'quota', JSON.stringify(r7))
   ok('la découpe reste possible malgré le quota de liens', (await creer(U1, 'dc-cut')).ok)
+  await q(`update public.render_jobs set status = 'done' where plan->>'__compose' = 'dc-cut'`)   // découpe finie (1 travail court à la fois)
   await q(`update public.render_jobs set created_at = now() - interval '11 minutes' where plan->>'__compose' = 'dc-fetch'`)
   ok('11 min plus tard : la récupération passe', (await creer(U1, 'dc-fetch')).ok)
   await vider()
@@ -116,6 +153,12 @@ console.log('D. render_claim_dc (prise en charge des dc-fetch / dc-cut par les m
   const pris = await Promise.all(ids.map((id) => q(`select public.render_claim_dc($1::uuid, 2) as ok`, [id]).then((r) => r[0].ok as boolean)))
   ok(`6 moteurs demandent en même temps : 2 pris (DC_MOTEURS_MAX = 2) — ${pris.filter(Boolean).length}`, pris.filter(Boolean).length === 2)
   ok('les pris passent en « rendering » avec attempts + 1', Number((await q(`select count(*)::int n from public.render_jobs where status = 'rendering' and attempts = 1`))[0].n) === 2)
+  const mcref = (await q(`insert into public.render_jobs (user_id, plan, input_video) values ($1, $2::jsonb, 'x') returning id`, [U2, plan('mc-ref')]))[0].id
+  ok('relecture 30/10 : mc-ref plafond atteint → refusé, reste en file', (await q(`select public.render_claim_dc($1::uuid, 2) as ok`, [mcref]))[0].ok === false
+    && (await q(`select status from public.render_jobs where id = $1`, [mcref]))[0].status === 'queued')
+  ok('… et un mc-ref en cours compte dans le plafond (3 max : pris, puis plus aucun dc)', (await q(`select public.render_claim_dc($1::uuid, 3) as ok`, [mcref]))[0].ok === true
+    && (await q(`select public.render_claim_dc($1::uuid, 3) as ok`, [ids[pris.findIndex((x) => !x)]]))[0].ok === false)
+  await q(`update public.render_jobs set status = 'queued' where id = $1`, [mcref])
   ok('un montage ne passe jamais par render_claim_dc', (await q(`select public.render_claim_dc($1::uuid, 50) as ok`, [montage]))[0].ok === false
     && (await q(`select status from public.render_jobs where id = $1`, [montage]))[0].status === 'queued')
   await q(`update public.render_jobs set status = 'done' where status = 'rendering' and id = $1`, [ids[pris.findIndex(Boolean)]])
@@ -128,7 +171,7 @@ console.log('D. render_claim_dc (prise en charge des dc-fetch / dc-cut par les m
 }
 
 console.log('E. Droits : EXECUTE réservé à service_role')
-for (const f of ['render_job_dc_creer(uuid, jsonb, text, jsonb, integer, integer, integer, integer)', 'render_claim_dc(uuid, integer)']) {
+for (const f of ['render_job_dc_creer(uuid, jsonb, text, jsonb, integer, integer, integer, integer, text[], integer, integer)', 'render_claim_dc(uuid, integer)']) {
   const d = (await q(`select has_function_privilege('anon', 'public.${f}', 'execute') a, has_function_privilege('authenticated', 'public.${f}', 'execute') u,
     has_function_privilege('service_role', 'public.${f}', 'execute') s, exists (select 1 from information_schema.routine_privileges where routine_name = split_part('${f}', '(', 1) and grantee = 'PUBLIC') p,
     (select prosecdef from pg_proc where oid = 'public.${f}'::regprocedure) sd`))[0]

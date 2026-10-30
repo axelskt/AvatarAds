@@ -138,8 +138,9 @@ export function dcProbe(file) {
   const rot = Math.abs(Number((v.tags && v.tags.rotate) || ((v.side_data_list || []).find((d) => d.rotation != null) || {}).rotation || 0))
   if (rot === 90 || rot === 270) [w, h] = [h, w]   // ffmpeg redresse la vidéo au décodage : on raisonne sur l'image redressée
   const [fn, fd] = String(v.r_frame_rate || '30/1').split('/').map(Number)
-  const fps = Math.min(60, Math.max(15, fd ? fn / fd : 30))
-  return { w, h, fps, dur: parseFloat((j.format || {}).duration) || NaN, audio: !!a, sr: Math.min(48000, Math.max(16000, +(a && a.sample_rate) || 48000)) }
+  const fpsSource = fd ? fn / fd : 30
+  const fps = Math.min(60, Math.max(15, fpsSource))
+  return { w, h, fps, fpsSource, dur: parseFloat((j.format || {}).duration) || NaN, audio: !!a, sr: Math.min(48000, Math.max(16000, +(a && a.sample_rate) || 48000)) }
 }
 
 const pair = (x) => Math.max(2, Math.round(x / 2) * 2)
@@ -150,12 +151,15 @@ function cotes(w, h, maxCote = 1920, minCote = 240) {
   return { W: pair(w * k), H: pair(h * k) }
 }
 
-async function normaliser(src, out, p, { ss = 0, t = 0 } = {}) {
+// relecture 30/10 : source à plus de 60 images/s (ralenti 120/240 i/s, ou cadence absurde déclarée) → sortie à 60 i/s : le
+// réencodage n'en paie plus 4 fois plus. En dessous : cadence d'origine, inchangée. `ms` : délai de ce réencodage.
+async function normaliser(src, out, p, { ss = 0, t = 0, ms = FF_MS } = {}) {
   const { W, H } = cotes(p.w, p.h)
   await ffmpeg([...(ss > 0 ? ['-ss', ss.toFixed(3)] : []), '-i', src, ...(t > 0 ? ['-t', t.toFixed(3)] : []),
+    ...(Number(p.fpsSource) > 60 ? ['-r', '60'] : []),
     '-map', '0:v:0', '-map', '0:a:0?', '-vf', `scale=${W}:${H}:flags=lanczos,setsar=1,format=yuv420p`,
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', '-map_metadata', '-1', out])
+    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', '-map_metadata', '-1', out], ms)
 }
 
 function messageLien(m) {
@@ -252,12 +256,18 @@ export async function dcFetch(url, outPath) {
 }
 
 // Passage gardé seul, ≤ 15 s (référence du changement de personnage : 1–15 s, côtés 240–4096 px, ≤ 100 Mo).
+// Relecture 30/10 : la découpe est GRATUITE et son entrée est n'importe quel fichier du dossier du compte — travail borné :
+// résolution ≤ DC_COTE_MAX (8K refusée), cadence de sortie ≤ 60 i/s (normaliser), réencodage ≤ DC_CUT_MS (au lieu de FF_MS,
+// 10 min) : une place du plafond global des moteurs n'est plus tenue 10 min par un fichier pathologique.
+export const DC_COTE_MAX = 4096
+export const DC_CUT_MS = 5 * 60 * 1000
 export async function dcCut(src, outPath, a, b) {
   const p = dcProbe(src)
+  if (Math.max(p.w, p.h) > DC_COTE_MAX) throw new Error(`Vidéo trop grande : ${DC_COTE_MAX} px maximum par côté (4K) — réexporte-la en 4K ou moins`)
   a = Math.max(0, Number(a) || 0); b = Math.min(p.dur || 0, Number(b) || 0)
   if (!(b - a >= 1)) throw new Error('Passage trop court (1 s minimum)')
   if (b - a > DC_PERSO_MAX + 0.05) throw new Error(`Passage de ${DC_PERSO_MAX} s maximum avec le changement de personnage`)
-  await normaliser(src, outPath, p, { ss: a, t: b - a })
+  await normaliser(src, outPath, p, { ss: a, t: b - a, ms: DC_CUT_MS })
 }
 
 // ── tirage des paramètres ──────────────────────────────────────────────────────────────────────────────────────

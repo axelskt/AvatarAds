@@ -10,7 +10,8 @@ import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SU
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 import { cheminSur, clePrepMcp, controlerTaillePlan, nettoyerSonUtilisateur } from '../_shared/storage-path.ts'
-import { DC_PLANS, decupleurOuvert, DC_VARIANTES, DC_CR_VARIANTE, DC_PERSO_CR_SEC, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_WAN_PROMPT, lienDecupleur, lienEstLive, DC_MSG_LIVE } from '../_shared/decupleur.ts'   // Décupleur (24/10)   // audit 02/10 : chemins render-media et plans de rendu
+import { DC_PLANS, decupleurOuvert, DC_VARIANTES, DC_CR_VARIANTE, DC_PERSO_CR_SEC, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_WAN_PROMPT, lienDecupleur, lienEstLive, DC_MSG_LIVE,
+  DC_FETCH_QUOTA, DC_FETCH_FENETRE_S, DC_COURT_EN_COURS_MAX } from '../_shared/decupleur.ts'   // Décupleur (24/10)   // audit 02/10 : chemins render-media et plans de rendu
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -986,7 +987,7 @@ function aaLance(){
       var er=x.j.error||'';
       if(er==='not_pending'&&aaJobId){ aaOk=false; aaPct=5; aaLong=true; aaStartPoll('https://mcp.avatarads.fr/status/'+aaJobId); return; }
       aaBusy=false;
-      if(er==='busy'&&aaRetryN<20){ aaRetryN++; aaMsg('Deux vidéos sont déjà en préparation — la carte relance toute seule dans quelques secondes…'); setTimeout(function(){ aaLance().catch(function(e){ aaMsg(String(e&&e.message||e)); }); }, 15000); return; }
+      if(er==='busy'&&aaRetryN<20){ aaRetryN++; aaMsg('Une autre vidéo de ton compte est en préparation — la carte relance toute seule dans quelques secondes…'); setTimeout(function(){ aaLance().catch(function(e){ aaMsg(String(e&&e.message||e)); }); }, 15000); return; }
       if(er==='no_credits'||er==='busy'){ aaRelancer(er==='no_credits'?'Crédits insuffisants — recharge sur avatarads.fr, puis relance.':'La file est encore pleine — relance dans un instant.'); return; }
       throw new Error(er==='bad_type'?'Fichier refusé (format ou poids).':er==='plan_pro'?'Réservé aux plans Pro et Élite — upgrade ton plan sur avatarads.fr':er==='plan'?'Réservé aux plans Starter, Pro et Élite':er==='expired'?'Carte expirée — redemande à Claude.':er==='no_video'?'La vidéo n’est pas arrivée — redépose-la.':er==='no_char'?'La photo n’est pas arrivée — redépose-la.':'Échec ('+(er||'réseau')+') — réessaie.');
     });
@@ -3965,6 +3966,31 @@ async function dcPersoDu(job: Record<string, unknown>, res: string, varCost: num
   job.credits_cost = apres; job.params = params
   return true
 }
+// 30/10 (relecture des failles 3-4 du Décupleur) : les PRÉPARATIONS gratuites du MCP (dc-fetch d'un lien, mc-ref d'une vidéo
+// déposée) étaient insérées après un « comptage puis insertion » sans verrou : 30 /start simultanés (30 cartes par heure)
+// créaient 30 jobs, servis devant les rendus payés. Elles passent désormais par render_job_dc_creer (migration
+// 20261030140000), comme celles de l'app : verrou par compte, comptage et insertion dans la même transaction, UN travail
+// gratuit court en file ou en cours par compte (app et MCP confondus), liens : 1 en cours et 6 par 10 min (pas de quota pour
+// owner / developer). Résultat : { id } créé, { refus } (plafond : la carte relance seule sur « busy »), {} (fonction absente
+// ou hoquet : jamais l'ancienne insertion sans plafond).
+async function creerPrepMcp(uid: string, plan: Record<string, unknown>, input: string, o: { compte: string[]; enCoursMax: number; illimite: boolean }): Promise<{ id?: string; refus?: string }> {
+  try {
+    const { data, error } = await svc.rpc('render_job_dc_creer', { p_user: uid, p_plan: plan, p_input: input, p_assets: [],
+      p_en_cours_max: o.enCoursMax, p_fetch_en_cours_max: 1, p_fetch_quota: o.illimite ? null : DC_FETCH_QUOTA, p_fetch_fenetre_s: DC_FETCH_FENETRE_S,
+      p_compte: o.compte, p_court_en_cours_max: DC_COURT_EN_COURS_MAX, p_cut_quota: null })
+    if (error) { console.warn('[mcp] render_job_dc_creer :', error.message); return {} }
+    const r = (data ?? null) as { ok?: boolean; id?: string; raison?: string } | null
+    if (r && r.ok === true && r.id) return { id: String(r.id) }
+    if (r && r.ok === false) return { refus: String(r.raison || 'en_cours') }
+    return {}
+  } catch (e) { console.warn('[mcp] render_job_dc_creer :', (e as Error).message); return {} }
+}
+// /start refusé par le plafond APRÈS la prise du job (pending → running) : le job redevient « pending » (rien n'a été créé ni
+// débité) et la carte relance seule (« busy » : toutes les 15 s, 20 fois).
+async function prepRefusee(jobId: string): Promise<Response> {
+  await svc.from('mcp_jobs').update({ status: 'pending', updated_at: new Date().toISOString() }).eq('id', jobId).eq('status', 'running').is('op_name', null)
+  return json(429, { error: 'busy' })
+}
 async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
   const userId = String(job.user_id), op = String(job.op_name || ''), pj = (job.params || {}) as Record<string, unknown>
   if (/^(dfs|vns|dwg):/.test(op)) return   // réservation en cours (ou orpheline : le filet VT_STALE_MIN rend ce qui a été débité)
@@ -3979,9 +4005,11 @@ async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
     const lu = cheminSur(userId, rj.output_url)
     if (!lu) { await vtEchec(job, 'Récupération de la vidéo impossible — dépose le fichier dans la carte.'); return }
     if (!(await vtPasser(job, op, 'dfs:' + op.slice(3)))) return
-    const { data: prep, error } = await svc.from('render_jobs').insert({ user_id: userId, status: 'queued', input_video: lu, assets: [], avatar_clips: [],
-      plan: { __compose: 'mc-ref', maxDur: Number(pj.max_dur) || DC_PASSAGE_MAX } }).select('id').single()
-    if (error || !prep) { await vtEchec(job, 'Préparation de la vidéo impossible — réessaie.', 'dfs:' + op.slice(3)); return }
+    // relecture 30/10 : préparation créée sous les mêmes bornes atomiques que les autres (1 travail gratuit court par compte) ;
+    // plafond atteint (une autre préparation du compte tourne) → étape rendue, nouvel essai à la sonde suivante
+    const prep = await creerPrepMcp(userId, { __compose: 'mc-ref', maxDur: Number(pj.max_dur) || DC_PASSAGE_MAX }, lu, { compte: ['mc-ref'], enCoursMax: 10, illimite: true })
+    if (prep.refus) { await vtPasser(job, 'dfs:' + op.slice(3), op); return }
+    if (!prep.id) { await vtEchec(job, 'Préparation de la vidéo impossible — réessaie.', 'dfs:' + op.slice(3)); return }
     await vtPasser(job, 'dfs:' + op.slice(3), 'vn:' + prep.id, { src_path: lu })   // vidéo du lien supprimée à la fin (vtNettoyer)
     return
   }
@@ -5892,11 +5920,12 @@ serve(async (req) => {
       const { data: tookD } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: 0, created_at: nowD, updated_at: nowD })
         .eq('id', jobId).eq('status', 'pending').select('id')
       if (!tookD || !tookD.length) return json(409, { error: 'not_pending' })
-      const { data: rjD, error: rjDE } = await svc.from('render_jobs').insert(lien
-        ? { user_id: uid, status: 'queued', input_video: `${uid}/dc-lien-${Date.now()}.mp4`, assets: [], avatar_clips: [], plan: { __compose: 'dc-fetch', lien, duration: 1 } }
-        : { user_id: uid, status: 'queued', input_video: src, assets: [], avatar_clips: [], plan: { __compose: 'mc-ref', maxDur: Number(params.max_dur) || DC_PASSAGE_MAX } })
-        .select('id').single()
-      if (rjDE || !rjD) { await failAndRefund(uid, { id: jobId }, 'préparation impossible'); return json(500, { error: 'prep' }) }
+      // relecture 30/10 (faille 4 par le MCP) : création ATOMIQUE (render_job_dc_creer) — avant, insertion directe : ni quota de
+      // liens, ni « 1 récupération en cours », et le comptage ci-dessus (sans verrou) laissait passer 30 /start simultanés
+      const rjD = await creerPrepMcp(uid, lien ? { __compose: 'dc-fetch', lien, duration: 1 } : { __compose: 'mc-ref', maxDur: Number(params.max_dur) || DC_PASSAGE_MAX },
+        lien ? `${uid}/dc-lien-${Date.now()}.mp4` : src, { compte: ['mc-ref', 'dc-fetch', 'decupleur'], enCoursMax: isUnlimited(profD) ? 10 : 2, illimite: isUnlimited(profD) })
+      if (rjD.refus) return await prepRefusee(jobId)
+      if (!rjD.id) { await failAndRefund(uid, { id: jobId }, 'préparation impossible'); return json(500, { error: 'prep' }) }
       await svc.from('mcp_jobs').update({ op_name: (lien ? 'df:' : 'vn:') + rjD.id }).eq('id', jobId).eq('status', 'running')
       return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
     }
@@ -5928,10 +5957,12 @@ serve(async (req) => {
       const { data: tookT } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: 0, created_at: nowT, updated_at: nowT, params: { ...params, dur_hint: Number(body.duration) || 0 } })
         .eq('id', jobId).eq('status', 'pending').select('id')
       if (!tookT || !tookT.length) return json(409, { error: 'not_pending' })
-      const { data: rj, error: rjE } = await svc.from('render_jobs').insert({ user_id: uid, status: 'queued', input_video: src, assets: [], avatar_clips: [],
-        plan: { __compose: 'mc-ref', maxDur: Math.min(params.tool === 'omni_edit' ? 10 : 30, Number(params.max_dur) || 30), minDur: params.tool === 'motion',
-          crop916: params.tool === 'omni_edit' } }).select('id').single()   // Omni : recadrée au format rendu (9:16 / 16:9), Axel 04/10
-      if (rjE || !rj) { await failAndRefund(uid, { id: jobId }, 'préparation impossible'); return json(500, { error: 'prep' }) }
+      // relecture 30/10 : création ATOMIQUE (render_job_dc_creer : 2 préparations en cours, 1 travail gratuit court par compte) —
+      // avant, ce comptage sans verrou laissait 30 /start simultanés créer 30 mc-ref, servis devant tous les rendus payés
+      const rj = await creerPrepMcp(uid, { __compose: 'mc-ref', maxDur: Math.min(params.tool === 'omni_edit' ? 10 : 30, Number(params.max_dur) || 30), minDur: params.tool === 'motion',
+        crop916: params.tool === 'omni_edit' }, src, { compte: ['mc-ref'], enCoursMax: isUnlimited(profT) ? 10 : 2, illimite: isUnlimited(profT) })   // Omni : recadrée au format rendu (9:16 / 16:9), Axel 04/10
+      if (rj.refus) return await prepRefusee(jobId)
+      if (!rj.id) { await failAndRefund(uid, { id: jobId }, 'préparation impossible'); return json(500, { error: 'prep' }) }
       await svc.from('mcp_jobs').update({ op_name: 'vn:' + rj.id }).eq('id', jobId).eq('status', 'running')
       return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
     }

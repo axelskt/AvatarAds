@@ -7,7 +7,9 @@
 //   · les modèles JS des fonctions SQL utilisées par render-job pour le Décupleur. Une fonction SQL s'exécute d'un bloc
 //     (verrou, comptage, insertion dans la même transaction) : ici, d'un bloc SYNCHRONE, sans await au milieu.
 //     render_job_dc_creer = MÊME règle que supabase/migrations/20261030140000_decupleur_file_atomique.sql (à garder
-//     identique ; le SQL réel est rejoué sur Postgres par test-faille34-sql.ts).
+//     identique ; le SQL réel est rejoué sur Postgres par test-faille34-sql.ts). Relecture 30/10 : + mc-ref, p_compte,
+//     « 1 travail gratuit court par compte » (court_en_cours), quota de découpes. Aussi utilisé par le banc MCP
+//     (test-faille34-mcp.ts : /start des cartes Claude).
 import { FakeDB, FakeStorage, createClient as baseClient } from './fake-supabase-dc.ts'
 export { FakeDB, FakeStorage }
 
@@ -19,6 +21,7 @@ const latence = () => new Promise((r) => setTimeout(r, (globalThis as any).__lat
 
 type Row = Record<string, any>
 const DC = ['dc-fetch', 'dc-cut', 'decupleur']
+const TOUS = [...DC, 'mc-ref'], COURTS = ['dc-fetch', 'dc-cut', 'mc-ref']
 
 export function rpcsDecupleur(db: FakeDB) {
   const ops = () => db.rows('credit_ops')
@@ -30,19 +33,26 @@ export function rpcsDecupleur(db: FakeDB) {
       l.push(t); cles.set(a.p_key, l); return true
     },
     render_job_dc_creer: (a: any) => {
+      // MIGRATION=1er (ab-faille34.sh) : la fonction telle que le 1er correctif l'écrivait (commit 9e56e41d) — ni mc-ref, ni
+      // p_compte, ni « 1 travail court », ni quota de découpes
+      if ((globalThis as any).__migration1er) a = { ...a, p_compte: undefined, p_court_en_cours_max: null, p_cut_quota: null }
       const compose = a.p_plan?.__compose
-      if (!a.p_user || !a.p_input || !a.p_plan || typeof a.p_plan !== 'object' || !DC.includes(compose)) throw new Error('render_job_dc_creer : job Décupleur invalide')
+      const compte: string[] = a.p_compte ?? DC
+      if ((globalThis as any).__migration1er && compose === 'mc-ref') throw new Error('render_job_dc_creer : job Décupleur invalide')
+      if (!a.p_user || !a.p_input || !a.p_plan || typeof a.p_plan !== 'object' || !TOUS.includes(compose)
+        || !compte.length || !compte.every((c) => TOUS.includes(c))) throw new Error('render_job_dc_creer : job Décupleur invalide')
       const vivant = new Date(Date.now() - 45 * 60_000).toISOString()
+      const depuis = new Date(Date.now() - Math.max(60, Math.min(a.p_fetch_fenetre_s ?? 600, 86400)) * 1000).toISOString()
       const rj = db.rows('render_jobs').filter((r) => r.user_id === a.p_user)
       const enCours = (cs: string[]) => rj.filter((r) => ['queued', 'rendering'].includes(r.status) && cs.includes(r.plan?.__compose) && String(r.updated_at) >= vivant).length
-      if (enCours(DC) >= Math.max(1, Math.min(a.p_en_cours_max ?? 3, 10))) return { ok: false, raison: 'en_cours' }
-      if (compose === 'dc-fetch') {
-        if (a.p_fetch_en_cours_max != null && enCours(['dc-fetch']) >= Math.max(1, Math.min(a.p_fetch_en_cours_max, 10))) return { ok: false, raison: 'fetch_en_cours' }
-        if (a.p_fetch_quota != null) {
-          const depuis = new Date(Date.now() - Math.max(60, Math.min(a.p_fetch_fenetre_s ?? 600, 86400)) * 1000).toISOString()
-          if (rj.filter((r) => r.plan?.__compose === 'dc-fetch' && String(r.created_at) >= depuis).length >= Math.max(1, Math.min(a.p_fetch_quota, 100))) return { ok: false, raison: 'quota' }
-        }
-      }
+      const recents = (c: string) => rj.filter((r) => r.plan?.__compose === c && String(r.created_at) >= depuis).length
+      if (enCours(compte) >= Math.max(1, Math.min(a.p_en_cours_max ?? 3, 10))) return { ok: false, raison: 'en_cours' }
+      if (compose === 'dc-fetch' && a.p_fetch_en_cours_max != null && enCours(['dc-fetch']) >= Math.max(1, Math.min(a.p_fetch_en_cours_max, 10))) return { ok: false, raison: 'fetch_en_cours' }
+      const courtMax = a.p_court_en_cours_max === undefined ? 1 : a.p_court_en_cours_max
+      if (COURTS.includes(compose) && courtMax != null && enCours(COURTS) >= Math.max(1, Math.min(courtMax, 10))) return { ok: false, raison: 'court_en_cours' }
+      const fq = a.p_fetch_quota === undefined ? 6 : a.p_fetch_quota, cq = a.p_cut_quota === undefined ? 10 : a.p_cut_quota
+      if (compose === 'dc-fetch' && fq != null && recents('dc-fetch') >= Math.max(1, Math.min(fq, 100))) return { ok: false, raison: 'quota' }
+      if (compose === 'dc-cut' && cq != null && recents('dc-cut') >= Math.max(1, Math.min(cq, 100))) return { ok: false, raison: 'quota' }
       const now = new Date().toISOString(), id = crypto.randomUUID()
       db.rows('render_jobs').push({ id, user_id: a.p_user, status: 'queued', plan: JSON.parse(JSON.stringify(a.p_plan)), input_video: a.p_input,
         assets: a.p_assets ?? [], avatar_clips: [], created_at: now, updated_at: now, attempts: 0 })
