@@ -455,6 +455,17 @@ test('démo MCP (Axel 02/10) : meta.features filtre les hooks qui citent un modu
   assert.equal(C.pairLevel({ id: 'X', meta: { compatible_subjects: ['image-ia'] } }, { id: 'C-IMGIA-02', subject: 'image-ia', meta: {} }), 'ok');
 });
 
+test('Décupleur (Axel 30/10) : H23 / H64 seulement avec une démo qui montre le changement de personnage', () => {
+  const H64 = { id: 'H64', meta: { compatible_subjects: ['motion-control', 'decupleur'], requires: { decupleur: ['changement-personnage'] } } };
+  const H75 = { id: 'H75', meta: { compatible_subjects: ['image-ia', 'express', 'decupleur'] } };
+  const perso = { id: 'C-DC-01', subject: 'decupleur', meta: { montre: ['changement-personnage'] } };
+  const seul = { id: 'C-DC-09', subject: 'decupleur', meta: {} };
+  assert.equal(C.pairLevel(H64, perso), 'ok');
+  assert.equal(C.pairLevel(H64, seul), 'review');
+  assert.equal(C.pairLevel(H64, { id: 'C-MC-01', subject: 'motion-control', meta: {} }), 'ok');   // la règle ne touche que le Décupleur
+  assert.equal(C.pairLevel(H75, seul), 'ok');
+});
+
 test('avatar Omni seulement (Axel 08/10 : « on ne générera pas d’autre lipsync avec A3 ») : hors des emplacements lipsync, compte en Omni', () => {
   const bricks = [
     { id: 'A1', kind: 'avatar', status: 'ready', meta: {} },

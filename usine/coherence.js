@@ -306,6 +306,10 @@
     // Un hook qui cite aussi un module (H73 influenceur UGC, H76 pubs produit) ne va qu'avec une démo qui le montre.
     var f = meta(demo).features, extra = hs.filter(function (s) { return s !== demo.subject && s !== 'generique'; });
     if (Array.isArray(f) && extra.length && !extra.some(function (s) { return f.indexOf(s) >= 0; })) return 'review';
+    // Ce que la démo doit MONTRER pour ce hook (Axel 30/10) : hook.meta.requires = { sujet: [choses montrées] }, démo.meta.montre.
+    // H23 / H64 + Décupleur = seulement les démos où l'on voit le changement de personnage, pas un décuplage seul.
+    var rq = meta(hook).requires, need = rq && Array.isArray(rq[demo.subject]) ? rq[demo.subject] : [], m = meta(demo).montre;
+    if (need.length && !need.every(function (x) { return Array.isArray(m) && m.indexOf(x) >= 0; })) return 'review';
     return 'ok';
   }
   function pairWhy(hook, demo) {
