@@ -60,7 +60,7 @@
 // Les URL de résultat kie expirent (~24 h) → rapatriement dans render-media/<uid>/kie/<taskId>.<ext>.
 
 import { CORS, jsonRes, authUser, userPlan, refusPlan, billableGate, helperGate, applyReservation, applyOmniReservation, applyReservationFull, resolveOp, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
-import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn, KIE_MC_1080_PLANS, KIE_MC_ALIASES, kieMcFalPath, kieMcSortieOk } from '../_shared/kie.ts'
+import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnership, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn, KIE_MC_1080_PLANS, KIE_MC_ALIASES, kieMcFalPath, kieMcSortieOk } from '../_shared/kie.ts'
 import { preparerVideoFal, preparerVideoWan, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : vidéo du client copiée + mesurée, comme fal-proxy
 import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
 import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
@@ -89,14 +89,31 @@ const str = (v: unknown, max: number) => String(v ?? '').slice(0, max)
 const pick = <T extends string>(v: unknown, allowed: readonly T[], dflt: T): T => (allowed as readonly string[]).includes(String(v)) ? String(v) as T : dflt
 
 // Entrée acceptée = URL signée de NOTRE bucket, dans le dossier de l'appelant (service_role : tout le bucket).
-function okInput(u: unknown, uid: string | null): string | null {
+// Audit Décupleur 30/10 (faille 5) : la forme EXACTE d'un lien createSignedUrl — `<STORE_SIGN><chemin>?token=<jeton>` — et rien
+// d'autre : ni `#…`, ni `&…`, ni second `?`, ni `:` dans le chemin (un second « https://…/sign/render-media/<autre uid>/ » collé
+// derrière l'adresse passait le contrôle, qui ne lisait que la partie avant `?` ; kie générait — payé par la plateforme — puis
+// le contrôle de propriété voyait deux comptes et le filet remboursait tout). L'URL envoyée à kie est RECONSTRUITE ici à partir
+// du chemin et du jeton validés, jamais relayée telle quelle.
+// Seule exception : un UNIQUE `&download=<nom>` final, celui que storage-js ajoute quand le lien est signé avec { download }
+// (render-job signe la découpe dc-cut avec download: 'montage-final.mp4' et l'app la passe telle quelle en video_url de wan-3).
+// Il ne sert qu'à l'en-tête de téléchargement : accepté (caractères sûrs ou %XX, ni `#`, ni `&`, ni `?`, ni `/`) puis RETIRÉ
+// de l'adresse reconstruite — kie ne le voit jamais.
+const IN_SEG = /^[A-Za-z0-9._~()!*'+,;=$%-]+$/
+const IN_TOKEN = /^token=([A-Za-z0-9._-]{1,4096})(?:&download=(?:[A-Za-z0-9._~-]|%[0-9A-Fa-f]{2}){0,200})?$/
+export function okInput(u: unknown, uid: string | null): string | null {
   const s = String(u ?? '')
-  if (!s.startsWith(STORE_SIGN)) return null
+  if (s.length > 8192 || !s.startsWith(STORE_SIGN)) return null
   const rest = s.slice(STORE_SIGN.length)
-  const p = rest.split('?')[0]
-  if (!p || /\.\.|%2e|%2f|%5c|@|\\/i.test(p)) return null
-  if (uid && !p.startsWith(uid + '/')) return null
-  return s
+  const q = rest.indexOf('?')
+  if (q <= 0) return null
+  const p = rest.slice(0, q), tok = rest.slice(q + 1).match(IN_TOKEN)
+  if (!tok) return null
+  const seg = p.split('/')
+  if (seg.some((x) => !x || x === '.' || x === '..' || !IN_SEG.test(x))) return null
+  // encodages d'un caractère qui change le sens de l'adresse (., /, \, :, ?, #, &, @, %) : refusés même encodés
+  if (/%(2e|2f|5c|3a|3f|23|26|40|25)/i.test(p) || /%(?![0-9a-f]{2})/i.test(p)) return null
+  if (uid && (seg.length < 2 || seg[0] !== uid)) return null
+  return `${STORE_SIGN}${p}?token=${tok[1]}`
 }
 
 // ── Corps kie reconstruit par alias (les prompts backend de l'app passent TELS QUELS dans `prompt`) ──
@@ -484,7 +501,22 @@ export async function handler(req: Request): Promise<Response> {
       if (!rec.found) return jsonRes(404, { error: 'tâche kie introuvable', detail: [{ type: 'not_found', msg: rec.err }] })
       // Propriété : TOUTES les URL d'entrée enregistrées par kie viennent du dossier de l'appelant. Un échec sans param
       // (ex. refus 400) passe (rien à protéger) ; un résultat réussi exige toujours la preuve.
-      if (uid && (rec.state === 'ok' || rec.param) && !kieOwnedBy(rec.param, uid, STORE_SIGN)) return jsonRes(404, { error: 'tâche kie introuvable' })
+      if (uid && (rec.state === 'ok' || rec.param)) {
+        const own = kieOwnership(rec.param, uid, STORE_SIGN)
+        // Audit 30/10 (faille 5) : tâche RÉUSSIE, soumise par CE compte (sa ligne kie_jobs), dont les entrées contiennent le
+        // dossier d'un AUTRE compte = entrée maquillée. Jamais livrée (ni à lui ni à l'autre) ; kie a facturé la plateforme →
+        // op RÉGLÉE (plus remboursée par le filet), puis tâche close en échec. Règlement impossible (hoquet) → 503, rien de
+        // clos : le filet reprend (reconcile-kie applique la même règle). Sans ligne (developer) ou pas encore finie → 404.
+        if (own === 'foreign' && job && rec.state === 'ok' && rec.urls.length) {
+          const sb = job.op_id ? await kieBill(svc(), uid, rid, 'settle') : { ok: true, bill: 'none' as const }
+          if (sb.bill === null) return jsonRes(503, { error: 'suivi momentanément indisponible', detail: [{ type: 'transient', msg: 'règlement' }] })
+          console.warn('[kie] propriété : entrée d’un autre compte, op réglée, non livrée', rid, who, sb.bill)
+          await svc().from('kie_jobs').update({ state: 'failed', last_error: 'propriété non prouvée : entrée d’un autre compte (réglée, non livrée)', updated_at: new Date().toISOString() })
+            .eq('task_id', rid).eq('user_id', uid).in('state', ['pending', 'fetched'])
+          return jsonRes(isStatus ? 200 : 422, { status: 'FAILED', error: 'image ou vidéo d’entrée non conforme — génération non livrée', detail: [{ type: 'ownership', msg: 'entrée hors de ton espace' }], billing: 'settled' })
+        }
+        if (own !== 'own') return jsonRes(404, { error: 'tâche kie introuvable' })
+      }
       const failed = rec.state === 'fail' || (rec.state === 'ok' && !rec.urls.length)   // « succès » sans URL = échec
       // Échec définitif chez kie : on le note TOUT DE SUITE (avant, seule la route résultat le faisait → une tâche
       // refusée pendant le suivi restait « pending » jusqu'au passage du filet, 45 min plus tard).
