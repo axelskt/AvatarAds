@@ -32,11 +32,21 @@ const FF_MS = 10 * 60 * 1000
 const LIEN = /^https:\/\/(?:(?:www|m|vm|vt)\.)?(?:tiktok\.com|instagram\.com)\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]{1,400}$/
 // 30/10 (audit Décupleur, faille 2) : un lien de LIVE (TikTok /@compte/live, m.tiktok.com/share/live/…, Instagram
 // /<compte>/live/) est refusé AVANT yt-dlp — un direct n'a pas de fin, son enregistrement remplissait /tmp. Même règle que
-// lienEstLive de supabase/functions/_shared/decupleur.ts. Chemin décodé (jusqu'à 3 fois) : « %6Cive » ne passe pas.
+// lienEstLive de supabase/functions/_shared/decupleur.ts. Relecture du 30/10 : chemin DÉCODÉ (%XX un par un, jusqu'à
+// stabilité ; plus de 5 couches = refus) AVANT la coupe sur ? et # (« /live%3Fx », « /live%23 » passaient), « \ » = « / » ;
+// refusé si un segment vaut « live » suivi de rien ou d'un séparateur (« ; », « . » final, « % »…), ou si, sur TikTok, le
+// segment après « @compte/ » COMMENCE par « live » (l'extracteur live de yt-dlp prend « @compte/live » comme préfixe :
+// « /@u/lively » y part aussi). Pas de dépendance à --use-extractors : le refus tient seul si on l'élargit un jour.
 export function lienEstLive(u) {
-  let chemin = String(u || '').replace(/^[a-z]+:\/\/[^/?#]*/i, '').split(/[?#]/)[0]
-  for (let i = 0; i < 3; i++) { try { const d = decodeURIComponent(chemin); if (d === chemin) break; chemin = d } catch { break } }
-  return /(?:^|\/)live(?:\/|$)/i.test(chemin)
+  let chemin = String(u || '').trim().replace(/^[a-z]+:\/\/[^/?#]*/i, '')
+  for (let i = 0; ; i++) {
+    const d = chemin.replace(/%([0-9a-f]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    if (d === chemin) break
+    if (i === 5) return true   // encodé plus de 5 fois : aucun lien honnête n'est fait comme ça
+    chemin = d
+  }
+  chemin = chemin.split(/[?#]/)[0].replace(/\\/g, '/')
+  return /(?:^|\/)live(?![\w-]|\.+[\w-])/i.test(chemin) || /(?:^|\/)@[^/]*\/live/i.test(chemin)
 }
 export const lienDecupleurOk = (u) => typeof u === 'string' && LIEN.test(u) && !lienEstLive(u)
 export const MSG_LIVE = 'Lien de live : le Décupleur ne prend que des vidéos publiées (3 min maximum)'
@@ -141,28 +151,34 @@ function calculCpu() {
 }
 
 // 30/10 (audit Décupleur, faille 2) : yt-dlp ASYNCHRONE dans SON groupe de processus (detached : il en est le chef, le ffmpeg
-// qu'il lance pour un flux HLS ou la fusion y entre aussi). Au délai, TOUT le groupe est tué (SIGKILL sur -pid) ; avant,
-// spawnSync ne tuait que yt-dlp et son ffmpeg orphelin enregistrait le live dans /tmp jusqu'au redémarrage du conteneur.
-// Le groupe est aussi vidé à la sortie normale (aucun reste). Le battement du job continue pendant la récupération.
+// qu'il lance pour un flux HLS ou la fusion y entre aussi). Au délai, TOUT le groupe est arrêté ; avant, spawnSync ne tuait que
+// yt-dlp et son ffmpeg orphelin enregistrait le live dans /tmp jusqu'au redémarrage du conteneur. Le groupe est aussi vidé à la
+// sortie normale (aucun reste). Le battement du job continue pendant la récupération.
+// Relecture du 30/10 : yt-dlp_linux (Dockerfile) est un exécutable PyInstaller « onefile » : son chargeur extrait Python dans
+// $TMPDIR/_MEIxxxxxx et ne l'efface qu'à une sortie propre. Donc (1) au délai, SIGTERM au groupe d'abord (le chargeur arrête
+// Python puis nettoie, ffmpeg ferme son fichier), SIGKILL au groupe DC_FETCH_GRACE_MS plus tard pour ce qui reste ; (2) TMPDIR
+// de yt-dlp = le dossier dc-lien-* du job (opts.tmp), supprimé par dcFetch quoi qu'il arrive : même tué net, rien ne reste.
 const DC_FETCH_MS = 240000
-function ytdlp(args, ms = DC_FETCH_MS) {
+const DC_FETCH_GRACE_MS = 5000
+function ytdlp(args, { ms = DC_FETCH_MS, tmp } = {}) {
   return new Promise((resolve) => {
-    let p, sortie = '', fini = false, delai = false, code = null, signal = null, repli = null
-    const tuerGroupe = () => { try { process.kill(-p.pid, 'SIGKILL') } catch { /* groupe déjà vide */ } }
+    let p, sortie = '', fini = false, delai = false, code = null, signal = null, repli = null, dur = null
+    const groupe = (sig) => { try { process.kill(-p.pid, sig) } catch { /* groupe déjà vide */ } }
     const finir = (r) => {
       if (fini) return
-      fini = true; clearTimeout(t); clearTimeout(repli); tuerGroupe()
+      fini = true; clearTimeout(t); clearTimeout(repli); clearTimeout(dur); if (p) groupe('SIGKILL')
       try { p.stdout.destroy(); p.stderr.destroy() } catch { /* déjà fermés */ }
       resolve({ ...r, sortie })
     }
-    const t = setTimeout(() => { delai = true; tuerGroupe() }, ms)
-    try { p = spawn('yt-dlp', args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] }) } catch (e) { finir({ error: e }); return }
+    const t = setTimeout(() => { delai = true; groupe('SIGTERM'); dur = setTimeout(() => groupe('SIGKILL'), DC_FETCH_GRACE_MS) }, ms)
+    const env = tmp ? { ...process.env, TMPDIR: tmp, TMP: tmp, TEMP: tmp } : process.env
+    try { p = spawn('yt-dlp', args, { detached: true, env, stdio: ['ignore', 'pipe', 'pipe'] }) } catch (e) { finir({ error: e }); return }
     const garder = (d) => { if (sortie.length < 65536) sortie += d }
     p.stdout.on('data', garder); p.stderr.on('data', garder)
     p.on('error', (e) => finir({ error: e }))
     const resultat = () => (delai ? { error: { code: 'ETIMEDOUT' } } : { status: code, signal })
     // sortie de yt-dlp : le reste du groupe est tué tout de suite ; « close » suit dès que les tuyaux sont fermés (2 s au plus)
-    p.on('exit', (c, s) => { code = c; signal = s; tuerGroupe(); repli = setTimeout(() => finir(resultat()), 2000) })
+    p.on('exit', (c, s) => { code = c; signal = s; groupe('SIGKILL'); repli = setTimeout(() => finir(resultat()), 2000) })
     p.on('close', () => finir(resultat()))
   })
 }
@@ -174,12 +190,16 @@ export async function dcFetch(url, outPath) {
   const cible = await lienPourYtdlp(url)
   const tmp = mkdtempSync(join(tmpdir(), 'dc-lien-'))
   try {
-    // filtre SANS « ? » : une durée inconnue (direct) ne passe plus ; « !is_live » écarte un live même si sa durée est connue
+    // filtre : « !is_live » écarte un live même si sa durée est connue. TikTok donne toujours la durée d'une vidéo publiée :
+    // durée INCONNUE = refus (sans « ? »). Instagram (relecture du 30/10) : InstagramIE ne remplit la durée que si la réponse
+    // contient video_duration (repli page / embed : pas toujours) → « ? » pour qu'un vrai Reel passe ; il n'a pas d'extracteur
+    // live, et le délai, --max-filesize et le contrôle ffprobe ci-dessous bornent quand même tout.
+    const filtreDuree = /^https:\/\/(?:www\.)?instagram\.com\//i.test(cible) ? `duration<=?${DC_SOURCE_MAX}` : `duration<=${DC_SOURCE_MAX}`
     const r = await ytdlp(['--ignore-config', '--no-cache-dir', '--no-playlist', '--no-warnings', '--no-progress', '--no-mtime',
       '--no-part', '--max-filesize', '300M', '--socket-timeout', '20', '--retries', '2', '--use-extractors', DC_EXTRACTEURS,
-      '--match-filter', `!is_live & duration<=${DC_SOURCE_MAX}`,
+      '--match-filter', `!is_live & ${filtreDuree}`,
       '-f', 'bv*[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b', '--merge-output-format', 'mp4',
-      '-o', join(tmp, 'source.%(ext)s'), '--', cible])
+      '-o', join(tmp, 'source.%(ext)s'), '--', cible], { tmp })
     if (r.error) throw new Error(r.error.code === 'ETIMEDOUT' ? 'Récupération trop longue — réessaie ou importe le fichier' : 'Récupération des liens indisponible')
     if (r.status !== 0) {
       const m = String(r.sortie || '').split('\n').filter((l) => /^ERROR/.test(l)).pop() || String(r.sortie || '').split('\n').filter(Boolean).pop() || ''

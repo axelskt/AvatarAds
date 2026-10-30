@@ -16,12 +16,24 @@ export const DC_BUDGET_S = 900             // N × passage ≤ 15 min produites 
 export const DC_LIEN = /^https:\/\/(?:(?:www|m|vm|vt)\.)?(?:tiktok\.com|instagram\.com)\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]{1,400}$/
 // 30/10 (audit Décupleur, faille 2) : un lien de LIVE est refusé dès la vérification (TikTok /@compte/live,
 // m.tiktok.com/share/live/…, Instagram /<compte>/live/). Un direct n'a pas de fin : son enregistrement par le moteur
-// remplissait /tmp. MÊME règle que lienEstLive de render-worker/decupleur.mjs (revérifié par le moteur). Chemin décodé
-// jusqu'à 3 fois : « %6Cive » ne passe pas.
+// remplissait /tmp. MÊME règle que lienEstLive de render-worker/decupleur.mjs (revérifié par le moteur).
+// Relecture du 30/10 : le chemin est DÉCODÉ (%XX un par un, jusqu'à ce qu'il ne change plus ; plus de 5 couches = refus ;
+// un « %zz » ne bloque pas le décodage) AVANT d'être coupé sur ? et # (sinon « /live%3Fx », « /live%23 » passaient),
+// « \ » compte comme « / ». Refusé si :
+//   · un segment vaut « live » suivi de rien ou d'un séparateur (« /live », « /live/ », « /live; », « /live. », « /live%… ») ;
+//     un compte Instagram « /live.musique/reel/… » reste accepté ;
+//   · OU, sur TikTok, le segment après « @compte/ » COMMENCE par « live » : l'extracteur live de yt-dlp prend
+//     « @compte/live » comme PRÉFIXE (« /@u/lively » y part aussi). « /@livestreamer/video/… » reste accepté.
 export function lienEstLive(v: unknown): boolean {
-  let chemin = String(v ?? '').trim().replace(/^[a-z]+:\/\/[^/?#]*/i, '').split(/[?#]/)[0]
-  for (let i = 0; i < 3; i++) { try { const d = decodeURIComponent(chemin); if (d === chemin) break; chemin = d } catch { break } }
-  return /(?:^|\/)live(?:\/|$)/i.test(chemin)
+  let chemin = String(v ?? '').trim().replace(/^[a-z]+:\/\/[^/?#]*/i, '')
+  for (let i = 0; ; i++) {
+    const d = chemin.replace(/%([0-9a-f]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    if (d === chemin) break
+    if (i === 5) return true   // encodé plus de 5 fois : aucun lien honnête n'est fait comme ça
+    chemin = d
+  }
+  chemin = chemin.split(/[?#]/)[0].replace(/\\/g, '/')
+  return /(?:^|\/)live(?![\w-]|\.+[\w-])/i.test(chemin) || /(?:^|\/)@[^/]*\/live/i.test(chemin)
 }
 export const DC_MSG_LIVE = 'Lien de live : le Décupleur ne prend que des vidéos publiées (3 min maximum)'
 export function lienDecupleur(v: unknown): string | null {

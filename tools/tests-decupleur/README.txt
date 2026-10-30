@@ -25,10 +25,15 @@ Deux bancs, aucun réseau, aucune vraie vidéo :
      (faux-ytdlp/) qui applique le VRAI choix d'extracteur et le VRAI --match-filter de yt-dlp (bibliothèque installée par
      Homebrew, ytdlp-reel.py ; YTDLP_PY pour un autre Python). Ses faux ffmpeg écrivent sans fin : le banc compte ceux qui
      survivent au job, puis les tue.
-A/B (code du commit c4a25051 puis code du dépôt) :
+A/B (code du commit c4a25051, puis 1er correctif 484683d2 contesté en relecture, puis code du dépôt) :
    bash tools/tests-decupleur/ab-faille2.sh
-   → AVANT 9/16 et 9/18 (live accepté, yt-dlp lancé, ffmpeg orphelin vivant qui grossit, filtre « <=? », aucun --use-extractors)
-   → APRÈS 16/16 et 18/18 (clients honnêtes : TikTok 30 s, sans www, lien court vm, partage Instagram → toujours récupérés).
+   → AVANT 14/30 et 12/37 (live accepté, yt-dlp lancé, ffmpeg orphelin vivant qui grossit, filtre « <=? », aucun --use-extractors)
+   → 1er correctif 21/30 et 21/37 (relecture 30/10 : « /live%3Fx », « /live;x », « /live. », « /live%23 », « /lively »… acceptés
+     et envoyés à yt-dlp ; _MEI* du chargeur PyInstaller laissé dans /tmp au délai (SIGKILL d'emblée) ; Reel Instagram sans
+     durée connue refusé « trop longue » par le filtre sans « ? »)
+   → APRÈS 30/30 et 37/37 (clients honnêtes : TikTok 30 s, sans www, lien court vm, partage Instagram, Reel sans durée → récupérés).
+   Le faux yt-dlp imite le chargeur PyInstaller (dossier $TMPDIR/_MEI<pid> effacé seulement à une sortie propre) ; S3c le rend
+   sourd à SIGTERM (SIGKILL de secours) ; S11 rejoue les contournements avec --use-extractors élargi à « default ».
 
 Déploiement du correctif faille 2 :
    1. Aucune migration.
@@ -36,6 +41,7 @@ Déploiement du correctif faille 2 :
       Command » ne remplace l'ENTRYPOINT ; au premier démarrage, « ps -o pid,comm 1 » dans le conteneur doit montrer tini.
    3. Fonctions : supabase functions deploy render-job ; supabase functions deploy mcp (message « live » ; _shared/decupleur.ts).
       kie-proxy importe _shared/decupleur.ts mais n'utilise pas lienDecupleur : rien à redéployer.
-   L'ordre moteur / fonctions est libre : chacun refuse les lives seul. Le moteur LOCAL du Mac (tools/decupleur-local.sh,
+   Ordre : moteur (Railway) EN PREMIER — c'est lui qui lance yt-dlp (délai SIGTERM puis SIGKILL du groupe, TMPDIR du job,
+   filtre, extracteurs) ; les fonctions ensuite (refus plus tôt, message clair). Chacun refuse seul les variantes de « /live ». Le moteur LOCAL du Mac (tools/decupleur-local.sh,
    DC_LOCAL=1) ne prend QUE les jobs « decupleur » (prochainJob, securite.mjs), jamais dc-fetch : rien d'obligatoire
    (un git pull + relance garde simplement sa copie à jour).

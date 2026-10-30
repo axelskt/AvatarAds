@@ -13,6 +13,9 @@ url = sys.argv[2]
 info = json.loads(sys.argv[3])
 with YoutubeDL({'allowed_extractors': opts.get('allowed_extractors') or ['default'], 'quiet': True}) as y:
     ie = next((k for k, e in y._ies.items() if e.suitable(url)), None)
+# l'extracteur live de TikTok rend toujours un direct (is_live, durée inconnue), quel que soit l'aspect du lien
+if ie == 'TikTokLive':
+    info = {'is_live': True, 'live_status': 'is_live', 'duration': None}
 mf = opts.get('match_filter')
 filtre = mf(info, incomplete=False) if mf else None
 print(json.dumps({'ie': ie, 'filtre': filtre}))

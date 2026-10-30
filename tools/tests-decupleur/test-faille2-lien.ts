@@ -22,6 +22,17 @@ for (const l of [
   'https://www.tiktok.com/@compte/%6Cive',
   'https://www.tiktok.com/@compte/%256Cive',
   'https://www.instagram.com/compte/live/',
+  // relecture du 30/10 : contournements de l'ancienne règle (coupe sur ?/# avant décodage, « / » ou fin exigés après « live »)
+  // — le VRAI yt-dlp (extracteurs par défaut) les envoie tous à tiktok:live, qui prend « @compte/live » comme préfixe
+  'https://www.tiktok.com/@compte/live%3Fx',
+  'https://www.tiktok.com/@compte/live;x',
+  'https://www.tiktok.com/@compte/live.',
+  'https://www.tiktok.com/@compte/live%23',
+  'https://www.tiktok.com/@compte/lively',
+  'https://www.tiktok.com/@compte/live_2',
+  'https://www.tiktok.com/@compte/live%3Fx?a=%zz',
+  'https://www.tiktok.com/@compte/%2525256Cive%3F',
+  'https://www.instagram.com/compte/live;x',
 ]) { const r = lienDecupleur(l); verif(r === null, l, `accepté (${r})`) }
 
 console.log('Liens honnêtes : toujours acceptés')
@@ -35,6 +46,11 @@ for (const l of [
   'https://www.instagram.com/reel/DAbc_12-x/?igsh=MWx0eHg=',
   'https://www.instagram.com/share/reel/BAabc123/',
   'https://www.instagram.com/p/C0abc/',
+  'https://www.tiktok.com/@live.musique/video/7300000000000000000',
+  'https://www.tiktok.com/@compte/video/7300000000000000000?ref=%2Flive%3Fx',
+  'https://www.instagram.com/live.musique/reel/DAbc12/',
+  'https://www.instagram.com/livenation/reel/DAbc12/',
+  'https://www.instagram.com/reel/liveAbc12/',
 ]) { const r = lienDecupleur(l); verif(typeof r === 'string' && r.startsWith('https://'), l, 'refusé') }
 
 console.log(`\n${ok}/${total} vérifications OK`)
