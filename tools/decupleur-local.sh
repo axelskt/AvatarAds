@@ -4,6 +4,8 @@
 # Railway leur laisse 15 s avant de les prendre lui-même : Mac éteint ou script arrêté = rendu Railway, comme avant.
 # Les variables (adresse Supabase, clé du moteur) viennent de Railway par `railway run` : aucune clé écrite sur le disque.
 # Arrêt : ctrl+C (un job en cours est remis en file, Railway le reprend).
+# À RELANCER après chaque mise à jour de render-worker/ (git pull puis ctrl+C et relance) : un moteur local resté sur l'ancien
+# code prend quand même en premier les lots de ces comptes (ex. 30/10 : entrée mcp-prep/<uid>/ refusée par l'ancien code).
 set -e
 cd "$(dirname "$0")/../render-worker"
 if [ ! -d node_modules ]; then npm ci --omit=dev --no-audit --no-fund; fi
