@@ -14307,12 +14307,23 @@ async function _dcUid(){
 async function _dcApi(body){
   const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
-  if(!r.ok || j.ok === false){ const e = new Error(j.error || ('HTTP ' + r.status)); e._http = r.status; throw e; }
+  if(!r.ok || j.ok === false){ const e = new Error(j.error || ('HTTP ' + r.status)); e._http = r.status; e._code = j.code || ''; throw e; }
   return j;
 }
 // Crée le job puis le suit jusqu'au bout → statut final (+ job_id). alive() faux = abandon (Annuler) ; onProgress(0–100).
+// 30/10 (2e relecture Décupleur) : 429 « court_en_cours » = une récupération ou une découpe du compte tourne déjà (ici, ou une
+// carte Décupleur lancée depuis Claude) → nouvel essai toutes les 10 s pendant 5 min au plus (avant : erreur affichée tout de suite).
 async function _dcJob(body, alive, onProgress, maxMin, onCreated, onStatus){
-  const { job_id } = await _dcApi(body);
+  let job_id = null;
+  const t429 = Date.now();
+  for(;;){
+    try{ ({ job_id } = await _dcApi(body)); break; }
+    catch(e){
+      if(!(e && e._http === 429 && e._code === 'court_en_cours') || Date.now() - t429 > 5 * 60000) throw e;
+      await new Promise(r => setTimeout(r, 10000));
+      if(alive && !alive()){ const a = new Error('annulé'); a._dcAnnule = true; throw a; }
+    }
+  }
   if(typeof onCreated === 'function'){ try{ onCreated(job_id); }catch(_){} }
   const t0 = Date.now(), maxMs = (maxMin || 40) * 60000;
   while(Date.now() - t0 < maxMs){

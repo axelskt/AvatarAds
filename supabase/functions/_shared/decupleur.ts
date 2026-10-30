@@ -15,7 +15,10 @@ export const DC_BUDGET_S = 900             // N × passage ≤ 15 min produites 
 // 30/10 (audit Décupleur, failles 3-4, et relecture) : bornes des travaux GRATUITS, appliquées ATOMIQUEMENT par
 // render_job_dc_creer (migration 20261030140000) pour render-job (app) ET le MCP. Un seul travail court gratuit (dc-fetch,
 // dc-cut, mc-ref) en file ou en cours par compte ; liens récupérés : 6 par 10 min ; découpes : 10 par 10 min.
-export const DC_FETCH_QUOTA = 6, DC_CUT_QUOTA = 10, DC_FETCH_FENETRE_S = 600, DC_COURT_EN_COURS_MAX = 1
+// 2e relecture 30/10 : « 1 travail court » compté PAR FAMILLE (dc-fetch + dc-cut ; mc-ref) — l'app et les cartes Omni / Motion
+// Control ne se bloquent plus — et préparations mc-ref des cartes Claude : 10 par 10 min (DC_PREP_QUOTA, échecs compris), 3
+// préparations ÉCHOUÉES par heure au plus (DC_PREP_ECHECS_MAX : un échec n'est jamais débité).
+export const DC_FETCH_QUOTA = 6, DC_CUT_QUOTA = 10, DC_FETCH_FENETRE_S = 600, DC_COURT_EN_COURS_MAX = 1, DC_PREP_QUOTA = 10, DC_PREP_ECHECS_MAX = 3
 // Liens acceptés (MÊME motif que render-worker/decupleur.mjs, revérifié par le moteur)
 export const DC_LIEN = /^https:\/\/(?:(?:www|m|vm|vt)\.)?(?:tiktok\.com|instagram\.com)\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]{1,400}$/
 // 30/10 (audit Décupleur, faille 2) : un lien de LIVE est refusé dès la vérification (TikTok /@compte/live,

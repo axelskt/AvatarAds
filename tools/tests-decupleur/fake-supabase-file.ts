@@ -10,6 +10,10 @@
 //     identique ; le SQL réel est rejoué sur Postgres par test-faille34-sql.ts). Relecture 30/10 : + mc-ref, p_compte,
 //     « 1 travail gratuit court par compte » (court_en_cours), quota de découpes. Aussi utilisé par le banc MCP
 //     (test-faille34-mcp.ts : /start des cartes Claude).
+//     2e relecture 30/10 : « 1 travail court » PAR FAMILLE (dc-fetch + dc-cut ; mc-ref), quota de préparations p_prep_quota,
+//     et render_job_creer_borne (retouche ; gen-subs, motion-split, motion-bg). __migration2 = la migration telle que le
+//     commit 8daf5ea5 l'écrivait (1 travail court toutes familles confondues, pas de quota mc-ref, pas de render_job_creer_borne).
+//   · une fonction SQL absente répond comme PostgREST (PGRST202), pas « null sans erreur ».
 import { FakeDB, FakeStorage, createClient as baseClient } from './fake-supabase-dc.ts'
 export { FakeDB, FakeStorage }
 
@@ -22,6 +26,7 @@ const latence = () => new Promise((r) => setTimeout(r, (globalThis as any).__lat
 type Row = Record<string, any>
 const DC = ['dc-fetch', 'dc-cut', 'decupleur']
 const TOUS = [...DC, 'mc-ref'], COURTS = ['dc-fetch', 'dc-cut', 'mc-ref']
+const famille = (c: string) => (c === 'mc-ref' ? ['mc-ref'] : ['dc-fetch', 'dc-cut'].includes(c) ? ['dc-fetch', 'dc-cut'] : null)
 
 export function rpcsDecupleur(db: FakeDB) {
   const ops = () => db.rows('credit_ops')
@@ -49,10 +54,29 @@ export function rpcsDecupleur(db: FakeDB) {
       if (enCours(compte) >= Math.max(1, Math.min(a.p_en_cours_max ?? 3, 10))) return { ok: false, raison: 'en_cours' }
       if (compose === 'dc-fetch' && a.p_fetch_en_cours_max != null && enCours(['dc-fetch']) >= Math.max(1, Math.min(a.p_fetch_en_cours_max, 10))) return { ok: false, raison: 'fetch_en_cours' }
       const courtMax = a.p_court_en_cours_max === undefined ? 1 : a.p_court_en_cours_max
-      if (COURTS.includes(compose) && courtMax != null && enCours(COURTS) >= Math.max(1, Math.min(courtMax, 10))) return { ok: false, raison: 'court_en_cours' }
+      const fam = (globalThis as any).__migration2 ? (COURTS.includes(compose) ? COURTS : null) : famille(compose)
+      if (fam && courtMax != null && enCours(fam) >= Math.max(1, Math.min(courtMax, 10))) return { ok: false, raison: 'court_en_cours' }
       const fq = a.p_fetch_quota === undefined ? 6 : a.p_fetch_quota, cq = a.p_cut_quota === undefined ? 10 : a.p_cut_quota
       if (compose === 'dc-fetch' && fq != null && recents('dc-fetch') >= Math.max(1, Math.min(fq, 100))) return { ok: false, raison: 'quota' }
       if (compose === 'dc-cut' && cq != null && recents('dc-cut') >= Math.max(1, Math.min(cq, 100))) return { ok: false, raison: 'quota' }
+      const pq = (globalThis as any).__migration2 ? null : a.p_prep_quota ?? null
+      if (compose === 'mc-ref' && pq != null && recents('mc-ref') >= Math.max(1, Math.min(pq, 100))) return { ok: false, raison: 'quota' }
+      const pe = (globalThis as any).__migration2 ? null : a.p_prep_echecs_max ?? null
+      if (compose === 'mc-ref' && pe != null && rj.filter((r) => r.plan?.__compose === 'mc-ref' && r.status === 'failed' && String(r.created_at) >= new Date(Date.now() - 3600_000).toISOString()).length >= Math.max(1, Math.min(pe, 100))) return { ok: false, raison: 'quota' }
+      const now = new Date().toISOString(), id = crypto.randomUUID()
+      db.rows('render_jobs').push({ id, user_id: a.p_user, status: 'queued', plan: JSON.parse(JSON.stringify(a.p_plan)), input_video: a.p_input,
+        assets: a.p_assets ?? [], avatar_clips: [], created_at: now, updated_at: now, attempts: 0 })
+      return { ok: true, id }
+    },
+    // 2e relecture 30/10 : création atomique des rendus gratuits hors Décupleur (même règle que la migration 20261030140000)
+    render_job_creer_borne: (a: any) => {
+      const compose = a.p_plan?.__compose
+      if (!a.p_user || !a.p_input || !a.p_plan || typeof a.p_plan !== 'object' || !['retouche', 'gen-subs', 'motion-split', 'motion-bg'].includes(compose)) throw new Error('render_job_creer_borne : job invalide')
+      const rj = db.rows('render_jobs').filter((r) => r.user_id === a.p_user && ['queued', 'rendering'].includes(r.status))
+      const n = compose === 'retouche'
+        ? rj.filter((r) => r.plan?.__compose === 'retouche' && String(r.created_at) >= new Date(Date.now() - 15 * 60_000).toISOString()).length
+        : rj.filter((r) => String(r.updated_at) >= new Date(Date.now() - 45 * 60_000).toISOString()).length
+      if (n >= Math.max(1, Math.min(a.p_en_cours_max ?? 2, 10))) return { ok: false, raison: 'en_cours' }
       const now = new Date().toISOString(), id = crypto.randomUUID()
       db.rows('render_jobs').push({ id, user_id: a.p_user, status: 'queued', plan: JSON.parse(JSON.stringify(a.p_plan)), input_video: a.p_input,
         assets: a.p_assets ?? [], avatar_clips: [], created_at: now, updated_at: now, attempts: 0 })
@@ -91,7 +115,13 @@ export function createClient(u: string, k: string, o?: any) {
     q.single = () => latence().then(() => single0())
     return q
   }
-  c.rpc = async (name: string, args: any) => { await latence(); return rpc0(name, args) }
+  c.rpc = async (name: string, args: any) => {
+    await latence()
+    // fonction absente (pas dans le modèle, ou retirée pour figurer une base d'avant) : réponse de PostgREST
+    if (!db.rpcs[name]) return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name}` } }
+    if (name === 'render_job_creer_borne' && ((globalThis as any).__migration2 || (globalThis as any).__migration1er)) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.render_job_creer_borne' } }
+    return rpc0(name, args)
+  }
   return c
 }
 

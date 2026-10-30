@@ -89,10 +89,30 @@ console.log('B2. Relecture 30/10 : préparations du MCP (mc-ref, dc-fetch) par l
   await vider()
   await creer(U1, 'dc-fetch')   // récupération lancée depuis l'app
   const m = await creer(U1, 'mc-ref', OMNI)
-  ok('récupération de l’app en cours : préparation MCP du même compte refusée « court_en_cours »', !m.ok && m.raison === 'court_en_cours', JSON.stringify(m))
+  ok('2e relecture : récupération de l’app en cours → la préparation d’une carte Claude du même compte PASSE (familles séparées)', m.ok === true, JSON.stringify(m))
+  const c = await creer(U1, 'dc-cut')
+  ok('… mais une découpe pendant la récupération : refus « court_en_cours » (même famille)', !c.ok && c.raison === 'court_en_cours', JSON.stringify(c))
+  const m2 = await creer(U1, 'mc-ref', OMNI)
+  ok('… et une 2e préparation pendant la 1re : refus « court_en_cours »', !m2.ok && m2.raison === 'court_en_cours', JSON.stringify(m2))
   ok('… un autre compte passe', (await creer(U2, 'mc-ref', OMNI)).ok)
   await q(`update public.render_jobs set status = 'done'`)
-  ok('récupération terminée : la préparation (suite du parcours) passe', (await creer(U1, 'mc-ref', OMNI)).ok)
+  ok('tout terminé : la préparation (suite du parcours) passe', (await creer(U1, 'mc-ref', OMNI)).ok)
+  await vider()
+  const OMNIQ = `, 2, 1, 6, 600, array['mc-ref']::text[], 1, null, 10`
+  for (let i = 0; i < 10; i++) { await creer(U1, 'mc-ref', OMNIQ); await q(`update public.render_jobs set status = case when random() < .5 then 'failed' else 'done' end where status = 'queued'`) }
+  const q11 = await creer(U1, 'mc-ref', OMNIQ)
+  ok('2e relecture : 11e préparation en 10 min (échecs compris) : refus « quota » (p_prep_quota = 10)', !q11.ok && q11.raison === 'quota', JSON.stringify(q11))
+  ok('… quota null (owner / developer) : passe', (await creer(U1, 'mc-ref', `, 2, 1, 6, 600, array['mc-ref']::text[], 1, null, null`)).ok)
+  await vider()
+  const OMNIE = `, 2, 1, 6, 600, array['mc-ref']::text[], 1, null, 10, 3`
+  for (let i = 0; i < 3; i++) { await creer(U1, 'mc-ref', OMNIE); await q(`update public.render_jobs set status = 'failed' where status = 'queued'`) }
+  const e4 = await creer(U1, 'mc-ref', OMNIE)
+  ok('2e relecture : 3 préparations ÉCHOUÉES dans l’heure (jamais débitées) → la 4e est refusée « quota »', !e4.ok && e4.raison === 'quota', JSON.stringify(e4))
+  await q(`update public.render_jobs set created_at = now() - interval '61 minutes'`)
+  ok('… une heure plus tard : elle passe', (await creer(U1, 'mc-ref', OMNIE)).ok)
+  await vider()
+  for (let i = 0; i < 3; i++) { await creer(U1, 'mc-ref', OMNIE); await q(`update public.render_jobs set status = 'done' where status = 'queued'`) }
+  ok('… des préparations RÉUSSIES (suivies d’un débit) ne comptent pas', (await creer(U1, 'mc-ref', OMNIE)).ok)
   await vider()
   // lot de variantes en cours : ni la découpe ni la préparation ne sont bloquées par la règle des travaux courts
   await creer(U1, 'decupleur')
@@ -144,38 +164,95 @@ console.log('C. Règles')
   ok('montage (sans __compose) refusé', /invalide/.test(err), err)
 }
 
-console.log('D. render_claim_dc (prise en charge des dc-fetch / dc-cut par les moteurs, plafond global)')
+console.log('D. render_claim_dc (prise en charge des travaux gratuits par les moteurs, plafond PAR FAMILLE)')
 {
   await vider()
+  const ins = async (u: string, c: string) => (await q(`insert into public.render_jobs (user_id, plan, input_video) values ($1, $2::jsonb, 'x') returning id`, [u, c === 'retouche' ? '{"__compose":"retouche"}' : plan(c)]))[0].id as string
+  const prise = async (id: string, max = 2, prep = 1, ret = 1) => (await q(`select public.render_claim_dc($1::uuid, $2, $3, $4) as ok`, [id, max, prep, ret]))[0].ok as boolean
+  const statut = async (id: string) => (await q(`select status from public.render_jobs where id = $1`, [id]))[0].status as string
   const ids: string[] = []
-  for (const u of [U1, U2, U3]) for (const c of ['dc-fetch', 'dc-cut']) ids.push((await q(`insert into public.render_jobs (user_id, plan, input_video) values ($1, $2::jsonb, 'x') returning id`, [u, plan(c)]))[0].id)
+  for (const u of [U1, U2, U3]) for (const c of ['dc-fetch', 'dc-cut']) ids.push(await ins(u, c))
   const montage = (await q(`insert into public.render_jobs (user_id, plan, input_video) values ($1, '{"duration":30}'::jsonb, 'x') returning id`, [U1]))[0].id
-  const pris = await Promise.all(ids.map((id) => q(`select public.render_claim_dc($1::uuid, 2) as ok`, [id]).then((r) => r[0].ok as boolean)))
-  ok(`6 moteurs demandent en même temps : 2 pris (DC_MOTEURS_MAX = 2) — ${pris.filter(Boolean).length}`, pris.filter(Boolean).length === 2)
+  const pris = await Promise.all(ids.map((id) => prise(id)))
+  ok(`6 moteurs demandent en même temps : 2 dc pris (DC_MOTEURS_MAX = 2) — ${pris.filter(Boolean).length}`, pris.filter(Boolean).length === 2)
   ok('les pris passent en « rendering » avec attempts + 1', Number((await q(`select count(*)::int n from public.render_jobs where status = 'rendering' and attempts = 1`))[0].n) === 2)
-  const mcref = (await q(`insert into public.render_jobs (user_id, plan, input_video) values ($1, $2::jsonb, 'x') returning id`, [U2, plan('mc-ref')]))[0].id
-  ok('relecture 30/10 : mc-ref plafond atteint → refusé, reste en file', (await q(`select public.render_claim_dc($1::uuid, 2) as ok`, [mcref]))[0].ok === false
-    && (await q(`select status from public.render_jobs where id = $1`, [mcref]))[0].status === 'queued')
-  ok('… et un mc-ref en cours compte dans le plafond (3 max : pris, puis plus aucun dc)', (await q(`select public.render_claim_dc($1::uuid, 3) as ok`, [mcref]))[0].ok === true
-    && (await q(`select public.render_claim_dc($1::uuid, 3) as ok`, [ids[pris.findIndex((x) => !x)]]))[0].ok === false)
-  await q(`update public.render_jobs set status = 'queued' where id = $1`, [mcref])
-  ok('un montage ne passe jamais par render_claim_dc', (await q(`select public.render_claim_dc($1::uuid, 50) as ok`, [montage]))[0].ok === false
-    && (await q(`select status from public.render_jobs where id = $1`, [montage]))[0].status === 'queued')
+  const m1 = await ins(U2, 'mc-ref'), m2 = await ins(U3, 'mc-ref')
+  ok('2e relecture : famille dc pleine → une préparation mc-ref est PRISE quand même (sa propre place)', (await prise(m1)) === true && (await statut(m1)) === 'rendering')
+  ok('… la 2e préparation attend (DC_PREP_MAX = 1), reste en file', (await prise(m2)) === false && (await statut(m2)) === 'queued')
+  ok('… et une préparation en cours ne prend aucune place aux dc (toujours 2 dc au plus)', (await prise(ids[pris.findIndex((x) => !x)], 2, 5, 1)) === false)
+  const r1 = await ins(U1, 'retouche'), r2 = await ins(U2, 'retouche')
+  ok('2e relecture : retouche prise sous SON plafond (RETOUCHE_MOTEURS_MAX = 1), la 2e attend', (await prise(r1)) === true && (await prise(r2)) === false && (await statut(r2)) === 'queued')
+  ok('… RETOUCHE_MOTEURS_MAX = 2 : la 2e est prise', (await prise(r2, 2, 1, 2)) === true)
+  ok('un montage ne passe jamais par render_claim_dc', (await prise(montage, 50, 50, 50)) === false && (await statut(montage)) === 'queued')
   await q(`update public.render_jobs set status = 'done' where status = 'rendering' and id = $1`, [ids[pris.findIndex(Boolean)]])
-  ok('une place libérée → un suivant pris', (await q(`select public.render_claim_dc($1::uuid, 2) as ok`, [ids[pris.findIndex((x) => !x)]]))[0].ok === true)
+  ok('une place dc libérée → un suivant pris', (await prise(ids[pris.findIndex((x) => !x)])) === true)
   await q(`update public.render_jobs set updated_at = now() - interval '31 minutes' where status = 'rendering'`)
   const restant = ids.filter((id, i) => !pris[i])
-  const r = await q(`select public.render_claim_dc($1::uuid, 2) as ok`, [restant[restant.length - 1]])
-  ok('orphelins sans battement depuis 31 min : plus comptés', r[0].ok === true)
-  ok('job déjà pris : refusé (jamais deux moteurs sur le même)', (await q(`select public.render_claim_dc($1::uuid, 50) as ok`, [restant[restant.length - 1]]))[0].ok === false)
+  ok('orphelins sans battement depuis 31 min : plus comptés', (await prise(restant[restant.length - 1])) === true)
+  ok('job déjà pris : refusé (jamais deux moteurs sur le même)', (await prise(restant[restant.length - 1], 50, 50, 50)) === false)
+}
+
+console.log('F. 2e relecture : render_job_creer_borne (retouche ; gen-subs, motion-split, motion-bg)')
+{
+  const pl = (c: string) => JSON.stringify(c === 'retouche' ? { __compose: c } : { __compose: c, duration: 30 })
+  const creerB = async (u: string, c: string, max = 2) =>
+    (await q(`select public.render_job_creer_borne($1::uuid, $2::jsonb, $3, '[{"id":"photo","path":"x"}]'::jsonb, $4) as r`, [u, pl(c), `${u}/retouche-1-a.mp4`, max]))[0].r as { ok: boolean; id?: string; raison?: string }
+  await vider()
+  // AVANT : comptage puis insertion (render-job jusqu'au 30/10) — 15 comptages avant la 1re insertion
+  const comptes = await Promise.all(Array.from({ length: 15 }, () => q(`select count(*)::int n from public.render_jobs where user_id = $1 and status in ('queued','rendering') and plan->>'__compose' = 'retouche' and created_at >= now() - interval '15 minutes'`, [U1])))
+  for (const c of comptes) if (Number(c[0].n) < 2) await q(`insert into public.render_jobs (user_id, status, plan, input_video) values ($1, 'queued', '{"__compose":"retouche"}'::jsonb, 'x')`, [U1])
+  const avant = await nb(U1)
+  console.log(`     → AVANT : ${avant} retouches créées pour un plafond de 2`)
+  ok('(constat) l’ancien schéma dépasse « 2 retouches en cours » en rafale', avant === 15, String(avant))
+  await vider()
+  const rr = await Promise.all(Array.from({ length: 15 }, () => creerB(U1, 'retouche')))
+  ok(`15 retouches « simultanées » : 2 créées — ${await nb(U1, 'retouche')}`, (await nb(U1, 'retouche')) === 2 && rr.filter((r) => !r.ok).every((r) => r.raison === 'en_cours'))
+  await vider()
+  await Promise.all(Array.from({ length: 20 }, () => creerB(U2, 'gen-subs')))
+  ok(`20 gen-subs « simultanés » : 2 créés — ${await nb(U2, 'gen-subs')}`, (await nb(U2, 'gen-subs')) === 2)
+  ok('un autre compte n’est pas touché', (await creerB(U1, 'motion-split')).ok)
+  await vider()
+  await q(`insert into public.render_jobs (user_id, status, plan, input_video) values ($1, 'rendering', '{"duration":30}'::jsonb, 'x'), ($1, 'queued', '{"__compose":"decupleur"}'::jsonb, 'x')`, [U1])
+  const g = await creerB(U1, 'gen-subs')
+  ok('gen-subs : « 2 rendus en cours » comptés TOUS types (montage, lot…) comme avant', !g.ok && g.raison === 'en_cours', JSON.stringify(g))
+  ok('… mais une retouche ne compte que les retouches (Express pendant un montage : passe)', (await creerB(U1, 'retouche')).ok)
+  await vider()
+  await creerB(U1, 'retouche'); await creerB(U1, 'retouche')
+  await q(`update public.render_jobs set created_at = now() - interval '16 minutes'`)
+  ok('retouches créées il y a plus de 15 min : plus comptées (comme avant)', (await creerB(U1, 'retouche')).ok)
+  await vider()
+  await creerB(U1, 'gen-subs'); await creerB(U1, 'gen-subs')
+  await q(`update public.render_jobs set updated_at = now() - interval '46 minutes'`)
+  ok('rendus sans battement depuis 46 min : plus comptés (comme avant)', (await creerB(U1, 'gen-subs')).ok)
+  const r3 = await creerB(U3, 'retouche')
+  const row = (await q(`select * from public.render_jobs where id = $1`, [r3.id]))[0]
+  ok('job créé : en file, plan, entrée, assets, avatar_clips [] ; « Rendu prioritaire » appliqué', row.status === 'queued' && row.plan.__compose === 'retouche' && row.assets[0].id === 'photo'
+    && Array.isArray(row.avatar_clips) && row.avatar_clips.length === 0 && row.prioritaire === true, JSON.stringify(row))
+  for (const bad of ['{"__compose":"decupleur"}', '{"__compose":"mc-ref"}', '{"duration":30}']) {
+    let err = ''
+    try { await q(`select public.render_job_creer_borne($1::uuid, $2::jsonb, 'x')`, [U1, bad]) } catch (e) { err = String((e as Error).message) }
+    ok(`refusé : ${bad} (la fonction ne crée que retouche / gen-subs / motion-split / motion-bg)`, /invalide/.test(err), err)
+  }
 }
 
 console.log('E. Droits : EXECUTE réservé à service_role')
-for (const f of ['render_job_dc_creer(uuid, jsonb, text, jsonb, integer, integer, integer, integer, text[], integer, integer)', 'render_claim_dc(uuid, integer)']) {
+for (const f of ['render_job_dc_creer(uuid, jsonb, text, jsonb, integer, integer, integer, integer, text[], integer, integer, integer, integer)', 'render_claim_dc(uuid, integer, integer, integer)',
+  'render_job_creer_borne(uuid, jsonb, text, jsonb, integer)']) {
   const d = (await q(`select has_function_privilege('anon', 'public.${f}', 'execute') a, has_function_privilege('authenticated', 'public.${f}', 'execute') u,
     has_function_privilege('service_role', 'public.${f}', 'execute') s, exists (select 1 from information_schema.routine_privileges where routine_name = split_part('${f}', '(', 1) and grantee = 'PUBLIC') p,
     (select prosecdef from pg_proc where oid = 'public.${f}'::regprocedure) sd`))[0]
   ok(`${f.split('(')[0]} : anon non, authenticated non, PUBLIC non, service_role oui, SECURITY DEFINER`, !d.a && !d.u && d.s && !d.p && d.sd, JSON.stringify(d))
+}
+
+// une seule surcharge de chaque fonction (jamais PGRST203 « ambigu » côté PostgREST), même si un brouillon précédent (signatures du
+// commit 8daf5ea5 : 11 paramètres, render_claim_dc à 2) avait été appliqué quelque part avant celle-ci
+{
+  await db.exec(`create or replace function public.render_job_dc_creer(p_user uuid, p_plan jsonb, p_input text, p_assets jsonb default '[]'::jsonb, a integer default 3, b integer default 1,
+    c integer default 6, d integer default 600, e text[] default null, f integer default 1, g integer default 10) returns jsonb language sql as $$ select '{}'::jsonb $$;
+    create or replace function public.render_claim_dc(p_job uuid, p_max integer default 2) returns boolean language sql as $$ select false $$;`)
+  await db.exec(sql)
+  const n = await q(`select proname, count(*)::int n from pg_proc where pronamespace = 'public'::regnamespace and proname in ('render_job_dc_creer', 'render_claim_dc', 'render_job_creer_borne') group by 1`)
+  ok('une seule signature par fonction', n.length === 3 && n.every((r) => r.n === 1), JSON.stringify(n))
 }
 
 console.log(`\n${nKo === 0 ? '✓' : '✗'} ${nOk}/${nOk + nKo} vérifications OK`)

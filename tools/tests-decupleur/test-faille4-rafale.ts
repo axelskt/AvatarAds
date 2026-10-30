@@ -16,6 +16,7 @@ globalThis.fetch = (async (u: unknown) => { throw new Error('réseau interdit da
 
 const db = new FakeDB(); (globalThis as any).__db = db
 if (Deno.env.get('MIGRATION') === '1er') (globalThis as any).__migration1er = true   // ab-faille34.sh : base du 1er correctif
+if (Deno.env.get('MIGRATION') === '2') (globalThis as any).__migration2 = true       // ab-faille34.sh : base du commit 8daf5ea5 (1re relecture)
 const st = new FakeStorage(); (globalThis as any).__st = st
 const MODULE = Deno.env.get('RJ_MODULE') || new URL('../../supabase/functions/render-job/index.ts', import.meta.url).pathname
 const source = Deno.readTextFileSync(MODULE)
@@ -28,7 +29,7 @@ const OWNER = '33333333-2222-4333-8444-555555555555', FREE = '44444444-2222-4333
 const LIEN = 'https://www.tiktok.com/@client/video/7400000000000000001'
 function reset() {
   for (const k of Object.keys(db.t)) delete db.t[k]
-  db.rpcs = rpcsDecupleur(db) as any
+  db.rpcs = { ...rpcsDecupleur(db), has_recent_debit: () => true } as any   // un débit quelconque dans l'heure (cas des relecteurs)
   db.pannes.clear(); logs = []
   db.tokens = { 'tok-pro': { id: PRO }, 'tok-pro2': { id: PRO2 }, 'tok-owner': { id: OWNER }, 'tok-free': { id: FREE } }
   db.rows('profiles').push({ id: PRO, plan: 'pro', is_owner: false }, { id: PRO2, plan: 'starter', is_owner: false },
@@ -126,8 +127,9 @@ reset()
   ok('un lot de variantes n’est pas un travail court : jamais bloqué par la découpe en cours (refus seulement faute de réservation)', r5.status === 402, JSON.stringify(r5))
 }
 
-// ── S6b. Relecture 30/10 : quota de découpes (10 par 10 min), et une préparation MCP (mc-ref) en cours bloque la découpe ──
-keep('S6b. 11 dc-cut à la suite ; dc-cut pendant une préparation mc-ref du MCP')
+// ── S6b. Relecture 30/10 : quota de découpes (10 par 10 min) ; 2e relecture : une préparation de carte Claude (mc-ref) ne
+//        bloque PLUS l'app (familles séparées), une récupération lancée par une carte Décupleur (dc-fetch du MCP) si ──
+keep('S6b. 11 dc-cut à la suite ; dc-cut pendant une préparation mc-ref du MCP, puis pendant une récupération d’une carte Décupleur')
 reset()
 {
   const s11: number[] = []
@@ -138,7 +140,12 @@ reset()
   const now = new Date().toISOString()
   db.rows('render_jobs').push({ id: crypto.randomUUID(), user_id: PRO, status: 'queued', plan: { __compose: 'mc-ref', maxDur: 30 }, input_video: `${PRO}/mcp-src/x-src.mp4`, assets: [], avatar_clips: [], created_at: now, updated_at: now, attempts: 0 })
   const r = await appel('tok-pro', { action: 'dc-cut', input_video: `${PRO}/src.mp4`, a: 0, b: 5 })
-  ok('préparation MCP du même compte en file : découpe refusée 429 (1 travail gratuit court par compte, app et MCP confondus)', r.status === 429, JSON.stringify(r))
+  ok('2e relecture : préparation Omni / Motion Control (mc-ref) du même compte en file → la découpe de l’app PASSE (familles séparées)', r.status === 200, JSON.stringify(r))
+  reset()
+  db.rows('render_jobs').push({ id: crypto.randomUUID(), user_id: PRO, status: 'rendering', plan: { __compose: 'dc-fetch', lien: LIEN, duration: 1 }, input_video: `${PRO}/dc-lien-1.mp4`, assets: [], avatar_clips: [], created_at: now, updated_at: now, attempts: 1 })
+  const r3 = await appel('tok-pro', { action: 'dc-cut', input_video: `${PRO}/src.mp4`, a: 0, b: 5 })
+  ok('récupération d’une carte Décupleur en cours → 429 qui dit « ici ou depuis Claude » + code court_en_cours (l’app relance seule)',
+    r3.status === 429 && /depuis Claude/.test(String(r3.j.error)) && r3.j.code === 'court_en_cours', JSON.stringify(r3))
   const r2 = await appel('tok-owner', { action: 'dc-cut', input_video: `${OWNER}/src.mp4`, a: 0, b: 5 })
   ok('un autre compte n’est pas touché', r2.status === 200, JSON.stringify(r2))
 }
@@ -214,6 +221,64 @@ reset()
 keep('S12. compte gratuit')
 reset()
 ok('403', (await appel('tok-free', { action: 'dc-fetch', url: LIEN })).status === 403)
+
+// ══ 2e relecture du 30/10 : rendus gratuits HORS Décupleur créés par « comptage puis insertion » (bancs des relecteurs) ══
+const creeBorne = Deno.readTextFileSync(MODULE).includes('render_job_creer_borne')
+const RET = (uid: string, i: number) => ({ action: 'retouche', input_video: `${uid}/retouche-17000000${i}-ab${i}cd.mp4`, photo: `${uid}/retouche-17000000${i}-ab${i}cd.jpg` })
+// ── S13. Retouche (gratuite, prioritaire) : 15 requêtes simultanées, latence fixe puis variable ──
+for (const fixe of [true, false]) {
+  keep(`S13${fixe ? '' : 'b'}. 15 retouches simultanées (un débit quelconque dans l’heure), latence ${fixe ? 'fixe' : 'variable'}`)
+  reset(); (globalThis as any).__latenceFixe = fixe
+  const rs = await Promise.all(Array.from({ length: 15 }, (_, i) => appel('tok-pro', RET(PRO, i))))
+  const crees = jobsDe(db, PRO, 'retouche').length
+  keep(`     → ${crees} retouches créées, ${rs.filter((r) => r.status === 429).length} refus 429`)
+  ok('au plus 2 retouches créées (« 2 en cours » tenu en rafale)', crees <= 2, `${crees} créées`)
+  ok('chaque 200 = un job réel, chaque refus = 429 lisible', rs.filter((r) => r.status === 200).length === crees && rs.filter((r) => r.status !== 200).every((r) => r.status === 429 && /retouche/.test(String(r.j.error))), JSON.stringify(rs.filter((r) => r.status !== 200 && r.status !== 429).slice(0, 2)))
+}
+(globalThis as any).__latenceFixe = false
+// ── S14. Générateur (gen-subs, sans tirage ni débit) : 20 requêtes simultanées d'un Starter ──
+for (const fixe of [true, false]) {
+  keep(`S14${fixe ? '' : 'b'}. 20 gen-subs simultanés (Starter, aucun débit), latence ${fixe ? 'fixe' : 'variable'}`)
+  reset(); (globalThis as any).__latenceFixe = fixe
+  const rs = await Promise.all(Array.from({ length: 20 }, (_, i) => appel('tok-pro2', { action: 'create', plan: { __compose: 'gen-subs', duration: 30 }, input_video: `${PRO2}/gen-17000000${i}.mp4`, assets: [] })))
+  const crees = jobsDe(db, PRO2, 'gen-subs').length
+  keep(`     → ${crees} jobs gen-subs créés, ${rs.filter((r) => r.status === 429).length} refus 429`)
+  ok('au plus 2 rendus créés (« 2 rendus en cours » tenu en rafale)', crees <= 2, `${crees} créés`)
+  ok('les refus sont des 429 « rendu en cours »', rs.filter((r) => r.status !== 200).every((r) => r.status === 429 && /rendu en cours/.test(String(r.j.error))), JSON.stringify(rs.filter((r) => r.status !== 200 && r.status !== 429).slice(0, 2)))
+}
+(globalThis as any).__latenceFixe = false
+// ── S15. Clients honnêtes : une retouche, un Générateur, puis un 2e de chaque — et la photo trop lourde ──
+keep('S15. client honnête : retouche puis gen-subs ; photo de 45 Mo refusée')
+reset()
+{
+  const r1 = await appel('tok-pro', RET(PRO, 1)), r2 = await appel('tok-pro', RET(PRO, 2))
+  const j = jobsDe(db, PRO, 'retouche')[0]
+  ok('2 retouches passent (Express + Voix native en parallèle)', r1.status === 200 && r2.status === 200, JSON.stringify([r1, r2]))
+  ok('job de retouche tel qu’avant (plan, entrée, photo)', !!j && j.status === 'queued' && JSON.stringify(j.plan) === '{"__compose":"retouche"}' && j.input_video === RET(PRO, 1).input_video
+    && j.assets.length === 1 && j.assets[0].id === 'photo' && j.assets[0].path === RET(PRO, 1).photo, JSON.stringify(j))
+  ok('3e retouche pendant les deux premières : 429', (await appel('tok-pro', RET(PRO, 3))).status === 429)
+  finir(PRO)
+  const g = await appel('tok-pro2', { action: 'create', plan: { __compose: 'gen-subs', duration: 30 }, input_video: `${PRO2}/gen-1700000001.mp4`, assets: [] })
+  const gj = jobsDe(db, PRO2, 'gen-subs')[0]
+  ok('Générateur : 200, job tel qu’avant (plan, entrée, aucun média)', g.status === 200 && gj?.id === g.j.job_id && gj.plan.__compose === 'gen-subs' && gj.assets.length === 0 && gj.avatar_clips.length === 0, JSON.stringify([g, gj]))
+  reset()
+  st.put('render-media', RET(PRO, 4).photo, new Uint8Array(45 * 1024 * 1024), 'image/jpeg')
+  const lourd = await appel('tok-pro', RET(PRO, 4))
+  ok(creeBorne ? 'photo de 45 Mo (MP4 renommé .jpg…) : 413, aucun job' : 'photo de 45 Mo : acceptée par cette version (aucun contrôle)', creeBorne ? lourd.status === 413 && !jobsDe(db, PRO).length : lourd.status === 200, JSON.stringify(lourd))
+}
+// ── S16. Base sans la nouvelle fonction (render-job déployé avant la migration) : comportement d'avant, jamais de panne ──
+keep('S16. render_job_creer_borne absente (PGRST202)')
+if (!creeBorne) keep('  · sans objet sur cette version')
+else {
+  reset(); (globalThis as any).__migration2 = true
+  const r = await appel('tok-pro', RET(PRO, 1))
+  const g = await appel('tok-pro2', { action: 'create', plan: { __compose: 'gen-subs', duration: 30 }, input_video: `${PRO2}/gen-1700000001.mp4`, assets: [] })
+  ok('retouche et Générateur créés par l’insertion d’avant (aucune panne)', r.status === 200 && g.status === 200 && jobsDe(db, PRO, 'retouche').length === 1 && jobsDe(db, PRO2, 'gen-subs').length === 1, JSON.stringify([r, g]))
+  ;(globalThis as any).__migration2 = Deno.env.get('MIGRATION') === '2'
+  reset(); db.pannes.add('rpc:render_job_creer_borne')
+  const p = await appel('tok-pro', RET(PRO, 1))
+  ok('autre erreur de la fonction : refus 500, aucun job (l’app garde la vidéo d’origine)', p.status === 500 && !jobsDe(db, PRO).length, JSON.stringify(p))
+}
 
 keep(`\n${nKo === 0 ? '✓' : '✗'} ${nOk}/${nOk + nKo} vérifications OK${nSans ? ` (${nSans} sans objet)` : ''}`)
 if (nKo) { keep('— journaux —'); for (const l of logs.slice(-15)) keep('   ' + l.slice(0, 200)) }

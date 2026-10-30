@@ -11,7 +11,7 @@ import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 import { cheminSur, clePrepMcp, controlerTaillePlan, nettoyerSonUtilisateur } from '../_shared/storage-path.ts'
 import { DC_PLANS, decupleurOuvert, DC_VARIANTES, DC_CR_VARIANTE, DC_PERSO_CR_SEC, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_WAN_PROMPT, lienDecupleur, lienEstLive, DC_MSG_LIVE,
-  DC_FETCH_QUOTA, DC_FETCH_FENETRE_S, DC_COURT_EN_COURS_MAX } from '../_shared/decupleur.ts'   // Décupleur (24/10)   // audit 02/10 : chemins render-media et plans de rendu
+  DC_FETCH_QUOTA, DC_FETCH_FENETRE_S, DC_COURT_EN_COURS_MAX, DC_PREP_QUOTA, DC_PREP_ECHECS_MAX } from '../_shared/decupleur.ts'   // Décupleur (24/10)   // audit 02/10 : chemins render-media et plans de rendu
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -987,7 +987,7 @@ function aaLance(){
       var er=x.j.error||'';
       if(er==='not_pending'&&aaJobId){ aaOk=false; aaPct=5; aaLong=true; aaStartPoll('https://mcp.avatarads.fr/status/'+aaJobId); return; }
       aaBusy=false;
-      if(er==='busy'&&aaRetryN<20){ aaRetryN++; aaMsg('Une autre vidéo de ton compte est en préparation — la carte relance toute seule dans quelques secondes…'); setTimeout(function(){ aaLance().catch(function(e){ aaMsg(String(e&&e.message||e)); }); }, 15000); return; }
+      if(er==='busy'&&aaRetryN<40){ aaRetryN++; aaMsg('Une autre vidéo de ton compte est en préparation — la carte relance toute seule dans quelques secondes…'); setTimeout(function(){ aaLance().catch(function(e){ aaMsg(String(e&&e.message||e)); }); }, 15000); return; }
       if(er==='no_credits'||er==='busy'){ aaRelancer(er==='no_credits'?'Crédits insuffisants — recharge sur avatarads.fr, puis relance.':'La file est encore pleine — relance dans un instant.'); return; }
       throw new Error(er==='bad_type'?'Fichier refusé (format ou poids).':er==='plan_pro'?'Réservé aux plans Pro et Élite — upgrade ton plan sur avatarads.fr':er==='plan'?'Réservé aux plans Starter, Pro et Élite':er==='expired'?'Carte expirée — redemande à Claude.':er==='no_video'?'La vidéo n’est pas arrivée — redépose-la.':er==='no_char'?'La photo n’est pas arrivée — redépose-la.':'Échec ('+(er||'réseau')+') — réessaie.');
     });
@@ -3970,14 +3970,16 @@ async function dcPersoDu(job: Record<string, unknown>, res: string, varCost: num
 // déposée) étaient insérées après un « comptage puis insertion » sans verrou : 30 /start simultanés (30 cartes par heure)
 // créaient 30 jobs, servis devant les rendus payés. Elles passent désormais par render_job_dc_creer (migration
 // 20261030140000), comme celles de l'app : verrou par compte, comptage et insertion dans la même transaction, UN travail
-// gratuit court en file ou en cours par compte (app et MCP confondus), liens : 1 en cours et 6 par 10 min (pas de quota pour
-// owner / developer). Résultat : { id } créé, { refus } (plafond : la carte relance seule sur « busy »), {} (fonction absente
-// ou hoquet : jamais l'ancienne insertion sans plafond).
+// gratuit court en file ou en cours par compte et par famille (2e relecture : récupération / découpe d'un côté, préparation
+// mc-ref de l'autre — l'app et les cartes Omni / Motion Control ne se bloquent plus), liens : 1 en cours et 6 par 10 min,
+// préparations : 10 par 10 min et 3 échecs par heure (pas de quota pour owner / developer). Résultat : { id } créé, { refus } (plafond : la carte
+// relance seule sur « busy »), {} (fonction absente ou hoquet : jamais l'ancienne insertion sans plafond).
 async function creerPrepMcp(uid: string, plan: Record<string, unknown>, input: string, o: { compte: string[]; enCoursMax: number; illimite: boolean }): Promise<{ id?: string; refus?: string }> {
   try {
     const { data, error } = await svc.rpc('render_job_dc_creer', { p_user: uid, p_plan: plan, p_input: input, p_assets: [],
       p_en_cours_max: o.enCoursMax, p_fetch_en_cours_max: 1, p_fetch_quota: o.illimite ? null : DC_FETCH_QUOTA, p_fetch_fenetre_s: DC_FETCH_FENETRE_S,
-      p_compte: o.compte, p_court_en_cours_max: DC_COURT_EN_COURS_MAX, p_cut_quota: null })
+      p_compte: o.compte, p_court_en_cours_max: DC_COURT_EN_COURS_MAX, p_cut_quota: null, p_prep_quota: o.illimite ? null : DC_PREP_QUOTA,
+      p_prep_echecs_max: o.illimite ? null : DC_PREP_ECHECS_MAX })
     if (error) { console.warn('[mcp] render_job_dc_creer :', error.message); return {} }
     const r = (data ?? null) as { ok?: boolean; id?: string; raison?: string } | null
     if (r && r.ok === true && r.id) return { id: String(r.id) }
@@ -3986,7 +3988,7 @@ async function creerPrepMcp(uid: string, plan: Record<string, unknown>, input: s
   } catch (e) { console.warn('[mcp] render_job_dc_creer :', (e as Error).message); return {} }
 }
 // /start refusé par le plafond APRÈS la prise du job (pending → running) : le job redevient « pending » (rien n'a été créé ni
-// débité) et la carte relance seule (« busy » : toutes les 15 s, 20 fois).
+// débité) et la carte relance seule (« busy » : toutes les 15 s, 40 fois = 10 min ; 2e relecture 30/10, avant 20 fois = 5 min).
 async function prepRefusee(jobId: string): Promise<Response> {
   await svc.from('mcp_jobs').update({ status: 'pending', updated_at: new Date().toISOString() }).eq('id', jobId).eq('status', 'running').is('op_name', null)
   return json(429, { error: 'busy' })

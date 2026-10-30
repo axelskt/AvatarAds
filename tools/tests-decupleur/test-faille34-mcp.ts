@@ -18,9 +18,11 @@ globalThis.fetch = (async (u: unknown) => { throw new Error('réseau interdit da
 
 const db = new FakeDB(); (globalThis as any).__db = db
 if (Deno.env.get('MIGRATION') === '1er') (globalThis as any).__migration1er = true   // ab-faille34.sh : base du 1er correctif
+if (Deno.env.get('MIGRATION') === '2') (globalThis as any).__migration2 = true       // ab-faille34.sh : base du commit 8daf5ea5
 const st = new FakeStorage(); (globalThis as any).__st = st
 const MODULE = Deno.env.get('MCP_MODULE') || new URL('../../supabase/functions/mcp/index.ts', import.meta.url).pathname
-const atomique = Deno.readTextFileSync(MODULE).includes('creerPrepMcp')
+const SOURCE = Deno.readTextFileSync(MODULE)
+const atomique = SOURCE.includes('creerPrepMcp')
 await import('file://' + MODULE)
 const handler = (globalThis as any).__handler as (r: Request) => Promise<Response>
 
@@ -78,20 +80,24 @@ for (const [nom, tool, lien] of [['M1. 30 /start decupler_video (lien) simultan�
 }
 (globalThis as any).__latenceFixe = false
 
-// ── M4. Parcours honnête : une carte Omni, puis une carte Décupleur par lien ──
-keep('M4. client honnête : 1 carte Omni, puis 1 carte Décupleur (lien) une fois la 1re préparée')
+// ── M4. Parcours honnête : une carte Omni, puis une carte Décupleur par lien PENDANT la préparation Omni ──
+// 2e relecture 30/10 : la préparation (famille « prep ») et la récupération du lien (famille « dc ») ne se bloquent plus.
+keep('M4. client honnête : 1 carte Omni, puis 1 carte Décupleur (lien) pendant la préparation de la 1re')
 reset()
 {
   const a = carte(PRO, 'omni_edit'), ra = await start(a)
   const rj = jobsDe(db, PRO, 'mc-ref')[0]
   ok('Omni : 200 et étape vn:<préparation>', ra.status === 200 && mj(a).status === 'running' && mj(a).op_name === 'vn:' + rj?.id, JSON.stringify([ra, mj(a).op_name]))
   ok('préparation telle qu’avant (maxDur 10, crop916, entrée = vidéo déposée)', rj?.plan?.maxDur === 10 && rj.plan.crop916 === true && rj.plan.minDur === false && rj.input_video === mj(a).params.src_path, JSON.stringify(rj))
-  const b = carte(PRO, 'decup', true), rb0 = await start(b)
-  ok('Décupleur pendant la préparation Omni : 429 busy, carte toujours « pending »', rb0.status === 429 && mj(b).status === 'pending', JSON.stringify(rb0))
-  finir(PRO)
-  const rb = await start(b), f = jobsDe(db, PRO, 'dc-fetch')[0]
-  ok('préparation finie : la carte relancée passe (df:<récupération>)', rb.status === 200 && mj(b).op_name === 'df:' + f?.id, JSON.stringify([rb, mj(b).op_name]))
+  const b = carte(PRO, 'decup', true), rb = await start(b)
+  const f = jobsDe(db, PRO, 'dc-fetch')[0]
+  ok('2e relecture : Décupleur (lien) PENDANT la préparation Omni → 200 tout de suite (df:<récupération>)', rb.status === 200 && mj(b).op_name === 'df:' + f?.id, JSON.stringify([rb, mj(b).op_name]))
   ok('récupération telle qu’avant (plan { __compose, lien, duration }, clé dc-lien-…)', f?.plan?.lien === LIEN && f.plan.duration === 1 && Object.keys(f.plan).length === 3 && new RegExp(`^${PRO}/dc-lien-\\d+\\.mp4$`).test(f.input_video), JSON.stringify(f))
+  const c = carte(PRO, 'omni_edit'), rc0 = await start(c)
+  ok('2e carte Omni pendant la 1re préparation : 429 busy (1 préparation à la fois par compte), carte « pending »', rc0.status === 429 && rc0.j.error === 'busy' && mj(c).status === 'pending', JSON.stringify(rc0))
+  for (const r of jobsDe(db, PRO, 'mc-ref')) r.status = 'done'
+  const rc = await start(c)
+  ok('1re préparation finie : la carte relancée passe', rc.status === 200 && String(mj(c).op_name).startsWith('vn:'), JSON.stringify([rc, mj(c).op_name]))
 }
 
 // ── M5. Quota de liens par le MCP (6 par 10 min, comptés avec l'app) ; owner / developer : pas de quota ──
@@ -108,7 +114,8 @@ reset()
 }
 
 // ── M6. Suite du parcours lien → préparation (étape df:) : bornée elle aussi, et jamais perdue ──
-keep('M6. récupération finie ; une découpe de l’app tourne pour le même compte ; la carte sonde /status')
+// 2e relecture 30/10 : une découpe de l'app (famille « dc ») ne la bloque plus ; une autre préparation du compte (« prep »), si.
+keep('M6. récupération finie ; découpe de l’app en cours, puis une préparation Omni du même compte ; la carte sonde /status')
 if (!atomique) keep('  · sans objet sur cette version (pas de creerPrepMcp)')
 else {
   reset()
@@ -118,14 +125,16 @@ else {
   Object.assign(f, { status: 'done', output_url: `${PRO}/${f.id}.mp4` })
   st.put('render-media', `${PRO}/${f.id}.mp4`, new Uint8Array(3000))
   const now = new Date().toISOString()
-  db.rows('render_jobs').push({ id: crypto.randomUUID(), user_id: PRO, status: 'rendering', plan: { __compose: 'dc-cut', a: 0, b: 5 }, input_video: `${PRO}/x.mp4`, assets: [], avatar_clips: [], created_at: now, updated_at: now, attempts: 1 })
+  const mcref = { id: crypto.randomUUID(), user_id: PRO, status: 'rendering', plan: { __compose: 'mc-ref', maxDur: 10 }, input_video: `${PRO}/mcp-src/y-src.mp4`, assets: [], avatar_clips: [], created_at: now, updated_at: now, attempts: 1 }
+  db.rows('render_jobs').push(mcref)
   const sonde = async () => { mj(id).updated_at = new Date(Date.now() - 60_000).toISOString(); await handler(new Request(`https://mcp.avatarads.fr/mcp/status/${id}`)) }
   await sonde()
-  ok('découpe en cours : aucune préparation créée, étape remise à df: (nouvel essai à la sonde suivante)', jobsDe(db, PRO, 'mc-ref').length === 0 && mj(id).op_name === 'df:' + f.id && mj(id).status === 'running', JSON.stringify([mj(id).op_name, mj(id).status]))
-  finir(PRO)
+  ok('préparation Omni du compte en cours : aucune 2e préparation créée, étape remise à df: (nouvel essai à la sonde suivante)', jobsDe(db, PRO, 'mc-ref').length === 1 && mj(id).op_name === 'df:' + f.id && mj(id).status === 'running', JSON.stringify([mj(id).op_name, mj(id).status]))
+  mcref.status = 'done'
+  db.rows('render_jobs').push({ id: crypto.randomUUID(), user_id: PRO, status: 'rendering', plan: { __compose: 'dc-cut', a: 0, b: 5 }, input_video: `${PRO}/x.mp4`, assets: [], avatar_clips: [], created_at: now, updated_at: now, attempts: 1 })
   await sonde()
-  const p = jobsDe(db, PRO, 'mc-ref')[0]
-  ok('découpe finie : préparation créée (mc-ref de la vidéo du lien), étape vn:<id>', !!p && p.input_video === `${PRO}/${f.id}.mp4` && mj(id).op_name === 'vn:' + p.id, JSON.stringify([mj(id).op_name, p]))
+  const p = jobsDe(db, PRO, 'mc-ref').find((r) => r.id !== mcref.id)
+  ok('2e relecture : découpe de l’app en cours → la préparation est créée quand même (familles séparées), étape vn:<id>', !!p && p.input_video === `${PRO}/${f.id}.mp4` && mj(id).op_name === 'vn:' + p.id, JSON.stringify([mj(id).op_name, p]))
 }
 
 // ── M7. Fonction de création en panne : jamais l'ancienne insertion sans plafond ; la carte est close sans débit ──
@@ -145,6 +154,32 @@ reset()
   const a = jobsDe(db, PRO, 'mc-ref').length, b = jobsDe(db, PRO2, 'mc-ref').length
   keep(`     → compte 1 : ${a}, compte 2 : ${b}`)
   ok('1 préparation par compte, aucun ne bloque l’autre', a === 1 && b === 1, `${a} / ${b}`)
+}
+
+// ── M9. 2e relecture : préparations gratuites (aucun débit si elles échouent) → 10 par 10 min et par compte ──
+keep('M9. 11 cartes Omni à la suite (chaque préparation finie avant la suivante) ; puis préparations qui échouent')
+reset()
+{
+  const s11: number[] = []
+  for (let i = 0; i < 11; i++) { s11.push((await start(carte(PRO, 'omni_edit'))).status); finir(PRO) }
+  keep(`     → statuts : ${s11.join(' ')}`)
+  ok('10 passent, la 11e est refusée (429 busy : la carte relance seule, rien n’est débité)', s11.slice(0, 10).every((x) => x === 200) && s11[10] === 429, s11.join(' '))
+  reset()
+  const e: number[] = []
+  for (let i = 0; i < 4; i++) { e.push((await start(carte(PRO, 'omni_edit'))).status); for (const r of jobsDe(db, PRO, 'mc-ref')) if (r.status === 'queued') r.status = 'failed' }
+  keep(`     → préparations en échec : statuts ${e.join(' ')}`)
+  ok('3 préparations ÉCHOUÉES dans l’heure (jamais débitées) : la 4e attend (429 busy)', e.slice(0, 3).every((x) => x === 200) && e[3] === 429, e.join(' '))
+  const o: number[] = []
+  for (let i = 0; i < 11; i++) { o.push((await start(carte(OWNER, 'omni_edit'))).status); finir(OWNER) }
+  ok('compte propriétaire : pas de quota', o.every((x) => x === 200), o.join(' '))
+}
+// ── M10. La carte relance seule assez longtemps (2e relecture : 40 × 15 s = 10 min, avant 20 × 15 s = 5 min) ──
+keep('M10. relance automatique de la carte sur « busy »')
+{
+  const m = SOURCE.match(/er==='busy'&&aaRetryN<(\d+)\)[\s\S]{0,400}?\}, (\d+)\); return; \}/)
+  const fenetre = m ? Number(m[1]) * Number(m[2]) / 1000 : 0
+  keep(`     → ${m ? m[1] + ' relances × ' + Number(m[2]) / 1000 + ' s = ' + fenetre / 60 + ' min' : 'motif introuvable'}`)
+  ok('au moins 10 min de relance automatique', fenetre >= 600, String(fenetre))
 }
 
 keep(`\n${nKo === 0 ? '✓' : '✗'} ${nOk}/${nOk + nKo} vérifications OK`)

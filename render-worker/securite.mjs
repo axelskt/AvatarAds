@@ -375,8 +375,34 @@ export function horsBornes(mesure, bornes) {
 // classe prioritaire, sans plafond global : 30 /start simultanés prenaient les 6 moteurs. `dc.pauseJusqua` (horodatage ms) :
 // après un échec de render_claim_dc (erreur durable ou plafond lu en retard), ce moteur traite ces jobs comme « plafond
 // atteint » quelques secondes — il sert les autres rendus au lieu de reboucler sur le même job (toute la file bloquée).
-export const DC_COURTS = ['dc-fetch', 'dc-cut', 'mc-ref']
+// 2e relecture 30/10 : trois FAMILLES de travaux gratuits, chacune sous SON plafond global (render_claim_dc) — avant, dc-fetch,
+// dc-cut et mc-ref partageaient un seul plafond (une charge Décupleur faisait attendre les préparations des cartes Claude, qui
+// précèdent un débit) et la retouche n'en avait aucun (gratuite, prioritaire : 30 retouches par compte et par 10 min passaient
+// devant tous les rendus payés).
+//   dc       : dc-fetch, dc-cut (Décupleur : récupération d'un lien, découpe)         → DC_MOTEURS_MAX (2)
+//   prep     : mc-ref (préparation d'une vidéo déposée dans une carte Claude)          → DC_PREP_MAX (1)
+//   retouche : retouche d'une vidéo Express / Omni du MCP (après une génération payée) → RETOUCHE_MOTEURS_MAX (1)
+export const FAMILLES_GRATUITES = { dc: ['dc-fetch', 'dc-cut'], prep: ['mc-ref'], retouche: ['retouche'] }
+export const DC_COURTS = Object.values(FAMILLES_GRATUITES).flat()
+export function familleGratuite(compose) {
+  for (const [nom, l] of Object.entries(FAMILLES_GRATUITES)) if (l.includes(compose)) return nom
+  return null
+}
 export const DC_VIVANT_MS = 30 * 60_000   // même fenêtre que render_claim_dc (reprise des orphelins : 30 min sans battement)
+// `dc` : { familles: { dc: max, prep: max, retouche: max }, pauseJusqua: { <famille>: horodatage ms } } (2e relecture ; `dc._penal`
+// garde 30 s la liste des comptes dont une préparation ou une retouche a échoué dans l'heure) ;
+// forme d'avant acceptée : { courts: [...], max, pauseJusqua: nombre } = une seule famille.
+function famillesDe(dc) {
+  if (!dc) return []
+  if (dc.familles && typeof dc.familles === 'object') {
+    return Object.entries(dc.familles).filter(([nom]) => FAMILLES_GRATUITES[nom]).map(([nom, max]) => ({
+      nom, composes: FAMILLES_GRATUITES[nom], max: Math.max(1, Number(max) || 1), penal: nom === 'prep' || nom === 'retouche',
+      pause: Number(dc.pauseJusqua && typeof dc.pauseJusqua === 'object' ? dc.pauseJusqua[nom] : dc.pauseJusqua) || 0,
+    }))
+  }
+  if (Array.isArray(dc.courts) && dc.courts.length) return [{ nom: '_', composes: dc.courts, max: Math.max(1, Number(dc.max) || 1), pause: Number(dc.pauseJusqua) || 0 }]
+  return []
+}
 export async function prochainJob(sb, dernierCompte, prioritaires, local = null, dc = null) {
   // 26/10 (Axel : « sur le compte dev, que le Décupleur passe en local, pas par Railway ») : un moteur lancé sur le Mac
   // (DC_LOCAL=1, tools/decupleur-local.sh) ne prend QUE les Décupleurs des comptes propriétaire / developer (local.ids) ;
@@ -393,35 +419,63 @@ export async function prochainJob(sb, dernierCompte, prioritaires, local = null,
   if (!Array.isArray(sonde) || !sonde.length) return null
   const reserve = (j) => !!(local && local.ids && local.ids.has(j.user_id) && j.compose === 'decupleur'
     && Date.now() - Date.parse(j.created_at) < (local.fenetreMs || 15000))
-  // dc-fetch / dc-cut en cours sur tous les moteurs (lecture illisible = plafond atteint : ils attendent le tour suivant)
-  const courts = dc && Array.isArray(dc.courts) && dc.courts.length ? dc.courts : null
-  let dcPlein = false, dcOccupes = []
-  if (courts && Number(dc.pauseJusqua) > Date.now()) dcPlein = true   // pause locale après un échec de prise : aucune lecture
-  else if (courts) {
-    const { data: enCours, error } = await sb.from('render_jobs').select('user_id').eq('status', 'rendering')
-      .in('plan->>__compose', courts).gte('updated_at', new Date(Date.now() - DC_VIVANT_MS).toISOString()).limit(200)
-    const l = !error && Array.isArray(enCours) ? enCours : null
-    dcPlein = !l || l.length >= Math.max(1, Number(dc.max) || 1)
-    dcOccupes = l ? [...new Set(l.map((r) => String(r.user_id)).filter((u) => /^[0-9a-f-]{36}$/i.test(u)))] : []
+  // travaux gratuits en cours sur tous les moteurs, PAR FAMILLE (lecture illisible = toutes pleines : ils attendent le tour suivant)
+  const fams = famillesDe(dc)
+  const tousCourts = fams.flatMap((f) => f.composes)
+  const vrais = (l) => [...new Set(l.map((u) => String(u)).filter((u) => /^[0-9a-f-]{36}$/i.test(u)))]
+  if (fams.length) {
+    const aLire = fams.filter((f) => !(f.pause > Date.now()))   // pause locale après un échec de prise : aucune lecture
+    let l = []
+    if (aLire.length) {
+      const { data: enCours, error } = await sb.from('render_jobs').select('user_id, compose:plan->>__compose').eq('status', 'rendering')
+        .in('plan->>__compose', aLire.flatMap((f) => f.composes)).gte('updated_at', new Date(Date.now() - DC_VIVANT_MS).toISOString()).limit(200)
+      l = !error && Array.isArray(enCours) ? enCours : null
+    }
+    for (const f of fams) {
+      if (f.pause > Date.now() || !l) { f.plein = true; f.occupes = []; continue }
+      const siens = l.filter((r) => f.composes.includes(String(r.compose)))
+      f.plein = siens.length >= f.max
+      f.occupes = vrais(siens.map((r) => r.user_id))
+    }
+    // 2e relecture 30/10 : une préparation mc-ref ou une retouche qui ÉCHOUE (délai dépassé, vidéo ou photo illisible…) n'a
+    // rien coûté au compte. Ceux qui en ont une en échec dans l'heure ne sont plus prioritaires pour CETTE famille : leurs jobs
+    // passent APRÈS ceux des autres clients (ordre normal de la file), sous le même plafond. Lecture gardée 30 s par moteur.
+    const penal = fams.filter((f) => f.penal && !f.plein)
+    if (penal.length && dc) {
+      const c = dc._penal
+      if (!c || Date.now() - c.t > 30_000) {
+        const { data: ech, error: eEch } = await sb.from('render_jobs').select('user_id, compose:plan->>__compose').eq('status', 'failed')
+          .in('plan->>__compose', fams.filter((f) => f.penal).flatMap((f) => f.composes)).gte('updated_at', new Date(Date.now() - 3600_000).toISOString())
+          .order('updated_at', { ascending: false }).limit(200)
+        dc._penal = { t: Date.now(), l: !eEch && Array.isArray(ech) ? ech : (c ? c.l : []) }
+      }
+      for (const f of penal) f.occupes = vrais([...f.occupes, ...dc._penal.l.filter((r) => f.composes.includes(String(r.compose))).map((r) => r.user_id)]).slice(0, 120)
+    }
   }
-  const listeCourts = courts ? `(${courts.join(',')})` : ''
+  const liste = (x) => `(${x.join(',')})`
+  const libres = fams.filter((f) => !f.plein), pleins = fams.filter((f) => f.plein)
+  const composesPleins = pleins.flatMap((f) => f.composes)
+  const prio = (prioritaires || []).filter((c) => !tousCourts.includes(c))
   // 3 classes, dans l'ordre : les compositions courtes (retouches…), puis les rendus des comptes au « Rendu prioritaire »
   // (Axel 23/10, abonnement 5 €/mois : render_jobs.prioritaire, posé à l'insertion d'après le compte), puis tous les autres.
   const plusAncien = async (classe, autreQue) => {
     let q = sb.from('render_jobs').select('id, user_id, created_at, compose:plan->>__compose').eq('status', 'queued')
     if (classe === 'compose') {
-      q = q.in('plan->>__compose', courts && !dcPlein ? [...prioritaires, ...courts] : prioritaires)
-      // un seul dc-fetch / dc-cut prioritaire par compte : pas celui d'un compte qui en a déjà un en cours
-      if (courts && !dcPlein && dcOccupes.length) q = q.or(`plan->>__compose.not.in.${listeCourts},user_id.not.in.(${dcOccupes.join(',')})`)
-    } else if (courts && dcPlein) {
-      // plafond atteint : aucun dc-fetch / dc-cut ; un montage n'a PAS de __compose (NULL) — il doit rester dans la file
-      q = q.or(`plan->>__compose.is.null,plan->>__compose.not.in.${listeCourts}`)
+      q = q.in('plan->>__compose', [...prio, ...libres.flatMap((f) => f.composes)])
+      // un seul travail gratuit prioritaire par compte ET par famille : pas celui d'un compte qui en a déjà un en cours dans
+      // la même famille. Une condition : composition hors de ces familles, OU (famille F et compte hors des occupés de F).
+      const occ = libres.filter((f) => f.occupes.length)
+      if (occ.length) q = q.or([`plan->>__compose.not.in.${liste(occ.flatMap((f) => f.composes))}`,
+        ...occ.map((f) => `and(plan->>__compose.in.${liste(f.composes)},user_id.not.in.${liste(f.occupes)})`)].join(','))
+    } else if (composesPleins.length) {
+      // famille pleine : aucun de ses jobs ; un montage n'a PAS de __compose (NULL) — il doit rester dans la file
+      q = q.or(`plan->>__compose.is.null,plan->>__compose.not.in.${liste(composesPleins)}`)
     }
     if (classe === 'compte') q = q.eq('prioritaire', true)
     if (autreQue) q = q.neq('user_id', autreQue)
     const { data } = await q.order('created_at').limit(6)
-    const libres = (Array.isArray(data) ? data : []).filter((j) => !reserve(j))
-    return libres[0] ? { id: libres[0].id, user_id: libres[0].user_id } : null
+    const libresJ = (Array.isArray(data) ? data : []).filter((j) => !reserve(j))
+    return libresJ[0] ? { id: libresJ[0].id, user_id: libresJ[0].user_id } : null
   }
   for (const classe of ['compose', 'compte', 'normal']) {
     const premier = await plusAncien(classe, null)

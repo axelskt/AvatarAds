@@ -40,7 +40,7 @@ import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs' 
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from './hedra-prompts.mjs'   // prompt lipsync Hedra PARTAGÉ (shared/hedra-prompts.json, 27/09)
 // Audit 02/10 : garde-fous partagés (chemins de stockage, plan assaini, GSAP embarqué) — voir securite.mjs
 import { cheminSur, cheminLisibleJob, entreesJobSures, cleSortieJob, assainirPlan, installerGsap, NOM_CATALOGUE, NOM_EMOJI, NOM_SFX,
-  musiqueBanqueSure, horsBornes, BORNES_MEDIA, origineStockage, prochainJob, DC_COURTS, cheminVoixPrep, fichiersVoixJob } from './securite.mjs'
+  musiqueBanqueSure, horsBornes, BORNES_MEDIA, origineStockage, prochainJob, familleGratuite, cheminVoixPrep, fichiersVoixJob } from './securite.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -249,7 +249,8 @@ const HF_RENDU_MAX_MS = 40 * 60 * 1000
 // 30/10 (relecture Décupleur) : ffmpeg ASYNCHRONE avec délai (SIGKILL au-delà). Un execFileSync bloque la boucle Node : plus de
 // battement du job ni de sonde — le job passait « orphelin » au bout de 30 min et un autre moteur le reprenait. Rejette
 // « ffmpeg <code|signal> : <dernière ligne> » (journal du moteur ; le MCP ne montre au client qu'un message neutre).
-const MCREF_MAX_MS = 10 * 60 * 1000
+// 2e relecture 30/10 : 5 min (avant 10) — une vidéo de 30 s en 4K se prépare en 1 à 2 min ; sortie ≤ 60 i/s (-fpsmax).
+const MCREF_MAX_MS = 5 * 60 * 1000
 function ffmpegAsync(args, ms) {
   return new Promise((resolve, reject) => {
     const p = spawn('ffmpeg', ['-nostdin', '-v', 'error', ...args], { stdio: ['ignore', 'ignore', 'pipe'] })
@@ -1066,7 +1067,7 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null,
   if (plan.__compose === 'retouche') {
     const dir = join(jobDir, 'assets'), f = existsSync(dir) ? readdirSync(dir).find((n) => /^photo\./.test(n)) : null
     if (!f) throw new Error('photo de départ manquante (retouche)')
-    const r = retoucheVideo(join(jobDir, 'base.mp4'), join(dir, f), outPath)
+    const r = await retoucheVideo(join(jobDir, 'base.mp4'), join(dir, f), outPath)   // 2e relecture 30/10 : asynchrone (boucle libre)
     console.log('✓ retouche', JSON.stringify({ grainPhoto: r.grainPhoto, grainVideo: r.grainVideo, bruit: r.bruit }))
     return
   }
@@ -1091,7 +1092,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null,
   // minimum), côtés ramenés dans 340–1920 px. Ré-encodée à chaque fois : quelques secondes, jamais de surprise de codec.
   if (plan.__compose === 'mc-ref') {
     const src = join(jobDir, 'base.mp4')
-    // relecture 30/10 : préparation GRATUITE → travail borné (résolution ≤ 4096 px, sondes ffprobe ≤ 30 s, encodage ≤ 10 min, asynchrone)
+    // relecture 30/10 : préparation GRATUITE → travail borné (résolution ≤ 4096 px, sondes ffprobe ≤ 30 s, encodage ≤ 5 min, asynchrone,
+    // sortie ≤ 60 i/s) ; quota par compte (10 par 10 min) et plafond de sa famille « prep » : render_job_dc_creer / render_claim_dc
     exigerBornes(src, 'mc-ref')
     const [w, h] = (ffprobeBorne(src, 'stream=width,height').split('\n').find((l) => /^\d+,\d+/.test(l.trim())) || '0,0').split(',').map(Number)
     const dur = parseFloat(ffprobeBorne(src, 'format=duration')) || 0
@@ -1112,7 +1114,9 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null,
       : `scale=trunc(iw*${k.toFixed(6)}/2)*2:trunc(ih*${k.toFixed(6)}/2)*2`
     const args = ['-y', '-i', src, '-t', String(maxDur + pad), '-vf', `${geo},setsar=1,format=yuv420p${pad ? `,tpad=stop_mode=clone:stop_duration=${pad.toFixed(2)}` : ''}`]
     if (hasA) args.push('-af', pad ? `apad=pad_dur=${pad.toFixed(2)}` : 'anull', '-c:a', 'aac', '-b:a', '128k'); else args.push('-an')
-    args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-movflags', '+faststart', outPath)
+    // 2e relecture 30/10 : cadence de sortie ≤ 60 i/s (une source à 1000 i/s réelles ou déclarées était réencodée image par image
+    // jusqu'au délai) — en dessous, cadence d'origine inchangée
+    args.push('-fpsmax', '60', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-movflags', '+faststart', outPath)
     await ffmpegAsync(args, MCREF_MAX_MS)
     console.log(`✓ mc-ref ${w}x${h} (codé) ${dur.toFixed(2)}s → ${plan.crop916 ? 'recadrée 9:16/16:9' : '×' + k.toFixed(3)}${pad ? ' +' + pad.toFixed(2) + 's' : ''}${dur > maxDur + 0.5 ? ' coupée à ' + maxDur + 's' : ''}`)
     return
@@ -3559,9 +3563,18 @@ async function pollLoop() {
   // refusée par render_claim_dc (erreur autre que « fonction absente », ou plafond atteint entre la lecture et la prise) met
   // ces jobs en PAUSE sur ce moteur pendant DC_PAUSE_MS : il sert les autres rendus au lieu de reboucler sur le même job (une
   // erreur durable — droits, surcharge ambiguë, délai — bloquait sinon les 6 moteurs et martelait la base).
-  const DC_MOTEURS_MAX = Math.max(1, Math.floor(Number(process.env.DC_MOTEURS_MAX || 2)) || 2)
+  // 2e relecture 30/10 : trois FAMILLES, chacune sous SON plafond (securite.mjs FAMILLES_GRATUITES) — dc (dc-fetch, dc-cut :
+  // DC_MOTEURS_MAX, 2), prep (mc-ref, préparation des cartes Claude, qui précède un débit : DC_PREP_MAX, 1 ; une charge
+  // Décupleur ne la retarde plus) et retouche (Express / MCP, gratuite : RETOUCHE_MOTEURS_MAX, 1 ; elle n'avait AUCUN plafond).
+  // Au total, au plus DC_MOTEURS_MAX + DC_PREP_MAX + RETOUCHE_MOTEURS_MAX moteurs (4 sur 6 par défaut) à ces travaux : la
+  // somme doit rester STRICTEMENT inférieure au nombre de moteurs. Pause après une prise refusée : par famille.
+  const entier = (v, d) => Math.max(1, Math.floor(Number(v || d)) || d)
+  const DC_MOTEURS_MAX = entier(process.env.DC_MOTEURS_MAX, 2)
+  const DC_PREP_MAX = entier(process.env.DC_PREP_MAX, 1)
+  const RETOUCHE_MOTEURS_MAX = entier(process.env.RETOUCHE_MOTEURS_MAX, 1)
   const DC_PAUSE_MS = 5000
-  const dcFile = { courts: DC_COURTS, max: DC_MOTEURS_MAX, pauseJusqua: 0 }
+  const dcFile = { familles: { dc: DC_MOTEURS_MAX, prep: DC_PREP_MAX, retouche: RETOUCHE_MOTEURS_MAX }, pauseJusqua: {} }
+  console.log(`travaux gratuits : ${DC_MOTEURS_MAX} récupération(s) / découpe(s), ${DC_PREP_MAX} préparation(s) Claude, ${RETOUCHE_MOTEURS_MAX} retouche(s) en même temps au plus (tous moteurs)`)
   let claimDcAbsent = false
   if (DC_LOCAL_SEUL) console.log(`🖥  moteur LOCAL : Décupleur des comptes propriétaire / developer seulement (${dcLocal.ids.size} compte(s))`)
 
@@ -3569,8 +3582,8 @@ async function pollLoop() {
     try {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
       // (la préparation des vidéos MCP, mc-ref, y était aussi : depuis la relecture du 30/10 elle passe par dcFile — gratuite,
-      // donc sous le plafond global et 1 par compte en priorité)
-      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'motion-voix'], dcLocal, dcFile)   // motion-voix : simple mux (copie du flux vidéo), quelques secondes ; dc-fetch / dc-cut / mc-ref : dcFile (plafond global, 1 par compte en priorité)
+      // donc sous un plafond global et 1 par compte en priorité ; 2e relecture : la retouche aussi, sous SON plafond)
+      const cand = await prochainJob(sb, dernierCompte, ['motion-voix'], dcLocal, dcFile)   // motion-voix : simple mux (copie du flux vidéo), quelques secondes ; retouche, mc-ref, dc-fetch / dc-cut : dcFile (plafond par famille, 1 par compte en priorité)
       if (!cand) {
         if (Date.now() - dernierBalayage > 5 * 60_000) await reprendreOrphelins()
         // 15/10 : attente qui S'ALLONGE quand la file reste vide (2 s → 12 s, + un peu de hasard pour que les 6 moteurs ne
@@ -3587,14 +3600,14 @@ async function pollLoop() {
       // 30/10 : dc-fetch / dc-cut pris sous le plafond GLOBAL (render_claim_dc : verrou, comptage et prise dans la même
       // transaction — deux moteurs ne dépassent jamais DC_MOTEURS_MAX). Fonction absente (migration pas encore appliquée) :
       // prise habituelle, le plafond lu par prochainJob s'applique seul. Tous les autres jobs : prise habituelle, inchangée.
-      const estDcCourt = !!(job.plan && DC_COURTS.includes(job.plan.__compose))
+      const famille = familleGratuite(job.plan && job.plan.__compose)
       let claimed = null
-      if (estDcCourt && !claimDcAbsent) {
-        const { data: pris, error: eDc } = await sb.rpc('render_claim_dc', { p_job: job.id, p_max: DC_MOTEURS_MAX })
+      if (famille && !claimDcAbsent) {
+        const { data: pris, error: eDc } = await sb.rpc('render_claim_dc', { p_job: job.id, p_max: DC_MOTEURS_MAX, p_max_prep: DC_PREP_MAX, p_max_retouche: RETOUCHE_MOTEURS_MAX })
         if (!eDc) claimed = pris === true ? [{ id: job.id }] : []
-        else if (eDc.code === 'PGRST202' || eDc.code === '42883') { claimDcAbsent = true; console.warn('render_claim_dc absente : prise habituelle des dc-fetch / dc-cut / mc-ref (appliquer la migration 20261030140000)') }
+        else if (eDc.code === 'PGRST202' || eDc.code === '42883') { claimDcAbsent = true; console.warn('render_claim_dc absente : prise habituelle des travaux gratuits (appliquer la migration 20261030140000)') }
         else { console.warn('render_claim_dc :', eDc.code || '', eDc.message); claimed = [] }
-        if (claimed !== null && !claimed.length) dcFile.pauseJusqua = Date.now() + DC_PAUSE_MS   // pause locale (voir DC_PAUSE_MS)
+        if (claimed !== null && !claimed.length) dcFile.pauseJusqua[famille] = Date.now() + DC_PAUSE_MS   // pause locale de CETTE famille (voir DC_PAUSE_MS)
       }
       if (claimed === null) {
         ({ data: claimed } = await sb.from('render_jobs')

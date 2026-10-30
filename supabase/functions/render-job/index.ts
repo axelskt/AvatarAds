@@ -37,6 +37,25 @@ const DC_COMPOSES = ['dc-fetch', 'dc-cut', 'decupleur']
 // découpes par 10 min (constantes partagées avec le MCP : _shared/decupleur.ts).
 const DC_EN_COURS_MAX = 3, DC_FETCH_EN_COURS_MAX = 1
 const cleRendu = (id: string) => ['render:' + id, 'render:' + id + '#1', 'render:' + id + '#2']
+// 2e relecture 30/10 : photo de départ d'une retouche (image de l'Express : quelques Mo)
+const RETOUCHE_PHOTO_OCTETS_MAX = 40 * 1024 * 1024
+// 2e relecture 30/10 : création ATOMIQUE d'un rendu gratuit hors Décupleur (retouche ; gen-subs, motion-split, motion-bg) par
+// render_job_creer_borne (migration 20261030140000) : { id } créé, { refus } (« en cours » atteint), { absente } (fonction pas
+// encore en ligne : l'appelant garde l'insertion d'avant), {} (autre erreur : refus).
+// deno-lint-ignore no-explicit-any
+async function creerBorne(service: any, uid: string, plan: Record<string, unknown>, input: string, assets: unknown[], enCoursMax = 2): Promise<{ id?: string; refus?: boolean; absente?: boolean }> {
+  try {
+    const { data, error } = await service.rpc('render_job_creer_borne', { p_user: uid, p_plan: plan, p_input: input, p_assets: assets, p_en_cours_max: enCoursMax })
+    if (error) {
+      if (['PGRST202', '42883'].includes(String(error.code || ''))) { console.warn('render_job_creer_borne absente : insertion d\'avant (appliquer la migration 20261030140000)'); return { absente: true } }
+      console.warn('render_job_creer_borne :', error.message); return {}
+    }
+    const r = (data ?? null) as { ok?: boolean; id?: string } | null
+    if (r && r.ok === true && r.id) return { id: String(r.id) }
+    if (r && r.ok === false) return { refus: true }
+    return {}
+  } catch (e) { console.warn('render_job_creer_borne :', (e as Error).message); return {} }
+}
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
@@ -260,12 +279,29 @@ serve(async (req: Request) => {
           catch (e) { console.warn('draw_full motion-bg:', (e as Error).message) }
         }
       }
-      const { data, error } = await service.from('render_jobs')
-        .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
-        .select('id').single()
-      if (error) {
+      // 2e relecture 30/10 : une composition SANS TIRAGE (gen-subs, motion-split, motion-bg) n'a aucune autre barrière que
+      // « 2 rendus en cours » (comptage plus haut, sans verrou : 20 gen-subs simultanés d'un Starter créaient 20 jobs de 30 min).
+      // Elle est créée par render_job_creer_borne (verrou par compte, comptage et insertion dans la même transaction). Fonction
+      // absente (migration pas encore appliquée) → insertion d'avant ; autre erreur → refus, tirages rendus.
+      let data: { id: string } | null = null, error: { message: string } | null = null
+      if (sansTirage) {
+        const r = await creerBorne(service, user.id, plan as Record<string, unknown>, input, assets)
+        if (r.refus) {
+          for (const t of tires) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: t.op, p_cost: t.amt }) } catch (_) { /* best-effort */ } }
+          return json({ error: 'Tu as deja un rendu en cours — attends qu\'il se termine' }, 429)
+        }
+        if (r.id) data = { id: r.id }
+        else if (!r.absente) error = { message: 'Création impossible — réessaie dans un instant' }
+      }
+      if (!data && !error) {
+        const ins = await service.from('render_jobs')
+          .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
+          .select('id').single()
+        data = ins.data; error = ins.error
+      }
+      if (error || !data) {
         for (const t of tires) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: t.op, p_cost: t.amt }) } catch (_) { /* best-effort */ } }   // job non créé → rendre EXACTEMENT les tirages
-        return json({ error: error.message }, 500)
+        return json({ error: error?.message || 'creation impossible' }, 500)
       }
       // lie chaque op tirée au job (+ montant tiré) → le worker règle (settle_by_job) à la livraison, libère (release_by_job) à
       // l'échec. Une op par clé de job (provider_job n'en lie qu'une) : 'render:<id>', puis 'render:<id>#1', '#2'.
@@ -309,14 +345,26 @@ serve(async (req: Request) => {
       if (!fichierDuFlux(user.id, input, 'retouche-', true) || !fichierDuFlux(user.id, photo, 'retouche-')) return json({ error: 'chemin invalide' }, 400)
       const taille = await tailleObjet('render-media', input)
       if (taille !== null && taille > RETOUCHE_OCTETS_MAX) return json({ error: 'Vidéo trop lourde pour la retouche.' }, 413)
+      // 2e relecture 30/10 : la photo aussi (image de l'Express : quelques Mo ; un MP4 renommé .jpg était décodé en entier)
+      const tailleP = await tailleObjet('render-media', photo)
+      if (tailleP !== null && tailleP > RETOUCHE_PHOTO_OCTETS_MAX) return json({ error: 'Photo trop lourde pour la retouche.' }, 413)
       {
+        // refus tôt (lecture simple) ; la décision est prise ATOMIQUEMENT par render_job_creer_borne ci-dessous
         const { count, error: cErr } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id).in('status', ['queued', 'rendering']).eq('plan->>__compose', 'retouche')
           .gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString())
         if (!cErr && (count ?? 0) >= RETOUCHE_EN_COURS_MAX) return json({ error: 'Une retouche est déjà en cours — patiente quelques secondes.' }, 429)
       }
+      // 2e relecture 30/10 : « 2 retouches en cours » était un comptage PUIS une insertion, sans verrou — 15 requêtes simultanées
+      // créaient 15 retouches prioritaires. render_job_creer_borne compte et insère dans la même transaction (verrou par compte).
+      // Fonction absente (migration pas encore appliquée) → insertion d'avant ; autre erreur → refus (l'app garde la vidéo d'origine).
+      const assetsR = [{ id: 'photo', path: photo }]
+      const r = await creerBorne(service, user.id, { __compose: 'retouche' }, input, assetsR, RETOUCHE_EN_COURS_MAX)
+      if (r.refus) return json({ error: 'Une retouche est déjà en cours — patiente quelques secondes.' }, 429)
+      if (r.id) return json({ ok: true, job_id: r.id })
+      if (!r.absente) return json({ error: 'creation impossible' }, 500)
       const { data, error } = await service.from('render_jobs')
-        .insert({ user_id: user.id, status: 'queued', plan: { __compose: 'retouche' }, input_video: input, assets: [{ id: 'photo', path: photo }], avatar_clips: [] })
+        .insert({ user_id: user.id, status: 'queued', plan: { __compose: 'retouche' }, input_video: input, assets: assetsR, avatar_clips: [] })
         .select('id').single()
       if (error || !data) return json({ error: 'creation impossible' }, 500)
       return json({ ok: true, job_id: data.id })
@@ -412,7 +460,9 @@ serve(async (req: Request) => {
       if (!cree.ok) {
         await rendre()
         if (cree.raison === 'fetch_en_cours') return json({ error: 'Une vidéo est déjà en cours de récupération — attends qu\'elle arrive' }, 429)
-        if (cree.raison === 'court_en_cours') return json({ error: 'Une récupération ou une découpe de vidéo est déjà en cours — attends qu\'elle se termine' }, 429)
+        // 2e relecture 30/10 : compté par famille (récupération / découpe) — jamais une préparation de carte Claude (mc-ref) ;
+        // le seul autre parcours qui l'occupe est une carte Décupleur par lien. code : l'app relance seule quelques minutes.
+        if (cree.raison === 'court_en_cours') return json({ error: 'Une récupération ou une découpe de vidéo est déjà en cours sur ton compte (ici ou depuis Claude) — attends qu\'elle se termine', code: 'court_en_cours' }, 429)
         if (cree.raison === 'quota') return json({ error: body.action === 'dc-cut' ? 'Trop de découpes en peu de temps — réessaie dans quelques minutes' : 'Trop de liens récupérés en peu de temps — réessaie dans quelques minutes' }, 429)
         return json({ error: 'Un décuplage est déjà en cours — attends qu\'il se termine' }, 429)
       }

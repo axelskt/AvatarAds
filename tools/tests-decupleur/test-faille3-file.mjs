@@ -23,15 +23,30 @@ const NOUVEAU = Array.isArray(sec.DC_COURTS)
 // refusée (worker.mjs) + création « 1 travail gratuit court par compte » (render_job_dc_creer). Version reconnue d'après
 // DC_COURTS : avec mc-ref = code du dépôt ; sans = 1er correctif (02/10 → 30/10 matin) ; absent = file d'avant.
 const RELU = NOUVEAU && sec.DC_COURTS.includes('mc-ref')
+// 2e relecture 30/10 : familles (dc, prep, retouche) plafonnées séparément, création par famille, pénalité des échecs
+const FAM = sec.FAMILLES_GRATUITES || null, R2 = !!FAM
 const COURTS_V = NOUVEAU ? sec.DC_COURTS : ['dc-fetch', 'dc-cut']
+const familleV = (c) => { if (!FAM) return COURTS_V.includes(c) ? '_' : null; for (const [n, l] of Object.entries(FAM)) if (l.includes(c)) return n; return null }
+const composesFam = (n) => (FAM ? FAM[n] : COURTS_V)
 const srcDc = readFileSync(DECUPLEUR, 'utf8')
 const m = srcDc.match(/DC_FETCH_MS = (\d+)\b/)   // délai de yt-dlp (dcFetch)
 const DC_FETCH_S = m ? Number(m[1]) / 1000 : 240
 const mc = srcDc.match(/DC_CUT_MS = (\d+) \* 60 \* 1000/)   // délai du réencodage d'une découpe (avant : FF_MS = 10 min)
 const DC_CUT_S = mc ? Number(mc[1]) * 60 : 600
 const DC_MAX = 2   // DC_MOTEURS_MAX par défaut (worker.mjs)
+const PREP_MAX = 1, RET_MAX = 1   // DC_PREP_MAX, RETOUCHE_MOTEURS_MAX par défaut (worker.mjs, 2e relecture)
 const MOTEURS = 6
-console.log(`securite.mjs : ${SECURITE}  (${RELU ? 'file NOUVELLE (relecture 30/10 : mc-ref plafonné)' : NOUVEAU ? 'file du 1er correctif (mc-ref hors plafond)' : 'file d’AVANT'}) ; délai yt-dlp ${DC_FETCH_S} s ; découpe ${DC_CUT_S} s au plus`)
+// délai d'une préparation mc-ref (worker.mjs MCREF_MAX_MS) et nombre de relances automatiques d'une carte Claude (mcp/index.ts)
+const WORKER = process.env.WORKER || join(dirname(SECURITE), 'worker.mjs')
+const MCP = process.env.MCP || join(dirname(SECURITE), '../supabase/functions/mcp/index.ts')
+const lire = (f) => { try { return readFileSync(f, 'utf8') } catch (_) { return '' } }
+const mm = lire(WORKER).match(/MCREF_MAX_MS = (\d+) \* 60 \* 1000/)
+const MCREF_S = mm ? Number(mm[1]) * 60 : 600
+const mr = lire(MCP).match(/er==='busy'&&aaRetryN<(\d+)\)/)
+const mt = lire(join(dirname(SECURITE), 'retouche.mjs')).match(/RETOUCHE_TOTAL_MS = (\d+)_000/)
+const RETOUCHE_S = mt ? Number(mt[1]) : 180   // avant : chaque ffmpeg 3 min (7 appels) — on garde 180 s, déjà favorable à l'ancien code
+const RELANCES = mr ? Number(mr[1]) : 20
+console.log(`securite.mjs : ${SECURITE}  (${R2 ? 'file NOUVELLE (2e relecture 30/10 : familles dc / prep / retouche)' : RELU ? 'file de la 1re relecture (mc-ref dans le plafond des dc, retouche sans plafond)' : NOUVEAU ? 'file du 1er correctif (mc-ref hors plafond)' : 'file d’AVANT'}) ; délai yt-dlp ${DC_FETCH_S} s ; découpe ${DC_CUT_S} s au plus ; préparation ${MCREF_S} s au plus ; carte : ${RELANCES} relances × 15 s ; retouche ${RETOUCHE_S} s au plus`)
 
 // ── base factice : render_jobs + filtres PostgREST ──
 let rows = [], seq = 0, panneLecture = null
@@ -44,13 +59,24 @@ function orFiltre(s) {
   for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && d === 0) { parts.push(cur); cur = '' } else cur += ch }
   if (cur) parts.push(cur)
   const conds = parts.map((p) => {
+    if (p.startsWith('and(') && p.endsWith(')')) return andFiltre(p.slice(4, -1))
     let mm = p.match(/^(.+?)\.not\.in\.\((.*)\)$/)
     if (mm) { const [, c, l] = mm, set = l.split(','); return (r) => { const v = col(r, c); return v !== null && !set.includes(String(v)) } }
+    mm = p.match(/^(.+?)\.in\.\((.*)\)$/)
+    if (mm) { const [, c, l] = mm, set = l.split(','); return (r) => { const v = col(r, c); return v !== null && set.includes(String(v)) } }
     mm = p.match(/^(.+?)\.is\.null$/)
     if (mm) return (r) => col(r, mm[1]) === null
     throw new Error('filtre or non géré : ' + p)
   })
   return (r) => conds.some((f) => f(r))
+}
+// and(a,b) : mêmes conditions, toutes vraies
+function andFiltre(s) {
+  const parts = []; let d = 0, cur = ''
+  for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && d === 0) { parts.push(cur); cur = '' } else cur += ch }
+  if (cur) parts.push(cur)
+  const conds = parts.map((x) => orFiltre(x))
+  return (r) => conds.every((f) => f(r))
 }
 function from(table) {
   if (table !== 'render_jobs') throw new Error('table ' + table)
@@ -68,7 +94,7 @@ function from(table) {
     update(v) { upd = v; return q },
     then(ok, ko) {
       try {
-        if (panneLecture && cols === 'user_id' && !upd) return Promise.resolve({ data: null, error: { message: panneLecture } }).then(ok, ko)
+        if (panneLecture && cols.startsWith('user_id') && !upd) return Promise.resolve({ data: null, error: { message: panneLecture } }).then(ok, ko)
         let l = rows.filter((r) => fs.every((f) => f(r)))
         if (upd) { for (const r of l) Object.assign(r, upd); return Promise.resolve({ data: l.map((r) => ({ id: r.id })), error: null }).then(ok, ko) }
         if (ord) l = [...l].sort((a, b) => String(a[ord]).localeCompare(String(b[ord])))
@@ -87,11 +113,15 @@ function from(table) {
 // render_claim_dc (migration 20261030140000) : comptage + prise d'un bloc (verrou global)
 // (relecture 30/10 : la version du dépôt compte aussi mc-ref — COURTS_V suit la version testée)
 let panneClaim = null, appelsClaim = 0
-function render_claim_dc(id, max) {
+function render_claim_dc(id, a) {
   const vivant = new Date(Date.now() - 30 * 60_000).toISOString()
-  const n = rows.filter((r) => r.status === 'rendering' && COURTS_V.includes(col(r, 'plan->>__compose')) && r.updated_at >= vivant).length
-  if (n >= Math.max(1, Math.min(max ?? 2, 50))) return false
-  const r = rows.find((x) => x.id === id && x.status === 'queued' && COURTS_V.includes(col(x, 'plan->>__compose')))
+  const job = rows.find((x) => x.id === id)
+  const fam = job && familleV(col(job, 'plan->>__compose'))
+  if (!fam) return false
+  const cs = composesFam(fam), max = fam === 'prep' ? a.p_max_prep ?? 1 : fam === 'retouche' ? a.p_max_retouche ?? 1 : a.p_max ?? 2
+  const n = rows.filter((r) => r.status === 'rendering' && cs.includes(col(r, 'plan->>__compose')) && r.updated_at >= vivant).length
+  if (n >= Math.max(1, Math.min(max, 50))) return false
+  const r = rows.find((x) => x.id === id && x.status === 'queued' && cs.includes(col(x, 'plan->>__compose')))
   if (!r) return false
   Object.assign(r, { status: 'rendering', updated_at: new Date().toISOString(), attempts: (r.attempts || 0) + 1 })
   return true
@@ -99,27 +129,35 @@ function render_claim_dc(id, max) {
 const sb = { from, rpc: async (n, a) => {
   if (n !== 'render_claim_dc') return { data: null, error: { code: 'PGRST202' } }
   appelsClaim++
-  return panneClaim ? { data: null, error: panneClaim } : { data: render_claim_dc(a.p_job, a.p_max), error: null }
+  return panneClaim ? { data: null, error: panneClaim } : { data: render_claim_dc(a.p_job, a), error: null }
 } }
 
 // pollLoop (worker.mjs), une itération : choix puis prise. Rend le job pris ou null.
 const PRIO_AVANT = ['retouche', 'mc-ref', 'motion-voix', 'dc-fetch', 'dc-cut']
 const PRIO_APRES = ['retouche', 'mc-ref', 'motion-voix'].filter((c) => !COURTS_V.includes(c))
+let tVirtuel = 0
 async function uneIteration(moteur) {
-  const cand = NOUVEAU
-    ? await sec.prochainJob(sb, moteur.dernier, PRIO_APRES, null, { courts: sec.DC_COURTS, max: DC_MAX, pauseJusqua: moteur.pause || 0 })
-    : await sec.prochainJob(sb, moteur.dernier, PRIO_AVANT, null)
+  // 2e relecture : la liste des comptes en échec (pénalité) est gardée 30 s par moteur — en temps VIRTUEL ici
+  if (R2 && moteur.dcFile && moteur.dcFile._penal && tVirtuel - (moteur.penalT ?? -1e9) >= 30) { moteur.dcFile._penal = null }
+  if (R2 && moteur.dcFile && !moteur.dcFile._penal) moteur.penalT = tVirtuel
+  if (R2 && !moteur.dcFile) moteur.dcFile = { familles: { dc: DC_MAX, prep: PREP_MAX, retouche: RET_MAX }, pauseJusqua: {} }
+  const cand = R2
+    ? await sec.prochainJob(sb, moteur.dernier, ['motion-voix'], null, moteur.dcFile)
+    : NOUVEAU
+      ? await sec.prochainJob(sb, moteur.dernier, PRIO_APRES, null, { courts: sec.DC_COURTS, max: DC_MAX, pauseJusqua: moteur.pause || 0 })
+      : await sec.prochainJob(sb, moteur.dernier, PRIO_AVANT, null)
   if (!cand) return null
   const job = rows.find((r) => r.id === cand.id && r.status === 'queued')
   if (!job) return null
   const estDc = NOUVEAU && sec.DC_COURTS.includes(col(job, 'plan->>__compose'))
   let pris
   if (estDc) {
-    const { data, error } = await sb.rpc('render_claim_dc', { p_job: job.id, p_max: DC_MAX })
+    const { data, error } = await sb.rpc('render_claim_dc', { p_job: job.id, p_max: DC_MAX, p_max_prep: PREP_MAX, p_max_retouche: RET_MAX })
     pris = !error && data === true
-    // worker.mjs du dépôt : prise refusée (erreur ou plafond) → pause locale des travaux gratuits (DC_PAUSE_MS, 5 s réelles :
-    // plus longue que toute la simulation, qui tourne en temps virtuel) ; versions d'avant : aucune pause
-    if (!pris && RELU) moteur.pause = Date.now() + 5000
+    // worker.mjs du dépôt : prise refusée (erreur ou plafond) → pause locale (DC_PAUSE_MS, 5 s réelles : plus longue que toute
+    // la simulation, qui tourne en temps virtuel) — par famille depuis la 2e relecture ; versions d'avant : aucune pause
+    if (!pris && R2) moteur.dcFile.pauseJusqua[familleV(col(job, 'plan->>__compose'))] = Date.now() + 5000
+    else if (!pris && RELU) moteur.pause = Date.now() + 5000
   }
   else { const { data } = await from('render_jobs').update({ status: 'rendering', updated_at: new Date().toISOString(), attempts: (job.attempts || 0) + 1 }).eq('id', job.id).eq('status', 'queued').select('id'); pris = data.length > 0 }
   if (!pris) return null
@@ -139,6 +177,19 @@ const estGratuit = (r) => ['dc-fetch', 'dc-cut', 'mc-ref'].includes(col(r, 'plan
 // file ou en cours par compte, liens 6 et découpes 10 par 10 min, app et MCP confondus) ; avant = « 3 en cours » côté app et
 // aucune borne atomique côté MCP (mc-ref, dc-fetch du MCP). Rend la ligne créée ou null (refus).
 function creer(user_id, compose, duree, t, extra = {}) {
+  if (R2) {
+    // render_job_dc_creer (2e relecture) : 1 en cours PAR FAMILLE ; liens 6, découpes 10, préparations 10 par 10 min ;
+    // préparations : 3 échecs par heure ; render_job_creer_borne : 2 retouches en cours
+    const actifs = (cs) => rows.filter((r) => r.user_id === user_id && (r.status === 'queued' || r.status === 'rendering') && cs.includes(col(r, 'plan->>__compose'))).length
+    const fen = (c, s = 600) => rows.filter((r) => r.user_id === user_id && col(r, 'plan->>__compose') === c && r._arrivee > t - s).length
+    if (compose === 'retouche') { if (actifs(['retouche']) >= 2) return null; return ajouter(user_id, compose, duree, t, extra) }
+    const fam = familleV(compose)
+    if (fam && actifs(FAM[fam]) >= 1) return null
+    if (compose === 'dc-fetch' && fen('dc-fetch') >= 6) return null
+    if (compose === 'dc-cut' && fen('dc-cut') >= 10) return null
+    if (compose === 'mc-ref' && (fen('mc-ref') >= 10 || rows.filter((r) => r.user_id === user_id && col(r, 'plan->>__compose') === 'mc-ref' && r.status === 'failed' && r._arrivee > t - 3600).length >= 3)) return null
+    return ajouter(user_id, compose, duree, t, extra)
+  }
   if (RELU) {
     const enCours = rows.filter((r) => r.user_id === user_id && (r.status === 'queued' || r.status === 'rendering') && estGratuit(r)).length
     if (enCours >= 1) return null
@@ -153,10 +204,11 @@ function creer(user_id, compose, duree, t, extra = {}) {
 // `arrivees(t)` ajoute les nouveaux jobs à l'instant t (pas de 1 s). Rend les mesures.
 async function simuler(dureeS, arrivees) {
   FIN = dureeS
-  const moteurs = Array.from({ length: MOTEURS }, (_, i) => ({ i, libreA: 0, job: null, dernier: null, pause: 0 }))
+  const moteurs = Array.from({ length: MOTEURS }, (_, i) => ({ i, libreA: 0, job: null, dernier: null, pause: 0, dcFile: null }))
   let maxDc = 0, minNormauxOccupes = Infinity
   for (let t = 0; t <= dureeS; t++) {
-    for (const mo of moteurs) if (mo.job && mo.libreA <= t) { mo.job.status = 'done'; mo.job._fin = t; mo.job = null }
+    tVirtuel = t
+    for (const mo of moteurs) if (mo.job && mo.libreA <= t) { mo.job.status = mo.job._echec ? 'failed' : 'done'; mo.job._fin = t; mo.job = null }
     arrivees(t)
     for (const mo of moteurs) {
       if (mo.job) continue
@@ -303,7 +355,7 @@ reset()
   await simuler(600, () => { maxMcRef = Math.max(maxMcRef, rows.filter((r) => r.status === 'rendering' && col(r, 'plan->>__compose') === 'mc-ref').length) })
   const payes = rows.filter((r) => r._paye), premier = Math.min(...payes.map((r) => r._debut ?? 1e9))
   console.log(`     → mc-ref en cours au plus : ${maxMcRef}/${MOTEURS} ; 1er montage payé démarré à t=${premier} s ; ${payes.filter((r) => r._debut != null && r._debut <= 1).length}/6 montages démarrés à t=1`)
-  ok(`mc-ref gratuits : au plus ${DC_MAX} moteurs (plafond global)`, maxMcRef <= DC_MAX, String(maxMcRef))
+  ok(`mc-ref gratuits : au plus ${R2 ? PREP_MAX : DC_MAX} moteur(s) (plafond global${R2 ? ' de la famille « prep »' : ''})`, maxMcRef <= (R2 ? PREP_MAX : DC_MAX), String(maxMcRef))
   ok(`au moins ${MOTEURS - DC_MAX} montages payés démarrent dès leur arrivée`, payes.filter((r) => r._debut != null && r._debut <= 1).length >= MOTEURS - DC_MAX, String(premier))
   // création par la base (dépôt) : la rafale ne crée qu'UN mc-ref
   reset()
@@ -342,6 +394,90 @@ else {
   console.log(`     → montages payés servis : ${servis.length}/10 en 10 min ; appels à render_claim_dc : ${appelsClaim}`)
   ok('tous les montages payés servis malgré la panne', servis.length === 10, `${servis.length}/10`)
   ok('les moteurs ne rebouclent pas sur la prise en panne (≤ 1 appel par moteur et par pause)', appelsClaim <= MOTEURS, String(appelsClaim))
+}
+
+// ══ 2e relecture du 30/10 (bancs adverses des relecteurs) ══
+// Une carte Claude : /start → création de la préparation (refus = « busy » : relance toutes les 15 s, RELANCES fois au plus,
+// puis « La file est encore pleine », bouton à cliquer) ; la préparation dure `duree` s une fois prise par un moteur.
+function carteClaude(user_id, t0, duree, nom) {
+  return { user_id, t0, duree, nom, essais: 0, job: null, abandon: false,
+    tick(t) {
+      if (this.job || this.abandon || t < this.t0 || (t - this.t0) % 15 !== 0) return
+      if (this.essais > RELANCES) { this.abandon = true; return }
+      this.essais++
+      this.job = creer(this.user_id, 'mc-ref', this.duree, t, { _carte: this.nom })
+    } }
+}
+// ── R5. Charge Décupleur (2 comptes : découpes lentes en continu) ; un client lance 3 cartes Omni à la suite (t=60, 62, 64) ──
+console.log(`R5. 2 comptes x dc-cut lents (${DC_CUT_S} s) en continu ; client honnête : 3 cartes Omni lancées à t=60, 62 et 64 (préparation 40 s)`)
+reset()
+{
+  const ATT = [1, 2].map((i) => uid('aaaaaaa', i)), H = uid('fffffff', 1)
+  const cartes = [0, 2, 4].map((d, i) => carteClaude(H, 60 + d, 40, 'carte ' + (i + 1)))
+  await simuler(1800, (t) => {
+    for (const a of ATT) { const n = rows.filter((r) => r.user_id === a && (r.status === 'queued' || r.status === 'rendering')).length; for (let i = n; i < 3; i++) creer(a, 'dc-cut', DC_CUT_S, t) }
+    for (const c of cartes) c.tick(t)
+  })
+  const res = cartes.map((c) => c.job && c.job._fin != null ? `${c.nom} prête à t=${c.job._fin} s (${c.job._fin - c.t0} s)` : `${c.nom} ${c.abandon ? '« La file est encore pleine » (bouton)' : 'jamais prête'}`)
+  console.log(`     → ${res.join(' ; ')}`)
+  ok('les 3 cartes sont préparées sans bouton « relance » (relance automatique suffisante)', cartes.every((c) => c.job && c.job._fin != null && !c.abandon), res.join(' ; '))
+  ok('1re carte : préparation démarrée en moins de 30 s malgré la charge Décupleur (sa propre place)', !!cartes[0].job && cartes[0].job._debut != null && cartes[0].job._debut - 60 < 30, String(cartes[0].job && cartes[0].job._debut))
+  ok('3e carte prête en moins de 5 min', !!cartes[2].job && cartes[2].job._fin != null && cartes[2].job._fin - cartes[2].t0 < 300, String(cartes[2].job && cartes[2].job._fin))
+}
+
+// ── R6. Retouches gratuites en rafale : 3 comptes (un débit quelconque dans l'heure) gardent des retouches lourdes en file
+//        (la « photo » est un MP4 renommé ou la vidéo force l'encodage : jusqu'au délai, puis échec) ; clients payants comme S1 ──
+console.log(`R6. 3 comptes x retouches lourdes (${RETOUCHE_S} s, échec au délai) en continu ; clients payants : 1 rendu toutes les 40 s, 30 min ; 1 retouche Express honnête toutes les 5 min`)
+reset()
+{
+  const ATT = [1, 2, 3].map((i) => uid('bbbbbbb', i)), CLI = [1, 2, 3, 4, 5].map((i) => uid('ccccccc', i))
+  const types = [[null, 150], ['gen-subs', 60], ['motion', 90], [null, 150, true]]
+  let k = 0, maxRet = 0
+  const honnetes = []
+  await simuler(1800, (t) => {
+    // version du dépôt : 2 retouches en cours par compte (création atomique) ; avant : la rafale en créait autant que voulu
+    for (const a of ATT) {
+      const n = rows.filter((r) => r.user_id === a && (r.status === 'queued' || r.status === 'rendering')).length
+      for (let i = n; i < (R2 ? 2 : 6); i++) creer(a, 'retouche', RETOUCHE_S, t, { _echec: true })
+    }
+    if (t % 40 === 0 && t < 1500) { const [c, d, prio] = types[k % types.length]; ajouter(CLI[k % CLI.length], c, d, t, { prioritaire: !!prio, _paye: true }); k++ }
+    if (t % 300 === 30) { const h = creer(uid('ddddddd', t), 'retouche', 8, t); if (h) honnetes.push(h) }
+    maxRet = Math.max(maxRet, rows.filter((r) => r.status === 'rendering' && col(r, 'plan->>__compose') === 'retouche').length)
+  })
+  const payes = rows.filter((r) => r._paye), servis = payes.filter((r) => r._debut != null)
+  const att = payes.map(attente), moy = att.reduce((x, y) => x + y, 0) / Math.max(1, att.length)
+  const prio = payes.filter((r) => r.prioritaire), prioMax = Math.max(...prio.map(attente))
+  // avant le 1er échec de chaque attaquant (3 × RETOUCHE_S), rien ne les distingue d'un client : la retouche honnête peut dépasser le
+  // délai de l'app, qui livre alors la vidéo d'origine (aucun crédit perdu) ; après, elle passe devant eux
+  const hTard = honnetes.filter((r) => r._arrivee >= 3 * RETOUCHE_S)
+  const hOk = hTard.filter((r) => r._fin != null && r._fin - r._arrivee <= 150).length
+  const hTot = honnetes.filter((r) => r._fin != null && r._fin - r._arrivee <= 150).length
+  console.log(`     → retouches en cours au plus : ${maxRet}/${MOTEURS} ; rendus payés servis ${servis.length}/${payes.length}, attente moyenne ${Math.round(moy)} s ; Rendu prioritaire : attente max ${prioMax} s ; retouches honnêtes finies dans le délai de l’app (150 s) : ${hTot}/${honnetes.length} (après les 1ers échecs des attaquants : ${hOk}/${hTard.length})`)
+  ok(`au plus ${RET_MAX} moteur(s) pris par les retouches`, maxRet <= RET_MAX, String(maxRet))
+  ok('tous les rendus payés servis, attente moyenne < 60 s', servis.length === payes.length && moy < 60, `${servis.length}/${payes.length}, ${Math.round(moy)} s`)
+  ok('Rendu prioritaire servi en moins de 2 min', prioMax < 120, prioMax + ' s')
+  ok('après leurs 1ers échecs, les retouches Express honnêtes passent avant celles des attaquants (finies dans le délai de 150 s de l’app)', hTard.length > 0 && hOk === hTard.length, `${hOk}/${hTard.length}`)
+}
+
+// ── R7. Préparations gratuites qui échouent au délai : 3 comptes Starter relancent une carte à chaque fin ;
+//        un client honnête lance une carte à t=1500 ──
+console.log(`R7. 3 comptes relancent des préparations qui vont jusqu’au délai (${MCREF_S} s, échec, jamais débitées) ; client honnête : 1 carte à t=1500`)
+reset()
+{
+  const ATT = [1, 2, 3].map((i) => uid('9999999', i))
+  let h = null, maxPrep = 0
+  await simuler(3600, (t) => {
+    for (const a of ATT) if (t % 15 === 0) creer(a, 'mc-ref', MCREF_S, t, { _echec: true })   // la carte relance sans cesse
+    if (t === 1500) h = carteClaude(uid('fffffff', 2), 1500, 40, 'carte honnête')
+    if (h) h.tick(t)
+    maxPrep = Math.max(maxPrep, rows.filter((r) => r.status === 'rendering' && col(r, 'plan->>__compose') === 'mc-ref').length)
+  })
+  const prepAtt = rows.filter((r) => ATT.includes(r.user_id) && r._debut != null && r._debut < 3600)
+  const occ = prepAtt.reduce((x, r) => x + Math.min(r._duree, (r._fin ?? 3600) - r._debut), 0)
+  console.log(`     → préparations des attaquants servies : ${prepAtt.length} en 1 h (${Math.round(occ / 60)} min de moteur) ; carte honnête : ${h && h.job && h.job._fin != null ? 'prête à t=' + h.job._fin + ' s (' + (h.job._fin - 1500) + ' s)' : 'jamais prête'}`)
+  ok(`au plus ${R2 ? PREP_MAX : DC_MAX} moteur(s) pris par les préparations`, maxPrep <= (R2 ? PREP_MAX : DC_MAX), String(maxPrep))
+  ok('attaquants : au plus 3 préparations en échec par compte et par heure', prepAtt.length <= 3 * ATT.length, String(prepAtt.length))
+  ok('carte honnête prête en moins de 10 min (avant toute relance manuelle)', !!h && !!h.job && h.job._fin != null && h.job._fin - 1500 < 600, String(h && h.job && h.job._fin))
 }
 
 // ── S7. Délai de yt-dlp ──
