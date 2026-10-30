@@ -1,0 +1,4 @@
+{ "imports": {
+  "https://esm.sh/@supabase/supabase-js@2": "./fake-supabase-file.ts",
+  "https://deno.land/std@0.168.0/http/server.ts": "../tests-whop-webhook/fake-serve.ts"
+} }

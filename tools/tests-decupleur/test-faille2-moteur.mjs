@@ -1,7 +1,7 @@
 // Banc de l'audit Décupleur du 30/10, faille 2 (lien de live TikTok : ffmpeg orphelin qui remplit /tmp), côté MOTEUR.
 // Code réel de render-worker/decupleur.mjs (dcFetch) ; yt-dlp remplacé par faux-ytdlp/ (aucun réseau, aucune vraie vidéo) qui
 // applique le VRAI choix d'extracteur et le VRAI --match-filter de yt-dlp (bibliothèque installée, ytdlp-reel.py). Le délai
-// de récupération (240 s) est ramené à 3 s dans une copie du module. Chaque scénario tourne dans un processus à part
+// de récupération (240 s, puis 90 s depuis le 30/10) est ramené à 3 s dans une copie du module. Chaque scénario tourne dans un processus à part
 // (25 s au plus) : un moteur bloqué compte comme un échec. Les faux ffmpeg restés vivants sont comptés puis tués.
 //
 //   node test-faille2-moteur.mjs                         → code du dépôt (APRÈS)
@@ -39,16 +39,19 @@ const YTDLP_PY = process.env.YTDLP_PY || '/opt/homebrew/Cellar/yt-dlp/2026.3.17_
 if (!existsSync(YTDLP_PY)) { console.error('Python du yt-dlp installé introuvable (YTDLP_PY) :', YTDLP_PY); process.exit(2) }
 const RACINE = mkdtempSync(join(tmpdir(), 'banc-faille2-'))
 const src = readFileSync(MODULE, 'utf8')
-const nDelai = src.split('240000').length - 1
-if (nDelai !== 1) { console.error(`délai 240000 trouvé ${nDelai} fois dans ${MODULE} (1 attendu)`); process.exit(2) }
+// délai de yt-dlp : 240000 jusqu'au 30/10 (« timeout: 240000 » puis « DC_FETCH_MS = 240000 »), 90000 depuis (faille 3)
+const DELAI = /(timeout: |DC_FETCH_MS = )(?:240000|90000)\b/
+const nDelai = (src.match(new RegExp(DELAI.source, 'g')) || []).length
+const delai3s = (t) => t.replace(DELAI, (_, avant) => avant + '3000')
+if (nDelai !== 1) { console.error(`délai de yt-dlp (240000 / 90000) trouvé ${nDelai} fois dans ${MODULE} (1 attendu)`); process.exit(2) }
 mkdirSync(join(RACINE, 'mod'))
 const COPIE = join(RACINE, 'mod', 'decupleur.mjs')
-writeFileSync(COPIE, src.replace('240000', '3000'))
+writeFileSync(COPIE, delai3s(src))
 // copie « extracteurs élargis » : --use-extractors remis sur « default » (ce que ferait quelqu'un qui rajoute « generic ») —
 // le refus des lives doit tenir SANS compter sur --use-extractors. Le code d'avant (sans --use-extractors) est déjà dans ce cas.
 mkdirSync(join(RACINE, 'mod-elargi'))
 const COPIE_ELARGIE = join(RACINE, 'mod-elargi', 'decupleur.mjs')
-writeFileSync(COPIE_ELARGIE, src.replace('240000', '3000').replace(/(DC_EXTRACTEURS = )'[^']*'/, "$1'default'"))
+writeFileSync(COPIE_ELARGIE, delai3s(src).replace(/(DC_EXTRACTEURS = )'[^']*'/, "$1'default'"))
 const SOURCE = join(RACINE, 'source-30s.mp4')
 const g = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=360x640:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
   '-t', '30', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', SOURCE])

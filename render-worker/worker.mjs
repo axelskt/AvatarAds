@@ -40,7 +40,7 @@ import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs' 
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from './hedra-prompts.mjs'   // prompt lipsync Hedra PARTAGÉ (shared/hedra-prompts.json, 27/09)
 // Audit 02/10 : garde-fous partagés (chemins de stockage, plan assaini, GSAP embarqué) — voir securite.mjs
 import { cheminSur, cheminLisibleJob, entreesJobSures, cleSortieJob, assainirPlan, installerGsap, NOM_CATALOGUE, NOM_EMOJI, NOM_SFX,
-  musiqueBanqueSure, horsBornes, BORNES_MEDIA, origineStockage, prochainJob, cheminVoixPrep, fichiersVoixJob } from './securite.mjs'
+  musiqueBanqueSure, horsBornes, BORNES_MEDIA, origineStockage, prochainJob, DC_COURTS, cheminVoixPrep, fichiersVoixJob } from './securite.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -3533,13 +3533,21 @@ async function pollLoop() {
   }
   await lireComptesLocaux()
   setInterval(lireComptesLocaux, 10 * 60_000).unref?.()
+  // 30/10 (audit Décupleur, faille 3) : récupération d'un lien (dc-fetch, jusqu'à 90 s de téléchargement + réencodage) et découpe
+  // (dc-cut) sont GRATUITES — elles passaient devant tous les rendus payés et 3 comptes suffisaient à prendre les 6 moteurs.
+  // Désormais : au plus DC_MOTEURS_MAX (2 par défaut) de ces jobs en même temps sur tous les moteurs (prise en charge
+  // atomique : render_claim_dc, migration 20261030140000), un seul par compte en priorité (prochainJob). Avec 6 moteurs, 4
+  // restent toujours aux montages, à l'Express, au Générateur… Régler DC_MOTEURS_MAX à moins que le nombre de moteurs.
+  const DC_MOTEURS_MAX = Math.max(1, Math.floor(Number(process.env.DC_MOTEURS_MAX || 2)) || 2)
+  const dcFile = { courts: DC_COURTS, max: DC_MOTEURS_MAX }
+  let claimDcAbsent = false
   if (DC_LOCAL_SEUL) console.log(`🖥  moteur LOCAL : Décupleur des comptes propriétaire / developer seulement (${dcLocal.ids.size} compte(s))`)
 
   for (;;) {
     try {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
       // + préparation des vidéos MCP (02/10)
-      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix', 'dc-fetch', 'dc-cut'], dcLocal)   // Décupleur : récupération d'un lien / découpe = quelques secondes   // motion-voix : simple mux (copie du flux vidéo), quelques secondes
+      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix'], dcLocal, dcFile)   // motion-voix : simple mux (copie du flux vidéo), quelques secondes ; dc-fetch / dc-cut : dcFile (plafond global, 1 par compte en priorité)
       if (!cand) {
         if (Date.now() - dernierBalayage > 5 * 60_000) await reprendreOrphelins()
         // 15/10 : attente qui S'ALLONGE quand la file reste vide (2 s → 12 s, + un peu de hasard pour que les 6 moteurs ne
@@ -3553,10 +3561,23 @@ async function pollLoop() {
       if (!job) { await new Promise((r) => setTimeout(r, 500)); continue }   // pris par un autre moteur entre-temps (ou hoquet DB)
 
       // claim atomique : queued → rendering (un seul worker gagne)
-      const { data: claimed } = await sb.from('render_jobs')
-        .update({ status: 'rendering', updated_at: new Date().toISOString(), attempts: (job.attempts || 0) + 1 })
-        .eq('id', job.id).eq('status', 'queued').select('id')
-      if (!claimed || !claimed.length) continue
+      // 30/10 : dc-fetch / dc-cut pris sous le plafond GLOBAL (render_claim_dc : verrou, comptage et prise dans la même
+      // transaction — deux moteurs ne dépassent jamais DC_MOTEURS_MAX). Fonction absente (migration pas encore appliquée) :
+      // prise habituelle, le plafond lu par prochainJob s'applique seul. Tous les autres jobs : prise habituelle, inchangée.
+      const estDcCourt = !!(job.plan && DC_COURTS.includes(job.plan.__compose))
+      let claimed = null
+      if (estDcCourt && !claimDcAbsent) {
+        const { data: pris, error: eDc } = await sb.rpc('render_claim_dc', { p_job: job.id, p_max: DC_MOTEURS_MAX })
+        if (!eDc) claimed = pris === true ? [{ id: job.id }] : []
+        else if (eDc.code === 'PGRST202' || eDc.code === '42883') { claimDcAbsent = true; console.warn('render_claim_dc absente : prise habituelle des dc-fetch / dc-cut (appliquer la migration 20261030140000)') }
+        else { console.warn('render_claim_dc :', eDc.message); claimed = [] }
+      }
+      if (claimed === null) {
+        ({ data: claimed } = await sb.from('render_jobs')
+          .update({ status: 'rendering', updated_at: new Date().toISOString(), attempts: (job.attempts || 0) + 1 })
+          .eq('id', job.id).eq('status', 'queued').select('id'))
+      }
+      if (!claimed || !claimed.length) { if (estDcCourt) await new Promise((r) => setTimeout(r, 500)); continue }
 
       jobEnCours = job.id
       dernierCompte = job.user_id

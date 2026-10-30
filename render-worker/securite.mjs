@@ -361,7 +361,15 @@ export function horsBornes(mesure, bornes) {
 // d'un AUTRE compte passe devant (requête dédiée : aucune fenêtre, un compte qui empile 50 jobs n'en masque aucun autre). Un
 // seul compte en file : ordre chronologique inchangé. File vide : deux lectures, comme avant. `sb` = client Supabase (injecté :
 // le module reste sans accès réseau à l'import). Rend { id, user_id } ou null (erreur de lecture = null, comme avant).
-export async function prochainJob(sb, dernierCompte, prioritaires, local = null) {
+// 30/10 (audit Décupleur, faille 3) : `dc` = { courts: ['dc-fetch', 'dc-cut'], max } — ces jobs GRATUITS ne sont plus servis
+// comme les compositions courtes : (1) au plus `max` rendus en même temps sur TOUS les moteurs (au-delà, ils attendent et les
+// autres jobs passent : il reste toujours des moteurs aux rendus normaux — la prise en charge elle-même est atomique,
+// render_claim_dc) ; (2) dans la classe prioritaire, UN seul par compte : un compte qui en a déjà un en cours voit les
+// suivants servis dans l'ordre normal de la file (plus jamais devant les montages, l'Express ou le « Rendu prioritaire »).
+// Sans `dc` : comportement d'avant.
+export const DC_COURTS = ['dc-fetch', 'dc-cut']
+export const DC_VIVANT_MS = 30 * 60_000   // même fenêtre que render_claim_dc (reprise des orphelins : 30 min sans battement)
+export async function prochainJob(sb, dernierCompte, prioritaires, local = null, dc = null) {
   // 26/10 (Axel : « sur le compte dev, que le Décupleur passe en local, pas par Railway ») : un moteur lancé sur le Mac
   // (DC_LOCAL=1, tools/decupleur-local.sh) ne prend QUE les Décupleurs des comptes propriétaire / developer (local.ids) ;
   // les moteurs Railway leur laissent local.fenetreMs (15 s) avant de les prendre eux-mêmes : Mac éteint = Railway, comme avant.
@@ -377,11 +385,29 @@ export async function prochainJob(sb, dernierCompte, prioritaires, local = null)
   if (!Array.isArray(sonde) || !sonde.length) return null
   const reserve = (j) => !!(local && local.ids && local.ids.has(j.user_id) && j.compose === 'decupleur'
     && Date.now() - Date.parse(j.created_at) < (local.fenetreMs || 15000))
+  // dc-fetch / dc-cut en cours sur tous les moteurs (lecture illisible = plafond atteint : ils attendent le tour suivant)
+  const courts = dc && Array.isArray(dc.courts) && dc.courts.length ? dc.courts : null
+  let dcPlein = false, dcOccupes = []
+  if (courts) {
+    const { data: enCours, error } = await sb.from('render_jobs').select('user_id').eq('status', 'rendering')
+      .in('plan->>__compose', courts).gte('updated_at', new Date(Date.now() - DC_VIVANT_MS).toISOString()).limit(200)
+    const l = !error && Array.isArray(enCours) ? enCours : null
+    dcPlein = !l || l.length >= Math.max(1, Number(dc.max) || 1)
+    dcOccupes = l ? [...new Set(l.map((r) => String(r.user_id)).filter((u) => /^[0-9a-f-]{36}$/i.test(u)))] : []
+  }
+  const listeCourts = courts ? `(${courts.join(',')})` : ''
   // 3 classes, dans l'ordre : les compositions courtes (retouches…), puis les rendus des comptes au « Rendu prioritaire »
   // (Axel 23/10, abonnement 5 €/mois : render_jobs.prioritaire, posé à l'insertion d'après le compte), puis tous les autres.
   const plusAncien = async (classe, autreQue) => {
     let q = sb.from('render_jobs').select('id, user_id, created_at, compose:plan->>__compose').eq('status', 'queued')
-    if (classe === 'compose') q = q.in('plan->>__compose', prioritaires)
+    if (classe === 'compose') {
+      q = q.in('plan->>__compose', courts && !dcPlein ? [...prioritaires, ...courts] : prioritaires)
+      // un seul dc-fetch / dc-cut prioritaire par compte : pas celui d'un compte qui en a déjà un en cours
+      if (courts && !dcPlein && dcOccupes.length) q = q.or(`plan->>__compose.not.in.${listeCourts},user_id.not.in.(${dcOccupes.join(',')})`)
+    } else if (courts && dcPlein) {
+      // plafond atteint : aucun dc-fetch / dc-cut ; un montage n'a PAS de __compose (NULL) — il doit rester dans la file
+      q = q.or(`plan->>__compose.is.null,plan->>__compose.not.in.${listeCourts}`)
+    }
     if (classe === 'compte') q = q.eq('prioritaire', true)
     if (autreQue) q = q.neq('user_id', autreQue)
     const { data } = await q.order('created_at').limit(6)

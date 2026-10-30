@@ -30,6 +30,9 @@ const CORS = {
 }
 // Clés de job d'un rendu (une par op tirée, 3 au plus) — MÊMES clés dans render-worker/worker.mjs (reservationJob).
 const DC_COMPOSES = ['dc-fetch', 'dc-cut', 'decupleur']
+// 30/10 (audit Décupleur, failles 3 et 4) : bornes appliquées ATOMIQUEMENT par render_job_dc_creer (migration 20261030140000) —
+// 3 jobs Décupleur en cours par compte (comme avant), 1 récupération de lien (dc-fetch) en cours, 6 récupérations par 10 min.
+const DC_EN_COURS_MAX = 3, DC_FETCH_EN_COURS_MAX = 1, DC_FETCH_QUOTA = 6, DC_FETCH_FENETRE_S = 600
 const cleRendu = (id: string) => ['render:' + id, 'render:' + id + '#1', 'render:' + id + '#2']
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -319,7 +322,7 @@ serve(async (req: Request) => {
     // ── DÉCUPLEUR (Axel 24/10) — owner / developer (illimités), et Pro / Élite une fois DECUPLEUR_OUVERT=1 ──────────────────
     // dc-fetch : lien TikTok / Instagram → <uid>/<job>.mp4 (téléchargé par le moteur) ; dc-cut : passage gardé seul (≤ 15 s,
     // vidéo de référence du changement de personnage) ; decupleur : N variantes sous <uid>/dc-<job>/. Plan RECONSTRUIT ici
-    // (jamais repris du client), chemins contrôlés (cheminSur), 3 jobs en cours au plus. Récupération et découpe : gratuites
+    // (jamais repris du client), chemins contrôlés (cheminSur), 3 jobs en cours au plus (atomique : render_job_dc_creer). Récupération et découpe : gratuites
     // (bornées en cadence). Variantes d'un compte non illimité : la réservation de l'app (spendCreditsFor, op DÉSIGNÉE dans
     // body.ops) est tirée ENTIÈRE ici, au moins ceil(N × 0,5), AVANT l'insertion, puis liée au job (render:<id>) → le moteur la
     // règle à la livraison, la rembourse à l'échec (reservationJob). Plan illisible (hoquet DB) → refus : jamais un rendu payant
@@ -334,7 +337,7 @@ serve(async (req: Request) => {
         const { count, error: cErr } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id).in('status', ['queued', 'rendering']).in('plan->>__compose', DC_COMPOSES)
           .gte('updated_at', new Date(Date.now() - 45 * 60 * 1000).toISOString())
-        if (!cErr && (count ?? 0) >= 3) return json({ error: 'Un décuplage est déjà en cours — attends qu\'il se termine' }, 429)
+        if (!cErr && (count ?? 0) >= DC_EN_COURS_MAX) return json({ error: 'Un décuplage est déjà en cours — attends qu\'il se termine' }, 429)
       }
       const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : NaN }
       let plan: Record<string, unknown>
@@ -387,13 +390,26 @@ serve(async (req: Request) => {
         }
         tire = { op, amt }
       }
-      const { data, error } = await service.from('render_jobs')
-        .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips: [] })
-        .select('id').single()
-      if (error || !data) {
-        if (tire) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: tire.op, p_cost: tire.amt }) } catch (_) { /* best-effort */ } }
-        return json({ error: 'creation impossible' }, 500)
+      // 30/10 (audit Décupleur, failles 3 et 4) : le comptage ci-dessus ne fait que refuser tôt (avant un tirage de crédits) ;
+      // c'est render_job_dc_creer qui décide, ATOMIQUEMENT : verrou par compte, comptage et insertion dans la même transaction
+      // (30 demandes simultanées lisaient toutes « 0 en cours » et créaient 30 jobs). Elle borne aussi la récupération par
+      // lien : 1 dc-fetch en cours par compte, 6 par 10 min (pas de quota pour owner / developer). Fonction absente ou hoquet
+      // → refus (jamais l'ancienne insertion sans plafond) ; le tirage éventuel est rendu.
+      const rendre = async () => { if (tire) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: tire.op, p_cost: tire.amt }) } catch (_) { /* best-effort */ } } }
+      let cree = null as { ok?: boolean; id?: string; raison?: string } | null
+      try {
+        const { data: _c, error: _ce } = await service.rpc('render_job_dc_creer', { p_user: user.id, p_plan: plan, p_input: input, p_assets: assets,
+          p_en_cours_max: DC_EN_COURS_MAX, p_fetch_en_cours_max: DC_FETCH_EN_COURS_MAX, p_fetch_quota: dcExempt ? null : DC_FETCH_QUOTA, p_fetch_fenetre_s: DC_FETCH_FENETRE_S })
+        if (_ce) console.warn('render_job_dc_creer :', _ce.message); else cree = (_c ?? null) as { ok?: boolean; id?: string; raison?: string } | null
+      } catch (e) { console.warn('render_job_dc_creer :', (e as Error).message) }
+      if (!cree || (cree.ok && !cree.id)) { await rendre(); return json({ error: 'Création impossible — réessaie dans un instant' }, 503) }
+      if (!cree.ok) {
+        await rendre()
+        if (cree.raison === 'fetch_en_cours') return json({ error: 'Une vidéo est déjà en cours de récupération — attends qu\'elle arrive' }, 429)
+        if (cree.raison === 'quota') return json({ error: 'Trop de liens récupérés en peu de temps — réessaie dans quelques minutes' }, 429)
+        return json({ error: 'Un décuplage est déjà en cours — attends qu\'il se termine' }, 429)
       }
+      const data = { id: String(cree.id) }
       if (tire) {
         // liée au job : règlement à la livraison, remboursement à l'échec (render-worker reservationJob). Une op déjà liée à
         // un autre rendu (bind = false) : job fermé AVANT d'être pris, tirage rendu → 402 (jamais un rendu payé deux fois).

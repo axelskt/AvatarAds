@@ -158,7 +158,9 @@ function calculCpu() {
 // $TMPDIR/_MEIxxxxxx et ne l'efface qu'à une sortie propre. Donc (1) au délai, SIGTERM au groupe d'abord (le chargeur arrête
 // Python puis nettoie, ffmpeg ferme son fichier), SIGKILL au groupe DC_FETCH_GRACE_MS plus tard pour ce qui reste ; (2) TMPDIR
 // de yt-dlp = le dossier dc-lien-* du job (opts.tmp), supprimé par dcFetch quoi qu'il arrive : même tué net, rien ne reste.
-const DC_FETCH_MS = 240000
+// 30/10 (audit Décupleur, faille 3) : 240 s → 90 s. Une vidéo publiée de 3 min au plus (≤ 300 Mo) arrive en quelques secondes ;
+// au-delà, le lien bloque un moteur pour rien (la récupération est gratuite).
+const DC_FETCH_MS = 90000
 const DC_FETCH_GRACE_MS = 5000
 function ytdlp(args, { ms = DC_FETCH_MS, tmp } = {}) {
   return new Promise((resolve) => {

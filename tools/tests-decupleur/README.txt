@@ -58,3 +58,33 @@ Déploiement du correctif faille 2 :
    filtre, extracteurs) ; les fonctions ensuite (refus plus tôt, message clair). Chacun refuse seul les variantes de « /live ». Le moteur LOCAL du Mac (tools/decupleur-local.sh,
    DC_LOCAL=1) ne prend QUE les jobs « decupleur » (prochainJob, securite.mjs), jamais dc-fetch : rien d'obligatoire
    (un git pull + relance garde simplement sa copie à jour).
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Failles 3 et 4 (dc-fetch / dc-cut gratuits servis devant tous les rendus payés ; plafond « 3 jobs en cours par compte »
+contourné par 30 requêtes simultanées). Trois bancs, aucun réseau, aucune base en ligne, aucune vraie vidéo :
+   · test-faille4-rafale.ts : code RÉEL de render-job (dc-fetch, dc-cut, decupleur) sur une base factice avec latence
+     (fake-supabase-file.ts, import_map_file.json) — 30 requêtes simultanées, quota, client honnête, lots payés, panne ;
+       deno run --allow-env --allow-read --import-map=import_map_file.json test-faille4-rafale.ts
+   · test-faille3-file.mjs : prochainJob RÉEL (render-worker/securite.mjs) + prise en charge de pollLoop, 6 moteurs simulés
+     en temps virtuel (30 min d'attaque par 3 comptes, ordre retouche > Rendu prioritaire > reste, client honnête) ;
+       node test-faille3-file.mjs
+   · test-faille34-sql.ts : la migration 20261030140000 sur un vrai Postgres en mémoire (PGlite, déjà en cache) — atomicité,
+     quota, render_claim_dc, déclencheur « Rendu prioritaire », EXECUTE réservé à service_role ;
+       deno run --node-modules-dir=none --allow-env --allow-read --allow-net test-faille34-sql.ts
+A/B : bash tools/tests-decupleur/ab-faille34.sh   (AVANT = 02a160f2)
+   → AVANT  19/29 (30 jobs dc-fetch créés pour 30 requêtes) et 5/14 (6/6 moteurs pris, 8/38 rendus payés servis en 30 min,
+            Rendu prioritaire jamais servi, délai yt-dlp 240 s)
+   → APRÈS  31/31 (1 job créé, 29 refus 429 lisibles), 15/15 (2/6 moteurs au plus, 38/38 rendus payés servis), SQL 24/24.
+
+Déploiement des failles 3 et 4 (depuis une copie propre du commit, jamais depuis un arbre modifié) — ORDRE OBLIGATOIRE :
+   1. Migration 20261030140000_decupleur_file_atomique.sql (render_job_dc_creer + render_claim_dc) EN PREMIER : le nouveau
+      render-job crée TOUS les jobs Décupleur par render_job_dc_creer (absente → 503 « Création impossible » pour tous).
+   2. Fonction render-job : supabase functions deploy render-job (et mcp si la faille 2 n'est pas encore en ligne).
+   3. render-worker sur Railway (worker.mjs, securite.mjs, decupleur.mjs). Il fonctionne aussi avant la migration (prise
+      habituelle si render_claim_dc est absente, plafond lu par prochainJob). Variable optionnelle DC_MOTEURS_MAX (défaut 2) :
+      toujours STRICTEMENT inférieure au nombre de moteurs.
+   4. Moteur local du Mac (DC_LOCAL=1) : il ne prend que les lots « decupleur », jamais dc-fetch / dc-cut — rien d'obligatoire
+      (git pull dans ~/.avatarads/moteur + relance pour garder sa copie à jour).
+Reste hors de ce lot : la route MCP « decupler_video » (supabase/functions/mcp, ~l. 5832) crée ses dc-fetch / mc-ref avec son
+propre comptage non atomique (2 en cours). Les moteurs la bornent quand même (plafond global de render_claim_dc, 1 par compte
+en priorité) et ses dc-fetch comptent dans le quota de render-job.
