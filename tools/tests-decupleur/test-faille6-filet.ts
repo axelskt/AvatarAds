@@ -7,6 +7,8 @@
 import { FakeDB, FakeStorage, SIGNE, rpcsCreditsMcp, createClient as fauxClient } from './fake-supabase-dc.ts'
 
 const CRON = 'cron-banc'
+// DNS factice (hôte public) : kieDownload résout l'hôte du résultat avant de le télécharger — aucun réseau réel
+try { (Deno as any).resolveDns = async (_h: string, t: string) => t === 'A' ? ['93.184.216.34'] : [] } catch { Object.defineProperty(Deno, 'resolveDns', { value: async (_h: string, t: string) => t === 'A' ? ['93.184.216.34'] : [] }) }
 for (const [k, v] of Object.entries({ SUPABASE_URL: 'https://test.local', SUPABASE_SERVICE_ROLE_KEY: 'x', SUPABASE_ANON_KEY: 'a', KIEAI_API_KEY: 'k', DECUPLEUR_OUVERT: '1', CRON_SECRET: CRON })) Deno.env.set(k, v)
 const keep = console.log
 let logs: string[] = []
@@ -150,6 +152,82 @@ for (const [nomF, filet] of FILETS) {
     throw new Error('réseau interdit dans le banc : ' + s) }) as typeof fetch
   await filet()
   ok(`étape personnage bloquée > 60 min : remboursée en entier comme avant (${VAR + PERSO})`, mj().status === 'failed' && rendu() === VAR + PERSO, `statut=${mj().status} rendu=${rendu()}`)
+}
+
+// ── RELECTURE 30/10 : courses entre un filet et un suivi /status concurrent (« remboursé + lot en file ») ──
+const vraiFail = db.rpcs.mcp_job_fail_refund
+for (const [nomF, filet] of FILETS) {
+  keep(`── courses, ${nomF} ──`)
+  // 9. Instantané du filet pris à « vn: » ; un /status CONCURRENT débite et lance le lot (→ « dj: ») juste avant que le filet
+  //    appelle mcp_job_fail_refund. Avant : clos + tout rendu, lot en file → variantes gratuites. Après : p_only_op → le suivi gagne.
+  preparer({ perso: false, ageMin: 70, rendu: null })
+  const prepRid = crypto.randomUUID()
+  Object.assign(mj(), { op_name: 'vn:' + prepRid, credits_cost: 0, params: { video: true, tool: 'decup', n: N, perso: false, alt: {}, text_pos: 'Haut', max_dur: 15 } })
+  db.rows('profiles')[0].credits_remaining = SOLDE
+  db.rows('render_jobs').push({ id: prepRid, user_id: UID, status: 'rendering', created_at: iso(69), updated_at: iso(1), plan: { __compose: 'mc-ref' } })
+  let course = 0
+  db.rpcs.mcp_job_fail_refund = (a: any) => {
+    const j = mj()
+    if (!course && j.op_name === 'vn:' + prepRid) {
+      course++
+      db.rows('profiles')[0].credits_remaining -= VAR
+      j.credits_cost = VAR
+      j.updated_at = new Date().toISOString()
+      db.rows('render_jobs').push({ id: rid, user_id: UID, status: 'queued', created_at: iso(0), updated_at: iso(0), input_video: `mcp-prep/${UID}/${prepRid}.mp4`, assets: [], avatar_clips: [], plan: { __compose: 'decupleur', n: N } })
+      j.op_name = 'dj:' + rid
+      Object.assign(j.params, { lot_at: Date.now() })
+    }
+    return vraiFail(a)
+  }
+  await filet()
+  db.rpcs.mcp_job_fail_refund = vraiFail
+  const c9 = { course, statut: mj().status, solde: db.rows('profiles')[0].credits_remaining, lot: lot()?.status }
+  ok('course vn: → dj: pendant le filet : le job n’est PAS clos ni remboursé (lot payé)', course === 1 && c9.statut === 'running' && c9.solde === SOLDE - VAR && c9.lot === 'queued', JSON.stringify(c9))
+  moteurTermine(); await filet()
+  ok('… puis le lot fini est livré, sans aucun crédit rendu', mj().status === 'done' && db.rows('profiles')[0].credits_remaining === SOLDE - VAR, `statut=${mj().status} solde=${db.rows('profiles')[0].credits_remaining}`)
+
+  // 10. Réservation « vns: » RÉCENTE (un suivi débite / lance le lot en ce moment) sur un job de 70 min → jamais tranchée
+  preparer({ perso: false, ageMin: 70, rendu: null })
+  Object.assign(mj(), { op_name: 'vns:' + crypto.randomUUID(), updated_at: iso(1) })
+  await filet()
+  ok('réservation de 1 min : le filet attend (ni clos ni remboursé)', mj().status === 'running' && rendu() === 0, `statut=${mj().status} rendu=${rendu()}`)
+  // 11. Réservation ORPHELINE (isolate tué, 10 min) → filet habituel : part encore due rendue
+  preparer({ perso: false, ageMin: 70, rendu: null })
+  Object.assign(mj(), { op_name: 'vns:' + crypto.randomUUID(), updated_at: iso(10) })
+  await filet()
+  ok(`réservation orpheline de 10 min : close, ${VAR} crédits rendus`, mj().status === 'failed' && rendu() === VAR, `statut=${mj().status} rendu=${rendu()}`)
+}
+
+// 12. Lancement du lot (dcLancerLot) alors que le job vient d'être clos entre la dépose du personnage et l'insertion du lot :
+//     avant, le lot restait EN FILE (variantes gratuites, part variantes déjà rendue) ; après, il est retiré de la file.
+{
+  keep('── lancement du lot sur un job clos entre-temps ──')
+  preparer({ perso: true, ageMin: 30, rendu: null })
+  const TACHE = 'wanCourse00001'
+  Object.assign(mj(), { op_name: 'dw:' + TACHE, credits_cost: VAR + PERSO, updated_at: iso(1), params: { ...mj().params, perso_path: undefined, perso_du: undefined } })
+  st.o.delete(st.k('render-media', `mcp-prep/${UID}/${jobId}-perso.mp4`))
+  const PB = new Uint8Array(6000).fill(7)
+  globalThis.fetch = (async (u: any) => { const s = String(u instanceof Request ? u.url : u)
+    if (s.startsWith('https://api.kie.ai/api/v1/jobs/recordInfo')) return Response.json({ code: 200, data: { state: 'success', resultJson: JSON.stringify({ resultUrls: ['https://tempfile.aiquickdraw.com/r/perso.mp4'] }) } })
+    if (s === 'https://tempfile.aiquickdraw.com/r/perso.mp4') return new Response(PB as BodyInit, { status: 200, headers: { 'content-type': 'video/mp4', 'content-length': String(PB.length) } })
+    throw new Error('réseau interdit dans le banc : ' + s) }) as typeof fetch
+  // le job est clos (filet) au moment où le suivi vérifie l'entrée du lot — juste avant l'insertion du render_job
+  const vraisNoms = st.noms.bind(st)
+  let clos = 0
+  st.noms = (b: string) => {
+    if (!clos && b === 'render-media' && mj().op_name === 'dwg:' + TACHE && typeof mj().params.perso_du === 'number') {
+      clos++; vraiFail({ p_job: jobId, p_reason: 'timeout', p_only_op: 'dwg:' + TACHE, p_max: null })
+    }
+    return vraisNoms(b)
+  }
+  await filetCompte()   // job de 30 min : le rattrapage du compte AVANCE le job (advanceDecupleur), sans filet des 60 min
+  st.noms = vraisNoms
+  const lots = db.rows('render_jobs').filter((r) => r.plan?.__compose === 'decupleur')
+  const c12 = { clos, job: mj().status, rendu: rendu(), lots: lots.map((r) => r.status) }
+  ok('job clos pendant le lancement : le lot inséré est retiré de la file (« failed »)', clos === 1 && c12.job === 'failed' && lots.length === 1 && lots[0].status === 'failed', JSON.stringify(c12))
+  // le moteur ne prend que les lots en file
+  for (const r of lots) if (r.status === 'queued') { const pre = `${UID}/dc-${r.id}`; for (let i = 1; i <= N; i++) st.put('render-media', `${pre}/v${String(i).padStart(2, '0')}.mp4`, new Uint8Array(100)); r.status = 'done' }
+  ok('aucune variante fabriquée pour ce job clos (part variantes rendue, personnage seul payé)', variantesChezClient() === 0 && c12.rendu === VAR, `variantes=${variantesChezClient()} rendu=${c12.rendu}`)
 }
 
 const nok = res.filter(([, c]) => !c).length

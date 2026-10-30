@@ -1997,7 +1997,9 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
       await advanceVideoTool(job)
       // audit 02/10 : clos par le filet → fichiers de la carte ET vidéo préparée (mcp-prep/, hors purge 7 jours) supprimés
       // 30/10 (audit Décupleur, faille 6) : lot de variantes en file / en cours → on attend (dcFiletLot), jamais remboursé en route
-      if (Date.now() - new Date(String(job.created_at)).getTime() > VT_STALE_MIN * 60_000 && !(await dcFiletLot(job))) { if ((await failAndRefund(userId, job, 'timeout')) >= 0) await vtNettoyer((job.params || {}) as Record<string, unknown>) }
+      // relecture 30/10 : clos SEULEMENT si l'étape lue est encore en place (p_only_op) — un /status concurrent qui vient de
+      // lancer le lot (vn:/vns:/dwg: → dj:) gagne, jamais « remboursé + lot en file »
+      if (Date.now() - new Date(String(job.created_at)).getTime() > VT_STALE_MIN * 60_000 && !(await dcFiletLot(job))) { if ((await failAndRefund(userId, job, 'timeout', String(job.op_name))) >= 0) await vtNettoyer((job.params || {}) as Record<string, unknown>) }
       continue
     }
     // ── OmniHuman chez kie (Axel 25/09) : livré / échec → réglé ; en cours → on patiente jusqu'à KIE_OMNI_STALE_MIN ──
@@ -2162,7 +2164,8 @@ async function reconcileAllStale(): Promise<void> {
         continue   // jamais le remboursement « timeout » aveugle ci-dessous pour une vidéo Express déjà générée
       }
       if (await dcFiletLot(job)) continue   // 30/10 (audit Décupleur, faille 6) : lot de variantes suivi d'après SON rendu
-      const rendu = await failAndRefund(String(job.user_id), job, 'timeout')
+      // relecture 30/10 : outil vidéo (Décupleur, Omni, Motion) clos SEULEMENT si l'étape lue est encore en place (p_only_op)
+      const rendu = await failAndRefund(String(job.user_id), job, 'timeout', estOutilVideo(job.op_name) ? String(job.op_name) : undefined)
       if (rendu >= 0 && estOutilVideo(job.op_name)) await vtNettoyer((job.params || {}) as Record<string, unknown>)   // audit 02/10 : mcp-prep/ n'est purgé par rien d'autre
     }
     // 4) CARTES PHOTO EXPIRÉES (audit 28/09 #23) : une carte jamais utilisée (> 2 h, /start la refuse) gardait sa part du
@@ -3930,7 +3933,12 @@ async function dcLancerLot(job: Record<string, unknown>, de: string, base: strin
     plan: { __compose: 'decupleur', a: 0, b: keep, n: Number(pj.n) || 10, alt: pj.alt || {}, textPos: pj.text_pos || 'Haut', seed: Math.floor(Math.random() * 2147483647), duration: keep } })
     .select('id').single()
   if (error || !rj) { await vtEchec(job, master ? `Lancement du décuplage impossible — crédits des variantes rendus ; ${DC_PERSO_GARDE}` : 'Lancement du décuplage impossible — crédits rendus, réessaie.', de); return }
-  await vtPasser(job, de, 'dj:' + rj.id, { ...patch, lot_at: Date.now() })
+  // relecture 30/10 : étape perdue entre l'insertion et le passage (job clos par un filet entre-temps) → le lot inséré est
+  // retiré de la file, sinon le moteur fabriquerait des variantes gratuites dans le dossier du client
+  if (await vtPasser(job, de, 'dj:' + rj.id, { ...patch, lot_at: Date.now() })) return
+  const { data: retire } = await svc.from('render_jobs').update({ status: 'failed', error: 'Lot annulé : décuplage déjà clos.', updated_at: new Date().toISOString() })
+    .eq('id', String(rj.id)).eq('status', 'queued').select('id')
+  console.warn('[mcp] décupleur : étape perdue au lancement du lot', job.id, 'rendu', rj.id, retire && retire.length ? 'retiré de la file' : 'déjà pris par un moteur')
 }
 // Vidéo du personnage d'un Décupleur MCP : mcp-prep/<uid>/<job>-perso.mp4 (30/10). L'ancienne place <uid>/mcp-src/<job>-perso.mp4
 // reste lue pour un job lancé avant le correctif.
@@ -4074,9 +4082,18 @@ async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
 //     DC_LOT_ABANDON_MIN (le moteur borne lui-même chaque rendu : délais ffmpeg, 3 reprises au plus).
 // true = le filet ne rembourse pas lui-même (réglé ici, ou attente) ; false = pas un lot / rendu disparu → filet habituel.
 const DC_LOT_MAX_MIN = 6 * 60, DC_LOT_BATTEMENT_MIN = 30, DC_LOT_ABANDON_MIN = 24 * 60
+const DC_RESA_MIN = 5
 async function dcFiletLot(job: Record<string, unknown>): Promise<boolean> {
   const op = String(job.op_name || ''), pj = (job.params || {}) as Record<string, unknown>
-  if (!op.startsWith('dj:') || String(pj.tool) !== 'decup') return false
+  if (String(pj.tool) !== 'decup') return false
+  // relecture 30/10 : réservation (dfs:/vns:/dwg:) — un suivi est peut-être en train de débiter / lancer le lot. Relue en base :
+  // étape changée ou réservation de moins de DC_RESA_MIN → on repassera ; seule une réservation orpheline va au filet.
+  if (/^(dfs|vns|dwg):/.test(op)) {
+    const { data: cur, error } = await svc.from('mcp_jobs').select('status, op_name, updated_at').eq('id', String(job.id)).maybeSingle()
+    if (error || !cur || cur.status !== 'running' || cur.op_name !== op) return true
+    return Date.now() - new Date(String(cur.updated_at || 0)).getTime() < DC_RESA_MIN * 60_000
+  }
+  if (!op.startsWith('dj:')) return false
   const rid = op.slice(3)
   const { data: rj, error } = await svc.from('render_jobs').select('status, created_at, updated_at').eq('id', rid).maybeSingle()
   if (error) return true   // base muette : on repassera, jamais un remboursement sur une erreur passagère

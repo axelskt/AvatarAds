@@ -2,7 +2,7 @@
 # A/B des failles 6, 7 et 8 (audit Décupleur 30/10) : les bancs sur le code d'AVANT (commit de base, défaut 3c00be72 : fonctions,
 # moteur, app ; base SANS la migration 20261030180800) puis sur le code du dépôt (APRÈS). Aucun réseau (sauf PGlite depuis le
 # cache npm de Deno), aucune vraie vidéo, aucun appel à un fournisseur.
-# Attendu : AVANT 6/26, 3/7, 5/14, 4/5 ; APRÈS 26/26, 7/7, 14/14, 5/5.
+# Attendu : AVANT 8/36, 3/7, 5/14, 4/5 ; APRÈS 36/36, 7/7, 14/14, 5/5 (faille 6 avec les courses de la relecture 30/10).
 #   bash tools/tests-decupleur/ab-faille678.sh [commit_avant]
 set -u
 cd "$(dirname "$0")"

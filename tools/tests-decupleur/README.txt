@@ -62,10 +62,11 @@ Failles 6, 7 et 8 (30/10). Aucun réseau (sauf PGlite pris dans le cache npm de 
        deno run --node-modules-dir=none --allow-env --allow-read --allow-net test-faille8-trace-sql.ts
 A/B (code du commit 3c00be72, base sans la migration, puis code du dépôt) :
    bash tools/tests-decupleur/ab-faille678.sh
-   → AVANT 6/26, 3/7, 5/14, 4/5 (lot en cours remboursé à 60 min puis livré quand même ; lot en file > 6 h jamais arrêté ;
+   → AVANT 8/36, 3/7, 5/14, 4/5 (lot en cours remboursé à 60 min puis livré quand même ; lot en file > 6 h jamais arrêté ;
      nsfw_checker false partout ; refus anglais brut dans l'app ; « Command failed: ffprobe … /var/…/aa-job-…/base.mp4 » et ligne
-     « ERROR: » de yt-dlp dans error / trace ; « N cœur(s) · quota CPU » dans la trace ; trace lisible par le client)
-   → APRÈS 26/26, 7/7, 14/14, 5/5 (lien TikTok normal récupéré, lot de 5 variantes rendu, parcours MCP normal livré).
+     « ERROR: » de yt-dlp dans error / trace ; « N cœur(s) · quota CPU » dans la trace ; trace lisible par le client ; relecture 30/10 : filet qui clôt un job qu'un suivi
+     concurrent vient de passer à « dj: », réservation récente tranchée, lot inséré laissé en file sur un job déjà clos)
+   → APRÈS 36/36, 7/7, 14/14, 5/5 (lien TikTok normal récupéré, lot de 5 variantes rendu, parcours MCP normal livré).
 
 Déploiement failles 6-8 (ordre) :
    1. Migration : supabase db push (20261030180800_render_jobs_trace_privee.sql). Indépendante du reste.
