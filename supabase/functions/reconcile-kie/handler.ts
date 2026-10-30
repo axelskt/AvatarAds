@@ -24,7 +24,7 @@
 //   ce qui n'a pas été livré (règle refund_credits sans la garde 2 h, bill_reason 'too_old') au lieu de clore sans rien rendre.
 // Déclenché par pg_cron (POST + x-cron-key = CRON_SECRET), comme reconcile-fal-orphans. Best-effort, jamais bloquant.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { kieKey, kieRecord, kieDownload, kieKindOf, kieOwnedBy, kieBill, kieLibMeta, KIE_MC_ALIASES, kieMcSortieOk } from '../_shared/kie.ts'
+import { kieKey, kieRecord, kieDownload, kieKindOf, kieOwnership, kieBill, kieLibMeta, KIE_MC_ALIASES, kieMcSortieOk } from '../_shared/kie.ts'
 import { dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : durée de sortie contrôlée, comme kie-proxy
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
@@ -145,7 +145,22 @@ export async function handler(req: Request): Promise<Response> {
       }
       if (!rec.found) { if (ageH > 24) { await setState(j.task_id, 'saving', 'expired', { last_error: 'introuvable chez kie' }); expired++; await bill(j, 'refund') } else { await setState(j.task_id, 'saving', 'pending'); retry++ } continue }
       // Propriété : l'entrée signée de la tâche doit venir du dossier de ce user (même règle que kie-proxy).
-      if (rec.state === 'ok' && !kieOwnedBy(rec.param, j.user_id, STORE_SIGN)) { await setState(j.task_id, 'saving', 'failed', { last_error: 'propriété non prouvée' }); failed++; await bill(j, 'refund'); continue }
+      if (rec.state === 'ok') {
+        const own = kieOwnership(rec.param, j.user_id, STORE_SIGN)
+        // Audit 30/10 (faille 5) : réussie, soumise par nous et rattachée à CE compte (sa ligne kie_jobs), mais avec une entrée
+        // du dossier d'un AUTRE compte = entrée maquillée → jamais rangée ; kie a facturé la plateforme → op RÉGLÉE, pas
+        // remboursée. Règlement impossible (hoquet) → remise en file sans rien clore (le balayage C rembourserait une ligne
+        // 'failed' encore 'drawn'). Aucune URL d'entrée lisible ('none') → non livrée et remboursée, comme avant.
+        if (own === 'foreign' && rec.urls.length) {
+          const sb = j.op_id ? await kieBill(svc, j.user_id, j.task_id, 'settle') : { ok: true, bill: 'none' }
+          if (sb.bill === null) { await setState(j.task_id, 'saving', 'pending', { last_error: 'propriété : règlement à reprendre' }); retry++; continue }
+          if (sb.ok && sb.bill === 'settled') settled++
+          console.warn('[reconcile-kie] propriété : entrée d’un autre compte, op réglée, non rangée', j.task_id, sb.bill)
+          await setState(j.task_id, 'saving', 'failed', { last_error: 'propriété non prouvée : entrée d’un autre compte (réglée, non livrée)' }); failed++
+          continue
+        }
+        if (own !== 'own') { await setState(j.task_id, 'saving', 'failed', { last_error: 'propriété non prouvée' }); failed++; await bill(j, 'refund'); continue }
+      }
       if (rec.state === 'fail' || (rec.state === 'ok' && !rec.urls.length)) { await setState(j.task_id, 'saving', 'failed', { last_error: (rec.err || 'échec kie').slice(0, 200) }); failed++; await bill(j, 'refund'); continue }
       if (rec.state !== 'ok') { if (ageH > 6) { await setState(j.task_id, 'saving', 'expired', { last_error: 'toujours en cours après 6 h' }); expired++; await bill(j, 'refund') } else { await setState(j.task_id, 'saving', 'pending'); running++ } continue }
 

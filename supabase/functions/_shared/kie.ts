@@ -220,6 +220,13 @@ export function kieKindOf(ct: string, buf: ArrayBuffer): { ext: string; mime: st
 // « non livrable » (404 puis remboursement par le filet) alors que kie avait facturé la plateforme. Seuls les champs
 // d'ENTRÉE comptent (param JSON parcouru, clés *prompt* ignorées) ; param illisible → ancien comportement (texte entier).
 export function kieOwnedBy(param: string, uid: string, storeSign: string): boolean {
+  return kieOwnership(param, uid, storeSign) === 'own'
+}
+// Audit Décupleur 30/10 (faille 5) : verdict détaillé. 'own' = au moins une URL d'entrée et toutes de ce user (livrable) ;
+// 'foreign' = au moins une URL d'entrée d'un AUTRE compte (entrée maquillée : jamais livrée, et pas remboursée non plus si la
+// tâche a réussi — kie a facturé la plateforme, voir kie-proxy et reconcile-kie) ; 'none' = aucune URL d'entrée lisible (param
+// absent ou format kie changé : non livrée, remboursée comme avant — un client honnête n'y est pour rien).
+export function kieOwnership(param: string, uid: string, storeSign: string): 'own' | 'foreign' | 'none' {
   const esc = storeSign.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const re = new RegExp(esc + '([0-9a-fA-F-]{36})/', 'g')
   let hay = String(param || '')
@@ -235,7 +242,8 @@ export function kieOwnedBy(param: string, uid: string, storeSign: string): boole
     hay = parts.join('\n')
   } catch { /* param non JSON : texte entier, comme avant */ }
   const owners = [...hay.matchAll(re)].map((m) => m[1].toLowerCase())
-  return owners.length > 0 && owners.every((o) => o === String(uid).toLowerCase())
+  if (!owners.length) return 'none'
+  return owners.every((o) => o === String(uid).toLowerCase()) ? 'own' : 'foreign'
 }
 
 
