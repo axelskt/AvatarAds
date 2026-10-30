@@ -36,7 +36,20 @@ A/B (code du commit c4a25051, puis 1er correctif 484683d2 contesté en relecture
    sourd à SIGTERM (SIGKILL de secours) ; S11 rejoue les contournements avec --use-extractors élargi à « default ».
 
 Déploiement du correctif faille 2 :
-   1. Aucune migration.
+   0. DEPUIS UNE COPIE PROPRE, jamais depuis wt-dcfix tel quel (relecture 30/10). « supabase functions deploy » et « railway up »
+      envoient les fichiers SUR DISQUE, pas le commit : wt-dcfix porte aussi, non committé, le lot des failles 3 et 4
+      (render-job/index.ts, render-worker/{worker,securite,decupleur}.mjs, migration 20261030140000). Ce render-job-là crée TOUS
+      les jobs Décupleur (dc-fetch, dc-cut, decupleur) par render_job_dc_creer, qui n'existe que dans cette migration non
+      appliquée → 503 « Création impossible » pour tout le monde ; railway up enverrait en plus DC_FETCH_MS à 90 s.
+      Deux façons correctes :
+        A. Faille 2 seule : copie propre du commit de la faille 2 (HEAD de dc-fix-securite au moment du déploiement, tant que le
+           lot 3-4 n'y est pas committé ; 3c00be72 ou plus récent) :
+              git worktree add ../wt-deploy-f2 <commit>   puis TOUT déployer depuis ../wt-deploy-f2
+           Contrôle avant chaque commande : « git status --porcelain -- render-worker supabase » vide, et
+           « grep -c render_job_dc_creer supabase/functions/render-job/index.ts » = 0.
+        B. Avec le lot 3-4 : seulement après l'avoir committé, et en appliquant SA migration (20261030140000) EN PREMIER, avant
+           render-job ; puis suivre l'ordre de déploiement de ce lot.
+   1. Aucune migration (cas A).
    2. render-worker sur Railway (decupleur.mjs + Dockerfile : tini, ENTRYPOINT). Vérifier dans Railway qu'aucune « Custom Start
       Command » ne remplace l'ENTRYPOINT ; au premier démarrage, « ps -o pid,comm 1 » dans le conteneur doit montrer tini.
    3. Fonctions : supabase functions deploy render-job ; supabase functions deploy mcp (message « live » ; _shared/decupleur.ts).
