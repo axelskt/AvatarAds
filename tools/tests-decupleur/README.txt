@@ -112,8 +112,30 @@ A/B (code du commit 3c00be72, base sans la migration, puis code du dépôt) :
    → APRÈS 36/36, 7/7, 14/14, 5/5 (lien TikTok normal récupéré, lot de 5 variantes rendu, parcours MCP normal livré).
 
 Déploiement failles 6-8 (ordre) :
-   1. Migration : supabase db push (20261030180800_render_jobs_trace_privee.sql). Indépendante du reste.
+   1. Migration 20261030180800_render_jobs_trace_privee.sql, appliquée SEULE (jamais « supabase db push » : voir le plan unique
+      ci-dessous). Indépendante du reste.
    2. render-worker sur Railway (decupleur.mjs + worker.mjs). Moteur LOCAL du Mac (DC_LOCAL=1) : il rend des lots decupleur →
       git pull dans ~/.avatarads/moteur puis relance (sinon ses lots gardent l'ancienne trace / les anciennes erreurs).
    3. Fonctions : supabase functions deploy mcp ; supabase functions deploy kie-proxy.
    4. Site (app/index.html : phrase du refus du filtre) : déploiement GitHub Pages habituel.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Faille 5 (adresse d'image truquée dans kie-proxy ; tâche truquée réglée au lieu d'être remboursée). Banc : test-faille5.ts
+(code réel de kie-proxy et reconcile-kie, base / stockage / kie factices, aucun réseau).
+A/B : bash tools/tests-decupleur/ab-faille5.sh   (AVANT = 3c00be72) → AVANT 19/38, APRÈS 38/38 (lien dc-cut signé avec
+&download accepté par wan-3). Déploiement : aucune migration ; kie-proxy et reconcile-kie (ordre indifférent).
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+PLAN DE DÉPLOIEMENT UNIQUE des failles 2 à 8 (contrôle final 30/10, commit de fusion 4f370d8b). Remplace les ordres partiels
+ci-dessus, qui datent d'avant la fusion.
+   Piège : les migrations en ligne sont enregistrées sous d'AUTRES numéros que les fichiers du dépôt (apply_migration) ;
+   « supabase db push » voudrait rejouer ou refuserait tout l'historique. Chaque migration est appliquée SEULE (apply_migration
+   avec son nom, ou supabase db query --linked -f <fichier>).
+   0. Copie propre : main avancée jusqu'au commit fusionné ; « git status --porcelain » vide dans le dossier de déploiement.
+   1. Migration 20261030140000_decupleur_file_atomique.sql (AVANT render-job), puis 20261030180800_render_jobs_trace_privee.sql.
+   2. git push de main (aucun rendu « rendering » en cours : le push redéploie Railway et tue le rendu en vol) → render-worker
+      Railway (Dockerfile tini + decupleur / worker / securite) et site GitHub Pages (app/index.html) partent ensemble.
+   3. Moteur local du Mac : launchctl kickstart -k gui/$(id -u)/fr.avatarads.decupleur-local (il refait fetch + reset sur
+      origin/main au démarrage) ; journal ~/Library/Logs/avatarads-decupleur.log → « code à jour : <commit> ».
+   4. Fonctions : render-job, mcp, kie-proxy, reconcile-kie (fal-proxy, google-ai-proxy, provider-watch, reconcile-fal-orphans
+      importent _shared/kie.ts, mais kieOwnedBy est inchangé : rien à redéployer).
