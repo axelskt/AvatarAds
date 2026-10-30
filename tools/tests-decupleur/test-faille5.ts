@@ -242,6 +242,35 @@ for (const alias of ALIASES) {   // chaque alias : soumission → résultat livr
   const r = await appel('POST', '/kie/nano-banana-pro', CORPS['nano-banana-pro'](img), op(20))
   verif('honnête · nom de fichier encodé (%20, %C3%A9) accepté', r.status === 200, `HTTP ${r.status}`)
 }
+for (const dl of ['montage-final.mp4', '']) { // Décupleur réel : video_url de wan-3 = lien du statut dc-cut (render-job signe avec { download })
+  remettre()
+  const vidDl = `${VID}&download=${dl}`
+  const o = op(50)
+  const r = await appel('POST', '/kie/wan-3', { ...CORPS['wan-3'](IMG), video_url: vidDl }, o)
+  const j = await r.json().catch(() => ({})) as Record<string, any>
+  let ok = r.status === 200 && !!j.request_id, d = `soumission HTTP ${r.status} ${j.error || ''}`
+  if (ok) {
+    const t = taches.get(String(j.request_id).slice(3))
+    const envoye = JSON.stringify(t ?? {})
+    const rr = await appel('GET', `/kie/requests/${j.request_id}`, undefined, o)
+    const jr = await rr.json().catch(() => ({})) as Record<string, any>
+    const row = db.rows('kie_jobs').find((x) => x.task_id === j.request_id)
+    ok = rr.status === 200 && !!jr.url && row?.bill_state === 'settled'
+    d = `résultat HTTP ${rr.status} ${jr.error || ''}, bill_state ${row?.bill_state}${envoye.includes('download=') ? ', download relayé à kie' : ''}`
+  }
+  verif(`honnête · wan-3 vidéo de référence = lien du statut render-job (&download=${dl || '<vide>'}) → livré et réglé`, ok, d)
+}
+{ // &download suivi d'autre chose (second paramètre, #, adresse d'un autre compte) : toujours refusé
+  for (const [nom, u] of [
+    ['download puis &', `${IMG}&download=a.jpg&v=${ETRANGER}`],
+    ['download puis #', `${IMG}&download=a.jpg#${ETRANGER}`],
+    ['download = adresse', `${IMG}&download=${ETRANGER}`],
+  ] as const) {
+    remettre()
+    const r = await appel('POST', '/kie/nano-banana-pro', CORPS['nano-banana-pro'](u), op(20))
+    verif(`truquée · ${nom} : refusée, rien chez kie`, r.status === 400 && taches.size === 0, `HTTP ${r.status}, tâches ${taches.size}`)
+  }
+}
 { // Décupleur : changement de personnage normal, onglet fermé → le filet range et règle
   remettre()
   const o = op(50), avant = credits()

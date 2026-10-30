@@ -94,8 +94,12 @@ const pick = <T extends string>(v: unknown, allowed: readonly T[], dflt: T): T =
 // derrière l'adresse passait le contrôle, qui ne lisait que la partie avant `?` ; kie générait — payé par la plateforme — puis
 // le contrôle de propriété voyait deux comptes et le filet remboursait tout). L'URL envoyée à kie est RECONSTRUITE ici à partir
 // du chemin et du jeton validés, jamais relayée telle quelle.
+// Seule exception : un UNIQUE `&download=<nom>` final, celui que storage-js ajoute quand le lien est signé avec { download }
+// (render-job signe la découpe dc-cut avec download: 'montage-final.mp4' et l'app la passe telle quelle en video_url de wan-3).
+// Il ne sert qu'à l'en-tête de téléchargement : accepté (caractères sûrs ou %XX, ni `#`, ni `&`, ni `?`, ni `/`) puis RETIRÉ
+// de l'adresse reconstruite — kie ne le voit jamais.
 const IN_SEG = /^[A-Za-z0-9._~()!*'+,;=$%-]+$/
-const IN_TOKEN = /^token=([A-Za-z0-9._-]{1,4096})$/
+const IN_TOKEN = /^token=([A-Za-z0-9._-]{1,4096})(?:&download=(?:[A-Za-z0-9._~-]|%[0-9A-Fa-f]{2}){0,200})?$/
 export function okInput(u: unknown, uid: string | null): string | null {
   const s = String(u ?? '')
   if (s.length > 8192 || !s.startsWith(STORE_SIGN)) return null
