@@ -180,7 +180,7 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('render_claim_dc:' || v_famille[1], 0));
   select count(*) into v_n from public.render_jobs
    where status = 'rendering' and plan->>'__compose' = any (v_famille)
-     and updated_at >= now() - interval '30 minutes';
+     and updated_at >= now() - case v_famille[1] when 'retouche' then interval '5 minutes' when 'mc-ref' then interval '10 minutes' else interval '30 minutes' end;
   if v_n >= greatest(1, least(v_max, 50)) then
     return false;
   end if;

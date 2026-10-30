@@ -389,6 +389,9 @@ export function familleGratuite(compose) {
   return null
 }
 export const DC_VIVANT_MS = 30 * 60_000   // même fenêtre que render_claim_dc (reprise des orphelins : 30 min sans battement)
+// Contrôle du 30/10 : une place de famille ne reste pas bloquée 30 min par un moteur mort. Battement toutes les 2 min, retouche
+// ≤ 100 s, mc-ref ≤ 5 min : au-delà de ces fenêtres (les mêmes dans render_claim_dc), le job ne compte plus dans le plafond.
+export const VIVANT_FAMILLE_MS = { dc: DC_VIVANT_MS, prep: 10 * 60_000, retouche: 5 * 60_000 }
 // `dc` : { familles: { dc: max, prep: max, retouche: max }, pauseJusqua: { <famille>: horodatage ms } } (2e relecture ; `dc._penal`
 // garde 30 s la liste des comptes dont une préparation ou une retouche a échoué dans l'heure) ;
 // forme d'avant acceptée : { courts: [...], max, pauseJusqua: nombre } = une seule famille.
@@ -427,13 +430,14 @@ export async function prochainJob(sb, dernierCompte, prioritaires, local = null,
     const aLire = fams.filter((f) => !(f.pause > Date.now()))   // pause locale après un échec de prise : aucune lecture
     let l = []
     if (aLire.length) {
-      const { data: enCours, error } = await sb.from('render_jobs').select('user_id, compose:plan->>__compose').eq('status', 'rendering')
+      const { data: enCours, error } = await sb.from('render_jobs').select('user_id, updated_at, compose:plan->>__compose').eq('status', 'rendering')
         .in('plan->>__compose', aLire.flatMap((f) => f.composes)).gte('updated_at', new Date(Date.now() - DC_VIVANT_MS).toISOString()).limit(200)
       l = !error && Array.isArray(enCours) ? enCours : null
     }
     for (const f of fams) {
       if (f.pause > Date.now() || !l) { f.plein = true; f.occupes = []; continue }
-      const siens = l.filter((r) => f.composes.includes(String(r.compose)))
+      const vivantDepuis = Date.now() - (VIVANT_FAMILLE_MS[f.nom] || DC_VIVANT_MS)
+      const siens = l.filter((r) => f.composes.includes(String(r.compose)) && !(Date.parse(r.updated_at) < vivantDepuis))
       f.plein = siens.length >= f.max
       f.occupes = vrais(siens.map((r) => r.user_id))
     }
