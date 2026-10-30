@@ -20,6 +20,27 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
+
+// ── Messages vus par le client (30/10, audit Décupleur, faille 8) ──────────────────────────────────────────────────────
+// render_jobs.error et render_jobs.trace d'un job Décupleur sont lisibles par son propriétaire (render-job renvoie error à
+// l'app, la policy de lecture couvre la ligne). Le moteur y écrivait la dernière ligne brute de yt-dlp, l'erreur « Command
+// failed » de ffprobe avec ses chemins temporaires, et la taille du moteur (cœurs, quota CPU). Désormais :
+//   · journal() : détail technique écrit sur la sortie d'erreur du PROCESSUS (journal Railway), jamais capté par la trace ;
+//   · dcErreurClient(compose, msg) : seules les phrases écrites pour le client passent, sinon un message neutre ;
+//   · dcTraceClient(evts) : trace d'un job Décupleur sans avertissements / erreurs (déjà au journal) ni ligne technique.
+export const journal = (...a) => { try { process.stderr.write('[décupleur] ' + a.map(String).join(' ') + '\n') } catch { /* jamais bloquant */ } }
+const PHRASES_CLIENT = /^(Lien |Récupération |Vidéo |Impossible de récupérer|Passage |Trop long pour |Fichier d'entrée refusé|nombre de variantes invalide)/
+const TECHNIQUE = /Command failed|\/tmp\/|\/var\/|\/private\/|\/app\/|aa-job-|dc-lien-|_MEI|ENOENT|EPIPE|EACCES|stderr|yt-dlp|ffprobe|ffmpeg|download |upload |c(?:œ|oe)urs?\b|quota|cpu|\bfils?\b|fil\(s\)|\.(?:mp4|py|mjs|js)\b/i
+const NEUTRE = { 'dc-fetch': 'Impossible de récupérer cette vidéo — importe le fichier à la place',
+  'dc-cut': 'Découpe du passage impossible — réessaie', decupleur: 'La fabrication des variantes a échoué — réessaie' }
+export const DC_COMPOSES = ['dc-fetch', 'dc-cut', 'decupleur']
+export function dcErreurClient(compose, msg) {
+  const m = String(msg || '').trim()
+  return PHRASES_CLIENT.test(m) && !TECHNIQUE.test(m) && m.length <= 300 ? m : (NEUTRE[compose] || NEUTRE.decupleur)
+}
+export function dcTraceClient(evts) {
+  return (Array.isArray(evts) ? evts : []).filter((e) => e && e.niveau === 'log' && !TECHNIQUE.test(String(e.msg || '')))
+}
 const TEXTES_DIR = join(HERE, 'assets', 'dc-textes')
 export const DC_VARIANTES = [5, 10, 20, 50]
 export const DC_PASSAGE_MAX = 60          // secondes gardées, sans changement de personnage
@@ -96,13 +117,23 @@ function ffmpeg(args, ms = FF_MS) {
   })
 }
 
+// 30/10 (audit Décupleur, faille 8) : une vidéo que ffprobe ne lit pas donne « Vidéo illisible » — jamais l'erreur brute
+// (« Command failed: ffprobe … /tmp/aa-job-…/base.mp4 », écrite avant dans render_jobs.error, que le client lit). Le détail
+// reste dans le journal du moteur (process.stderr : hors de la trace du job).
+export const DC_ILLISIBLE = 'Vidéo illisible — réexporte-la en MP4 et réessaie'
 export function dcProbe(file) {
-  const j = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries',
-    'stream=codec_type,width,height,r_frame_rate,sample_rate:stream_tags=rotate:stream_side_data=rotation:format=duration',
-    '-of', 'json', file], { timeout: 30000 }).toString())
+  let j
+  try {
+    j = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries',
+      'stream=codec_type,width,height,r_frame_rate,sample_rate:stream_tags=rotate:stream_side_data=rotation:format=duration',
+      '-of', 'json', file], { timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'] }).toString())
+  } catch (e) {
+    journal('dcProbe :', String((e && e.stderr) || (e && e.message) || e).trim().split('\n').pop().slice(0, 300))
+    throw new Error(DC_ILLISIBLE)
+  }
   const v = (j.streams || []).find((s) => s.codec_type === 'video')
   const a = (j.streams || []).find((s) => s.codec_type === 'audio')
-  if (!v) throw new Error('aucune piste vidéo')
+  if (!v) throw new Error(DC_ILLISIBLE)
   let w = +v.width, h = +v.height
   const rot = Math.abs(Number((v.tags && v.tags.rotate) || ((v.side_data_list || []).find((d) => d.rotation != null) || {}).rotation || 0))
   if (rot === 90 || rot === 270) [w, h] = [h, w]   // ffmpeg redresse la vidéo au décodage : on raisonne sur l'image redressée
@@ -203,7 +234,7 @@ export async function dcFetch(url, outPath) {
     if (r.error) throw new Error(r.error.code === 'ETIMEDOUT' ? 'Récupération trop longue — réessaie ou importe le fichier' : 'Récupération des liens indisponible')
     if (r.status !== 0) {
       const m = String(r.sortie || '').split('\n').filter((l) => /^ERROR/.test(l)).pop() || String(r.sortie || '').split('\n').filter(Boolean).pop() || ''
-      console.warn('dc-fetch yt-dlp :', m.slice(0, 300))
+      journal('dc-fetch yt-dlp :', m.slice(0, 300))   // faille 8 : ligne brute au journal du moteur, jamais dans la trace
       throw new Error(messageLien(m))
     }
     const f = readdirSync(tmp).find((n) => /^source\./.test(n) && !/\.(part|ytdl)$/.test(n))
@@ -396,7 +427,8 @@ export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {
   const liste = JSON.parse(readFileSync(join(TEXTES_DIR, 'textes.json'), 'utf8'))
   const ref = empreinte(vSrc, vDebut, lenV)
   await onProgress(5)
-  console.log(`▶ décupleur ×${n} (${lenV.toFixed(1)} s, ${W}×${H}) sur ${availableParallelism()} cœur(s) · quota CPU ${quotaCpu()}`)
+  console.log(`▶ décupleur ×${n} (${lenV.toFixed(1)} s, ${W}×${H})`)
+  journal(`décupleur ×${n} sur ${availableParallelism()} cœur(s) · quota CPU ${quotaCpu()}`)   // faille 8 : taille du moteur hors trace
 
   const params = tirerParametres(n, alt, textPos, Number(seed) >>> 0, liste.length, lenV)
   const cpu0 = calculCpu(), t0 = Date.now()
@@ -418,7 +450,7 @@ export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {
   const rendrePlace = () => { const r = enAttente.shift(); if (r) r(); else libres++ }
   const avecPlace = async (f) => { await prendre(); try { return await f() } finally { rendrePlace() } }
   const premiers = params.map((v) => { const p = avecPlace(() => rendre(v)); p.catch(() => {}); return p })   // attendue plus bas, dans l'ordre
-  console.log(`  rendu par lots : ${LOT} à la fois, ${LOT > 1 ? FILS : 'tous les'} fil(s) chacun`)
+  journal(`rendu par lots : ${LOT} à la fois, ${LOT > 1 ? FILS : 'tous les'} fil(s) chacun`)
   const faites = []   // { v, nom, emp }
   for (let i = 0; i < params.length; i++) {
     let v = params[i], essais = 1
@@ -468,6 +500,7 @@ export async function dcVariantes({ src, master = null, outDir, a, b, n, alt = {
   writeFileSync(join(outDir, 'dc.json'), JSON.stringify(manifeste))
   const cpu1 = calculCpu(), duree = (Date.now() - t0) / 1000
   const charge = cpu0 != null && cpu1 != null ? `, calcul ${(cpu1 - cpu0).toFixed(0)} s sur ${duree.toFixed(0)} s (~${((cpu1 - cpu0) / duree).toFixed(1)} cœurs en moyenne)` : ''
-  console.log(`✓ décupleur ×${n} (${len.toFixed(1)} s) — contrôle ${manifeste.controle}${faibles ? ` (${faibles} proches)` : ''}, ${(total / 1048576).toFixed(0)} Mo${zip ? ', zip' : ''}${charge}`)
+  console.log(`✓ décupleur ×${n} (${len.toFixed(1)} s) — contrôle ${manifeste.controle}${faibles ? ` (${faibles} proches)` : ''}, ${(total / 1048576).toFixed(0)} Mo${zip ? ', zip' : ''}`)
+  if (charge) journal(`décupleur ×${n}${charge}`)
   return manifeste
 }

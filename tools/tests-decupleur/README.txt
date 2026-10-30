@@ -45,3 +45,31 @@ Déploiement du correctif faille 2 :
    filtre, extracteurs) ; les fonctions ensuite (refus plus tôt, message clair). Chacun refuse seul les variantes de « /live ». Le moteur LOCAL du Mac (tools/decupleur-local.sh,
    DC_LOCAL=1) ne prend QUE les jobs « decupleur » (prochainJob, securite.mjs), jamais dc-fetch : rien d'obligatoire
    (un git pull + relance garde simplement sa copie à jour).
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Failles 6, 7 et 8 (30/10). Aucun réseau (sauf PGlite pris dans le cache npm de Deno), aucune vraie vidéo, aucun fournisseur.
+   · test-faille6-filet.ts : les DEUX filets du MCP (GET /mcp du cron → reconcileAllStale ; appel d'outil → reconcileStaleJobs)
+     sur un job à l'étape dj: (lot de variantes lancé) ; moteur de rendu factice.
+       cd tools/tests-decupleur && deno run --allow-env --allow-read --import-map=import_map.json test-faille6-filet.ts
+   · test-faille7-nsfw.ts : corps envoyé à kie CAPTURÉ (kie-proxy wan-3 : client Pro, propriétaire, developer ; MCP decupler_video)
+     + refus du filtre (« DataInspectionFailed ») : remboursement (kie-proxy KIE_NO_FALLBACK, MCP étape dw:) et phrase de l'app.
+       deno run --allow-env --allow-read --allow-write --allow-run=ffmpeg --import-map=import_map_f7.json test-faille7-nsfw.ts
+       (fake-supabase-f7.ts : liens signés au format Supabase + jeton lu dans l'en-tête, pour kie-proxy)
+   · test-faille8-messages.mjs : ce que le moteur ÉCRIT dans render_jobs.error / trace d'un job Décupleur (dcFetch avec un faux
+     yt-dlp, dcProbe, dcVariantes ; capture de trace = PHASES + ouvrirTrace extraits de worker.mjs ; câblage relu dans worker.mjs).
+       node test-faille8-messages.mjs
+   · test-faille8-trace-sql.ts : migration 20261030180800 sur un vrai Postgres (PGlite) : trace illisible pour authenticated.
+       deno run --node-modules-dir=none --allow-env --allow-read --allow-net test-faille8-trace-sql.ts
+A/B (code du commit 3c00be72, base sans la migration, puis code du dépôt) :
+   bash tools/tests-decupleur/ab-faille678.sh
+   → AVANT 6/26, 3/7, 5/14, 4/5 (lot en cours remboursé à 60 min puis livré quand même ; lot en file > 6 h jamais arrêté ;
+     nsfw_checker false partout ; refus anglais brut dans l'app ; « Command failed: ffprobe … /var/…/aa-job-…/base.mp4 » et ligne
+     « ERROR: » de yt-dlp dans error / trace ; « N cœur(s) · quota CPU » dans la trace ; trace lisible par le client)
+   → APRÈS 26/26, 7/7, 14/14, 5/5 (lien TikTok normal récupéré, lot de 5 variantes rendu, parcours MCP normal livré).
+
+Déploiement failles 6-8 (ordre) :
+   1. Migration : supabase db push (20261030180800_render_jobs_trace_privee.sql). Indépendante du reste.
+   2. render-worker sur Railway (decupleur.mjs + worker.mjs). Moteur LOCAL du Mac (DC_LOCAL=1) : il rend des lots decupleur →
+      git pull dans ~/.avatarads/moteur puis relance (sinon ses lots gardent l'ancienne trace / les anciennes erreurs).
+   3. Fonctions : supabase functions deploy mcp ; supabase functions deploy kie-proxy.
+   4. Site (app/index.html : phrase du refus du filtre) : déploiement GitHub Pages habituel.
