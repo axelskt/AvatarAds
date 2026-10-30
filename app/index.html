@@ -14592,8 +14592,17 @@ async function _dcRun(){
     _dc.phase = 'idle'; _dcRender();
     // 27/10 : refus du moteur sur de vrais visages (message anglais du fournisseur) → phrase claire, crédits déjà rendus
     const m = (e && e.message) || '';
-    if(!(e && e._dcSilence)) toast(/real human faces/i.test(m) ? 'Changement de personnage refusé : la photo ou la vidéo montre de vraies personnes. Utilise une photo d\'avatar IA.' : (m || 'Le décuplage a échoué'));   // débit refusé : spendCreditsFor a déjà prévenu
+    if(!(e && e._dcSilence)) toast(_dcMsgErreur(m));   // débit refusé : spendCreditsFor a déjà prévenu
   }
+}
+// Message d'échec du Décupleur montré au client. 27/10 : vrais visages refusés par le moteur ; 30/10 (audit Décupleur, faille 7) :
+// filtre de contenu explicite du fournisseur désormais allumé → son refus (anglais, « nsfw », « inappropriate content »…) est
+// traduit ; les crédits du personnage sont déjà rendus (kie-proxy KIE_NO_FALLBACK + creditsFlowRefund ci-dessus).
+function _dcMsgErreur(m){
+  m = String(m || '');
+  if(/real human faces/i.test(m)) return 'Changement de personnage refusé : la photo ou la vidéo montre de vraies personnes. Utilise une photo d\'avatar IA.';
+  if(/nsfw|explicit|inappropriate|sensitive|inspection|moderat|safety|violat|prohibit|policy/i.test(m)) return 'Changement de personnage refusé par le filtre de contenu (contenu explicite ou interdit) — crédits rendus. Essaie une autre photo ou une autre vidéo.';
+  return m || 'Le décuplage a échoué';
 }
 function _dcCancel(){
   const etapeNom = _dc.phase === 'running' ? _dcStages()[_dc.stageIdx] : _dc.phase === 'live' ? 'Génération' : '';

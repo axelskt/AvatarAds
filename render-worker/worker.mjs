@@ -14,7 +14,7 @@
 //       Env requis (.env) : SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { retoucheVideo } from './retouche.mjs'
-import { dcFetch, dcCut, dcVariantes } from './decupleur.mjs'   // Décupleur (24/10) : lien → MP4, passage gardé, N variantes
+import { dcFetch, dcCut, dcVariantes, dcErreurClient, dcTraceClient, DC_COMPOSES } from './decupleur.mjs'   // Décupleur (24/10) : lien → MP4, passage gardé, N variantes ; 30/10 : messages client (faille 8)
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync, statSync, renameSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -3609,6 +3609,10 @@ async function pollLoop() {
       }
 
       const trace = ouvrirTrace()
+      // 30/10 (audit Décupleur, faille 8) : job Décupleur → trace et erreur écrites SANS détail technique (lignes yt-dlp,
+      // « Command failed », chemins temporaires, cœurs / quota CPU) : le client lit ces colonnes. Le détail reste au journal.
+      const estDc = DC_COMPOSES.includes(job.plan && job.plan.__compose)
+      const traceEcrite = () => estDc ? dcTraceClient(trace.fermer()) : trace.fermer()
       const tDebut = Date.now()
       console.log('▶ job', job.id)
       const jobDir = mkdtempSync(join(tmpdir(), 'aa-job-'))
@@ -3720,7 +3724,7 @@ async function pollLoop() {
             if (upErr) throw new Error('upload ' + f + ': ' + upErr.message)
           }
           console.log(`✅ job ${job.id} → ${prefixe}/ (${Math.round((Date.now() - tDebut) / 1000)}s)`)
-          await sb.from('render_jobs').update({ status: 'done', output_url: `${prefixe}/dc.json`, progress: 100, trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
+          await sb.from('render_jobs').update({ status: 'done', output_url: `${prefixe}/dc.json`, progress: 100, trace: traceEcrite(), updated_at: new Date().toISOString() }).eq('id', job.id)
           await reservationJob(sb, job, true)
         } else {
         const durF = (() => { try { return parseFloat(ffprobe(out, 'format=duration')) || 60 } catch (_) { return 60 } })()
@@ -3775,7 +3779,7 @@ async function pollLoop() {
         } catch (e) { console.warn('derived:', e.message) }
         // bucket privé : on stocke le PATH ; l'edge render-job signe l'URL à la demande
         console.log(`✅ job ${job.id} → ${outKey} (${Math.round((Date.now() - tDebut) / 1000)}s)`)
-        await sb.from('render_jobs').update({ status: 'done', output_url: outKey, trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
+        await sb.from('render_jobs').update({ status: 'done', output_url: outKey, trace: traceEcrite(), updated_at: new Date().toISOString() }).eq('id', job.id)
         await reservationJob(sb, job, true)
         }
       } catch (e) {
@@ -3783,7 +3787,8 @@ async function pollLoop() {
         // crédits RENDUS AVANT d'annoncer l'échec (relecture 09/10) : l'app rembourse dès qu'elle lit « failed » — dans l'ordre
         // inverse, son refund_credits tombait encore sur une op tirée (« in_progress ») et ne rendait rien
         await reservationJob(sb, job, false)
-        await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
+        const errEcrite = estDc ? dcErreurClient(job.plan.__compose, e && e.message || e) : String(e.message || e).slice(0, 300)
+        await sb.from('render_jobs').update({ status: 'failed', error: errEcrite, trace: traceEcrite(), updated_at: new Date().toISOString() }).eq('id', job.id)
       } finally {
         jobEnCours = null
         // « Cloner l'audio » : la vidéo copiée et la voix (voix-prep/<uid>/…) n'ont plus d'usage une fois le job terminé

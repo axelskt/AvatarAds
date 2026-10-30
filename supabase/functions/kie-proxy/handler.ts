@@ -199,7 +199,10 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
       prompt, reference_video_urls: [vid], reference_image_urls: imgs,
       resolution: pick(b.resolution, ['480P', '720P', '1080P'] as const, '720P'),
       aspect_ratio: pick(b.aspect_ratio, ['adaptive', '16:9', '4:3', '1:1', '3:4', '9:16'] as const, 'adaptive'),
-      duration: Math.min(15, Math.max(2, d)), audio: b.audio === true, nsfw_checker: false,
+      duration: Math.min(15, Math.max(2, d)), audio: b.audio === true,
+      // 30/10 (audit Décupleur, faille 7) : filtre de contenu explicite du fournisseur ALLUMÉ pour les clients ; coupé seulement
+      // pour le compte developer / service_role (`full`, tests). Refus = tâche en échec → rendue puis remboursée (KIE_NO_FALLBACK).
+      nsfw_checker: !full,
     }
     if (Number.isInteger(b.seed) && b.seed >= 0 && b.seed <= 2147483647) input.seed = b.seed
     return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'wan/3-0-video', input } }

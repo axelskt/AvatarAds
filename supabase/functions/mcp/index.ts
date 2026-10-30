@@ -1996,7 +1996,10 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     if (estOutilVideo(job.op_name)) {
       await advanceVideoTool(job)
       // audit 02/10 : clos par le filet → fichiers de la carte ET vidéo préparée (mcp-prep/, hors purge 7 jours) supprimés
-      if (Date.now() - new Date(String(job.created_at)).getTime() > VT_STALE_MIN * 60_000) { if ((await failAndRefund(userId, job, 'timeout')) >= 0) await vtNettoyer((job.params || {}) as Record<string, unknown>) }
+      // 30/10 (audit Décupleur, faille 6) : lot de variantes en file / en cours → on attend (dcFiletLot), jamais remboursé en route
+      // relecture 30/10 : clos SEULEMENT si l'étape lue est encore en place (p_only_op) — un /status concurrent qui vient de
+      // lancer le lot (vn:/vns:/dwg: → dj:) gagne, jamais « remboursé + lot en file »
+      if (Date.now() - new Date(String(job.created_at)).getTime() > VT_STALE_MIN * 60_000 && !(await dcFiletLot(job))) { if ((await failAndRefund(userId, job, 'timeout', String(job.op_name))) >= 0) await vtNettoyer((job.params || {}) as Record<string, unknown>) }
       continue
     }
     // ── OmniHuman chez kie (Axel 25/09) : livré / échec → réglé ; en cours → on patiente jusqu'à KIE_OMNI_STALE_MIN ──
@@ -2160,7 +2163,9 @@ async function reconcileAllStale(): Promise<void> {
         if (r !== 'livre') { try { await reglerExpressBloque(String(job.user_id), job, r) } catch (e) { console.warn('[mcp] reglerExpressBloque', job.id, (e as Error)?.message) } }
         continue   // jamais le remboursement « timeout » aveugle ci-dessous pour une vidéo Express déjà générée
       }
-      const rendu = await failAndRefund(String(job.user_id), job, 'timeout')
+      if (await dcFiletLot(job)) continue   // 30/10 (audit Décupleur, faille 6) : lot de variantes suivi d'après SON rendu
+      // relecture 30/10 : outil vidéo (Décupleur, Omni, Motion) clos SEULEMENT si l'étape lue est encore en place (p_only_op)
+      const rendu = await failAndRefund(String(job.user_id), job, 'timeout', estOutilVideo(job.op_name) ? String(job.op_name) : undefined)
       if (rendu >= 0 && estOutilVideo(job.op_name)) await vtNettoyer((job.params || {}) as Record<string, unknown>)   // audit 02/10 : mcp-prep/ n'est purgé par rien d'autre
     }
     // 4) CARTES PHOTO EXPIRÉES (audit 28/09 #23) : une carte jamais utilisée (> 2 h, /start la refuse) gardait sa part du
@@ -3451,7 +3456,7 @@ function erreurKling(rd: Record<string, unknown>, status: number): { msg: string
   const type = String((typeof d === 'object' && d?.type) || '')
   const msg = String((typeof d === 'object' && d?.msg) || (typeof d === 'string' ? d : '') || rd?.error || '')
   const s = type + ' ' + msg
-  const moderation = /policy|moderat|content check|flagged|could not be processed|sensitive|risk|safety|violat|nsfw|prohibit|inappropriate/i.test(s)   // + mots des refus kie (= l'app)
+  const moderation = /policy|moderat|content check|flagged|could not be processed|sensitive|risk|safety|violat|nsfw|prohibit|inappropriate|explicit|inspection/i.test(s)   // + mots des refus kie (= l'app) ; 30/10 : filtre explicite de Wan (« DataInspectionFailed »)
   if (/image_too_large/i.test(type || msg)) return { moderation, msg: 'Image du personnage trop grande pour le moteur — réessaie avec une photo plus petite.' }
   if (/duration|too long|too short|seconds/i.test(s)) return { moderation, msg: 'Durée de la vidéo de référence refusée (3 à 30 s).' }
   if (/hevc|h\.?265|codec/i.test(s)) return { moderation, msg: 'Format vidéo refusé — réexporte la vidéo en MP4.' }
@@ -3860,7 +3865,8 @@ async function runMotionControl(profile: Record<string, unknown>, args: Record<s
 // Étapes (op_name) : df:<rendu> lien récupéré par le moteur (dc-fetch) → vn:<rendu> vidéo préparée (mc-ref → mcp-prep/<uid>/,
 // hors du dossier réinscriptible) → durée MESURÉE → débit (variantes + personnage) → [dw:<tâche> changement de personnage
 // chez kie (Wan 3.0, prompt DC_WAN_PROMPT, sans son) → copie du résultat] → dj:<rendu> N variantes (decupleur) → done.
-// Réservations (compare-and-swap) : dfs, vns, dwg. Toujours en cours après VT_STALE_MIN → remboursé (filet commun).
+// Réservations (compare-and-swap) : dfs, vns, dwg. Toujours en cours après VT_STALE_MIN → remboursé (filet commun), SAUF
+// l'étape dj: (lot lancé) : suivie d'après l'état de son rendu jusqu'à 6 h (dcFiletLot, 30/10, faille 6).
 // 30/10 (audit Décupleur, faille 1) : entrée du lot ET vidéo du personnage sous mcp-prep/<uid>/ (préfixe que seul le serveur
 // écrit ; avant : <uid>/mcp-src/, le client pouvait supprimer l'entrée pendant le personnage → lot en échec → 100 % rendus,
 // personnage gardé). Vidéo du personnage déposée = DUE : credits_cost ramené à la part variantes (dcPersoDu), entrée revérifiée
@@ -3900,10 +3906,12 @@ async function runDecupler(profile: Record<string, unknown>, args: Record<string
   }
 }
 // Changement de personnage chez kie (= alias wan-3 de kie-proxy : Wan 3.0 en mode référence, 720P, sans son, prompt serveur).
+// 30/10 (audit Décupleur, faille 7) : filtre de contenu explicite du fournisseur ALLUMÉ (nsfw_checker: true) pour tout le MCP.
+// Son refus arrive comme un échec de la tâche : traduit (« refusé par la modération ») et remboursé en entier (étape dw:).
 async function soumettreWanKie(refUrl: string, charUrl: string, duree: number): Promise<{ ok: boolean; status: number; task: string; msg: string }> {
   if (!kieKey()) return { ok: false, status: 503, task: '', msg: 'indisponible' }
   const body = { model: 'wan/3-0-video', input: { prompt: DC_WAN_PROMPT, reference_video_urls: [refUrl], reference_image_urls: [charUrl],
-    resolution: '720P', aspect_ratio: 'adaptive', duration: Math.min(DC_PERSO_MAX, Math.max(2, duree)), audio: false, nsfw_checker: false } }
+    resolution: '720P', aspect_ratio: 'adaptive', duration: Math.min(DC_PERSO_MAX, Math.max(2, duree)), audio: false, nsfw_checker: true } }
   try {
     const r = await fetch(`${KIE}/api/v1/jobs/createTask`, { method: 'POST', headers: kieHeaders(), body: JSON.stringify(body), signal: AbortSignal.timeout(30000) })
     const j = await r.json().catch(() => ({})) as Record<string, any>
@@ -3925,7 +3933,12 @@ async function dcLancerLot(job: Record<string, unknown>, de: string, base: strin
     plan: { __compose: 'decupleur', a: 0, b: keep, n: Number(pj.n) || 10, alt: pj.alt || {}, textPos: pj.text_pos || 'Haut', seed: Math.floor(Math.random() * 2147483647), duration: keep } })
     .select('id').single()
   if (error || !rj) { await vtEchec(job, master ? `Lancement du décuplage impossible — crédits des variantes rendus ; ${DC_PERSO_GARDE}` : 'Lancement du décuplage impossible — crédits rendus, réessaie.', de); return }
-  await vtPasser(job, de, 'dj:' + rj.id, { ...patch, lot_at: Date.now() })
+  // relecture 30/10 : étape perdue entre l'insertion et le passage (job clos par un filet entre-temps) → le lot inséré est
+  // retiré de la file, sinon le moteur fabriquerait des variantes gratuites dans le dossier du client
+  if (await vtPasser(job, de, 'dj:' + rj.id, { ...patch, lot_at: Date.now() })) return
+  const { data: retire } = await svc.from('render_jobs').update({ status: 'failed', error: 'Lot annulé : décuplage déjà clos.', updated_at: new Date().toISOString() })
+    .eq('id', String(rj.id)).eq('status', 'queued').select('id')
+  console.warn('[mcp] décupleur : étape perdue au lancement du lot', job.id, 'rendu', rj.id, retire && retire.length ? 'retiré de la file' : 'déjà pris par un moteur')
 }
 // Vidéo du personnage d'un Décupleur MCP : mcp-prep/<uid>/<job>-perso.mp4 (30/10). L'ancienne place <uid>/mcp-src/<job>-perso.mp4
 // reste lue pour un job lancé avant le correctif.
@@ -4057,6 +4070,49 @@ async function advanceDecupleur(job: Record<string, unknown>): Promise<void> {
       if (pj.base_path) { try { await svc.storage.from('render-media').remove([String(pj.base_path)]) } catch (_) { /* best effort */ } }
     }
   }
+}
+// 30/10 (audit Décupleur, faille 6) : FILET d'un job à l'étape « dj: » (lot de variantes lancé). Avant : à VT_STALE_MIN
+// (60 min), les deux filets remboursaient tout sans regarder le lot, qui continuait (file lente, moteur redémarré en plein
+// lot) : le client gardait variantes, personnage ET crédits. Désormais l'état du RENDU décide :
+//   · terminé → livré, échoué → part encore due rendue (advanceDecupleur ; personnage déposé = part variantes seule, perso_du) ;
+//   · en file ou en cours → on ATTEND, jusqu'à DC_LOT_MAX_MIN après le lancement du lot ;
+//   · au-delà : lot encore en FILE, ou « en cours » sans battement du moteur depuis DC_LOT_BATTEMENT_MIN (le moteur bat toutes
+//     les 2 min ; mort, il le remet en file à 30 min) → ARRÊTÉ (statut échoué, écriture conditionnelle : un moteur qui le
+//     prend ou bat entre-temps gagne, on repassera) puis la part due est rendue. Un lot qui bat encore est attendu jusqu'à
+//     DC_LOT_ABANDON_MIN (le moteur borne lui-même chaque rendu : délais ffmpeg, 3 reprises au plus).
+// true = le filet ne rembourse pas lui-même (réglé ici, ou attente) ; false = pas un lot / rendu disparu → filet habituel.
+const DC_LOT_MAX_MIN = 6 * 60, DC_LOT_BATTEMENT_MIN = 30, DC_LOT_ABANDON_MIN = 24 * 60
+const DC_RESA_MIN = 5
+async function dcFiletLot(job: Record<string, unknown>): Promise<boolean> {
+  const op = String(job.op_name || ''), pj = (job.params || {}) as Record<string, unknown>
+  if (String(pj.tool) !== 'decup') return false
+  // relecture 30/10 : réservation (dfs:/vns:/dwg:) — un suivi est peut-être en train de débiter / lancer le lot. Relue en base :
+  // étape changée ou réservation de moins de DC_RESA_MIN → on repassera ; seule une réservation orpheline va au filet.
+  if (/^(dfs|vns|dwg):/.test(op)) {
+    const { data: cur, error } = await svc.from('mcp_jobs').select('status, op_name, updated_at').eq('id', String(job.id)).maybeSingle()
+    if (error || !cur || cur.status !== 'running' || cur.op_name !== op) return true
+    return Date.now() - new Date(String(cur.updated_at || 0)).getTime() < DC_RESA_MIN * 60_000
+  }
+  if (!op.startsWith('dj:')) return false
+  const rid = op.slice(3)
+  const { data: rj, error } = await svc.from('render_jobs').select('status, created_at, updated_at').eq('id', rid).maybeSingle()
+  if (error) return true   // base muette : on repassera, jamais un remboursement sur une erreur passagère
+  if (!rj) return false
+  if (rj.status === 'done' || rj.status === 'failed') { await advanceDecupleur(job); return true }
+  if (rj.status !== 'queued' && rj.status !== 'rendering') return false
+  const age = (d: unknown) => Date.now() - new Date(String(d || 0)).getTime()
+  if (age(rj.created_at) < DC_LOT_MAX_MIN * 60_000) return true
+  const sansBattement = new Date(Date.now() - DC_LOT_BATTEMENT_MIN * 60_000).toISOString()
+  const mort = rj.status === 'queued' || age(rj.updated_at) > DC_LOT_BATTEMENT_MIN * 60_000
+  if (!mort && age(rj.created_at) < DC_LOT_ABANDON_MIN * 60_000) return true
+  let q = svc.from('render_jobs').update({ status: 'failed', error: 'Rendu des variantes abandonné : moteur indisponible.', updated_at: new Date().toISOString() })
+    .eq('id', rid).eq('status', String(rj.status))
+  if (rj.status === 'rendering' && mort) q = q.lt('updated_at', sansBattement)
+  const { data: arrete } = await q.select('id')
+  if (!arrete || !arrete.length) return true   // pris ou relancé par un moteur entre-temps : on repassera
+  console.warn('[mcp] décupleur : lot abandonné par le filet', job.id, 'rendu', rid, rj.status)
+  await advanceDecupleur(job)   // lit « failed » → vtEchec : part encore due rendue, personnage payé toujours livré
+  return true
 }
 // Réponse /status d'un Décupleur : avancement par étape ; fini → variantes signées (2 h), ZIP, vidéo du personnage
 async function statutDecupleur(j: Record<string, unknown>): Promise<Record<string, unknown>> {
