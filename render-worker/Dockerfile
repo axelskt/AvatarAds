@@ -18,7 +18,7 @@
 FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg ca-certificates curl fonts-liberation unzip zip \
+    ffmpeg ca-certificates curl fonts-liberation unzip zip tini \
     chromium \
     libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdrm2 libgbm1 libgtk-3-0 \
     libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 xdg-utils \
@@ -80,4 +80,9 @@ USER node
 # processus enfant, écoute sur $PORT (8080 par défaut ; Railway le fournit).
 # RNNoise est dans vendor/rnnoise/ (copié par COPY . .) : rien à télécharger.
 EXPOSE 8080
+# 30/10 (audit Décupleur, faille 2) : tini (paquet Debian bookworm, /usr/bin/tini) en PID 1 — il récupère les processus
+# orphelins (zombies) que node, PID 1 jusque-là, ne ramassait pas. Les ffmpeg lancés par yt-dlp sont, eux, tués avec tout leur
+# groupe au délai (decupleur.mjs). SANS « -g » : le SIGTERM d'un déploiement va à node SEUL, comme avant (son gestionnaire
+# remet le job en file) — avec -g, le rendu HyperFrames en cours mourrait d'abord et le job passerait en échec.
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "worker.mjs"]

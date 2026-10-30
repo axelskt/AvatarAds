@@ -21,7 +21,7 @@ import { billableGate, userPlan, reserveStrict, reserveEnforce, requirePlan, PLA
   MONTAGE_DUREE_MAX, RENDU_DUREE_MAX, RETOUCHE_OCTETS_MAX, RETOUCHE_EN_COURS_MAX, MOTION_ASSETS, fichierDuFlux, opMotionRecente,
   opFondVideo, opRenduMontage, tailleObjet } from '../_shared/guard.ts'
 import { cheminSur, planClientRenderJob } from '../_shared/storage-path.ts'
-import { lienDecupleur, DC_VARIANTES, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_PLANS, DC_CR_VARIANTE, decupleurOuvert } from '../_shared/decupleur.ts'
+import { lienDecupleur, lienEstLive, DC_MSG_LIVE, DC_VARIANTES, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_PLANS, DC_CR_VARIANTE, decupleurOuvert } from '../_shared/decupleur.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -342,7 +342,7 @@ serve(async (req: Request) => {
       let assets: { id: string; path: string; kind: string }[] = []
       if (body.action === 'dc-fetch') {
         const u = lienDecupleur(body.url)
-        if (!u) return json({ error: 'Lien TikTok ou Instagram uniquement' }, 400)
+        if (!u) return json({ error: lienEstLive(body.url) ? DC_MSG_LIVE : 'Lien TikTok ou Instagram uniquement' }, 400)
         plan = { __compose: 'dc-fetch', lien: u, duration: 1 }   // « lien » et pas « url » : aucune clé média du nettoyeur du moteur (assainirPlan)
         input = `${user.id}/dc-lien-${Date.now()}.mp4`   // clé réservée : le moteur lit le LIEN, jamais ce fichier
       } else {

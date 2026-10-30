@@ -14,12 +14,22 @@ export const DC_PERSO_MAX = 15             // avec changement de personnage (ré
 export const DC_BUDGET_S = 900             // N × passage ≤ 15 min produites par lot
 // Liens acceptés (MÊME motif que render-worker/decupleur.mjs, revérifié par le moteur)
 export const DC_LIEN = /^https:\/\/(?:(?:www|m|vm|vt)\.)?(?:tiktok\.com|instagram\.com)\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]{1,400}$/
+// 30/10 (audit Décupleur, faille 2) : un lien de LIVE est refusé dès la vérification (TikTok /@compte/live,
+// m.tiktok.com/share/live/…, Instagram /<compte>/live/). Un direct n'a pas de fin : son enregistrement par le moteur
+// remplissait /tmp. MÊME règle que lienEstLive de render-worker/decupleur.mjs (revérifié par le moteur). Chemin décodé
+// jusqu'à 3 fois : « %6Cive » ne passe pas.
+export function lienEstLive(v: unknown): boolean {
+  let chemin = String(v ?? '').trim().replace(/^[a-z]+:\/\/[^/?#]*/i, '').split(/[?#]/)[0]
+  for (let i = 0; i < 3; i++) { try { const d = decodeURIComponent(chemin); if (d === chemin) break; chemin = d } catch { break } }
+  return /(?:^|\/)live(?:\/|$)/i.test(chemin)
+}
+export const DC_MSG_LIVE = 'Lien de live : le Décupleur ne prend que des vidéos publiées (3 min maximum)'
 export function lienDecupleur(v: unknown): string | null {
   let u = String(v ?? '').trim().slice(0, 450)
   if (!u) return null
   if (!/^https?:\/\//i.test(u)) u = 'https://' + u
   u = u.replace(/^http:\/\//i, 'https://')
-  return DC_LIEN.test(u) ? u : null
+  return DC_LIEN.test(u) && !lienEstLive(u) ? u : null
 }
 
 // Prompt du changement de personnage (Wan 3.0, mode référence : Video1 = passage gardé, Image1 = nouveau personnage).

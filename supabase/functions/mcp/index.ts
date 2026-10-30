@@ -10,7 +10,7 @@ import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SU
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 import { cheminSur, clePrepMcp, controlerTaillePlan, nettoyerSonUtilisateur } from '../_shared/storage-path.ts'
-import { DC_PLANS, decupleurOuvert, DC_VARIANTES, DC_CR_VARIANTE, DC_PERSO_CR_SEC, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_WAN_PROMPT, lienDecupleur } from '../_shared/decupleur.ts'   // Décupleur (24/10)   // audit 02/10 : chemins render-media et plans de rendu
+import { DC_PLANS, decupleurOuvert, DC_VARIANTES, DC_CR_VARIANTE, DC_PERSO_CR_SEC, DC_PASSAGE_MAX, DC_PERSO_MAX, DC_BUDGET_S, DC_WAN_PROMPT, lienDecupleur, lienEstLive, DC_MSG_LIVE } from '../_shared/decupleur.ts'   // Décupleur (24/10)   // audit 02/10 : chemins render-media et plans de rendu
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -3877,6 +3877,7 @@ async function runDecupler(profile: Record<string, unknown>, args: Record<string
   if (perso && !kieKey()) return toolErr('Changement de personnage momentanément indisponible — réessaie plus tard.')
   const lienBrut = String(args.link || '').trim()
   const lien = lienBrut ? lienDecupleur(lienBrut) : null
+  if (lienBrut && !lien && lienEstLive(lienBrut)) return toolErr(DC_MSG_LIVE + '. Importe la vidéo à la place (video_url ou dépôt sur la carte).')
   if (lienBrut && !lien) return toolErr("Lien TikTok ou Instagram uniquement. Pour une autre vidéo : appelle l'outil sans lien (la carte la fait déposer) ou passe son URL directe dans video_url.")
   const plafond = Math.min(perso ? DC_PERSO_MAX : DC_PASSAGE_MAX, Math.floor(DC_BUDGET_S / n))
   const maxDur = Math.min(plafond, Math.max(perso ? 2 : 1, Math.round(Number(args.duration_seconds) || plafond)))

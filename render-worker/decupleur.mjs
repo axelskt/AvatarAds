@@ -30,7 +30,49 @@ const ZIP_MAX = 250 * 1024 * 1024         // le ZIP est lu en mémoire par le mo
 const FF_MS = 10 * 60 * 1000
 
 const LIEN = /^https:\/\/(?:(?:www|m|vm|vt)\.)?(?:tiktok\.com|instagram\.com)\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]{1,400}$/
-export const lienDecupleurOk = (u) => typeof u === 'string' && LIEN.test(u)
+// 30/10 (audit Décupleur, faille 2) : un lien de LIVE (TikTok /@compte/live, m.tiktok.com/share/live/…, Instagram
+// /<compte>/live/) est refusé AVANT yt-dlp — un direct n'a pas de fin, son enregistrement remplissait /tmp. Même règle que
+// lienEstLive de supabase/functions/_shared/decupleur.ts. Chemin décodé (jusqu'à 3 fois) : « %6Cive » ne passe pas.
+export function lienEstLive(u) {
+  let chemin = String(u || '').replace(/^[a-z]+:\/\/[^/?#]*/i, '').split(/[?#]/)[0]
+  for (let i = 0; i < 3; i++) { try { const d = decodeURIComponent(chemin); if (d === chemin) break; chemin = d } catch { break } }
+  return /(?:^|\/)live(?:\/|$)/i.test(chemin)
+}
+export const lienDecupleurOk = (u) => typeof u === 'string' && LIEN.test(u) && !lienEstLive(u)
+export const MSG_LIVE = 'Lien de live : le Décupleur ne prend que des vidéos publiées (3 min maximum)'
+
+// yt-dlp est limité à SES extracteurs TikTok / Instagram (--use-extractors, noms vérifiés sur la version épinglée du Dockerfile :
+// « TikTok » = /@compte/video/<id>, « vm.tiktok » = liens courts vm. / vt. / www.tiktok.com/t/, « Instagram » = /p/, /reel/,
+// /tv/). Plus de « tiktok:live », ni de « generic » — qui suivait aussi les redirections des liens hors de ces formes. Ce que
+// generic faisait pour un client honnête est refait ici : hôte ramené sur www (tiktok.com/…, m.tiktok.com/…,
+// m.instagram.com/…), puis redirections suivies À LA MAIN (lien de partage instagram.com/share/…, ancien m.tiktok.com/v/…) :
+// 4 sauts au plus, chaque étape revérifiée (hors TikTok / Instagram = arrêt ; vers un live = refus).
+export const DC_EXTRACTEURS = 'TikTok,vm\\.tiktok,Instagram'
+const FORMES_YTDLP = [
+  /^https:\/\/www\.tiktok\.com\/(?:embed|(?:share|@[\w.-]*)\/video)\/\d+/,
+  /^https:\/\/(?:(?:vm|vt)\.tiktok\.com|www\.tiktok\.com\/t)\/\w+/,
+  /^https:\/\/(?:www\.)?instagram\.com(?:\/(?!share\/)[^/?#]+)?\/(?:p|tv|reels?(?!\/audio\/))\/[^/?#&]+/,
+]
+const hoteWww = (u) => u.replace(/^https:\/\/(?:m\.)?tiktok\.com\//i, 'https://www.tiktok.com/').replace(/^https:\/\/m\.instagram\.com\//i, 'https://www.instagram.com/')
+export async function lienPourYtdlp(url, fetchFn = globalThis.fetch) {
+  let u = hoteWww(url)
+  for (let saut = 0; saut < 4 && !FORMES_YTDLP.some((r) => r.test(u)); saut++) {
+    let r
+    try {
+      r = await fetchFn(u, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(15000),
+        headers: { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' } })
+    } catch { break }
+    try { await r.body?.cancel() } catch { /* corps déjà fermé */ }
+    const loc = r.status >= 300 && r.status < 400 ? r.headers.get('location') : null
+    if (!loc) break
+    let suivant
+    try { suivant = new URL(loc, u).href.replace(/^http:\/\//i, 'https://') } catch { break }
+    if (lienEstLive(suivant)) throw new Error(MSG_LIVE)
+    if (!LIEN.test(suivant)) break
+    u = hoteWww(suivant)
+  }
+  return u
+}
 
 // ffmpeg asynchrone : le battement du job (setInterval du moteur) continue pendant les longs encodages
 function ffmpeg(args, ms = FF_MS) {
@@ -76,6 +118,7 @@ async function normaliser(src, out, p, { ss = 0, t = 0 } = {}) {
 }
 
 function messageLien(m) {
+  if (/unsupported url/i.test(m) && /\/live(?:[/?#\s]|$)/i.test(m)) return MSG_LIVE   // lien court (vm.tiktok) qui menait à un live
   if (/login|log in|cookies|private|unavailable for|requires authentication|rate.?limit/i.test(m)) return 'Vidéo privée ou protégée : ce lien demande une connexion — importe le fichier à la place'
   if (/not available|removed|404|does not exist|no video/i.test(m)) return 'Vidéo introuvable à ce lien'
   if (/File is larger|max-filesize/i.test(m)) return 'Vidéo trop lourde (300 Mo maximum)'
@@ -97,22 +140,55 @@ function calculCpu() {
   try { const m = /usage_usec (\d+)/.exec(readFileSync('/sys/fs/cgroup/cpu.stat', 'utf8')); return m ? Number(m[1]) / 1e6 : null } catch { return null }
 }
 
+// 30/10 (audit Décupleur, faille 2) : yt-dlp ASYNCHRONE dans SON groupe de processus (detached : il en est le chef, le ffmpeg
+// qu'il lance pour un flux HLS ou la fusion y entre aussi). Au délai, TOUT le groupe est tué (SIGKILL sur -pid) ; avant,
+// spawnSync ne tuait que yt-dlp et son ffmpeg orphelin enregistrait le live dans /tmp jusqu'au redémarrage du conteneur.
+// Le groupe est aussi vidé à la sortie normale (aucun reste). Le battement du job continue pendant la récupération.
+const DC_FETCH_MS = 240000
+function ytdlp(args, ms = DC_FETCH_MS) {
+  return new Promise((resolve) => {
+    let p, sortie = '', fini = false, delai = false, code = null, signal = null, repli = null
+    const tuerGroupe = () => { try { process.kill(-p.pid, 'SIGKILL') } catch { /* groupe déjà vide */ } }
+    const finir = (r) => {
+      if (fini) return
+      fini = true; clearTimeout(t); clearTimeout(repli); tuerGroupe()
+      try { p.stdout.destroy(); p.stderr.destroy() } catch { /* déjà fermés */ }
+      resolve({ ...r, sortie })
+    }
+    const t = setTimeout(() => { delai = true; tuerGroupe() }, ms)
+    try { p = spawn('yt-dlp', args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] }) } catch (e) { finir({ error: e }); return }
+    const garder = (d) => { if (sortie.length < 65536) sortie += d }
+    p.stdout.on('data', garder); p.stderr.on('data', garder)
+    p.on('error', (e) => finir({ error: e }))
+    const resultat = () => (delai ? { error: { code: 'ETIMEDOUT' } } : { status: code, signal })
+    // sortie de yt-dlp : le reste du groupe est tué tout de suite ; « close » suit dès que les tuyaux sont fermés (2 s au plus)
+    p.on('exit', (c, s) => { code = c; signal = s; tuerGroupe(); repli = setTimeout(() => finir(resultat()), 2000) })
+    p.on('close', () => finir(resultat()))
+  })
+}
+
 // Lien TikTok / Instagram → MP4 normalisé (outPath). Le lien est revérifié ici (le moteur ne lit QUE ces deux sites).
 export async function dcFetch(url, outPath) {
+  if (typeof url === 'string' && LIEN.test(url) && lienEstLive(url)) throw new Error(MSG_LIVE)
   if (!lienDecupleurOk(url)) throw new Error('Lien TikTok ou Instagram uniquement')
+  const cible = await lienPourYtdlp(url)
   const tmp = mkdtempSync(join(tmpdir(), 'dc-lien-'))
   try {
-    const r = spawnSync('yt-dlp', ['--ignore-config', '--no-cache-dir', '--no-playlist', '--no-warnings', '--no-progress', '--no-mtime',
-      '--no-part', '--max-filesize', '300M', '--socket-timeout', '20', '--retries', '2', '--match-filter', `duration <=? ${DC_SOURCE_MAX}`,
+    // filtre SANS « ? » : une durée inconnue (direct) ne passe plus ; « !is_live » écarte un live même si sa durée est connue
+    const r = await ytdlp(['--ignore-config', '--no-cache-dir', '--no-playlist', '--no-warnings', '--no-progress', '--no-mtime',
+      '--no-part', '--max-filesize', '300M', '--socket-timeout', '20', '--retries', '2', '--use-extractors', DC_EXTRACTEURS,
+      '--match-filter', `!is_live & duration<=${DC_SOURCE_MAX}`,
       '-f', 'bv*[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b', '--merge-output-format', 'mp4',
-      '-o', join(tmp, 'source.%(ext)s'), '--', url], { timeout: 240000, encoding: 'utf8', maxBuffer: 1 << 24 })
+      '-o', join(tmp, 'source.%(ext)s'), '--', cible])
     if (r.error) throw new Error(r.error.code === 'ETIMEDOUT' ? 'Récupération trop longue — réessaie ou importe le fichier' : 'Récupération des liens indisponible')
     if (r.status !== 0) {
-      const m = String(r.stderr || '').split('\n').filter(Boolean).pop() || ''
+      const m = String(r.sortie || '').split('\n').filter((l) => /^ERROR/.test(l)).pop() || String(r.sortie || '').split('\n').filter(Boolean).pop() || ''
       console.warn('dc-fetch yt-dlp :', m.slice(0, 300))
       throw new Error(messageLien(m))
     }
     const f = readdirSync(tmp).find((n) => /^source\./.test(n) && !/\.(part|ytdl)$/.test(n))
+    // vidéo écartée par le filtre : yt-dlp sort en 0 sans fichier (« does not pass filter ») — durée > 3 min, inconnue, ou live
+    if (!f && /does not pass filter/i.test(r.sortie || '')) throw new Error(`Vidéo trop longue (${DC_SOURCE_MAX / 60} min maximum) ou live : importe une vidéo publiée`)
     if (!f) throw new Error('Vidéo introuvable à ce lien')
     const src = join(tmp, f), p = dcProbe(src)
     if (!(p.dur > 0)) throw new Error('Vidéo illisible')

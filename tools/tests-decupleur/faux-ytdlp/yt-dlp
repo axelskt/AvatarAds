@@ -1,0 +1,3 @@
+#!/bin/sh
+# Faux yt-dlp du banc faille 2 : voir faux-ytdlp.cjs (exec : même pid, le moteur tue bien CE processus et son groupe)
+exec node "$(dirname "$0")/faux-ytdlp.cjs" "$@"
