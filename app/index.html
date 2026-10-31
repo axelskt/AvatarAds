@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1400'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1440'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -34215,6 +34215,7 @@ function _mcResetAll(){
   // besoin (_mcSplitCtx ne garde que des CHEMINS storage, il est conservé).
   window._mcRefB64=null; window._mcCharB64=null; window._mcBgB64=null; window._mcPrompt='';
   window._mcRefDur=0; window._mcBgClean=true;
+  if(window._mcRefBlobUrl){ try{ URL.revokeObjectURL(window._mcRefBlobUrl); }catch(_){} window._mcRefBlobUrl=null; }
   window._mcCharFace=null; if(typeof _mcCloseUpWarnShow==='function') _mcCloseUpWarnShow(false);
   for (const [pv,dz] of [['mcRefPrev','mcRefDrop'],['mcCharPrev','mcCharDrop']]){
     // ⚠ Safari garde la vidéo DÉCODÉE en mémoire tant que load() n'est pas rappelé
@@ -34236,7 +34237,13 @@ function _mcLoad(f, which){
     if(which==='ref'){
       window._mcRefB64=b64;
       const v=document.getElementById('mcRefPrev'), dz=document.getElementById('mcRefDrop');
-      if(v){ v.src=b64; v.style.display='block';
+      // Axel 31/10 : aperçu blanc sous Safari : une vidéo en data: sans lecture n'affiche aucune image. L'aperçu lit le fichier
+      // (adresse blob, en boucle et muet) ; le base64 ne sert plus qu'à l'envoi.
+      if(v){ if(window._mcRefBlobUrl){ try{ URL.revokeObjectURL(window._mcRefBlobUrl); }catch(_){} }
+        window._mcRefBlobUrl=URL.createObjectURL(f);
+        v.muted=true; v.loop=true; v.playsInline=true; v.preload='auto'; v.src=window._mcRefBlobUrl; v.style.display='block';
+        v.onloadeddata=()=>{ const p=v.play(); if(p&&p.catch) p.catch(()=>{ try{ v.currentTime=0.01; }catch(_){} }); };
+        v.onerror=()=>{ v.style.display='none'; const s=document.getElementById('mcRefSub'); if(s){ s.textContent=(f.name||'Vidéo importée')+' · aperçu indisponible, la génération reste possible'; s.style.display=''; } };
         v.onloadedmetadata=()=>{ window._mcRefDur=v.duration||0; window._mcRefW=v.videoWidth||0; window._mcRefH=v.videoHeight||0; const s=document.getElementById('mcRefSub'); if(s) s.textContent=(window._mcRefDur?Math.round(window._mcRefDur)+' s · ':'')+'le mouvement à reproduire'+((window._mcRefDur||0)>_MC_MAX_REF_S+0.5?' · coupée à '+_MC_MAX_REF_S+' s (max)':''); if((window._mcRefDur||0)>_MC_MAX_REF_S+0.5) toast('Vidéo de référence : 30 s max — seules les 30 premières secondes seront reproduites'); _mcUpdateCost(); };
       }
       if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
