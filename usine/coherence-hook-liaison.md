@@ -101,8 +101,10 @@ Chaque vidéo = 2 formats : `hook+contenu+CTA` (court) et `hook+liaison+contenu+
 | **H-AX-90** · Oh, ça commence vraiment à devenir flippant, là, ce qu'on peut faire. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **H-AX-90-2** · Waouh, ça commence vraiment à devenir flippant ce qu'on peut faire avec l'IA. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **H-AX-90-3** · Boah, ça commence vraiment à devenir flippant ce qu'on peut faire avec l'IA. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H-AX-91** · Je ne suis pas censé en parler, mais là, c'est vraiment trop une dinguerie ce qui se passe. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H-AX-91-2** · Je ne suis pas censé en parler, mais je pense que c'est vraiment trop une dinguerie ce qui se passe en ce moment. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 
-**✅ par liaison** — L12 22 · L15 66 · L16 68 · L19 71 · L28 36 · L30 32 · L32 51 · L33/L35 31 · L34 38 · L48 62 · L58 43 · L70 54 (sur 77 hooks)
+**✅ par liaison** — L12 22 · L15 68 · L16 70 · L19 73 · L28 38 · L30 32 · L32 53 · L33/L35 31 · L34 38 · L48 64 · L58 45 · L70 56 (sur 79 hooks)
 
 > **Analyse cohérence : 12 liaisons validées** (L33=L35 ; L69 & L72 abandonnées).
 > **Étape suivante** : ranger chaque hook dans une ou plusieurs FAMILLES (multi-famille possible) + analyse « pourquoi telle famille et pas telle autre » (générique ≠ 100% des hooks).
