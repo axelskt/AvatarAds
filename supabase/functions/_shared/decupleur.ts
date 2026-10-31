@@ -84,6 +84,8 @@ export function placesDecupleur(raw: unknown, n: number): string[] | null {
 }
 // Motion Control, « Garder le fond de la vidéo » décoché (Axel 31/10) : le décor vient de la photo, le reste de la consigne ne change pas.
 export const DC_WAN_FOND_IMAGE = ' EXCEPTION: replace the whole background and environment with the background of Image1, and adapt the light on the person to it. Keep the camera framing and movement of Video1.'
+// Motion Control seulement (Axel 31/10) : bouche bien ouverte, bonne articulation. Le Décupleur garde sa consigne.
+export const DC_WAN_BOUCHE = ' Mouth and speech: clear, well articulated speech. The mouth opens wide on every syllable and the jaw and lips move visibly, at exactly the same moments as in Video1. Never a half-closed, stiff or mumbling mouth.'
 export function dcWanPrompt(places: string[]): string {
   if (places.length === 1 && places[0] === 'principal') return DC_WAN_PROMPT
   const who = places.map((p, i) => `Image${i + 1} is the new character for the person ${PLACE_EN[p]}.`).join(' ')

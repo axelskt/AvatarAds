@@ -64,7 +64,7 @@ import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieCopierResultat,
 import { preparerVideoFal, preparerVideoWan, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : vidéo du client copiée + mesurée, comme fal-proxy
 import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
 import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
-import { dcWanPrompt, placesDecupleur, DC_PERSOS_MAX, DC_PLANS, DC_PERSO_CR_SEC, DC_PERSO_MAX, decupleurOuvert, DC_WAN_FOND_IMAGE } from '../_shared/decupleur.ts'   // Décupleur : prompt du changement de personnage (UNE version, partagée avec le MCP)
+import { dcWanPrompt, placesDecupleur, DC_PERSOS_MAX, DC_PLANS, DC_PERSO_CR_SEC, DC_PERSO_MAX, decupleurOuvert, DC_WAN_FOND_IMAGE, DC_WAN_BOUCHE } from '../_shared/decupleur.ts'   // Décupleur : prompt du changement de personnage (UNE version, partagée avec le MCP)
 
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
@@ -193,7 +193,8 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
     if (!vid || imgs.some((x: string | null) => !x)) return { error: 'video_url / image_url : URL de notre storage uniquement' }
     const places = placesDecupleur(b.positions, imgs.length)
     if (!places) return { error: 'positions : une place par personnage (gauche, centre ou droite), chacune une seule fois' }
-    const prompt = dcWanPrompt(places) + (b.fond === 'image' ? DC_WAN_FOND_IMAGE : '')
+    // b.fond n'est envoyé que par Motion Control
+    const prompt = dcWanPrompt(places) + (b.fond === 'image' ? DC_WAN_FOND_IMAGE : '') + (b.fond === 'image' || b.fond === 'video' ? DC_WAN_BOUCHE : '')
     const d = Math.round(Number(b.duration) || 5)
     const input: Record<string, unknown> = {
       prompt, reference_video_urls: [vid], reference_image_urls: imgs,
