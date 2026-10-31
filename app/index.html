@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1625'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1640'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -34189,14 +34189,14 @@ window._mcTier='wan'; window._mcQuality='720'; window._mcRender='full';   // Axe
 window._mcKlingVer='v2.6';
 function _mcSetKlingVer(v){ window._mcKlingVer = (v==='v3' && _aaIsDev()) ? 'v3' : 'v2.6'; try{ _mcSaveOpts&&_mcSaveOpts(); }catch(_){} _mcRenderAdv(); }
 window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
-window._mcCamFollow=true; window._mcKeepVidBg=false; window._mcFondVideo=false; window._mcFormat='auto';   // #cam-realiste (04/09) : « Caméra réaliste » COCHÉE par défaut. 'auto' (défaut) = ratio de la VIDÉO DE RÉF (LOT A, mesuré : Kling suit le ratio de la vidéo, pas de l'image) ; repli ratio image si réf illisible
+window._mcCamFollow=true; window._mcKeepVidBg=false; window._mcFondVideo=true; window._mcFormat='auto';   // #cam-realiste (04/09) : « Caméra réaliste » COCHÉE par défaut. 'auto' (défaut) = ratio de la VIDÉO DE RÉF (LOT A, mesuré : Kling suit le ratio de la vidéo, pas de l'image) ; repli ratio image si réf illisible
 window._mcAutoFrame=true;   // cadrage auto du visage — ON par défaut (Axel, 14/08)
 window._mcBgClean=true;     // fond fourni : effacer la personne dessus (par image, non persisté)
 // ── OPTIONS MÉMORISÉES (Axel, 14/08 : « une fois qu'on met une option, elle est
 // enregistrée et remise la prochaine fois — sauf arrière-plan et instruction »).
 function _mcSaveOpts(){ try{ localStorage.setItem('aa_mc_opts', JSON.stringify({
   tier:window._mcTier, quality:window._mcQuality, render:window._mcRender, format:window._mcFormat,
-  cam:!!window._mcCamFollow, camV2:true, keepVidBg:false, fondVideo:!!window._mcFondVideo, autoFrame:window._mcAutoFrame!==false, klingVer:window._mcKlingVer, voice:window._mcVoice||'orig' })); }catch(_){ } }
+  cam:!!window._mcCamFollow, camV2:true, keepVidBg:false, fondVideo:!!window._mcFondVideo, fondV2:true, autoFrame:window._mcAutoFrame!==false, klingVer:window._mcKlingVer, voice:window._mcVoice||'orig' })); }catch(_){ } }
 function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts')||'null'); if(!o) return;
   if(o.quality==='720'||o.quality==='1080') window._mcQuality=o.quality;
   if(['full','split-bottom','split-top'].includes(o.render)) window._mcRender=o.render;
@@ -34205,7 +34205,7 @@ function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts
   // enregistrées AVANT ce changement (sans camV2) sont forcées à ON ; ensuite le choix explicite est respecté.
   window._mcCamFollow = o.camV2 ? !!o.cam : true;
   // 10/10 : l'ancien « fond vidéo » par détourage (+1 cr/s, lent) est remplacé par le fond NATIF de Motion 3.0
-  window._mcKeepVidBg=false; window._mcFondVideo=false; window._mcAutoFrame=true;
+  window._mcKeepVidBg=false; window._mcFondVideo = o.fondV2 ? !!o.fondVideo : true; window._mcAutoFrame=true;
   window._mcVoice = (o.voice==='fille'||o.voice==='garcon') ? o.voice : 'orig';
   }catch(_){ } } // version couplée au modèle (Motion 2.6/3.0) ; cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
 _mcLoadOpts();
@@ -34291,7 +34291,7 @@ function _mcOpenAdv(){ const m=document.getElementById('mcAdvModal'); if(!m) ret
 function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.style.display='none'; }
 function _mcSetTier(t){
   // Le « forfait » est devenu le MODÈLE : 'standard' = Motion 2.6 (Kling v2.6), 'pro' = Motion 3.0 (Kling v3, 1080p natif).
-  if(t==='wan'){ window._mcTier='wan'; window._mcKlingVer='v2.6'; window._mcQuality='720'; window._mcFondVideo=false; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); return; }
+  if(t==='wan'){ window._mcTier='wan'; window._mcKlingVer='v2.6'; window._mcQuality='720'; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); return; }
   if(t==='pro' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
     if(typeof showPaywall==='function') showPaywall('Oups — Motion 3.0 est réservé aux plans Pro & Élite', 'Passe en Pro ou Élite pour débloquer Motion 3.0.'); else toast('Motion 3.0 est réservé aux plans Pro et Élite'); return;
   }
@@ -34311,13 +34311,6 @@ function _mcToggleCam(){ window._mcCamFollow=!window._mcCamFollow; _mcSaveOpts()
 // GARDER LE FOND DE LA VIDÉO D'ORIGINE (Axel 10/10) : natif chez Motion 3.0 (background_source input_video) — aucun
 // détourage, aucun supplément. Activé, il masque « Glisse un fond » ; en Motion 2.6 il fait passer en Motion 3.0.
 function _mcToggleFondVideo(){
-  if(!window._mcFondVideo && window._mcTier!=='pro'){
-    if(!['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
-      if(typeof showPaywall==='function') showPaywall('Garder le fond de ta vidéo', 'Disponible avec Motion 3.0 — plans Pro et Élite.'); else toast('Disponible avec Motion 3.0 — plans Pro et Élite');
-      return;
-    }
-    window._mcTier='pro'; window._mcKlingVer='v3'; window._mcQuality='1080';
-  }
   window._mcFondVideo=!window._mcFondVideo; _mcSaveOpts(); _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost();
 }
 function _mcToggleVidBg(){ window._mcKeepVidBg=!window._mcKeepVidBg; _mcSaveOpts(); _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost(); }
@@ -34490,7 +34483,20 @@ function _mcRenderAdv(){
     </div>
     <div style="height:10px"></div>
     <div style="height:12px"></div>
-        <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
+        <span class="label" style="display:block;margin-bottom:8px">Arrière-plan</span>
+    <button onclick="_mcToggleFondVideo()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:${window._mcFondVideo?'18px':'12px'};border:${window._mcFondVideo?'2px solid var(--accent)':'1px solid var(--border)'};background:${window._mcFondVideo?'var(--accent-soft)':'var(--surface)'}">
+      <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">Garder le fond de la vidéo d’origine</span><span class="faint" style="font-size:11.5px">Le décor de ta vidéo reste, seule la personne est remplacée${tier==='pro'?'':' · avec Motion 3.0'}</span></div>
+      <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${window._mcFondVideo?'var(--accent)':'var(--surface-3)'};border:1px solid ${window._mcFondVideo?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${window._mcFondVideo?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
+    </button>
+    ${window._mcFondVideo?'':_mcFondPersoHtml()}
+    <span class="label" style="display:block;margin-bottom:8px">Options</span>
+    ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow]]
+      .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
+        <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
+        <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
+      </button>`).join('')}
+    <div style="height:8px"></div>
+    <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       ${modes.map(([id,t,sub])=>{const o=rnd===id;return `<button onclick="_mcSetRender('${id}')" class="col" style="gap:8px;padding:12px 10px;border-radius:13px;align-items:center;cursor:pointer;font-family:inherit;border:${o?'2px solid var(--accent)':'1px solid var(--border)'};background:${o?'var(--accent-soft)':'var(--panel-1)'}"><div style="width:34px;height:52px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border-2);flex:0 0 auto">${diag(id)}</div><div class="col" style="gap:2px;align-items:center"><span style="font-size:12px;font-weight:${o?700:600};color:${o?'var(--text)':'var(--text-2)'};text-align:center;line-height:1.2">${t}</span><span class="faint" style="font-size:10px;text-align:center">${sub}</span></div></button>`;}).join('')}
     </div>
@@ -34589,7 +34595,9 @@ async function _mcVoiceWait(jobId, tours){
 // messages de fin s'affichent DANS la fenêtre de résultat (window._mcVoiceNote) : un toast était aussitôt recouvert par
 // celui de la sauvegarde automatique. (Bouton « Livrer sans attendre la voix » retiré, Axel 09/10 : la voix arrive en
 // ~1 min, chaque étape reste bornée, et une attente trop longue livre déjà la vidéo avec l'audio d'origine.)
-// Motion Scène sort sans son : on remet celui de la référence, image copiée sans perte. Échec → vidéo livrée muette avec une note.
+// Le moteur sort sans son : on remet celui de la référence (image copiée sans perte, sauf Caméra réaliste). Échec → vidéo livrée muette avec une note.
+// Tremblement : mêmes courbes que SHAKE + GRAIN de usine/build.mjs, proportionnées à la largeur de la vidéo.
+const _MC_TREMBLE = "noise=alls=9:allf=t+u,eq=saturation=1.03:contrast=1.02,scale=trunc(iw*1.09/2)*2:trunc(ih*1.09/2)*2:flags=bicubic,rotate='(0.4*(sin(5.7*t)+0.4*sin(11.3*t)))*PI/180':c=black,crop=iw/1.09:ih/1.09:(iw-iw/1.09)/2+(iw/135)*(sin(6.3*t)+0.5*sin(12.9*t+1)+0.3*sin(19.7*t)):(ih-ih/1.09)/2+(iw/135)*(cos(7.1*t)+0.5*sin(13.7*t+0.5)+0.25*sin(22.3*t)),format=yuv420p";
 async function _mcWanSon(url, refBlob, vPath){
   const inV='wn_v_'+Date.now().toString(36)+'.mp4', inA=inV+'a.mp4', outN=inV+'o.mp4';
   let ff=null;
@@ -34598,8 +34606,19 @@ async function _mcWanSon(url, refBlob, vPath){
     const vid=new Uint8Array(await r.arrayBuffer()), ref=new Uint8Array(await refBlob.arrayBuffer());
     await _loadFFmpeg(); ff=_ffmpegInst;
     await ff.FS('writeFile', inV, vid); await ff.FS('writeFile', inA, ref);
-    await ff.run('-i', inV, '-i', inA, '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', outN);
-    const u8=await ff.FS('readFile', outN);
+    const sonSeul=['-c:v','copy','-c:a','aac','-b:a','160k','-shortest','-movflags','+faststart',outN];
+    let u8=null;
+    if(window._mcCamFollow){   // Caméra réaliste (Axel 31/10) : l'effet est ajouté à la fin, image ré-encodée
+      try{
+        await ff.run('-i', inV, '-i', inA, '-map', '0:v:0', '-map', '1:a:0', '-vf', _MC_TREMBLE, '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', outN);
+        u8=await ff.FS('readFile', outN);
+      }catch(e){ console.warn('[mc] tremblement :', e); u8=null; }
+      if(!u8 || u8.length<1000){ u8=null; window._mcVoiceNote='Effet caméra non ajouté : vidéo livrée sans.'; }
+    }
+    if(!u8){
+      await ff.run('-i', inV, '-i', inA, '-map', '0:v:0', '-map', '1:a:0', ...sonSeul);
+      u8=await ff.FS('readFile', outN);
+    }
     if(!u8 || u8.length<1000) throw new Error('sans résultat');
     const path=vPath.replace(/\.mp4$/,'')+'-son.mp4';
     const up=await sb.storage.from('render-media').upload(path, new Blob([u8.buffer],{type:'video/mp4'}), { contentType:'video/mp4', upsert:true });
@@ -35284,7 +35303,7 @@ async function _mcGenerate(){
     // constaté le 15/08). On matérialise donc l'option : une frame de la vidéo
     // de réf sert de fond (sa personne effacée), le perso est incrusté dessus.
     let charUrl = si.data.signedUrl;
-    let bgSrc = (window._mcFondVideo || tier==='wan') ? null : (window._mcBgB64 || null), bgDeVid = false;   // fond de la vidéo gardé : aucun fond perso
+    let bgSrc = window._mcFondVideo ? null : (window._mcBgB64 || null), bgDeVid = false;   // fond de la vidéo gardé : aucun fond perso
     // LOT MC · frame de la réf DÉJÀ nettoyée (personne effacée par gpt-image) — le
     // pipeline « fond vidéo » d'après-Kling la RÉUTILISE comme patch statique
     // (assets/bgclean.jpg du worker) : zéro second appel gpt-image.
@@ -35402,7 +35421,7 @@ async function _mcGenerate(){
     const runKling = async (ver) => {
       if(ver==='wan'){   // pas de repli (Axel 31/10) : un refus du moteur est affiché tel quel, crédits rendus par le catch global
         const _t0=Date.now();
-        const _r = await _kieRun('wan-3', { video_url:sv.data.signedUrl, image_url:charUrl, image_urls:[charUrl], positions:['principal'], resolution:'720P', aspect_ratio:'adaptive', duration:Math.ceil(dur), audio:false },
+        const _r = await _kieRun('wan-3', { video_url:sv.data.signedUrl, image_url:charUrl, image_urls:[charUrl], positions:['principal'], resolution:'720P', aspect_ratio:'adaptive', duration:Math.ceil(dur), audio:false, fond: window._mcFondVideo ? 'video' : 'image' },
           { op:_mcOpWan, every:6000, maxPolls:300, onTick:()=>_mcProg('Remplacement de la personne dans ta vidéo…', Math.min(88, 22+66*(1-Math.exp(-(Date.now()-_t0)/240000)))) });
         window._aaLastEngine='kie'; window._mcKieRid=_r.rid;
         return _r.url;

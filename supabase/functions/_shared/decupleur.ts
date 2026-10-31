@@ -82,6 +82,8 @@ export function placesDecupleur(raw: unknown, n: number): string[] | null {
   if (arr.length !== n || arr.some((p) => !PLACE_EN[p]) || new Set(arr).size !== n) return null
   return arr
 }
+// Motion Control, « Garder le fond de la vidéo » décoché (Axel 31/10) : le décor vient de la photo, le reste de la consigne ne change pas.
+export const DC_WAN_FOND_IMAGE = ' EXCEPTION: replace the whole background and environment with the background of Image1, and adapt the light on the person to it. Keep the camera framing and movement of Video1.'
 export function dcWanPrompt(places: string[]): string {
   if (places.length === 1 && places[0] === 'principal') return DC_WAN_PROMPT
   const who = places.map((p, i) => `Image${i + 1} is the new character for the person ${PLACE_EN[p]}.`).join(' ')
