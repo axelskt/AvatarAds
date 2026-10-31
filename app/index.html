@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-0900'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1300'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -38896,6 +38896,31 @@ async function _acExtractAudioWav(file){
   }
 }
 
+// Axel 31/10 : à partir d'une vidéo, on rend un MP3 (256 kbit/s). Si ffmpeg n'est pas disponible, le WAV reste téléchargeable.
+async function _acVersMp3(wavBlob){
+  await _loadFFmpeg();
+  const ff = _ffmpegInst;
+  await ff.FS('writeFile', 'ac_mp3_in.wav', new Uint8Array(await wavBlob.arrayBuffer()));
+  try {
+    await ff.run('-i', 'ac_mp3_in.wav', '-c:a', 'libmp3lame', '-b:a', '256k', 'ac_mp3_out.mp3');
+    const mp3 = await ff.FS('readFile', 'ac_mp3_out.mp3');
+    if(!mp3 || mp3.length < 200) throw new Error('MP3 vide');
+    return new Blob([mp3], { type:'audio/mpeg' });
+  } finally {
+    try{ await ff.FS('unlink', 'ac_mp3_in.wav'); }catch(_){}
+    try{ await ff.FS('unlink', 'ac_mp3_out.mp3'); }catch(_){}
+  }
+}
+// téléchargement du résultat d'un seul audio : MP3 si la source est une vidéo, WAV sinon
+async function _acDlResultat(url){
+  const a = document.createElement('a'); a.download = 'audio-nettoye.wav'; a.href = url;
+  if(_acVideoFile && _acCleanBlob){
+    try { toast('Préparation du MP3…'); a.href = URL.createObjectURL(await _acVersMp3(_acCleanBlob)); a.download = 'audio-nettoye.mp3'; setTimeout(() => URL.revokeObjectURL(a.href), 30000); }
+    catch(e){ console.warn('_acVersMp3', e); }
+  }
+  a.click();
+}
+
 // Recoupe la vidéo aux segments gardés + colle l'audio nettoyé.
 // ⚠️ PAS de FFmpeg.wasm ici : il exige SharedArrayBuffer, indisponible sur
 // avatarads.fr (GitHub Pages ne peut pas envoyer les en-têtes COOP/COEP, donc
@@ -39653,7 +39678,7 @@ function _acFillDone(d){
   const oc = el('acOrigCard'); if(oc) oc.style.display = 'none';
   _acStopAll();
   const dl = el('acDoneDl');
-  if(dl) dl.onclick = () => { if(d.url){ const a = document.createElement('a'); a.href = d.url; a.download = 'audio-nettoye.wav'; a.click(); } };
+  if(dl) dl.onclick = () => { if(d.url) _acDlResultat(d.url); };
   const lib = el('acDoneLib'); if(lib) lib.onclick = _acSaveToLibrary;
   const cmp = el('acDoneCmp'); if(cmp) cmp.onclick = _acCompare;
   window._acDoneData = d;
@@ -40140,7 +40165,7 @@ function _acApplyEdited(newBuf, cutA, cutB, marksForce){
   _acIcon('acDonePlayIco', false);
   _acDoneEnsureAudio();
   const dl = el('acDoneDl');
-  if(dl) dl.onclick = () => { const a = document.createElement('a'); a.href = d.url; a.download = 'audio-nettoye.wav'; a.click(); };
+  if(dl) dl.onclick = () => _acDlResultat(d.url);
   _acCutPaint();
 }
 function _acOrigTogglePlay(){
@@ -40287,7 +40312,7 @@ function _acBruitDeFondDb(buf){
   return 20 * Math.log10(Math.max(plancher, 1e-6) / voix);
 }
 
-async function _acCleanCore(srcBlob, onAfterDenoise){
+async function _acCleanCore(srcBlob, onAfterDenoise, opts){
   let working = srcBlob;
   // auscultation AVANT tout traitement : inutile (et nuisible) de débruiter
   // un fichier qui l'est déjà
@@ -40331,7 +40356,10 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   //
   // `alreadyClean` reste calculé : il sert au mur de coupe HF plus bas, qui lui
   // ne doit tomber que sur un fichier réellement débruité en amont.
-  if(_acDenoiseEnabled) working = await denoiseAudioFile(working);
+  // Axel 31/10 (« le son n'est toujours pas ouf en .mov ») : le micro d'un téléphone a déjà son propre traitement ; le réducteur
+  // repasse dessus et la voix sort métallique. Source vidéo : conversion, silences, volume constant, MP3, sans réducteur.
+  const sansDebruit = !!(opts && opts.video);
+  if(_acDenoiseEnabled && !sansDebruit) working = await denoiseAudioFile(working);
   if(onAfterDenoise) onAfterDenoise();
   const arrBuf  = await working.arrayBuffer();
   const ac      = new (window.AudioContext || window.webkitAudioContext)();
@@ -40448,7 +40476,10 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   // se déclenche sur un plancher de silence très bas, c'est-à-dire la signature
   // d'un DJI Mic : toutes les prises d'Axel repartaient filtrées à 13,5 kHz,
   // exactement ce que l'avertissement juste au-dessus interdit.
-  const cleanBuf = await _acMasterVoice(rawClean, null, { denoised: _acDenoiseEnabled && !alreadyClean });
+  // … et les presets de voix sont réglés sur un signal débruité : sans débruitage, volume constant seul (sinon « son horrible »)
+  const cleanBuf = sansDebruit
+    ? (_acOpts.voice && rawClean.length ? _acLimitPeaks(_acNiveauConstant(rawClean), 0.89) : rawClean)
+    : await _acMasterVoice(rawClean, null, { denoised: _acDenoiseEnabled && !alreadyClean });
   return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs, nCoupes, nCompr,
     masterDenoised: _acDenoiseEnabled && !alreadyClean };   // #restore : re-mastering identique quand on rétablit un blanc
 }
@@ -40472,7 +40503,7 @@ async function _acAnalyze(){
   try {
     // #69 · débruitage d'abord si l'option « Supprimer les bruits de fond » est activée
     if(_acDenoiseEnabled && btn) btn.textContent = 'Débruitage…';
-    const r = await _acCleanCore(_acAudioBlob, () => { if(btn) btn.textContent = 'Analyse des silences…'; });
+    const r = await _acCleanCore(_acAudioBlob, () => { if(btn) btn.textContent = 'Analyse des silences…'; }, { video: !!_acVideoFile });
     _acAudioBlob = r.working;
     if(_acDenoiseEnabled && typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(_acAudioBlob);
     const { decoded, cleanBuf, keepSegs } = r;
@@ -40753,8 +40784,9 @@ async function _acBatchRun(){
       // #68b · en lot, une vidéo est acceptée : on ne nettoie que sa piste audio (sortie .wav)
       const _isVid = String(it.file.type).startsWith('video') || /\.(mp4|mov|webm|m4v)$/i.test(it.file.name);
       it.origine = _isVid ? await _acExtractAudioWav(it.file) : it.file;
-      const r = await _acCleanCore(it.origine);
+      const r = await _acCleanCore(it.origine, null, { video: _isVid });
       it.blob = r.blob;
+      if(_isVid){ try { it.blob = await _acVersMp3(r.blob); it.outName = it.outName.replace(/\.wav$/, '.mp3'); } catch(e){ console.warn('_acVersMp3', e); } }
       it.removedS = Math.round((r.decoded.duration - r.cleanBuf.duration)*10)/10;
       it.cleanS   = Math.round(r.cleanBuf.duration);
       it.dur      = r.cleanBuf.duration;
@@ -40763,7 +40795,7 @@ async function _acBatchRun(){
       let acc = 0; it.marks = [];
       for(let i = 0; i < r.keepSegs.length - 1; i++){ acc += (r.keepSegs[i].end - r.keepSegs[i].start) / r.sr; it.marks.push(acc / (r.cleanBuf.duration || 1)); }
       it.status = 'ok';
-      _libAutoSaveAudio(new File([it.blob], it.outName, { type:'audio/wav' }), it.outName.replace(/\.wav$/,''), it.cleanS + 's', '🪄');
+      _libAutoSaveAudio(new File([it.blob], it.outName, { type: it.blob.type || 'audio/wav' }), it.outName.replace(/\.(wav|mp3)$/,''), it.cleanS + 's', '🪄');
     } catch(e){
       console.error('_acBatchRun:', it.file.name, e);
       await creditsFlowRefund();
