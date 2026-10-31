@@ -125,7 +125,7 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
    dès la frame 0 (= couverture). Forcer : `--format F02 --choc TH05`.
    **Emojis = ceux d'Apple, jamais d'autres** (Axel 30/09) : captions.mjs remplace chaque emoji par l'image officielle
    (`emoji-datasource-apple@15.1.2`, 64 px, jsDelivr) ; Noto seulement si le téléchargement échoue.
-7. **CTA** : grain + léger tremblement « selfie » (casse le côté IA figé).
+7. **Tremblement sur CHAQUE vidéo (Axel 18/10, redit 31/10)** : hook avatar ET CTA, grain + léger tremblement « selfie », ajoutés au montage, jamais cuits dans la variante. Un hook envoyé seul à Axel pour validation le porte aussi (`usine/selfie-treat.mjs` ou mêmes filtres). Split, fond vert, incrusté : appliqué à l'avatar dans leur script. Seule exception : hook avant/après à médaillon. Démo jamais.
 7b. **Bruitages liés à l'action** en plus des transitions : pop quand le texte du hook apparaît, swish quand un groupe
    de sous-titres s'affiche, woosh (+ déclencheur photo si image) à l'entrée du B-roll, et dans la démo clic / magie /
    succès d'après les mots dits (clique, sélectionne… / génère, crée… / voilà, résultat…), 2,5 s d'écart mini, 5 maxi.
@@ -230,7 +230,7 @@ CTA après la fin de la démo, chaîne voix commune, liaison + B-roll « regarde
 - **CTA** (`cta.py` + `cta/incruste.json`) : consigne (« COMMENTE » / « ÉCRIS » blanc + mot-clé vert) DEVANT dès qu'elle
   est dite, jusqu'à la fin ; le reste de la phrase derrière la tête, même alternance. Retirer les « » que Whisper compte
   comme des mots. « commande » entendu = COMMENTE (le texte affiché est celui des groupes).
-- **Assemblage** : `build.mjs … --incruste --format F01 --subs-style auto` (pas de zoom / tremblement / texte choc /
+- **Assemblage** : `build.mjs … --incruste --format F01 --subs-style auto` (pas de zoom / texte choc / 2e couche de tremblement, déjà faite par `incruste/tremble.py` /
   sous-titres sur hook et CTA ; la démo garde ses sous-titres, en 1,08x). Copier d'abord les mots vérifiés du clip brut dans
   le cache words/ sous l'empreinte du clip habillé (Whisper rate la fin d'un clip habillé).
 - **Livraison** : 4K (agrandi lanczos, 42 Mbit/s) ; publish-qc puis brick_combo + {incruste: true, hook_demos, cta_file,

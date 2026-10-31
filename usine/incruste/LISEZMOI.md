@@ -9,7 +9,7 @@ Prototype (dossier de travail : `f/` images du clip, `m2/` masques, `demo/` et `
    en vert devant, jusqu'à la fin du hook. Pas de texte choc.
 3. `python3 cta.py` → `cta/o/` : consigne (« COMMENTE PLAN ») devant en bas, le reste de la phrase derrière la tête.
 4. `node usine/build.mjs HOOK DEMO OUT MUSIQUE HOOK CTA --incruste --format F01 …` : l'assembleur ne remet ni zoom, ni
-   tremblement, ni texte choc, ni sous-titres sur le hook et le CTA (la démo garde les siens).
+   tremblement ajouté au montage (déjà appliqué dans hook_auto.py / cta_auto.py depuis le 31/10, voir tremble.py), ni texte choc, ni sous-titres sur le hook et le CTA (la démo garde les siens).
 
 Réglages par hook / photo : `incruste.json` dans le dossier de travail (essai H14 × A1-6 du 26/10) :
 `{"fps": 30, "forts": ["QUALITÉ-LÀ"], "une_ligne": true, "carte": {"w": 320, "marge": 36}, "mot_seul": {"cap": 250, "chevauche": 120},

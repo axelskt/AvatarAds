@@ -19,6 +19,10 @@ RES = [r for r in arg('--res', '').split(',') if r]
 if MODE not in ('A', 'B') or len(RES) < 2: sys.exit('usage : split-hook.py <prise> <sortie> --mode A|B --res r1,r2[,r3,r4…]')
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.environ.get('CF_CACHE') or os.path.join(os.path.expanduser('~'), 'Downloads', 'Creative Factory', 'cache')
+# Axel 31/10 : tremblement sur chaque vidéo. Mêmes valeurs que SHAKE de build.mjs, sur l'avatar seul (les résultats du haut, non).
+SHAKE = ("scale=iw*1.09:ih*1.09:flags=lanczos,rotate='(0.4*(sin(5.7*t)+0.4*sin(11.3*t)))*PI/180':c=black,"
+         "crop=1080:1920:x='(iw-1080)/2+8*(sin(6.3*t)+0.5*sin(12.9*t+1)+0.3*sin(19.7*t))':"
+         "y='(ih-1920)/2+8*(cos(7.1*t)+0.5*sin(13.7*t+0.5)+0.25*sin(22.3*t))'")
 W, H, TOP, GAP, FPS = 1080, 1920, 880, 6, 25   # haut = 0 → 880 (deux colonnes de 537 px + 6 px), bas = 880 → 1920
 COL = (W - GAP) // 2
 dur = lambda f: float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f], capture_output=True, text=True).stdout)
@@ -63,14 +67,15 @@ boxes = fz.get('faces') or []
 if boxes:
     ys = sorted(bx[1] * H for bx in boxes); hs = sorted(bx[3] * H for bx in boxes)   # boîtes [x, y, l, h] normalisées
     tete = ys[len(ys) // 2] - 0.45 * hs[len(hs) // 2]   # haut des cheveux ≈ haut du visage − 45 % de sa hauteur
+    tete = H / 2 - (H / 2 - tete) * 1.09                # le zoom du tremblement remonte la tête
     Y0 = int(min(max(tete - 70, 0), H - (H - TOP)))
 else:
-    Y0 = 330   # visage inconnu : cadrage moyen des prises Omni (validé sur A3-7 · H17 : 310)
+    Y0 = 275   # visage inconnu : cadrage moyen des prises Omni (validé sur A3-7 · H17 : 310 sans le zoom du tremblement)
 
 fc, ins = [], ['-i', take]
 fc.append('color=c=black:s=%dx%d:r=%d:d=%.3f[bg]' % (W, H, FPS, T + 1))
-fc.append(('[0:v]fps=%d,setsar=1,split=2[tk1][tk2];[tk1]crop=%d:%d:0:%d[bas];[tk2]scale=%d:%d[plein]' % (FPS, W, H - TOP, Y0, W, H)) if MODE == 'B' and SW
-          else '[0:v]fps=%d,setsar=1,crop=%d:%d:0:%d[bas]' % (FPS, W, H - TOP, Y0))
+fc.append(('[0:v]fps=%d,setsar=1,%s,split=2[tk1][tk2];[tk1]crop=%d:%d:0:%d[bas];[tk2]scale=%d:%d[plein]' % (FPS, SHAKE, W, H - TOP, Y0, W, H)) if MODE == 'B' and SW
+          else '[0:v]fps=%d,setsar=1,%s,crop=%d:%d:0:%d[bas]' % (FPS, SHAKE, W, H - TOP, Y0))
 cur = 'bg'
 for k, p in enumerate(pairs):
     for j, (src, x) in enumerate(((p['a'], 0), (p['b'], COL + GAP))):

@@ -9,7 +9,7 @@ import json, os, shutil, subprocess, sys, urllib.request
 ICI = os.path.dirname(os.path.abspath(__file__)); REPO = os.path.abspath(os.path.join(ICI, '..', '..'))
 sys.path.insert(0, os.path.join(REPO, 'usine', 'lots')); sys.path.insert(0, ICI)
 from outils import q, log
-import masques
+import masques, tremble
 from voix import images_a_couper
 
 def run(*a, **kw): subprocess.run(list(a), check=True, **kw)
@@ -51,6 +51,7 @@ def main():
     json.dump([dict(w, start=round(max(0.0, w['start'] - t0), 3), end=round(max(0.01, w['end'] - t0), 3)) for w in json.load(open(wb))],
               open(os.path.join(d, 'words.json'), 'w'), ensure_ascii=False)
     if n0: log(hook, photo, 'voix à %.2f s : %d images de blanc coupées en tête' % (t0 + 0.02, n0))
+    tremble.dossiers(os.path.join(d, 'f'), os.path.join(d, 'm2'), fps)   # Axel 31/10 : tremblement sur chaque vidéo (m2-brut/ reste intact)
     # Hook démo de la banque (aucun : pas de cartes)
     for k, nom in enumerate(['demo', 'demo2']):
         shutil.rmtree(os.path.join(d, nom), ignore_errors=True)

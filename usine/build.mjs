@@ -200,7 +200,7 @@ const TRANS = 'slideleft';
 // Traitement AVATAR pour casser le côté « IA figée » : grain + tremblement selfie tenu à la main
 // (dérive + micro-tremble, repris de camOrganiqueFilter du render-worker). Appliqué au CTA ET, depuis le 18/10 (Axel :
 // « il faut mettre l'effet de tremblement sur chaque vidéo »), au HOOK avatar ; jamais à la démo ni à un hook avant/après
-// (médaillon incrusté).
+// (médaillon incrusté). 31/10 : --split et --incruste arrivent déjà tremblés (split-hook.py, incruste/tremble.py) : pas de 2e couche ici.
 const GRAIN = 'noise=alls=9:allf=t+u,eq=saturation=1.03:contrast=1.02';
 // Tremblé main tenue « faible » (validé Axel) : vraies fréquences ~1-3 Hz, A=8px, rotation 0,4°, zoom 1,09.
 const SHAKE = "scale=iw*1.09:ih*1.09:flags=lanczos,rotate='(0.4*(sin(5.7*t)+0.4*sin(11.3*t)))*PI/180':c=black,"

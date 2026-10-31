@@ -7,7 +7,7 @@ import json, os, shutil, subprocess, sys, urllib.request
 ICI = os.path.dirname(os.path.abspath(__file__)); REPO = os.path.abspath(os.path.join(ICI, '..', '..'))
 sys.path.insert(0, os.path.join(REPO, 'usine', 'lots')); sys.path.insert(0, ICI)
 from outils import q, log
-import masques
+import masques, tremble
 
 def run(*a, **kw): subprocess.run(list(a), check=True, **kw)
 
@@ -24,11 +24,15 @@ def main():
     if not os.path.exists(clip): urllib.request.urlretrieve(url, clip)
     for s in ('f', 'o'): shutil.rmtree(os.path.join(c, s), ignore_errors=True); os.makedirs(os.path.join(c, s))
     run('ffmpeg', '-v', 'error', '-y', '-i', clip, os.path.join(c, 'f', '%03d.png'))
-    if not os.path.isdir(os.path.join(c, 'm2')) or len(os.listdir(os.path.join(c, 'm2'))) != len(os.listdir(os.path.join(c, 'f'))):
-        shutil.rmtree(os.path.join(c, 'm2'), ignore_errors=True); masques.pour(url, os.path.join(c, 'm2'))
+    mb = os.path.join(c, 'm2-brut')   # masques de la prise brute ; m2/ = leur copie tremblée (Axel 31/10), refaite à chaque passage
+    if not os.path.isdir(mb) and os.path.isdir(os.path.join(c, 'm2')): os.rename(os.path.join(c, 'm2'), mb)   # dossier d'avant le 31/10
+    if not os.path.isdir(mb) or len(os.listdir(mb)) != len(os.listdir(os.path.join(c, 'f'))):
+        shutil.rmtree(mb, ignore_errors=True); masques.pour(url, mb)
+    shutil.rmtree(os.path.join(c, 'm2'), ignore_errors=True); shutil.copytree(mb, os.path.join(c, 'm2'))
     if not os.path.exists(os.path.join(c, 'words.json')):
         run('node', os.path.join(REPO, 'usine', 'captions.mjs'), 'emit', clip, '0', os.path.join(c, 'words.json'), stdout=subprocess.DEVNULL)
     fps = round(masques.fps_de(clip), 3)
+    tremble.dossiers(os.path.join(c, 'f'), os.path.join(c, 'm2'), fps)
     json.dump({'fps': fps, 'consigne': banque['consigne'], 'groupes': banque['groupes']}, open(os.path.join(c, 'incruste.json'), 'w'), ensure_ascii=False)
     style = {'une_ligne': True, **{k[2:]: v for k, v in opt.items() if k in ('--couleur', '--teinte')}}   # groupes sur une ligne, comme le hook
     json.dump(style, open(os.path.join(d, 'incruste.json'), 'w'), ensure_ascii=False)   # couleur lue par hook.py (importé)

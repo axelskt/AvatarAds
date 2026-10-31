@@ -30,8 +30,9 @@ try:
     # (vers la droite et vers le haut, 0,5 s, lissé) — pas de grand parcours ; ensuite il reste fixe jusqu'à la fin.
     ease = lambda a, d: "(1-pow(1-min(max((t-%g)/%g\\,0)\\,1)\\,3))" % (a, d)
     k_ = TAILLE / 0.45; AW, AH = int(1080 * TAILLE) // 2 * 2, int(1920 * TAILLE) // 2 * 2
-    x = "30+%d*%s" % (120 * k_, ease(M, 0.5))
-    y = "%d-h-%d*%s" % (BAS, 60 * k_, ease(M, 0.5))
+    # Axel 31/10 : tremblement sur chaque vidéo (mêmes courbes que SHAKE de build.mjs) : l'avatar seul, le fond reste net
+    x = "30+%d*%s+8*(sin(6.3*t)+0.5*sin(12.9*t+1)+0.3*sin(19.7*t))" % (120 * k_, ease(M, 0.5))
+    y = "%d-h-%d*%s+8*(cos(7.1*t)+0.5*sin(13.7*t+0.5)+0.25*sin(22.3*t))" % (BAS, 60 * k_, ease(M, 0.5))
     fc = ("[0:v]fps=25,setsar=1[bg];[2:v]format=gray,boxblur=2:1,geq=lum='lum(X,Y)*min(1,(H-Y)/120)'[m];"
           "[1:v][m]alphamerge,scale=%d:%d,tpad=stop_mode=clone:stop_duration=1[av];"
           "[bg][av]overlay=x='%s':y='%s':eval=frame:shortest=1,format=yuv420p[v]" % (AW, AH, x, y))
