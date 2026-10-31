@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1440'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1500'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -11845,6 +11845,7 @@ function _kieTag(){ const t = (window._aaLastEngine==='kie' && _kieOn()) ? ' · 
 // le compte dev ») : pour un client, aucun suffixe moteur ni préfixe « kie : » dans les toasts et messages d'erreur.
 function _kieP(){ return _kieDev() ? 'kie : ' : ''; }
 function _kieMsg(m){
+  if(/copyright/i.test(String(m||''))) return 'Refusé pour droits d\'auteur : ce personnage ou cette vidéo est protégé. Utilise un personnage original.';   // Axel 31/10 : message du fournisseur en anglais
   m = String(m == null ? '' : m);
   if(_kieDev() || !/kie/i.test(m)) return m;
   m = m.replace(/\s*\(?repli\s*:\s*kie\.ai[^)]*\)?/gi, '').replace(/\s*·\s*kie\.ai\b/gi, '');
@@ -35242,7 +35243,7 @@ async function _mcGenerate(){
     if(window._mcAutoFrame!==false && typeof _detectFaceBox==='function'){
       try{
         _mcProg('Analyse du cadrage de la référence…', 6);
-        refFrame = await _mcFrameFromVideo(window._mcRefB64);
+        refFrame = await _mcFrameFromVideo(window._mcRefBlobUrl||window._mcRefB64);   // Axel 31/10 : Safari ne lit pas la vidéo en data: (« vidéo illisible », cadrage perdu)
         const rb = await _detectFaceBox(refFrame);
         if(rb && rb.h>0){ refTarget = { headFrac: rb.h, cx: rb.x+rb.w/2, cy: rb.y+rb.h/2 }; }
         else console.warn('[mc] cadrage ref : aucun visage détecté sur la frame de référence — cadrage standard');
@@ -35277,7 +35278,7 @@ async function _mcGenerate(){
     // (assets/bgclean.jpg du worker) : zéro second appel gpt-image.
     let bgCleanFrame = null;
     if(!bgSrc && window._mcKeepVidBg){
-      try{ _mcProg('Fond : frame de ta vidéo…', 9); bgSrc = refFrame || await _mcFrameFromVideo(window._mcRefB64); bgDeVid = true; }
+      try{ _mcProg('Fond : frame de ta vidéo…', 9); bgSrc = refFrame || await _mcFrameFromVideo(window._mcRefBlobUrl||window._mcRefB64); bgDeVid = true; }
       catch(e){ console.warn('[mc] frame fond :', e); }
     }
     if(bgSrc){

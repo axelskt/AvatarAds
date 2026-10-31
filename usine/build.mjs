@@ -658,7 +658,8 @@ allWords.push(...(INCRUSTE ? [] : hookW), ...demoW, ...(INCRUSTE ? [] : ctaW));
 const wj = join(work, 'allWords.json'); writeFileSync(wj, JSON.stringify(allWords));
 // format : phrase choc (placée hors visage, zone sûre) + style des sous-titres
 const capOpts = { uhd: UHD || undefined, subs: format.subs, style: OPT['subs-style'] || 'contour', broll: brollEvents.map(e => ({ file: e.file, pair: e.pair || undefined, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image, style: e.style || 'card' })) };
-const sidecar = { incruste: INCRUSTE || undefined, format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
+// Axel 31/10 : un split n'a jamais de texte choc : noté F01, sinon publish-qc refuse la recette (« F03 sans texte choc »)
+const sidecar = { incruste: INCRUSTE || undefined, format: SPLIT ? 'F01' : format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
 if (FMT.hasChoc(format) && !SPLIT && !INCRUSTE) {
   const firstIll = brollEvents.filter(e => e.style === 'hook').map(e => e.at).sort((a, b) => a - b)[0];
@@ -694,7 +695,7 @@ if (FMT.hasChoc(format) && !SPLIT && !INCRUSTE) {
   try { writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
   console.log(`  phrase choc ${p.id} style ${chocStyle} (${layout.zone}, ${layout.size} px, ${layout.lines.length} ligne(s)) 0-${end.toFixed(2)} s` + (layout.level !== 'ok' ? ' ⚠ revue : ' + layout.reasons.join(' · ') : ''));
 }
-sidecar.combo = { format: format.id, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
+sidecar.combo = { format: sidecar.format, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
 if (illusLog.length) sidecar.illustrations = illusLog;
 sidecar.musique = music ? (/(M\d+)_/.exec(basename(music)) || [])[1] || basename(music) : null; sidecar.sous_titre = SUBS[OPT['subs-style'] || 'contour'] || (/^S\d{2}$/.test(OPT['subs-style']) ? OPT['subs-style'] : 'S02');
 if (INCRUSTE) capOpts.fenetre = { de: +(O1 + TS).toFixed(3), a: +(cta ? O2 : 1e9).toFixed(3) };   // sous-titres de la démo seulement, hors glissements
