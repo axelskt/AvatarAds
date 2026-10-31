@@ -19,7 +19,7 @@ def sh_borne(args, delai, **kw):
     try: return sh(args, timeout=delai, **kw)
     except subprocess.TimeoutExpired: return _Delai()
 def q(sql, js=True):
-    f = os.path.join(WORK, '_q%d.sql' % os.getpid()); open(f, 'w').write(sql)
+    f = os.path.join(WORK, '_q%d-%d.sql' % (os.getpid(), threading.get_ident())); open(f, 'w').write(sql)
     for k in range(4):
         r = sh_borne(['supabase', 'db', 'query', '--linked', '-f', f, '-o', 'json'], D_REQ)
         t = r.stdout; i = t.find('{')
@@ -147,7 +147,7 @@ DUREE_SQL = ("coalesce((select f.duration from factory_fp f where f.video_url=q.
              "'$.checks[*] ? (@.name == \"duree\").detail') #>> '{}' from '^([0-9.]+)s')::numeric)")
 def _cli_q(sql, extra, cwd, tag, tries=4):
     """supabase db query -o json → lignes. Une erreur SQL (fonction absente, exception) n'est pas réessayée : seulement les coupures."""
-    f = os.path.join(WORK, '_%s_%d.sql' % (tag, os.getpid())); open(f, 'w').write(sql); err = ''
+    f = os.path.join(WORK, '_%s_%d_%d.sql' % (tag, os.getpid(), threading.get_ident())); open(f, 'w').write(sql); err = ''
     try:
         for k in range(tries):
             try: r = subprocess.run(['supabase', 'db', 'query', '--linked', *extra, '-f', f, '-o', 'json'], cwd=cwd, capture_output=True, text=True, timeout=D_REQ)

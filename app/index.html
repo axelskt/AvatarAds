@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1500'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1515'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -34416,7 +34416,7 @@ async function _mcNormalizeRef(b64, crop){
       const vf=(doCrop?('crop='+crop.w+':'+crop.h+':'+crop.x+':'+crop.y+','):'')+'scale='+sw+':'+sh+',format=yuv420p'+(tooShort?(',tpad=stop_mode=clone:stop_duration='+padSec.toFixed(2)):'');
       args.push('-vf',vf);
       if(tooShort) args.push('-af','apad=pad_dur='+padSec.toFixed(2));
-      args.push('-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','128k');
+      args.push('-c:v','libx264','-preset','ultrafast','-crf','23','-c:a','aac','-b:a','128k');   // Axel 31/10 : l'étape la plus lente chez lui ; le moteur ne lit que le mouvement
     } else { args.push('-c','copy'); }
     args.push('-movflags','+faststart','mcref_out.mp4');
     await ff.run(...args);

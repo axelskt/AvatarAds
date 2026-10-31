@@ -8,6 +8,7 @@
 # Ici : recettes (plan.mjs), CTA cohérent avec la démo, textes choc et musiques des F05, 6 rendus à la fois (LOT_PAR), relance si le
 # texte choc tombe au milieu, dépôt qc/ en 'pending' (Axel valide), numérotation VF continue, reprise possible (état).
 import json, os, random, shutil, subprocess, sys, time, itertools
+from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from outils import *
 NS, NV = int(sys.argv[1]) if len(sys.argv) > 1 else 5, int(sys.argv[2]) if len(sys.argv) > 2 else 5
@@ -101,7 +102,7 @@ def sans_blanc(h):
     if not n0: return h
     out = h[:-4] + '-c%d.mp4' % n0; t0 = n0 / fps
     if not os.path.exists(out):
-        tmp = out + '.%d.part.mp4' % os.getpid()
+        tmp = out + '.%d.%d.part.mp4' % (os.getpid(), threading.get_ident())
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', '%.4f' % t0, '-i', h, '-c:v', 'libx264', '-crf', '15', '-preset', 'medium', '-pix_fmt', 'yuv420p',
                         '-c:a', 'aac', '-b:a', '192k', tmp], check=True)
         os.replace(tmp, out)
@@ -217,19 +218,24 @@ def prep(it, tag):
     return dict(kind='m', react=react, demo=demo, music=m, th=th, cs=cs, out=out, cmd=cmd, it=it)
 env = dict(os.environ, PRODUCER_BROWSER_GPU_MODE='hardware')
 # 19/10 (Axel : « tu peux en faire 6 en même temps ») : rendus simultanés, 6 par défaut (avant 3) — LOT_PAR=3 pour revenir
-PAR = max(1, int(os.environ.get('LOT_PAR', '6')))
+# 31/10 (Axel : « tu peux tout lancer en même temps ») : 9 rendus, préparation et dépôt en parallèle. Pas 18 : 6 rendus prennent déjà ~40 % des 24 Go,
+# et Chromium meurt en pleine capture quand la RAM manque.
+PAR = max(1, int(os.environ.get('LOT_PAR', '9')))
 # les fichiers partagés (démos, réactions) d'une série sont téléchargés AVANT de lancer les rendus en parallèle
 for si in range(S['serie'], len(S['series'])):
     t0 = time.time(); todo = [(it, 0) for it in S['series'][si]]
     while todo:
-        batch, todo = todo[:PAR], todo[PAR:]; js = []
-        for k, (it, tries) in enumerate(batch):
-            try: j = prep(it, 's%d_%d_%d' % (si + 1, k, tries)); j['tries'] = tries; js.append(j)
+        batch, todo = todo[:PAR], todo[PAR:]
+        def prep1(a):
+            k, (it, tries) = a
+            try: j = prep(it, 's%d_%d_%d' % (si + 1, k, tries)); j['tries'] = tries; return j
             except Exception as e: log('✗ préparation', it, e); S['fail'].append({'it': it, 'err': str(e)[:200]})
+        with ThreadPoolExecutor(len(batch)) as ex: js = [j for j in ex.map(prep1, enumerate(batch)) if j]
         ps = []
         for j in js:   # 27/10 : départs décalés de 3 s, chaque rendu voit la musique tirée par le précédent (dernier.json)
             if ps: time.sleep(3)
             ps.append((j, subprocess.Popen(j['cmd'], cwd=REPO, env=env, stdout=open(j['out'] + '.log', 'w'), stderr=subprocess.STDOUT)))
+        depots = []
         for j, p in ps:
             p.wait()
             if p.returncode or not os.path.exists(j['out']):
@@ -237,9 +243,11 @@ for si in range(S['serie'], len(S['series'])):
             z = (json.load(open(j['out'] + '.format.json')).get('layout') or {}).get('zone') if os.path.exists(j['out'] + '.format.json') else None
             if j['kind'] == 'o' and z == 'milieu' and j['tries'] < 2:
                 log('… texte choc au milieu, relance', j['it']); todo.append((j['it'], j['tries'] + 1)); os.remove(j['out']); continue
-            vf = 'VF-%04d' % S['next']
+            depots.append((j, 'VF-%04d' % S['next'])); S['next'] += 1   # numéro réservé avant le dépôt en parallèle (un échec laisse un trou)
+        def depot(a):
+            j, vf = a
             try:
-                name, T, zone = publish(j, vf); S['next'] += 1
+                name, T, zone = publish(j, vf)
                 S['ok'].append({'vf': vf, 'name': name, 'serie': si + 1}); log('✓', name, T, zone)
             except Exception as e: log('✗ dépôt', j['it'], e); S['fail'].append({'it': j['it'], 'err': str(e)[:300]})
             if j.get('incdir'): shutil.rmtree(j['incdir'], ignore_errors=True)   # images du texte incrusté
@@ -247,6 +255,8 @@ for si in range(S['serie'], len(S['series'])):
                 try:
                     if x_: os.remove(x_)
                 except OSError: pass
+        if depots:
+            with ThreadPoolExecutor(min(4, len(depots))) as ex: list(ex.map(depot, depots))
         save()
     S['serie'] = si + 1; save(); log('— série %d/%d en %.0f s' % (si + 1, len(S['series']), time.time() - t0))
 with open(os.path.join(WORK, NOM + '-liens.txt'), 'w') as f:
