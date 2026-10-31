@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1640'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1645'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -34485,7 +34485,7 @@ function _mcRenderAdv(){
     <div style="height:12px"></div>
         <span class="label" style="display:block;margin-bottom:8px">Arrière-plan</span>
     <button onclick="_mcToggleFondVideo()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:${window._mcFondVideo?'18px':'12px'};border:${window._mcFondVideo?'2px solid var(--accent)':'1px solid var(--border)'};background:${window._mcFondVideo?'var(--accent-soft)':'var(--surface)'}">
-      <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">Garder le fond de la vidéo d’origine</span><span class="faint" style="font-size:11.5px">Le décor de ta vidéo reste, seule la personne est remplacée${tier==='pro'?'':' · avec Motion 3.0'}</span></div>
+      <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">Garder le fond de la vidéo d’origine</span><span class="faint" style="font-size:11.5px">Le décor de ta vidéo reste, seule la personne est remplacée</span></div>
       <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${window._mcFondVideo?'var(--accent)':'var(--surface-3)'};border:1px solid ${window._mcFondVideo?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${window._mcFondVideo?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
     </button>
     ${window._mcFondVideo?'':_mcFondPersoHtml()}
