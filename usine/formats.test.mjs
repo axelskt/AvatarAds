@@ -50,8 +50,8 @@ test('chocEnd : fixe = 3 s bornées à la vidéo ; hook = durée du hook ; sans 
 });
 
 // ── banque de phrases choc ──
-test('banque : 37 phrases TH01…TH37, modules connus, TH13 exige TX-O02a', () => {
-  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 37 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
+test('banque : 38 phrases TH01…TH38, modules connus, TH13 exige TX-O02a', () => {
+  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 38 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
   F.TEXTES_CHOC.forEach(p => assert.ok(['generique', 'mcp-claude', 'omni', 'montage-ia', 'scotch'].includes(p.module), p.id));   // scotch = TH35 (15/10)
   assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH29', 'TH30', 'TH31', 'TH32', 'TH35', 'TH36', 'TH37']);
   // TH36 (Axel 18/10) : bloc « cheat code » (logos Claude + AvatarAds = 🔥, bandeau dessous) aux mesures de la réf.
@@ -71,7 +71,7 @@ test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.
   const md = readFileSync(BANK, 'utf8'), sec = md.split(/^## /m).find(x => /^VALIDÉES/.test(x));
   assert.ok(sec, 'section VALIDÉES');
   const lines = sec.split('\n').filter(l => /^TH\d{2} /.test(l));
-  assert.equal(lines.length, 37);   // + TH37 (Claude 2098, Axel 21/10)
+  assert.equal(lines.length, 38);   // + TH38 (Tuto gratuit, Axel 31/10)
   lines.forEach(l => {
     const m = /^(TH\d{2}) (.+?)\s{2,}\((.+)\)\s*$/.exec(l);
     assert.ok(m, l);
@@ -145,7 +145,7 @@ test('pickFormat en série : 12 vidéos sur 3 hooks → chaque format 3 fois, ch
 test('pickChoc : phrases compatibles avec la démo, la moins utilisée d’abord, préférence aux phrases qui tiennent (fits)', () => {
   const ids = new Set(); for (let i = 0; i < 40; i++) ids.add(F.pickChoc({ demo: DEMO.omni, rand: () => i / 40 }).id);
   assert.ok(![...ids].some(id => ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24', 'TH26', 'TH27', 'TH32'].includes(id)), [...ids].join(','));
-  assert.equal(ids.size, 22);   // phrases génériques (TH28 ajoutée le 12/10, TH33-34 le 14/10) (TH10-14 et TH24 = autres modules)
+  assert.equal(ids.size, 23);   // phrases génériques (TH28 ajoutée le 12/10, TH33-34 le 14/10, TH38 le 31/10) (TH10-14 et TH24 = autres modules)
   const idsTx = new Set(); for (let i = 0; i < 60; i++) idsTx.add(F.pickChoc({ demo: DEMO.omni, tx: ['TX-O02a', 'TX-O01'], rand: () => i / 60 }).id);
   assert.ok(!idsTx.has('TH13'));   // TH13 supprimée par Axel le 14/10 : plus jamais tirée
   const done = F.TEXTES_CHOC.filter(p => p.module === 'generique' && p.id !== 'TH18').map(p => ({ hook: 'H74', texte_choc: p.id }));

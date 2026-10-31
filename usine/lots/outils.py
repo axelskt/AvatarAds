@@ -65,7 +65,7 @@ def storage_rm(paths):
 TH_MCP = {'TH10', 'TH11', 'TH12', 'TH24', 'TH26', 'TH27', 'TH29', 'TH30', 'TH31', 'TH32', 'TH36', 'TH37'}   # TH36 cheat code (18/10) ; TH37 (21/10)
 CS = ['CS01', 'CS02', 'CS03', 'CS05', 'CS07', 'CS08', 'CS11', 'CS17']
 def pick_th(demo, prev):
-    ths = ['TH%02d' % i for i in range(1, 35) if i not in (13, 14)] + ['TH36', 'TH37']   # TH35 = format scotch seulement
+    ths = ['TH%02d' % i for i in range(1, 35) if i not in (13, 14)] + ['TH36', 'TH37', 'TH38']   # TH35 = format scotch seulement
     ok = [t for t in ths if t != prev and (t not in TH_MCP or demo.startswith('C-MCPM'))]
     return random.choice(ok)
 # Format Insomnie (R-I-*) : un TI, jamais un TH. TI01 supprimé ; TI02 = démos Express seulement ; TI03 = démos MCP seulement.

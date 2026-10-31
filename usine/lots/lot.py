@@ -136,6 +136,8 @@ def incruste(photo, hook, demo, cta, cf, tag, style=None):
     return dict(d=d_, hook=hi, cta=ci, style=st, hd=hd)
 # Axel 21/10 (revue fond vert : « il parle trop lentement ») : prises accélérées EN PLUS de leur ×1,10 dans le format fond vert
 VIT_FV = {('A3-10', 'H23'): 1.15, ('A3-11', 'H74'): 1.15}
+# Axel 31/10 : le hook s'ouvre sur un geste muet voulu (cheveux, main devant la caméra) : surtout pas de coupe du « blanc » de tête
+GESTE_MUET = {('AUTRE-6', 'H59'), ('AUTRE-7', 'H59')}
 def prep(it, tag):
     if it['k'] == 'o':
         photo, hook, demo = it['photo'], it['hook'], it['demo']
@@ -153,11 +155,12 @@ def prep(it, tag):
             return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, incruste=inc['style'], hd=inc['hd'], incdir=inc['d'])
         g = [k for k in ('H89-GRILLE', 'H89-GRILLE-C') if (photo, k, 'omni') in VAR] if hook == 'H89' else []
         if g and random.random() < 0.7: hv = random.choice(g); hf = VAR[(photo, hv, 'omni')]
-        h = sans_blanc(get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4')); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        h = get('%s/variants/%s.mp4' % (B, hf), hf + '.mp4'); c = get('%s/variants/%s.mp4' % (B, cf), cf + '.mp4')
+        if (photo, hook) not in GESTE_MUET: h = sans_blanc(h)
         d = get(bricks[demo]['meta']['media'], os.path.basename(bricks[demo]['meta']['media']))
         out = os.path.join(OUT, '%s_%s.mp4' % (NOM, tag))
         cmd = ['node', 'usine/build.mjs', h, d, out, 'auto', h, c, '--voice', 'omni', '--format', 'F03', '--illus', 'auto', '--subs-style', 'auto',
-               '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE]
+               '--hook-id', hook, '--demo', demo, '--bricks', BRICKS, '--done', DONE] + (['--choc', it['choc']] if it.get('choc') else [])
         return dict(kind='o', photo=photo, hook=hook, demo=demo, cta=cta, cf=cf, out=out, cmd=cmd, it=it, hf_var=hv)
     if it['k'] == 's':   # Axel 23/10 : SPLIT (usine/split-hook.py) — 2 résultats « Hook démo » en haut, l'avatar en bas, démo Express
         photo, hook, demo, mode = it['photo'], it['hook'], it['demo'], it.get('mode', 'B')
