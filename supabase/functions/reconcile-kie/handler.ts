@@ -24,8 +24,7 @@
 //   ce qui n'a pas été livré (règle refund_credits sans la garde 2 h, bill_reason 'too_old') au lieu de clore sans rien rendre.
 // Déclenché par pg_cron (POST + x-cron-key = CRON_SECRET), comme reconcile-fal-orphans. Best-effort, jamais bloquant.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { kieKey, kieRecord, kieDownload, kieKindOf, kieOwnership, kieBill, kieLibMeta, KIE_MC_ALIASES, kieMcSortieOk } from '../_shared/kie.ts'
-import { dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : durée de sortie contrôlée, comme kie-proxy
+import { kieKey, kieRecord, kieCopierResultat, kieOwnership, kieBill, kieLibMeta, KIE_MC_ALIASES } from '../_shared/kie.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -164,22 +163,22 @@ export async function handler(req: Request): Promise<Response> {
       if (rec.state === 'fail' || (rec.state === 'ok' && !rec.urls.length)) { await setState(j.task_id, 'saving', 'failed', { last_error: (rec.err || 'échec kie').slice(0, 200) }); failed++; await bill(j, 'refund'); continue }
       if (rec.state !== 'ok') { if (ageH > 6) { await setState(j.task_id, 'saving', 'expired', { last_error: 'toujours en cours après 6 h' }); expired++; await bill(j, 'refund') } else { await setState(j.task_id, 'saving', 'pending'); running++ } continue }
 
-      const dl = await kieDownload(rec.urls[0]); if (!dl) { await later('téléchargement impossible (trop gros, lien expiré ou hôte refusé)'); continue }
-      const k = kieKindOf(dl.ct, dl.buf); if (!k) { await setState(j.task_id, 'saving', 'failed', { last_error: 'format inattendu ' + dl.ct }); failed++; await bill(j, 'refund'); continue }
-      // Motion Control (09/10) : sortie nettement plus longue que la vidéo mesurée à la soumission = entrée maquillée → jamais
-      // rangée ; op RÉGLÉE d'abord (le balayage C ne rembourse pas une ligne réglée), puis tâche close en échec.
-      if (KIE_MC_ALIASES.has(String(j.alias)) && k.kind === 'video') {
-        const outSec = dureeMp4Octets(new Uint8Array(dl.buf))
-        if (!kieMcSortieOk(outSec, j.bill_sec == null ? null : Number(j.bill_sec))) {
-          console.warn('[reconcile-kie] motion : sortie hors durée', j.task_id, `sortie=${outSec}s mesuré=${j.bill_sec}s`)
+      // Axel 31/10 : copie en flux, comme kie-proxy (plus jamais une vidéo entière en mémoire).
+      const mc = KIE_MC_ALIASES.has(String(j.alias))
+      const cp = await kieCopierResultat(svc, 'render-media', rec.urls[0], `${j.user_id}/lib/kie-${taskId}`, j.bill_sec == null ? null : Number(j.bill_sec), mc)
+      if (!cp.ok) {
+        if (cp.raison === 'format') { await setState(j.task_id, 'saving', 'failed', { last_error: cp.detail }); failed++; await bill(j, 'refund'); continue }
+        // Motion Control (09/10) : sortie nettement plus longue que la vidéo mesurée à la soumission = entrée maquillée → jamais
+        // rangée ; op RÉGLÉE d'abord (le balayage C ne rembourse pas une ligne réglée), puis tâche close en échec.
+        if (cp.raison === 'duree') {
+          console.warn('[reconcile-kie] motion : sortie hors durée', j.task_id, cp.detail)
           await bill(j, 'settle')
-          await setState(j.task_id, 'saving', 'failed', { last_error: `sortie ${outSec}s > vidéo facturée ${j.bill_sec}s` }); failed++
+          await setState(j.task_id, 'saving', 'failed', { last_error: cp.detail }); failed++
           continue
         }
+        await later(cp.detail); continue
       }
-      const path = `${j.user_id}/lib/kie-${taskId}.${k.ext}`
-      const up = await svc.storage.from('render-media').upload(path, new Uint8Array(dl.buf), { contentType: k.mime, upsert: true })
-      if (up.error) { await later('copie storage : ' + up.error.message); continue }
+      const path = cp.dst, k = cp
       let libId: string | null = null
       try { libId = await toLibrary(j.user_id, path, k.kind, j.label, j.alias) } catch (e) { await later(String((e as Error)?.message || e).slice(0, 150)); continue }
       await setState(j.task_id, 'saving', 'saved', { storage_path: path, library_id: libId, last_error: null })

@@ -6055,7 +6055,7 @@ setTimeout(function(){
 </div>
 
 <!-- TOAST -->
-<div class="toast" id="toastEl"><span id="toastMsg"></span></div>
+<div class="toast" id="toastEl"><span id="toastMsg"></span><button id="toastClose" type="button" aria-label="Fermer" onclick="_toastFermer()" style="display:none;flex:0 0 auto;margin:-4px -6px -4px 4px;width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:inherit;cursor:pointer;place-items:center;pointer-events:auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <!-- Badge debug audio — fixe, ne se fait pas écraser par setStage() -->
 <div id="audioBadge" style="display:none;position:fixed;bottom:80px;right:16px;background:#1a1a1a;border:1.5px solid #f90;color:#f90;padding:8px 12px;border-radius:10px;font-size:11px;font-family:monospace;z-index:99999;max-width:320px;word-break:break-all;line-height:1.6"></div>
 
@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1515'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1530'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -33331,11 +33331,16 @@ function toast(msg){
   const el=document.getElementById('toastEl');
   document.getElementById('toastMsg').textContent=msg;
   el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),3000);
+  // Axel 31/10 : une erreur reste 15 s avec une croix (3 s ne laissaient pas le temps de la lire) ; le reste, 3 s. Délai repris à chaque toast.
+  const _err=_toastLooksLikeError(msg), _x=document.getElementById('toastClose');
+  if(_x) _x.style.display=_err?'grid':'none';
+  el.style.pointerEvents=_err?'auto':'';
+  clearTimeout(window._toastT); window._toastT=setTimeout(_toastFermer,_err?15000:3000);
   // Compte dev : un toast d'ERREUR est aussi posé dans le panneau persistant (croix pour fermer) —
   // 3 s ne suffisent pas pour lire « Kling a refusé… : <raison> » (Axel, 20/08).
   try{ if(typeof _aaIsDev==='function' && _aaIsDev() && _toastLooksLikeError(msg)) _devErr('TOAST · '+msg); }catch(_){}
 }
+function _toastFermer(){ clearTimeout(window._toastT); const el=document.getElementById('toastEl'); if(el){ el.classList.remove('show'); el.style.pointerEvents=''; } }
 function _toastLooksLikeError(m){
   m=String(m||'');
   return /erreur|échou|echou|refus|impossible|indispon|invalid|expir|introuvable|non support|pas support|illisible|trop (grand|long|court|lourd)|limite|interdit|bloqu|panne|timeout|délai dépassé|manquant|\b(4\d\d|5\d\d)\b|kling|fal |hedra|nano banana .*(refus|échou)|aucun(e)? (image|vidéo|résultat)/i.test(m) && !/réussi|terminé|ajouté|enregistr|copié|envoyé/i.test(m);

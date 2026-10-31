@@ -3,6 +3,7 @@
 // jamais renvoyée ni journalisée.
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isBlockedHost, hostResolvesInternal } from './guard.ts'
+import { dureeMp4Url } from './mp4-duree.ts'
 
 export const KIE = 'https://api.kie.ai'
 export const kieKey = () => Deno.env.get('KIEAI_API_KEY') ?? ''
@@ -198,6 +199,82 @@ export async function kieDownload(raw: string): Promise<{ buf: ArrayBuffer; ct: 
     return { buf: buf.buffer, ct: (r.headers.get('content-type') || '').toLowerCase(), host: p.hostname }
   }
   return null
+}
+
+// Axel 31/10 : une vidéo Motion Control 1080p finie chez kie, jamais livrée : kieDownload la met deux fois en mémoire et
+// l'isolate tombe (546 WORKER_LIMIT à chaque suivi, 66 crédits bloqués). Tout résultat passe donc en FLUX : kie → dossier
+// service kie-tmp/ (hors dossier client : un fichier refusé n'y est jamais lisible) → contrôle de durée par plages → dossier final.
+export const MAX_FLUX_BYTES = 500 * 1024 * 1024   // plafond d'envoi du projet
+export type FluxKie = { tete: Uint8Array; flux: ReadableStream<Uint8Array>; len: number; ct: string; host: string; annuler: () => Promise<void> }
+export function fluxBorne(tete: Uint8Array, reader: ReadableStreamDefaultReader<Uint8Array>, max = MAX_FLUX_BYTES): ReadableStream<Uint8Array> {
+  let total = tete.byteLength, debut = true
+  return new ReadableStream<Uint8Array>({
+    async pull(c) {
+      if (debut) { debut = false; c.enqueue(tete); return }
+      const { done, value } = await reader.read()
+      if (done) { c.close(); return }
+      total += value.byteLength
+      if (total > max) { try { await reader.cancel() } catch { /* */ } c.error(new Error('résultat trop lourd')); return }
+      c.enqueue(value)
+    },
+    async cancel() { try { await reader.cancel() } catch { /* */ } },
+  })
+}
+export async function kieOuvrirFlux(raw: string): Promise<FluxKie | null> {
+  let u = raw
+  for (let hop = 0; hop < 4; hop++) {
+    let p: URL
+    try { p = new URL(u) } catch { return null }
+    if (p.protocol !== 'https:' || isBlockedHost(p.hostname) || await hostResolvesInternal(p.hostname)) return null
+    const r = await fetch(p.href, { redirect: 'manual', signal: AbortSignal.timeout(300000) })
+    if (r.status >= 300 && r.status < 400) { const loc = r.headers.get('location'); if (!loc) return null; u = new URL(loc, p.href).href; continue }
+    if (!r.ok || !r.body) return null
+    const len = Number(r.headers.get('content-length') || 0)
+    const reader = r.body.getReader()
+    if (len > MAX_FLUX_BYTES) { try { await reader.cancel() } catch { /* */ } return null }
+    let tete = new Uint8Array(0)
+    while (tete.byteLength < 12) {   // assez d'octets pour la signature
+      const { done, value } = await reader.read()
+      if (done) break
+      const t = new Uint8Array(tete.byteLength + value.byteLength); t.set(tete); t.set(value, tete.byteLength); tete = t
+    }
+    return { tete, flux: fluxBorne(tete, reader), len, ct: (r.headers.get('content-type') || '').toLowerCase(), host: p.hostname,
+      annuler: async () => { try { await reader.cancel() } catch { /* */ } } }
+  }
+  return null
+}
+// Envoi sans mémoire tampon. null = réussi, sinon le message d'erreur.
+export async function kieEnvoyerFlux(base: string, cle: string, bucket: string, path: string, flux: ReadableStream<Uint8Array>, len: number, mime: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${base}/storage/v1/object/${bucket}/${path}`, {
+      method: 'POST', body: flux, duplex: 'half', signal: AbortSignal.timeout(300000),
+      headers: { Authorization: `Bearer ${cle}`, apikey: cle, 'x-upsert': 'true', 'content-type': mime, 'cache-control': 'max-age=3600', ...(len > 0 ? { 'content-length': String(len) } : {}) },
+    } as RequestInit)
+    if (r.ok) { await r.body?.cancel(); return null }
+    return `HTTP ${r.status} ${(await r.text()).slice(0, 120)}`
+  } catch (e) { return String((e as Error)?.message || e).slice(0, 150) }
+}
+export type CopieKie = { ok: true; dst: string; kind: 'image' | 'video'; mime: string; ext: string; host: string }
+  | { ok: false; raison: 'telechargement' | 'format' | 'copie' | 'duree'; detail: string; outSec?: number | null }
+// `sansExt` : chemin final sans extension. `billSec` : défini = Motion Control, durée de sortie contrôlée (kieMcSortieOk).
+export async function kieCopierResultat(svc: SupabaseClient, bucket: string, url: string, sansExt: string, billSec?: number | null, mc = false): Promise<CopieKie> {
+  const src = await kieOuvrirFlux(url)
+  if (!src) return { ok: false, raison: 'telechargement', detail: 'téléchargement impossible (trop gros, lien expiré ou hôte refusé)' }
+  const k = kieKindOf(src.ct, src.tete.buffer.slice(src.tete.byteOffset, src.tete.byteOffset + src.tete.byteLength) as ArrayBuffer)
+  if (!k) { await src.annuler(); return { ok: false, raison: 'format', detail: 'format inattendu ' + src.ct } }
+  const dst = `${sansExt}.${k.ext}`, tmp = `kie-tmp/${crypto.randomUUID()}.${k.ext}`
+  const st = svc.storage.from(bucket)
+  const err = await kieEnvoyerFlux(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', bucket, tmp, src.flux, src.len, k.mime)
+  if (err) { await src.annuler(); await st.remove([tmp]).catch(() => {}); return { ok: false, raison: 'copie', detail: 'copie storage : ' + err } }
+  if (mc && k.kind === 'video') {
+    const { data: s } = await st.createSignedUrl(tmp, 600)
+    const outSec = s?.signedUrl ? await dureeMp4Url(s.signedUrl) : null
+    if (!kieMcSortieOk(outSec, billSec)) { await st.remove([tmp]).catch(() => {}); return { ok: false, raison: 'duree', detail: `sortie ${outSec}s > vidéo facturée ${billSec}s`, outSec } }
+  }
+  let mv = await st.move(tmp, dst)
+  if (mv.error) { await st.remove([dst]).catch(() => {}); mv = await st.move(tmp, dst) }   // reprise : ancienne copie à la même place
+  if (mv.error) { await st.remove([tmp]).catch(() => {}); return { ok: false, raison: 'copie', detail: 'copie storage : ' + mv.error.message } }
+  return { ok: true, dst, kind: k.kind, mime: k.mime, ext: k.ext, host: src.host }
 }
 
 // Format réel d'après la SIGNATURE des octets uniquement (jamais le content-type de l'hôte distant : un SVG ou un HTML

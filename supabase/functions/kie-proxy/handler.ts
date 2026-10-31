@@ -60,7 +60,7 @@
 // Les URL de résultat kie expirent (~24 h) → rapatriement dans render-media/<uid>/kie/<taskId>.<ext>.
 
 import { CORS, jsonRes, authUser, userPlan, refusPlan, billableGate, helperGate, applyReservation, applyOmniReservation, applyReservationFull, resolveOp, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
-import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnership, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn, KIE_MC_1080_PLANS, KIE_MC_ALIASES, kieMcFalPath, kieMcSortieOk } from '../_shared/kie.ts'
+import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieCopierResultat, kieKindOf as kindOf, kieOwnership, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn, KIE_MC_1080_PLANS, KIE_MC_ALIASES, kieMcFalPath, kieMcSortieOk } from '../_shared/kie.ts'
 import { preparerVideoFal, preparerVideoWan, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : vidéo du client copiée + mesurée, comme fal-proxy
 import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
 import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
@@ -569,24 +569,24 @@ export async function handler(req: Request): Promise<Response> {
       const hit = (listed || []).find((f: { name: string }) => f.name.startsWith(taskId + '.'))
       let dst = hit ? `${who}/kie/${hit.name}` : '', kind: 'image' | 'video' = hit && /\.(jpg|png|webp)$/.test(hit.name) ? 'image' : 'video', host = ''
       if (!dst) {
-        const dl = await download(rec.urls[0])
-        if (!dl) { await unclaim(); return jsonRes(502, { error: 'rapatriement du résultat kie impossible' }) }
-        const k = kindOf(dl.ct, dl.buf)
-        if (!k) { await unclaim(); return jsonRes(502, { error: 'format de résultat kie inattendu' }) }
-        // Motion Control (09/10) : sortie nettement plus longue que la vidéo mesurée à la soumission = entrée maquillée → non
-        // livrée ; op RÉGLÉE d'abord (le filet ne la rembourse pas), puis tâche close en échec (le filet ne la range pas).
-        if (uid && job && KIE_MC_ALIASES.has(String(job.alias)) && k.kind === 'video') {
-          const outSec = dureeMp4Octets(new Uint8Array(dl.buf))
-          if (!kieMcSortieOk(outSec, job.bill_sec == null ? null : Number(job.bill_sec))) {
-            console.warn('[kie] motion : sortie hors durée', rid, who, `sortie=${outSec}s mesuré=${job.bill_sec}s`)
+        // Axel 31/10 : copie en flux (kieCopierResultat), plus jamais la vidéo en mémoire (546 sur Motion Control 1080p).
+        const mc = !!(uid && job && KIE_MC_ALIASES.has(String(job.alias)))
+        const cp = await kieCopierResultat(svc(), BUCKET, rec.urls[0], base, job?.bill_sec == null ? null : Number(job.bill_sec), mc)
+        if (!cp.ok) {
+          // Motion Control (09/10) : sortie nettement plus longue que la vidéo mesurée à la soumission = entrée maquillée → non
+          // livrée ; op RÉGLÉE d'abord (le filet ne la rembourse pas), puis tâche close en échec (le filet ne la range pas).
+          if (cp.raison === 'duree' && uid && job) {
+            console.warn('[kie] motion : sortie hors durée', rid, who, cp.detail)
             if (job.op_id) await kieBill(svc(), uid, rid, 'settle')
-            await svc().from('kie_jobs').update({ state: 'failed', last_error: `sortie ${outSec}s > vidéo facturée ${job.bill_sec}s`, updated_at: new Date().toISOString() }).eq('task_id', rid).eq('user_id', uid)
+            await svc().from('kie_jobs').update({ state: 'failed', last_error: cp.detail, updated_at: new Date().toISOString() }).eq('task_id', rid).eq('user_id', uid)
             return jsonRes(422, { status: 'FAILED', error: 'vidéo de référence non conforme — génération non livrée', detail: [{ type: 'duration', msg: 'sortie plus longue que la vidéo facturée' }], billing: 'settled' })
           }
+          await unclaim()
+          if (cp.raison === 'telechargement') return jsonRes(502, { error: 'rapatriement du résultat kie impossible' })
+          if (cp.raison === 'format') return jsonRes(502, { error: 'format de résultat kie inattendu' })
+          return jsonRes(500, { error: 'copie du résultat impossible : ' + cp.detail })
         }
-        dst = `${base}.${k.ext}`; kind = k.kind; host = dl.host
-        const { error: upErr } = await st.upload(dst, new Uint8Array(dl.buf), { contentType: k.mime, upsert: true })
-        if (upErr) { await unclaim(); return jsonRes(500, { error: 'copie du résultat impossible : ' + upErr.message }) }
+        dst = cp.dst; kind = cp.kind; host = cp.host
       }
       const { data: signed, error: sErr } = await st.createSignedUrl(dst, 3600)
       if (sErr || !signed?.signedUrl) { await unclaim(); return jsonRes(500, { error: 'URL signée impossible' }) }
