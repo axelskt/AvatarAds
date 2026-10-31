@@ -5556,7 +5556,7 @@ setTimeout(function(){
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express — <b data-cc-sec="expressLitePerSec" style="color:var(--text2)">1,5 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en 1080p · <b data-cc-sec="omniFlashPerSec" style="color:var(--text2)">5 cr/s</b> en Qualité Max<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 12a8.5 8.5 0 01-12.3 7.6L3 21l1.4-5.2A8.5 8.5 0 1121 12z"/><path d="M9 10.5v3M12 8.5v7M15 10.5v3"/></svg> Voix native — <b data-cc-sec="omniFlashPerSec" style="color:var(--text2)">5 cr/s</b> en 1080p<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni · transformation vidéo — <b data-cc-sec="omniEditPerSec" style="color:var(--text2)">3 cr/s</b> en 720p · <b data-cc-sec="omniEdit1080PerSec" style="color:var(--text2)">4 cr/s</b> en 1080p<br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg> Motion Control — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en 1080p · <b data-cc-sec="motion30PerSec" style="color:var(--text2)">6 cr/s</b> en Motion 3.0 · remplacer l’audio <b style="color:var(--text2)">gratuit</b><br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg> Motion Control — <b style="color:var(--text2)">10 cr/s</b> · remplacer l’audio <b style="color:var(--text2)">gratuit</b><br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9.9 2.6l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5zM18 13l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg> Montage IA — <b style="color:var(--text2)">2 à 10 crédits</b> selon la réflexion · <b style="color:var(--text2)">8</b> avec ta voix seule · <b style="color:var(--text2)">4</b> pour un re-rendu<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg> Avatar dans le montage — <b style="color:var(--text2)">+2 cr/s</b> quand il parle · réaction <b style="color:var(--text2)">+20 crédits</b><br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Image IA — <b style="color:var(--text2)">1</b> Standard · <b style="color:var(--text2)">3</b> Premium · <b style="color:var(--text2)">5</b> 4K, par image<br>
@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1610'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1625'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -34184,7 +34184,7 @@ function _expSetEngine(e){
 
 /* ── Motion Control — état + uploads ── */
 window._MC_BACKEND_READY = true;   // Motion Control LIVE pour tous (Kling 2.6 via fal-proxy dans _mcGenerate) — flag informatif, non testé ailleurs
-window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
+window._mcTier='wan'; window._mcQuality='720'; window._mcRender='full';   // Axel 31/10 : un seul moteur, plus de choix de modèle
 // Version Kling — 'v2.6' pour tous ; 'v3' (Kling 3.0) réservé au compte DEV (test only, cf. _aaIsDev).
 window._mcKlingVer='v2.6';
 function _mcSetKlingVer(v){ window._mcKlingVer = (v==='v3' && _aaIsDev()) ? 'v3' : 'v2.6'; try{ _mcSaveOpts&&_mcSaveOpts(); }catch(_){} _mcRenderAdv(); }
@@ -34198,7 +34198,6 @@ function _mcSaveOpts(){ try{ localStorage.setItem('aa_mc_opts', JSON.stringify({
   tier:window._mcTier, quality:window._mcQuality, render:window._mcRender, format:window._mcFormat,
   cam:!!window._mcCamFollow, camV2:true, keepVidBg:false, fondVideo:!!window._mcFondVideo, autoFrame:window._mcAutoFrame!==false, klingVer:window._mcKlingVer, voice:window._mcVoice||'orig' })); }catch(_){ } }
 function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts')||'null'); if(!o) return;
-  if(o.tier==='pro'||o.tier==='standard') window._mcTier=o.tier;
   if(o.quality==='720'||o.quality==='1080') window._mcQuality=o.quality;
   if(['full','split-bottom','split-top'].includes(o.render)) window._mcRender=o.render;
   if(['auto','9:16','16:9'].includes(o.format)) window._mcFormat=o.format;   // 1:1 retiré (Axel 04/10) → un ancien choix 1:1 repasse en Auto
@@ -34206,9 +34205,9 @@ function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts
   // enregistrées AVANT ce changement (sans camV2) sont forcées à ON ; ensuite le choix explicite est respecté.
   window._mcCamFollow = o.camV2 ? !!o.cam : true;
   // 10/10 : l'ancien « fond vidéo » par détourage (+1 cr/s, lent) est remplacé par le fond NATIF de Motion 3.0
-  window._mcKeepVidBg=false; window._mcFondVideo=!!o.fondVideo && o.tier==='pro'; window._mcAutoFrame=true;
+  window._mcKeepVidBg=false; window._mcFondVideo=false; window._mcAutoFrame=true;
   window._mcVoice = (o.voice==='fille'||o.voice==='garcon') ? o.voice : 'orig';
-  window._mcKlingVer=(window._mcTier==='pro')?'v3':'v2.6'; }catch(_){ } } // version couplée au modèle (Motion 2.6/3.0) ; cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
+  }catch(_){ } } // version couplée au modèle (Motion 2.6/3.0) ; cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
 _mcLoadOpts();
 // ── RESET COMPLET après une génération réussie (Axel, 13/08 : « à chaque fois
 // qu'on a fini, ça ne se réinitialise pas complètement ») : le formulaire
@@ -34292,7 +34291,7 @@ function _mcOpenAdv(){ const m=document.getElementById('mcAdvModal'); if(!m) ret
 function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.style.display='none'; }
 function _mcSetTier(t){
   // Le « forfait » est devenu le MODÈLE : 'standard' = Motion 2.6 (Kling v2.6), 'pro' = Motion 3.0 (Kling v3, 1080p natif).
-  if(t==='wan'){ if(!_mcWanOk()) return; window._mcTier='wan'; window._mcKlingVer='v2.6'; window._mcQuality='720'; window._mcFondVideo=false; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); return; }
+  if(t==='wan'){ window._mcTier='wan'; window._mcKlingVer='v2.6'; window._mcQuality='720'; window._mcFondVideo=false; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); return; }
   if(t==='pro' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
     if(typeof showPaywall==='function') showPaywall('Oups — Motion 3.0 est réservé aux plans Pro & Élite', 'Passe en Pro ou Élite pour débloquer Motion 3.0.'); else toast('Motion 3.0 est réservé aux plans Pro et Élite'); return;
   }
@@ -34326,17 +34325,15 @@ function _mcToggleAutoFrame(){ window._mcAutoFrame=(window._mcAutoFrame===false)
 function _mcToggleBgClean(){ window._mcBgClean=(window._mcBgClean===false); _mcRenderAdv(); }
 // Motion 2.6 720p = 2 cr/s ; Motion 2.6 1080p NATIF = 3 cr/s (Axel 09/10 : fini l'upscale Topaz) ; Motion 3.0 1080p =
 // motion30PerSec. Même barème côté serveur (kie-proxy et fal-proxy : tarifVideoFal).
-// Axel 31/10 : « Motion Scène » (changement de personnage du Décupleur) branché ici, EN TEST sur son compte seulement : il remplace la
-// personne DANS la vidéo (décor gardé), 720p, 15 s max, 10 cr/s comme le Décupleur (le serveur tire 10 × durée arrondie au-dessus).
-const _MC_WAN_TEST = ['f0cae49a-e610-4721-862a-5c4afca6d7eb'];
-function _mcWanOk(){ return !!(typeof currentMember!=='undefined' && currentMember && (_aaIsDev() || _MC_WAN_TEST.includes(currentMember.id))); }
+// Axel 31/10 : Motion Control = uniquement le changement de personnage du Décupleur, pour tous les plans payants : il remplace la
+// personne DANS la vidéo (décor gardé), 720p, 15 s max, 10 cr/s (le serveur tire 10 × durée arrondie au-dessus). Refus = crédits rendus, sans repli.
 function _mcRate(){ return window._mcTier==='wan' ? DC_PERSO_CR_SEC : window._mcTier==='pro' ? CREDIT_COSTS.motion30PerSec : (window._mcQuality==='1080' ? 3 : 2); }
 // #34 · coût dynamique À CÔTÉ du bouton « Générer le mouvement » (pas seulement
 // dans les réglages avancés) : rate × durée de la vidéo de référence. Se met à
 // Kling motion-control (fal, v2.6 et v3) : vidéo de référence de 30 s MAX (orientation 'video'),
 // 3 s min. Au-delà, fal répond 422 « duration not supported » ~10 s après la soumission (vu le
 // 20/08 : vidéo TikTok > 30 s). On coupe donc aux 30 premières secondes AVANT l'envoi.
-const _MC_MAX_REF_S = 30;
+const _MC_MAX_REF_S = 15;
 function _mcRefDurEff(){ const d=window._mcRefDur||0; const eff = (d>0 && d<3.3) ? 3.6 : d; return Math.min(_MC_MAX_REF_S, Math.ceil(eff)); }
 // Sonde la vidéo de référence SANS la décoder : codec (fourcc dans le moov) + conteneur. Safari lit
 // le HEVC (vidéos iPhone « haute efficacité ») sans broncher, Kling NON → 422 « unsupported » en ~10 s.
@@ -34405,7 +34402,7 @@ async function _mcNormalizeRef(b64, crop){
   // dimensions APRÈS recadrage : c'est d'elles que dépendent les bornes Kling (340–3850 px)
   const w = doCrop ? crop.w : (window._mcRefW||0), h = doCrop ? crop.h : (window._mcRefH||0);
   const probe=_mcProbeRef(b64);
-  const tooLong = dur > _MC_MAX_REF_S+0.5;
+  const tooLong = dur >= _MC_MAX_REF_S-0.05;   // le serveur refuse au-delà de 15 s mesurées
   // Kling exige STRICTEMENT ≥ 3 s (« Video duration can not less than 3s » sur un clip de 2,97 s, 21/08) :
   // sous 3,3 s on prolonge la dernière image (tpad) + silence jusqu'à 3,6 s plutôt que de refuser.
   const tooShort = dur > 0 && dur < 3.3;
@@ -34418,7 +34415,7 @@ async function _mcNormalizeRef(b64, crop){
     await _loadFFmpeg(); const ff=_ffmpegInst;
     await ff.FS('writeFile','mcref_in.mp4', await window._ffFetchFile(src));
     const args=['-i','mcref_in.mp4'];
-    if(tooLong) args.push('-t', String(_MC_MAX_REF_S));
+    if(tooLong) args.push('-t', String(_MC_MAX_REF_S-0.1));
     if(badCodec || badSize || tooShort || doCrop){
       // dimensions cibles : ≥720 de petit côté si trop petit, ≤1920 de grand côté si trop grand, paires
       let sw=w||720, sh=h||1280; let k=1;
@@ -34450,7 +34447,7 @@ function _mcUpdateCost(){
   const tierLbl = window._mcTier==='pro' ? 'Motion 3.0 · 1080p natif' : (window._mcQuality==='1080' ? 'Motion 2.6 · 1080p natif' : 'Motion 2.6 · 720p');
   const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max)</span>' : '';
   // Axel 12/10 : le coût est DANS le bouton (« Générer le mouvement • 30 cr ») dès que la vidéo ET l'image sont posées ;
-  // plus de « Coût estimé » dans les paramètres avancés. Sous le bouton : seulement l'avertissement de coupe à 30 s.
+  // plus de « Coût estimé » dans les paramètres avancés. Sous le bouton : seulement l'avertissement de coupe à 15 s.
   void tierLbl;
   const gc=document.getElementById('mcGenCost'); if(gc) gc.textContent = window._mcCharB64 ? '• '+c+' cr' : '';
   el.innerHTML = coupe ? '<span style="opacity:.75">'+coupe.replace(/^ · /,'')+'</span>' : '';
@@ -34473,7 +34470,6 @@ function _mcRenderAdv(){
   const card=document.getElementById('mcAdvCard'); if(!card) return;
   // Motion 3.0 (tier 'pro') réservé Pro/Élite : un Starter avec une préférence 'pro' enregistrée retombe sur Motion 2.6.
   const _mcPaid=['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
-  if(window._mcTier==='pro' && !_mcPaid){ window._mcTier='standard'; window._mcKlingVer='v2.6'; window._mcQuality='720'; }
   const tier=window._mcTier, q=window._mcQuality, rnd=window._mcRender, rate=_mcRate();
   const dur=_mcRefDurEff();
   // option « fond vidéo » : +1 cr/s (inactif si un fond image perso est fourni — il prime)
@@ -34488,39 +34484,13 @@ function _mcRenderAdv(){
       <span style="font-weight:800;font-size:18px">Paramètres avancés</span>
       <button onclick="_mcCloseAdv()" class="row" style="width:32px;height:32px;border-radius:9px;border:1px solid var(--border);align-items:center;justify-content:center;cursor:pointer;background:none;color:var(--text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <span class="label" style="display:block;margin-bottom:8px">Modèle</span>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:${tier==='pro'?'16px':'14px'}">
-      ${tierCard('standard','Motion 2.6','Rapide et fiable · 2 cr/s')}
-      ${tierCard('pro','Motion 3.0','1080p natif · '+CREDIT_COSTS.motion30PerSec+' cr/s',_mcPaid?'':'<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap">PRO & ÉLITE</span>')}
-      ${_mcWanOk()?tierCard('wan','Motion Scène','Décor de ta vidéo · 720p · 15 s max · '+DC_PERSO_CR_SEC+' cr/s','<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em">TEST</span>'):''}
-    </div>
-    ${(tier==='pro'||tier==='wan')?``:`
-    <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
-    <div class="seg" style="width:100%;margin-bottom:6px">
-      <button class="${q==='720'?'on':''}" style="flex:1" onclick="_mcSetQual('720')">720p</button>
-      <button class="${q==='1080'?'on':''}" style="flex:1" onclick="_mcSetQual('1080')">1080p <span class="mono" style="font-size:10px;color:var(--accent-2)">+1 cr/s</span></button>
-    </div>
-    <p class="faint" style="font-size:11.5px;margin-bottom:18px">${q==='1080'?"1080p natif : +1 crédit / seconde.":"720p rapide. Passe en 1080p natif pour +1 cr/s, ou choisis Motion 3.0."}</p>`}
     <span class="label" style="display:block;margin-bottom:8px">Format</span>
     <div class="seg" style="width:100%;margin-bottom:6px">
       ${[['auto',0,0],['9:16',9,16],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'auto')===f;const ic=f==='auto'?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="3.2 3.2"/></svg>':`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>`;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 6px;font-size:12.5px" onclick="_mcSetFormat('${f}')">${ic}${f==='auto'?'Auto':f}</button>`;}).join('')}
     </div>
     <div style="height:10px"></div>
     <div style="height:12px"></div>
-    ${tier==='wan'?'':`<span class="label" style="display:block;margin-bottom:8px">Arrière-plan</span>
-    <button onclick="_mcToggleFondVideo()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:${window._mcFondVideo?'18px':'12px'};border:${window._mcFondVideo?'2px solid var(--accent)':'1px solid var(--border)'};background:${window._mcFondVideo?'var(--accent-soft)':'var(--surface)'}">
-      <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">Garder le fond de la vidéo d’origine</span><span class="faint" style="font-size:11.5px">Le décor de ta vidéo reste, seule la personne est remplacée${tier==='pro'?'':' · avec Motion 3.0'}</span></div>
-      <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${window._mcFondVideo?'var(--accent)':'var(--surface-3)'};border:1px solid ${window._mcFondVideo?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${window._mcFondVideo?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
-    </button>
-    ${window._mcFondVideo?'':_mcFondPersoHtml()}`}
-    <span class="label" style="display:block;margin-bottom:8px">Options</span>
-    ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow]]
-      .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
-        <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
-        <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
-      </button>`).join('')}
-    <div style="height:8px"></div>
-    <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
+        <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       ${modes.map(([id,t,sub])=>{const o=rnd===id;return `<button onclick="_mcSetRender('${id}')" class="col" style="gap:8px;padding:12px 10px;border-radius:13px;align-items:center;cursor:pointer;font-family:inherit;border:${o?'2px solid var(--accent)':'1px solid var(--border)'};background:${o?'var(--accent-soft)':'var(--panel-1)'}"><div style="width:34px;height:52px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border-2);flex:0 0 auto">${diag(id)}</div><div class="col" style="gap:2px;align-items:center"><span style="font-size:12px;font-weight:${o?700:600};color:${o?'var(--text)':'var(--text-2)'};text-align:center;line-height:1.2">${t}</span><span class="faint" style="font-size:10px;text-align:center">${sub}</span></div></button>`;}).join('')}
     </div>
@@ -35263,7 +35233,6 @@ async function _mcGenerate(){
   //    direct au proxy (hors app) = Kling gratuit. Motion 3.0 = motion30PerSec ; 2.6 = 2 cr/s ; si Motion 3.0
   //    retombe sur 2.6 (faux positif de modération) on refacture au tarif 2.6 pro, plus bas (voir plus loin).
   let _mcPreRate = rate;   // 2 (2.6 720p) · 3 (2.6 1080p natif) · motion30PerSec (3.0) — réassignable : repli modération v3→2.6 (refacturation)
-  if(tier==='wan' && dur>15){ toast('Motion Scène : 15 s maximum, raccourcis ta vidéo'); return; }
   creditsFlowBegin();
   if(!(await spendCreditsFor(_mcPreRate*(tier==='wan'?Math.ceil(dur):dur),'motion'))) return;
   const _mcOpWan = tier==='wan' ? (window._aaLastSpendOp||null) : null;
@@ -35431,7 +35400,7 @@ async function _mcGenerate(){
     //   Refus de contenu → repli modération existant (2.6, chez kie) ; panne → erreur, crédits rendus par le serveur — PAS de
     //   repli fal (Axel 09/10). fal ne sert plus qu'au réglage console aa_kie='0'.
     const runKling = async (ver) => {
-      if(ver==='wan'){   // pas de repli : un refus du moteur est affiché tel quel, crédits rendus par le catch global
+      if(ver==='wan'){   // pas de repli (Axel 31/10) : un refus du moteur est affiché tel quel, crédits rendus par le catch global
         const _t0=Date.now();
         const _r = await _kieRun('wan-3', { video_url:sv.data.signedUrl, image_url:charUrl, image_urls:[charUrl], positions:['principal'], resolution:'720P', aspect_ratio:'adaptive', duration:Math.ceil(dur), audio:false },
           { op:_mcOpWan, every:6000, maxPolls:300, onTick:()=>_mcProg('Remplacement de la personne dans ta vidéo…', Math.min(88, 22+66*(1-Math.exp(-(Date.now()-_t0)/240000)))) });
