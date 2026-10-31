@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1545'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1610'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -11845,6 +11845,7 @@ function _kieTag(){ const t = (window._aaLastEngine==='kie' && _kieOn()) ? ' · 
 // le compte dev ») : pour un client, aucun suffixe moteur ni préfixe « kie : » dans les toasts et messages d'erreur.
 function _kieP(){ return _kieDev() ? 'kie : ' : ''; }
 function _kieMsg(m){
+  if(/real human face/i.test(String(m||''))) return 'Refusé par le moteur : la vidéo ou la photo contient un vrai visage. Essaie avec un personnage 100 % généré.';
   if(/copyright/i.test(String(m||''))) return 'Refusé pour droits d\'auteur : ce personnage ou cette vidéo est protégé. Utilise un personnage original.';   // Axel 31/10 : message du fournisseur en anglais
   m = String(m == null ? '' : m);
   if(_kieDev() || !/kie/i.test(m)) return m;
@@ -34291,6 +34292,7 @@ function _mcOpenAdv(){ const m=document.getElementById('mcAdvModal'); if(!m) ret
 function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.style.display='none'; }
 function _mcSetTier(t){
   // Le « forfait » est devenu le MODÈLE : 'standard' = Motion 2.6 (Kling v2.6), 'pro' = Motion 3.0 (Kling v3, 1080p natif).
+  if(t==='wan'){ if(!_mcWanOk()) return; window._mcTier='wan'; window._mcKlingVer='v2.6'; window._mcQuality='720'; window._mcFondVideo=false; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); return; }
   if(t==='pro' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
     if(typeof showPaywall==='function') showPaywall('Oups — Motion 3.0 est réservé aux plans Pro & Élite', 'Passe en Pro ou Élite pour débloquer Motion 3.0.'); else toast('Motion 3.0 est réservé aux plans Pro et Élite'); return;
   }
@@ -34324,7 +34326,11 @@ function _mcToggleAutoFrame(){ window._mcAutoFrame=(window._mcAutoFrame===false)
 function _mcToggleBgClean(){ window._mcBgClean=(window._mcBgClean===false); _mcRenderAdv(); }
 // Motion 2.6 720p = 2 cr/s ; Motion 2.6 1080p NATIF = 3 cr/s (Axel 09/10 : fini l'upscale Topaz) ; Motion 3.0 1080p =
 // motion30PerSec. Même barème côté serveur (kie-proxy et fal-proxy : tarifVideoFal).
-function _mcRate(){ return window._mcTier==='pro' ? CREDIT_COSTS.motion30PerSec : (window._mcQuality==='1080' ? 3 : 2); }
+// Axel 31/10 : « Motion Scène » (changement de personnage du Décupleur) branché ici, EN TEST sur son compte seulement : il remplace la
+// personne DANS la vidéo (décor gardé), 720p, 15 s max, 10 cr/s comme le Décupleur (le serveur tire 10 × durée arrondie au-dessus).
+const _MC_WAN_TEST = ['f0cae49a-e610-4721-862a-5c4afca6d7eb'];
+function _mcWanOk(){ return !!(typeof currentMember!=='undefined' && currentMember && (_aaIsDev() || _MC_WAN_TEST.includes(currentMember.id))); }
+function _mcRate(){ return window._mcTier==='wan' ? DC_PERSO_CR_SEC : window._mcTier==='pro' ? CREDIT_COSTS.motion30PerSec : (window._mcQuality==='1080' ? 3 : 2); }
 // #34 · coût dynamique À CÔTÉ du bouton « Générer le mouvement » (pas seulement
 // dans les réglages avancés) : rate × durée de la vidéo de référence. Se met à
 // Kling motion-control (fal, v2.6 et v3) : vidéo de référence de 30 s MAX (orientation 'video'),
@@ -34486,8 +34492,9 @@ function _mcRenderAdv(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:${tier==='pro'?'16px':'14px'}">
       ${tierCard('standard','Motion 2.6','Rapide et fiable · 2 cr/s')}
       ${tierCard('pro','Motion 3.0','1080p natif · '+CREDIT_COSTS.motion30PerSec+' cr/s',_mcPaid?'':'<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap">PRO & ÉLITE</span>')}
+      ${_mcWanOk()?tierCard('wan','Motion Scène','Décor de ta vidéo · 720p · 15 s max · '+DC_PERSO_CR_SEC+' cr/s','<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em">TEST</span>'):''}
     </div>
-    ${tier==='pro'?``:`
+    ${(tier==='pro'||tier==='wan')?``:`
     <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
     <div class="seg" style="width:100%;margin-bottom:6px">
       <button class="${q==='720'?'on':''}" style="flex:1" onclick="_mcSetQual('720')">720p</button>
@@ -34500,12 +34507,12 @@ function _mcRenderAdv(){
     </div>
     <div style="height:10px"></div>
     <div style="height:12px"></div>
-    <span class="label" style="display:block;margin-bottom:8px">Arrière-plan</span>
+    ${tier==='wan'?'':`<span class="label" style="display:block;margin-bottom:8px">Arrière-plan</span>
     <button onclick="_mcToggleFondVideo()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:${window._mcFondVideo?'18px':'12px'};border:${window._mcFondVideo?'2px solid var(--accent)':'1px solid var(--border)'};background:${window._mcFondVideo?'var(--accent-soft)':'var(--surface)'}">
       <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">Garder le fond de la vidéo d’origine</span><span class="faint" style="font-size:11.5px">Le décor de ta vidéo reste, seule la personne est remplacée${tier==='pro'?'':' · avec Motion 3.0'}</span></div>
       <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${window._mcFondVideo?'var(--accent)':'var(--surface-3)'};border:1px solid ${window._mcFondVideo?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${window._mcFondVideo?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
     </button>
-    ${window._mcFondVideo?'':_mcFondPersoHtml()}
+    ${window._mcFondVideo?'':_mcFondPersoHtml()}`}
     <span class="label" style="display:block;margin-bottom:8px">Options</span>
     ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow]]
       .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
@@ -34612,6 +34619,27 @@ async function _mcVoiceWait(jobId, tours){
 // messages de fin s'affichent DANS la fenêtre de résultat (window._mcVoiceNote) : un toast était aussitôt recouvert par
 // celui de la sauvegarde automatique. (Bouton « Livrer sans attendre la voix » retiré, Axel 09/10 : la voix arrive en
 // ~1 min, chaque étape reste bornée, et une attente trop longue livre déjà la vidéo avec l'audio d'origine.)
+// Motion Scène sort sans son : on remet celui de la référence, image copiée sans perte. Échec → vidéo livrée muette avec une note.
+async function _mcWanSon(url, refBlob, vPath){
+  const inV='wn_v_'+Date.now().toString(36)+'.mp4', inA=inV+'a.mp4', outN=inV+'o.mp4';
+  let ff=null;
+  try{
+    const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
+    const vid=new Uint8Array(await r.arrayBuffer()), ref=new Uint8Array(await refBlob.arrayBuffer());
+    await _loadFFmpeg(); ff=_ffmpegInst;
+    await ff.FS('writeFile', inV, vid); await ff.FS('writeFile', inA, ref);
+    await ff.run('-i', inV, '-i', inA, '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', outN);
+    const u8=await ff.FS('readFile', outN);
+    if(!u8 || u8.length<1000) throw new Error('sans résultat');
+    const path=vPath.replace(/\.mp4$/,'')+'-son.mp4';
+    const up=await sb.storage.from('render-media').upload(path, new Blob([u8.buffer],{type:'video/mp4'}), { contentType:'video/mp4', upsert:true });
+    if(up.error) throw new Error(up.error.message);
+    const sg=await sb.storage.from('render-media').createSignedUrl(path, 3600);
+    if(sg.error||!sg.data?.signedUrl) throw new Error('lien signé indisponible');
+    return sg.data.signedUrl;
+  }catch(e){ console.warn('[mc] son :', e); window._mcVoiceNote='Son non ajouté : vidéo livrée muette.'; return url; }
+  finally{ if(ff) for(const n of [inV,inA,outN]){ try{ await ff.FS('unlink', n); }catch(_){} } }
+}
 async function _mcApplyVoiceStep(url, dur, vPath){
   window._mcVoiceNote='';
   if(!_mcVoiceActive() || !url) return url;
@@ -34740,19 +34768,26 @@ function _mcBlob(url){
   }
   return _mcBlobP;
 }
+// « Nouvelle vidéo » : referme le résultat et rouvre le formulaire (le résultat avait pris sa place, comme Omni).
 function _mcResClose(){
   _mcBlobP=null; _mcBlobUrl='';
-  const m=document.getElementById('mcResModal'); if(!m) return;
-  m.style.display='none';
+  const m=document.getElementById('mcResult'); if(!m) return;
   try{ const v=m.querySelector('video'); if(v) v.pause(); }catch(_){}
+  m.remove();
+  const w=document.getElementById('expMotionWrap'); if(!w) return;
+  w.querySelectorAll(':scope > [data-mc-cache]').forEach(el=>{ el.style.display=el.dataset.mcCache==='-'?'':el.dataset.mcCache; el.removeAttribute('data-mc-cache'); });
+  try{ w.scrollTo({top:0,behavior:'smooth'}); }catch(_){}
 }
 function _mcShowResult(url, render, fullUrl){
   _mcProgHide();
-  let m=document.getElementById('mcResModal');
-  if(!m){ m=document.createElement('div'); m.id='mcResModal';
-    m.style.cssText='position:fixed;inset:0;z-index:230;background:rgba(6,6,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px';
-    m.onclick=(e)=>{ if(e.target===m) _mcResClose(); };
-    document.body.appendChild(m); }
+  if(document.getElementById('mcResult')) _mcResClose();
+  if(typeof nav==='function' && !document.getElementById('v-motion')?.classList.contains('on')){ try{ nav('motion'); }catch(_){} }
+  const _w=document.getElementById('expMotionWrap');
+  const m=document.createElement('div'); m.id='mcResult';
+  // Le résultat PREND LA PLACE du formulaire (Axel 31/10 : comme Omni) ; le titre du module reste au-dessus.
+  [..._w.children].slice(1).forEach(el=>{ el.dataset.mcCache=el.style.display||'-'; el.style.display='none'; });
+  _w.appendChild(m);
+  try{ _w.scrollTo({top:0}); }catch(_){}
   const lbl = render==='split-bottom' ? 'Split · original ↑ · motion ↓' : render==='split-top' ? 'Split · motion ↑ · original ↓' : '';
   window._mcLastUrl = url;
   window._mcLastFullUrl = (render!=='full' && fullUrl) ? fullUrl : null;
@@ -34771,16 +34806,17 @@ function _mcShowResult(url, render, fullUrl){
   // ratio du fichier, plus aucun fond visible autour ; fond panneau (jamais
   // noir) seulement pendant le chargement. Desktop + mobile : mêmes contraintes
   // max-width/max-height qu'avant, la boîte est simplement ajustée au ratio.
-  m.innerHTML='<div class="col" style="gap:12px;align-items:center;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:6px 2px"><video src="'+_safeUrl(url)+'" controls autoplay playsinline onloadedmetadata="if(this.videoWidth)this.style.aspectRatio=this.videoWidth+\' / \'+this.videoHeight" style="max-height:'+(isSplit?'46vh':'70vh')+';width:auto;max-width:100%;aspect-ratio:9/16;object-fit:contain;border-radius:16px;background:var(--panel-1);box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
-    +(lbl?'<div class="faint mono" style="font-size:11px">'+lbl+'</div>':'')
-    +(window._mcVoiceNote?'<div style="font-size:12.5px;line-height:1.45;text-align:center;max-width:360px;color:rgba(246,244,241,.82)">'+_sansModele(String(window._mcVoiceNote)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c])+'</div>':'')
-    +(isSplit?_mcReframePanel(render):'')
-    +'<div class="row" style="gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn-primary" onclick="_mcDownload()">Télécharger</button>'
-    +(window._mcLastFullUrl?'<button class="btn btn-ghost" onclick="_mcDownload(window._mcLastFullUrl)">Version plein écran</button>':'')
-    +'<button class="btn btn-ghost" onclick="_mcResClose()">Fermer</button></div></div>';
-  m.style.display='flex';
+  m.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px"><div class="label" style="font-size:11px;letter-spacing:.14em">RÉSULTAT</div>'
+    +'<button type="button" onclick="_mcResClose()" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Nouvelle vidéo</button></div>'
+    +'<div style="position:relative;width:fit-content;max-width:100%;margin:0 auto"><video src="'+_safeUrl(url)+'" controls autoplay playsinline onloadedmetadata="if(this.videoWidth)this.style.aspectRatio=this.videoWidth+\' / \'+this.videoHeight" style="display:block;max-width:100%;max-height:'+(isSplit?'46vh':'min(66vh,620px)')+';width:auto;border-radius:14px;background:var(--panel-1)"></video></div>'
+    +(lbl?'<div class="faint mono" style="font-size:11px;text-align:center;margin-top:8px">'+lbl+'</div>':'')
+    +(window._mcVoiceNote?'<div class="muted" style="font-size:12.5px;line-height:1.45;text-align:center;margin:10px auto 0;max-width:420px">'+_sansModele(String(window._mcVoiceNote)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c])+'</div>':'')
+    +(isSplit?'<div style="max-width:420px;margin:12px auto 0">'+_mcReframePanel(render)+'</div>':'')
+    +'<div class="row" style="gap:8px;margin:12px 0 44px;flex-wrap:wrap"><button onclick="_mcDownload()" class="btn btn-primary" style="flex:1;min-width:180px;padding:13px;border-radius:12px;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>'
+    +(window._mcLastFullUrl?'<button class="btn btn-ghost" style="flex:1;min-width:180px;padding:13px;border-radius:12px" onclick="_mcDownload(window._mcLastFullUrl)">Version plein écran</button>':'')
+    +'</div>';
   window._mcVoiceNote='';
-  // génération terminée → le formulaire repart à zéro derrière la modale
+  // génération terminée → le formulaire repart à zéro derrière le résultat
   try{ _mcResetAll(); }catch(_){}
 }
 // Télécharger = enregistrer le fichier SANS quitter l'app ni afficher d'adresse (Axel 09/10 : le lien Supabase
@@ -35227,8 +35263,10 @@ async function _mcGenerate(){
   //    direct au proxy (hors app) = Kling gratuit. Motion 3.0 = motion30PerSec ; 2.6 = 2 cr/s ; si Motion 3.0
   //    retombe sur 2.6 (faux positif de modération) on refacture au tarif 2.6 pro, plus bas (voir plus loin).
   let _mcPreRate = rate;   // 2 (2.6 720p) · 3 (2.6 1080p natif) · motion30PerSec (3.0) — réassignable : repli modération v3→2.6 (refacturation)
+  if(tier==='wan' && dur>15){ toast('Motion Scène : 15 s maximum, raccourcis ta vidéo'); return; }
   creditsFlowBegin();
-  if(!(await spendCreditsFor(_mcPreRate*dur,'motion'))) return;
+  if(!(await spendCreditsFor(_mcPreRate*(tier==='wan'?Math.ceil(dur):dur),'motion'))) return;
+  const _mcOpWan = tier==='wan' ? (window._aaLastSpendOp||null) : null;
   try{
     _mcProg('Envoi des fichiers…', 6);
     const { data:{ user } } = await sb.auth.getUser();
@@ -35277,7 +35315,7 @@ async function _mcGenerate(){
     // constaté le 15/08). On matérialise donc l'option : une frame de la vidéo
     // de réf sert de fond (sa personne effacée), le perso est incrusté dessus.
     let charUrl = si.data.signedUrl;
-    let bgSrc = window._mcFondVideo ? null : (window._mcBgB64 || null), bgDeVid = false;   // fond de la vidéo gardé : aucun fond perso
+    let bgSrc = (window._mcFondVideo || tier==='wan') ? null : (window._mcBgB64 || null), bgDeVid = false;   // fond de la vidéo gardé : aucun fond perso
     // LOT MC · frame de la réf DÉJÀ nettoyée (personne effacée par gpt-image) — le
     // pipeline « fond vidéo » d'après-Kling la RÉUTILISE comme patch statique
     // (assets/bgclean.jpg du worker) : zéro second appel gpt-image.
@@ -35309,8 +35347,8 @@ async function _mcGenerate(){
     }
     // Modèle → version Kling : Motion 3.0 (tier 'pro') = Kling v3 (1080p natif), Motion 2.6 = v2.6.
     // Le gating plan (Pro/Élite) est déjà appliqué plus haut ; ici on ne fait que dériver la version.
-    let _mcVer = tier==='pro' ? 'v3' : 'v2.6';
-    _mcProg('Transfert du mouvement (Motion '+(_mcVer==='v3'?'3.0':'2.6')+')…', 18);
+    let _mcVer = tier==='wan' ? 'wan' : tier==='pro' ? 'v3' : 'v2.6';
+    _mcProg(_mcVer==='wan' ? 'Remplacement de la personne dans ta vidéo…' : 'Transfert du mouvement (Motion '+(_mcVer==='v3'?'3.0':'2.6')+')…', 18);
     // #34 · l'identité de l'image fournie DOIT être conservée (Axel) — instruction
     // ajoutée à TOUS les coups, qu'il y ait ou non un prompt perso.
     // LOT5 · ANTI-ZOOM (mesuré : perso tête 26 %, réf 40 %, rendu Kling 64 % —
@@ -35393,6 +35431,13 @@ async function _mcGenerate(){
     //   Refus de contenu → repli modération existant (2.6, chez kie) ; panne → erreur, crédits rendus par le serveur — PAS de
     //   repli fal (Axel 09/10). fal ne sert plus qu'au réglage console aa_kie='0'.
     const runKling = async (ver) => {
+      if(ver==='wan'){   // pas de repli : un refus du moteur est affiché tel quel, crédits rendus par le catch global
+        const _t0=Date.now();
+        const _r = await _kieRun('wan-3', { video_url:sv.data.signedUrl, image_url:charUrl, image_urls:[charUrl], positions:['principal'], resolution:'720P', aspect_ratio:'adaptive', duration:Math.ceil(dur), audio:false },
+          { op:_mcOpWan, every:6000, maxPolls:300, onTick:()=>_mcProg('Remplacement de la personne dans ta vidéo…', Math.min(88, 22+66*(1-Math.exp(-(Date.now()-_t0)/240000)))) });
+        window._aaLastEngine='kie'; window._mcKieRid=_r.rid;
+        return _r.url;
+      }
       if(_kieClientOn('motion')){
         const _dv=_kieDev();
         try{
@@ -35448,6 +35493,7 @@ async function _mcGenerate(){
       creditsFlowBegin();
       await spendCreditsFor(baseRate*dur,'motion');
     }
+    if(_mcVer==='wan'){ _mcProg('Ajout du son de ta vidéo…', 92); out=await _mcWanSon(out, refBlob, vPath); }
     // (09/10) Plus d'upscale Topaz : la 1080p de Motion 2.6 sort NATIVE de Kling (kie 1080p, ou fal 2.6 pro en repli).
     // ── LOT7/LOT MC · FOND = VRAIE VIDÉO D'ORIGINE, ANIMÉE (v2, 28/08) ──────────
     // Le chemin frame-figée AVANT Kling (plus haut) est conservé : il cale la lumière
@@ -35758,7 +35804,7 @@ async function _mcApplyReframe(){
       panTop:(r.posTop||50)/100, zoomTop:(r.zoomTop||100)/100,
       panBot:(r.posBot||50)/100, zoomBot:(r.zoomBot||100)/100 };
     const url=await _mcRunSplit(plan);
-    const v=document.querySelector('#mcResModal video'); if(v){ v.src=url; try{ v.load(); v.play(); }catch(_){ } }
+    const v=document.querySelector('#mcResult video'); if(v){ v.src=url; try{ v.load(); v.play(); }catch(_){ } }
     window._mcLastUrl=url; window._mcSavedUrl=null; _mcProgHide();
     if(typeof toast==='function') toast('Cadrage appliqué');
   }catch(e){ _mcProgHide(); if(typeof toast==='function') toast('Cadrage : '+(e.message||e)); }
