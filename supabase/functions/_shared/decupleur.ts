@@ -86,6 +86,11 @@ export function placesDecupleur(raw: unknown, n: number): string[] | null {
 export const DC_WAN_FOND_IMAGE = ' EXCEPTION: replace the whole background and environment with the background of Image1, and adapt the light on the person to it. Keep the camera framing and movement of Video1.'
 // Motion Control seulement (Axel 31/10) : bouche bien ouverte, bonne articulation. Le Décupleur garde sa consigne.
 export const DC_WAN_BOUCHE = ' Mouth and speech: clear, well articulated speech. The mouth opens wide on every syllable and the jaw and lips move visibly, at exactly the same moments as in Video1. Never a half-closed, stiff or mumbling mouth.'
+// Motion Control (Axel 31/10) : identité stricte de la photo et décor gardé à chaque image. 1er test : yeux, teint et lèvres changés, micro du
+// tournage recopié sur la tête, débardeur devenu transparent.
+export const DC_WAN_IDENTITE = ' Identity is the top priority: the face must be the exact person of Image1 in every frame, with the same eye color, eye shape, eyebrows, nose, lips and jawline, the same skin tone and tan, the same makeup and the same hairstyle. Never lighten the skin, change the eye color or enlarge the lips. Clothing stays exactly as in Image1, same fabric and same opacity, never see-through. Anything worn by or attached to the person in Video1 (microphone, clip, cap, glasses, jewelry) disappears completely: only what is visible in Image1 is kept on the new person.'
+export const DC_WAN_VISAGE = ' Image2 is a close-up of the face of the same person as Image1, not a second person: use it to match the facial identity exactly.'
+export const DC_WAN_FOND_VIDEO = ' Background rule: in every single frame, the background is pixel-faithful to the same frame of Video1, including anything moving in it (people, objects, light, camera motion). Never freeze, redraw, blur or simplify it, and never use the background of Image1.'
 export function dcWanPrompt(places: string[]): string {
   if (places.length === 1 && places[0] === 'principal') return DC_WAN_PROMPT
   const who = places.map((p, i) => `Image${i + 1} is the new character for the person ${PLACE_EN[p]}.`).join(' ')

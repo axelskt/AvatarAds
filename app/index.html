@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1645'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1650'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -34595,6 +34595,26 @@ async function _mcVoiceWait(jobId, tours){
 // messages de fin s'affichent DANS la fenêtre de résultat (window._mcVoiceNote) : un toast était aussitôt recouvert par
 // celui de la sauvegarde automatique. (Bouton « Livrer sans attendre la voix » retiré, Axel 09/10 : la voix arrive en
 // ~1 min, chaque étape reste bornée, et une attente trop longue livre déjà la vidéo avec l'audio d'origine.)
+// 2e référence pour l'identité (Axel 31/10) : gros plan du visage pris sur la photo d'ORIGINE, pas sur la version recadrée. Sans visage détecté : photo seule.
+async function _mcVisageUrl(base){
+  try{
+    const b64=window._mcCharB64;
+    const cached=(window._mcCharFace && window._mcCharFace.src===b64) ? window._mcCharFace.box : undefined;
+    const box=(cached!==undefined) ? cached : await _detectFaceBox(b64);
+    if(!box) return null;
+    const img=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=b64; });
+    const W=img.naturalWidth, H=img.naturalHeight, c=Math.min(W,H,Math.max(box.w*W,box.h*H)*1.5);
+    const sx=Math.max(0,Math.min(W-c,(box.x+box.w/2)*W-c/2)), sy=Math.max(0,Math.min(H-c,(box.y+box.h/2)*H-c/2));
+    const n=Math.min(1536,Math.round(c)), cv=document.createElement('canvas'); cv.width=cv.height=n;
+    cv.getContext('2d').drawImage(img,sx,sy,c,c,0,0,n,n);
+    const bl=await new Promise(res=>cv.toBlob(res,'image/jpeg',0.95));
+    const path=base+'-visage.jpg';
+    const up=await sb.storage.from('render-media').upload(path, bl, { contentType:'image/jpeg', upsert:true });
+    if(up.error) return null;
+    const sg=await sb.storage.from('render-media').createSignedUrl(path, 3600);
+    return sg.data?.signedUrl||null;
+  }catch(e){ console.warn('[mc] visage :', e); return null; }
+}
 // Le moteur sort sans son : on remet celui de la référence (image copiée sans perte, sauf Caméra réaliste). Échec → vidéo livrée muette avec une note.
 // Tremblement : mêmes courbes que SHAKE + GRAIN de usine/build.mjs, proportionnées à la largeur de la vidéo.
 const _MC_TREMBLE = "noise=alls=9:allf=t+u,eq=saturation=1.03:contrast=1.02,scale=trunc(iw*1.09/2)*2:trunc(ih*1.09/2)*2:flags=bicubic,rotate='(0.4*(sin(5.7*t)+0.4*sin(11.3*t)))*PI/180':c=black,crop=iw/1.09:ih/1.09:(iw-iw/1.09)/2+(iw/135)*(sin(6.3*t)+0.5*sin(12.9*t+1)+0.3*sin(19.7*t)):(ih-ih/1.09)/2+(iw/135)*(cos(7.1*t)+0.5*sin(13.7*t+0.5)+0.25*sin(22.3*t)),format=yuv420p";
@@ -35420,8 +35440,8 @@ async function _mcGenerate(){
     //   repli fal (Axel 09/10). fal ne sert plus qu'au réglage console aa_kie='0'.
     const runKling = async (ver) => {
       if(ver==='wan'){   // pas de repli (Axel 31/10) : un refus du moteur est affiché tel quel, crédits rendus par le catch global
-        const _t0=Date.now();
-        const _r = await _kieRun('wan-3', { video_url:sv.data.signedUrl, image_url:charUrl, image_urls:[charUrl], positions:['principal'], resolution:'720P', aspect_ratio:'adaptive', duration:Math.ceil(dur), audio:false, fond: window._mcFondVideo ? 'video' : 'image' },
+        const _t0=Date.now(), _visage=await _mcVisageUrl(base);
+        const _r = await _kieRun('wan-3', { ...(_visage?{visage_url:_visage}:{}), video_url:sv.data.signedUrl, image_url:charUrl, image_urls:[charUrl], positions:['principal'], resolution:'720P', aspect_ratio:'adaptive', duration:Math.ceil(dur), audio:false, fond: window._mcFondVideo ? 'video' : 'image' },
           { op:_mcOpWan, every:6000, maxPolls:300, onTick:()=>_mcProg('Remplacement de la personne dans ta vidéo…', Math.min(88, 22+66*(1-Math.exp(-(Date.now()-_t0)/240000)))) });
         window._aaLastEngine='kie'; window._mcKieRid=_r.rid;
         return _r.url;
