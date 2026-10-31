@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1530'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1545'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -35316,7 +35316,7 @@ async function _mcGenerate(){
     // LOT5 · ANTI-ZOOM (mesuré : perso tête 26 %, réf 40 %, rendu Kling 64 % —
     // Kling zoome au-delà des DEUX entrées) : la distance sujet/caméra est
     // VERROUILLÉE sur la réf — suivre son vrai push-in : oui ; zoomer davantage : non.
-    const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. Natural, realistic.';
+    const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. Natural, realistic. Mouth and lip movements are clear and well articulated: the mouth opens wide on every syllable, exactly as in the reference video, the jaw and lips move visibly, never a half-closed or mumbling mouth.';
     // « Suivi de la caméra » et « garder le fond de la vidéo » n'existent pas en
     // paramètres Kling (schéma fal : image/video/prompt/orientation/son) — ils
     // se pilotent par le PROMPT. Le fond par défaut reste celui de l'IMAGE.

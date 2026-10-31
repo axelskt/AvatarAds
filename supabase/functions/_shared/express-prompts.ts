@@ -154,7 +154,7 @@ export function omniEditPrompt(p: string): string{
 // identité / geste / cadrage / décor / caméra / réalisme, tronqué à 2 400 caractères comme dans _mcGenerate.
 export function motionControlPrompt(o: { instruction?: string; camFollow?: boolean; keepVidBg?: boolean }): string {
   const window = { _mcPrompt: String(o.instruction || '').trim(), _mcCamFollow: o.camFollow !== false, _mcKeepVidBg: !!o.keepVidBg }
-  const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. Natural, realistic.';
+  const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. Natural, realistic. Mouth and lip movements are clear and well articulated: the mouth opens wide on every syllable, exactly as in the reference video, the jaw and lips move visibly, never a half-closed or mumbling mouth.';
   const _mcBgTxt = (window._mcKeepVidBg || (window._mcFondVideo && tier==='pro'))
       ? ' Keep the EXACT same background, scene and environment as the REFERENCE VIDEO: only replace the person with the provided character — everything behind them stays identical to the original video.'
       : ' Keep the EXACT same background, scene and environment as the provided image: do not change, replace, blur, crop out or regenerate anything behind the character — the decor must stay identical.';
