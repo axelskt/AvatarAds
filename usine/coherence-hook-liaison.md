@@ -87,8 +87,22 @@ Chaque vidéo = 2 formats : `hook+contenu+CTA` (court) et `hook+liaison+contenu+
 | **H93** · Voici comment les marques créent leurs publicités aujourd'hui. | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **H94** · Si tu penses que ton produit ne pourrait pas avoir un beau rendu avec l'IA, regarde cette vidéo. | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **H95** · Si je n'avais que 5 minutes pour créer 3 publicités pour mon produit, j'utiliserais l'intelligence artificielle. | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H96** · Est-ce que quelqu'un peut m'expliquer pourquoi on n'apprend pas ça à l'école, écoutez ce qu'il dit. | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **H97** · Vous voyez ce mec là derrière moi, il a supprimé sa vidéo après l'avoir postée mais heureusement je l'ai enregistrée, regarde ce qu'il dit. | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **H98** · Nan je vous en supplie retrouvez-moi ce mec les gars, c'est trop un génie. | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **H99** · Si tu fais pas d'argent après cette vidéo j'arrête TikTok, parce que ce que je vais te montrer c'est trop puissant. | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **H100** · Si tu ne fais pas d'argent après cette vidéo je ne peux plus rien faire pour toi. | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **H-AX-100** · Si tu fais pas d'argent après avoir vu cette vidéo, je peux plus rien faire pour toi. | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **H-AX-99** · Si tu fais pas d'argent après avoir vu cette vidéo, j'arrête TikTok, parce que c'est vraiment trop puissant ce que je vais te montrer. | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **H-AX-95** · Si je n'avais que 5 minutes pour créer 3 publicités pour mon produit, j'utiliserais l'intelligence artificielle. | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H-AX-94** · Voici comment les marques créent leur publicité aujourd'hui. Si tu penses que ton produit ne pourrait pas avoir un beau rendu avec l'IA, regarde cette vidéo. | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H-AX-87** · Normalement, je ne devais pas en parler, mais je pense que je vais vous choquer. J'ai trouvé la planque de cet hiver. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **H-AX-92** · Claude vient juste de tuer les agences marketing, tu peux littéralement le connecter pour qu'il crée des vidéos en automatique. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| **H-AX-90** · Oh, ça commence vraiment à devenir flippant, là, ce qu'on peut faire. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H-AX-90-2** · Waouh, ça commence vraiment à devenir flippant ce qu'on peut faire avec l'IA. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H-AX-90-3** · Boah, ça commence vraiment à devenir flippant ce qu'on peut faire avec l'IA. | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 
-**✅ par liaison** — L12 16 · L15 55 · L16 57 · L19 60 · L28 27 · L30 30 · L32 42 · L33/L35 27 · L34 33 · L48 51 · L58 32 · L70 44 (sur 63 hooks)
+**✅ par liaison** — L12 22 · L15 66 · L16 68 · L19 71 · L28 36 · L30 32 · L32 51 · L33/L35 31 · L34 38 · L48 62 · L58 43 · L70 54 (sur 77 hooks)
 
 > **Analyse cohérence : 12 liaisons validées** (L33=L35 ; L69 & L72 abandonnées).
 > **Étape suivante** : ranger chaque hook dans une ou plusieurs FAMILLES (multi-famille possible) + analyse « pourquoi telle famille et pas telle autre » (générique ≠ 100% des hooks).

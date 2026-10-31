@@ -6063,7 +6063,7 @@ setTimeout(function(){
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-31-1300'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-10-31-1400'; window.__AA_BUILD = AA_BUILD;
 // DÉCUPLEUR (Axel 24/10) : false = en test, compte owner / developer seulement. true = ouvert : entrée visible pour tous,
 // génération réservée Pro / Élite (paywall pour Free / Starter), et « Décuplage de vidéo » remplace « AvatarAds × Claude »
 // dans les cartes Pro du paywall. À basculer AVEC le secret serveur DECUPLEUR_OUVERT=1 (render-job, kie-proxy, mcp).
@@ -40792,6 +40792,7 @@ async function _acBatchRun(){
       it.dur      = r.cleanBuf.duration;
       it.cuts     = r.nCoupes | 0;
       it.peaks    = _acPeaks(r.cleanBuf, 90);
+      it.video = _isVid; it.decoded = r.decoded; it.keepSegs = r.keepSegs; it.sr = r.sr; it.masterDenoised = r.masterDenoised; it.restored = new Set();
       let acc = 0; it.marks = [];
       for(let i = 0; i < r.keepSegs.length - 1; i++){ acc += (r.keepSegs[i].end - r.keepSegs[i].start) / r.sr; it.marks.push(acc / (r.cleanBuf.duration || 1)); }
       it.status = 'ok';
@@ -40829,17 +40830,73 @@ function _acBatchResultat(){
       + '<div class="row" style="align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px"><span style="min-width:0;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _acEsc(it.file.name) + '</span><span class="mono faint" style="font-size:11px;flex:0 0 auto">' + _acFmt(it.dur || 0) + '</span></div>'
       + '<div class="row gap12" style="align-items:center">'
       + '<button id="acBP' + i + '" onclick="_acBatchPlay(' + i + ')" aria-label="Écouter" style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent);border:none;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="#1A0A02" stroke="none"><path d="M7 4l13 8-13 8z"/></svg></button>'
-      + '<div onclick="_acBatchSeek(event,' + i + ')" style="flex:1;min-width:0;position:relative;height:38px;cursor:pointer"><canvas id="acBW' + i + '" style="width:100%;height:38px;display:block"></canvas><div id="acBH' + i + '" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:var(--accent);border-radius:2px;box-shadow:0 0 6px var(--accent-glow);pointer-events:none"></div></div>'
+      + '<div onclick="_acBatchSeek(event,' + i + ')" style="flex:1;min-width:0;position:relative;height:38px;cursor:pointer"><canvas id="acBW' + i + '" style="width:100%;height:38px;display:block"></canvas><div id="acBH' + i + '" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:var(--accent);border-radius:2px;box-shadow:0 0 6px var(--accent-glow);pointer-events:none"></div><div id="acBL' + i + '" style="position:absolute;inset:0;pointer-events:none"></div></div>'
       + '<button onclick="_acBatchDl(' + i + ')" aria-label="Télécharger" title="Télécharger" class="btn btn-ghost btn-sm" style="flex:0 0 auto;padding:9px">' + ico + '</button>'
       + '</div>'
-      + '<div style="display:flex;justify-content:flex-end;margin-top:6px"><button id="acBC' + i + '" onclick="_acBatchCompare(' + i + ')" class="faint" style="background:none;border:none;cursor:pointer;font-family:var(--font);font-size:11.5px;font-weight:600;padding:2px 0">Écouter l\'original</button></div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px"><span class="faint" style="font-size:11px;min-width:0">' + (it.keepSegs && it.keepSegs.length > 1 ? 'Clique sur un trait pour remettre ce passage' : '') + '</span><button id="acBC' + i + '" onclick="_acBatchCompare(' + i + ')" class="faint" style="background:none;border:none;cursor:pointer;font-family:var(--font);font-size:11.5px;font-weight:600;padding:2px 0;flex:0 0 auto">Écouter l\'original</button></div>'
       + '</div>'
     : '<div class="card" style="padding:12px 14px;background:var(--panel-1)"><div style="font-size:12.5px;font-weight:700;overflow-wrap:anywhere">' + _acEsc(it.file.name) + '</div><div style="font-size:11.5px;color:#E5484D;margin-top:3px">' + (it.status === 'erreur' ? _acEsc(it.err || 'échec') : 'pas traité') + '</div></div>').join('');
   document.getElementById('acBatchDlAll').textContent = oks.length > 1 ? 'Tout télécharger (' + oks.length + ' fichiers)' : 'Télécharger';
   document.getElementById('acBatchZipRow').style.display = oks.length > 1 ? 'flex' : 'none';
   document.getElementById('acBatchZip').checked = !!_acBatch.zip;
   _acPhase('batch');
-  requestAnimationFrame(() => items.forEach((it, i) => { if(it.status === 'ok') _acWavePaint('acBW' + i, it.peaks, it.marks); }));
+  requestAnimationFrame(() => items.forEach((it, i) => { if(it.status === 'ok'){ _acWavePaint('acBW' + i, it.peaks, it.marks); _acBatchTraits(i); } }));
+}
+// Axel 31/10 : en lot aussi, un clic sur un trait de coupe remet le passage coupé, un reclic le recoupe (comme pour un seul audio)
+function _acBatchTraits(i){
+  const it = _acBatch && _acBatch.items[i], layer = document.getElementById('acBL' + i);
+  if(!it || !layer || !it.keepSegs || it.keepSegs.length < 2) return;
+  layer.innerHTML = '';
+  const ks = it.keepSegs, sr = it.sr, dur = it.dur || 1;
+  let t = 0;
+  for(let g = 0; g < ks.length - 1; g++){
+    t += (ks[g].end - ks[g].start) / sr;
+    const remis = it.restored.has(g);
+    const pos = remis ? (t + (ks[g+1].start - ks[g].end) / sr / 2) / dur : t / dur;
+    if(remis) t += (ks[g+1].start - ks[g].end) / sr;
+    const b = document.createElement('button');
+    b.type = 'button'; b.title = remis ? 'Passage remis : clique pour le recouper' : 'Clique pour remettre ce passage';
+    b.setAttribute('aria-label', b.title);
+    b.style.cssText = 'position:absolute;top:-6px;bottom:-6px;width:18px;transform:translateX(-50%);left:' + (Math.max(0, Math.min(1, pos)) * 100) + '%;background:transparent;border:none;padding:0;cursor:pointer;pointer-events:auto;display:flex;justify-content:center';
+    b.innerHTML = '<span style="width:3px;height:100%;border-radius:2px;background:' + (remis ? 'var(--green)' : 'transparent') + '"></span>';
+    b.onclick = (ev) => { ev.stopPropagation(); ev.preventDefault(); _acBatchBascule(i, g); };
+    layer.appendChild(b);
+  }
+}
+async function _acBatchBascule(i, g){
+  const it = _acBatch && _acBatch.items[i];
+  if(!it || it.rebuild) return;
+  it.rebuild = true; _acBatchStop();
+  if(it.restored.has(g)) it.restored.delete(g); else it.restored.add(g);
+  try {
+    const ks = it.keepSegs, sr = it.sr, dec = it.decoded;
+    const segs = []; let cur = { start: ks[0].start, end: ks[0].end };
+    for(let k = 1; k < ks.length; k++){
+      if(it.restored.has(k - 1)) cur.end = ks[k].end;
+      else { segs.push(cur); cur = { start: ks[k].start, end: ks[k].end }; }
+    }
+    segs.push(cur);
+    const total = segs.reduce((n, x) => n + (x.end - x.start), 0);
+    const off = new OfflineAudioContext(dec.numberOfChannels, Math.max(1, total), sr);
+    let o = 0;
+    for(const x of segs){ const len = x.end - x.start, src = off.createBufferSource(); src.buffer = dec; src.connect(off.destination); src.start(o / sr, x.start / sr, len / sr); o += len; }
+    const raw = await off.startRendering();
+    const buf = it.video ? (_acOpts.voice ? _acLimitPeaks(_acNiveauConstant(raw), 0.89) : raw) : await _acMasterVoice(raw, null, { denoised: !!it.masterDenoised });
+    let blob = _audioBufferToWavBlob(buf);
+    if(it.video && /\.mp3$/.test(it.outName)){ try { blob = await _acVersMp3(blob); } catch(e){ console.warn('_acVersMp3', e); it.outName = it.outName.replace(/\.mp3$/, '.wav'); } }
+    it.blob = blob; it.dur = buf.duration; it.cleanS = Math.round(buf.duration);
+    it.removedS = Math.round((dec.duration - buf.duration) * 10) / 10; it.cuts = segs.length - 1;
+    it.peaks = _acPeaks(buf, 90);
+    it.marks = []; let t = 0;
+    for(let k = 0; k < ks.length - 1; k++){ t += (ks[k].end - ks[k].start) / sr; if(it.restored.has(k)) t += (ks[k+1].start - ks[k].end) / sr; else it.marks.push(t / (buf.duration || 1)); }
+    toast(it.restored.has(g) ? 'Passage remis' : 'Passage recoupé');
+  } catch(e){
+    console.error('_acBatchBascule', e);
+    if(it.restored.has(g)) it.restored.delete(g); else it.restored.add(g);
+    toast('Impossible de remettre ce passage');
+  }
+  it.rebuild = false;
+  _acBatchResultat();
 }
 function _acBatchStop(){
   if(_acBatchAudio){ try{ _acBatchAudio.pause(); }catch(_){} _acBatchAudio = null; }

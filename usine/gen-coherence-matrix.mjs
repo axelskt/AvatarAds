@@ -64,6 +64,20 @@ export const hooks = [
  ['93',"Voici comment les marques créent leurs publicités aujourd'hui."],
  ['94',"Si tu penses que ton produit ne pourrait pas avoir un beau rendu avec l'IA, regarde cette vidéo."],
  ['95',"Si je n'avais que 5 minutes pour créer 3 publicités pour mon produit, j'utiliserais l'intelligence artificielle."],
+ ['96',"Est-ce que quelqu'un peut m'expliquer pourquoi on n'apprend pas ça à l'école, écoutez ce qu'il dit."],
+ ['97',"Vous voyez ce mec là derrière moi, il a supprimé sa vidéo après l'avoir postée mais heureusement je l'ai enregistrée, regarde ce qu'il dit."],
+ ['98',"Nan je vous en supplie retrouvez-moi ce mec les gars, c'est trop un génie."],
+ ['99',"Si tu fais pas d'argent après cette vidéo j'arrête TikTok, parce que ce que je vais te montrer c'est trop puissant."],
+ ['100',"Si tu ne fais pas d'argent après cette vidéo je ne peux plus rien faire pour toi."],
+ ['-AX-100',"Si tu fais pas d'argent après avoir vu cette vidéo, je peux plus rien faire pour toi."],
+ ['-AX-99',"Si tu fais pas d'argent après avoir vu cette vidéo, j'arrête TikTok, parce que c'est vraiment trop puissant ce que je vais te montrer."],
+ ['-AX-95',"Si je n'avais que 5 minutes pour créer 3 publicités pour mon produit, j'utiliserais l'intelligence artificielle."],
+ ['-AX-94',"Voici comment les marques créent leur publicité aujourd'hui. Si tu penses que ton produit ne pourrait pas avoir un beau rendu avec l'IA, regarde cette vidéo."],
+ ['-AX-87',"Normalement, je ne devais pas en parler, mais je pense que je vais vous choquer. J'ai trouvé la planque de cet hiver."],
+ ['-AX-92',"Claude vient juste de tuer les agences marketing, tu peux littéralement le connecter pour qu'il crée des vidéos en automatique."],
+ ['-AX-90',"Oh, ça commence vraiment à devenir flippant, là, ce qu'on peut faire."],
+ ['-AX-90-2',"Waouh, ça commence vraiment à devenir flippant ce qu'on peut faire avec l'IA."],
+ ['-AX-90-3',"Boah, ça commence vraiment à devenir flippant ce qu'on peut faire avec l'IA."],
 ];
 // Génériques : liste des ❌ (tout le reste = ✅). Spécifiques : liste des ✅.
 const L12_ok = new Set(['12','13','14','21','60','73','59']);        // SPÉCIFIQUE influenceur/avatar
@@ -82,6 +96,11 @@ const L70_ok = new Set(['12','13','14','15','16','19','20','21','23','24','25','
 // Validations EXPLICITES d'Axel (28/09) : pour ces hooks, la liste fait foi (L33 = colonne « L33/L35 »), elle remplace les ensembles ci-dessus.
 const VALIDATED = {'92':['L15','L16','L19','L32','L48','L58'],   // Axel 23/10
   '62':[],   // Axel 30/10 : aucune liaison (format court seulement)
+  '96':[],'97':[],'98':[],   // Axel 31/10 : générique, juste dit avant le hook (format Réact), aucune liaison
+  '99':['L12','L15','L16','L19','L28','L32','L33','L34','L48','L58','L70'],'100':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],   // Axel 31/10 (H99 : tous sauf L30)
+  '-AX-99':['L12','L15','L16','L19','L28','L32','L33','L34','L48','L58','L70'],'-AX-100':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],   // selfies d'Axel : mêmes liaisons que le hook repris
+  '-AX-95':['L12','L15','L16','L19','L28','L48','L58','L70'],'-AX-94':['L12','L15','L16','L19','L48','L58','L70'],'-AX-87':['L15','L16','L19','L28','L32','L34','L48','L58','L70'],'-AX-92':['L15','L16','L19','L32','L48','L58'],
+  '-AX-90':['L15','L16','L19','L28','L32','L48','L58','L70'],'-AX-90-2':['L15','L16','L19','L28','L32','L48','L58','L70'],'-AX-90-3':['L15','L16','L19','L28','L32','L48','L58','L70'],
   '93':['L12','L15','L16','L19','L28','L48','L58','L70'],'94':['L12','L15','L16','L19','L48','L58','L70'],'95':['L12','L15','L16','L19','L28','L48','L58','L70'],   // Axel 30/10
   '90':['L15','L16','L19','L28','L32','L48','L58','L70'],'91':['L15','L16','L19','L28','L32','L48','L58','L70'],   // Axel 20/10 : génériques + L58, L28, L32
   '59':['L19','L48','L70','L58'],'78':['L12','L15','L16','L19','L48','L58','L70'],'84':['L12','L15','L16','L19','L48','L58','L70'],'79':['L12','L15','L16','L19','L28','L30','L32','L34','L48','L58','L70'],'80':['L15','L16','L19','L48','L70'],'81':['L15','L16','L19','L48','L70'],'82':['L15','L16','L19','L48','L70'],'83':['L12','L16','L19','L48','L58','L70'],'85':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],'86':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],'87':['L15','L16','L19','L28','L32','L34','L48','L58','L70'],'88':['L15','L16','L19','L32','L34','L48','L58'],'89':['L12','L15','L16','L34','L48','L58','L70']};   // 87-89 : Axel 18/10
